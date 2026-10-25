@@ -133,6 +133,9 @@ function openSettings(){
     setGroupHTML("Ammunition",
       setRowHTML("Ammo recovery","What comes back after a fight. Thrown weapons and items set to Always come back anyway; firearm bullets never do.",
         `<select id="setAmmoRec" aria-label="Ammo recovery">${AMMO_RECOVERY.map(([v,l])=>`<option value="${esc(v)}"${ammoRecoveryOf(character)===v?" selected":""}>${esc(l)}</option>`).join("")}</select>`))+
+    setGroupHTML("Inventory",
+      setRowHTML("Inventory log size","How many lines of trades, items and coins the log keeps. Trimming it drops the oldest lines, and their Undo with them.",
+        `<select id="setInvLogSize" aria-label="Inventory log size">${INV_LOG_SIZES.map(v=>`<option value="${esc(String(v))}"${num(character.invLogSize)===v?" selected":""}>${esc(v.toLocaleString())}</option>`).join("")}</select>`))+
     tabsGroupHTML(character):"";
   const secCarrying=hasChar?setGroupHTML("Size and weight",
       setRowHTML("Size","From your ancestry unless you choose one. It sets your carrying capacity.",
@@ -236,6 +239,7 @@ function openSettings(){
     b.classList.toggle("on",show);b.setAttribute("aria-checked",show?"true":"false");
   }));
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
+  {const s=document.getElementById("setInvLogSize");if(s)s.addEventListener("change",()=>{character.invLogSize=num(s.value);character.invLog=cleanInvLog(character.invLog,character.invLogSize);scheduleSave();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());

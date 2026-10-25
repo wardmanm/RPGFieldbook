@@ -96,6 +96,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
   'cleanInvLog', 'logInv', 'logGrant', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
+  'INV_FILTERS', 'invDayLabel', 'invLogHTML', 'openInvLog',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -6538,6 +6539,30 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#47 ammoFightSummary totals what was fired per kind', sum.length === 1 && sum[0].kind === 'arrow' && sum[0].fired === 12, sum);
     ck('#47 End combat logs one ammo line per kind fired', /ammoFightSummary\(character\)[\s\S]{0,400}logInv\(\{kind:"ammo"/.test(src('87-combat.js')));
   } finally { Object.assign(ctx, {scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, renderCoins: keep.rc, recompute: keep.rq, restSummary: keep.rsum, renderStatuses: keep.rst}); X.character = keep.ch; X.rules = keep.rules; }
+}
+
+// ---------- #47 the Log dialog
+{
+  const L = [
+    {id: 'a', at: Date.now(), kind: 'trade', title: 'Traded with <b>Olvin</b>', lines: [{dir: '-', text: 'Dagger ×1'}, {dir: '+', text: 'Rope ×1'}], undo: {parts: []}, undone: false, meta: {with: '<b>Olvin</b>'}},
+    {id: 'b', at: Date.now() - 1000, kind: 'grant', title: 'Granted by Fighter', lines: [{dir: '+', text: 'Chain Mail ×1'}], undo: null, undone: false, meta: {}},
+    {id: 'c', at: Date.now() - 2000, kind: 'coins', title: 'Coins adjusted', lines: [{dir: '+', text: '+15 GP'}], undo: {delta: {gp: 15}}, undone: true, meta: {}}
+  ];
+  const keep = X.character; X.character = X.blankChar(); X.character.invLog = L; X.character.coins = {gp: 100};
+  try {
+    const h = X.invLogHTML(L, 'all', 500);
+    ck('#47 the log escapes titles and receipts', h.includes('Traded with &lt;b&gt;Olvin&lt;/b&gt;') && !h.includes('<b>Olvin'));
+    ck('#47 ...offers Undo only where allowed; a grant has none', /data-invundo="a"/.test(h) && !/data-invundo="b"/.test(h));
+    ck('#47 ...strikes an undone line and offers it no Undo', /class="il-e undone"[^>]*data-ilid="c"/.test(h) && !/data-invundo="c"/.test(h));
+    ck('#47 ...groups by day with Today first', /Today/.test(h));
+    ck('#47 ...shows the size and Clear log', /Keeps the newest 500/.test(h) && /id="invLogClear"/.test(h));
+    ck('#47 ...a filter narrows it', !/Coins adjusted/.test(X.invLogHTML(L, 'trades', 500)) && /Traded with/.test(X.invLogHTML(L, 'trades', 500)));
+    X.character.coins = {gp: 0}; L[2].undone = false;
+    const h2 = X.invLogHTML(L, 'all', 500);
+    ck('#47 a blocked Undo is disabled with its reason', /data-invundo="c" disabled title="Not enough GP left to take back\."/.test(h2), h2);
+  } finally { X.character = keep; }
+  const html = require('./harness').loadHTML();
+  ck('#47 the Equipment card has Trade and Log beside Add', /data-add="item"[\s\S]{0,400}id="btnTrade"[\s\S]{0,400}id="btnInvLog"/.test(html));
 }
 
 ck.done();

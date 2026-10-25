@@ -120,3 +120,41 @@ function invUndo(id){
   renderInventory();renderAttacks();renderCoins();recompute();scheduleSave();
   return "";
 }
+/* ---- the Log dialog (#47 Task 3) ---- */
+const INV_FILTERS={all:null,trades:["trade"],items:["add","edit","delete","use","grant"],coins:["coins"],ammo:["ammo"]};
+const INV_ICON={trade:"⇄",add:"+",edit:"✎",delete:"🗑",use:"✦",coins:"¤",grant:"⚑",ammo:"➶"};
+let _invLogFilter="all";
+function invDayLabel(at){
+  const d=new Date(at),t=new Date();const day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diff=(day(t)-day(d))/86400000;return diff===0?"Today":diff===1?"Yesterday":d.toLocaleDateString();
+}
+function invLogHTML(list,filter,size){
+  const kinds=INV_FILTERS[filter]||null,rows=(list||[]).filter(e=>!kinds||kinds.indexOf(e.kind)>=0);
+  let day="",out=`<div class="il-filters">`+Object.keys(INV_FILTERS).map(f=>`<button type="button" class="il-f${f===filter?" on":""}" data-ilfilter="${esc(f)}" aria-pressed="${f===filter?"true":"false"}">${esc(f[0].toUpperCase()+f.slice(1))}</button>`).join("")+`</div>`;
+  if(!rows.length)out+=`<p class="empty">Nothing logged yet.</p>`;
+  rows.forEach(e=>{
+    const dl=invDayLabel(e.at);if(dl!==day){day=dl;out+=`<div class="il-day">${esc(dl)}</div>`;}
+    const c=invUndoCheck(e),time=new Date(e.at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+    const undo=e.undone||!e.undo||e.kind==="grant"||e.kind==="ammo"?"":
+      (c.ok?`<button type="button" class="tbtn il-undo" data-invundo="${esc(e.id)}">Undo</button>`
+           :`<button type="button" class="tbtn il-undo" data-invundo="${esc(e.id)}" disabled title="${esc(c.why)}">Undo</button><small class="il-why">${esc(c.why)}</small>`);
+    const lines=(e.lines||[]).map(l=>`<div class="il-l ${esc(l.dir==="+"?"in":l.dir==="-"?"out":"")}">${esc(l.text)}</div>`).join("");
+    out+=`<div class="il-e${e.undone?" undone":""}" data-ilid="${esc(e.id)}"><span class="il-ic" aria-hidden="true">${INV_ICON[e.kind]||"•"}</span>`+
+      `<div class="il-tx"><b>${esc(e.title)}</b>${e.kind==="trade"?`<details><summary>Receipt</summary>${lines}</details>`:lines}</div>`+
+      `<div class="il-side"><span class="il-t">${esc(time)}</span>${undo}</div></div>`;
+  });
+  return out+`<div class="il-foot"><span>Keeps the newest ${esc(String(size))}.</span><button type="button" class="tbtn danger" id="invLogClear">Clear log</button></div>`;
+}
+function openInvLog(){
+  const paint=()=>{const b=document.getElementById("mBody");if(b)b.innerHTML=invLogHTML(character.invLog||[],_invLogFilter,character.invLogSize||500);};
+  openModal("Inventory log","","",{wide:true});paint();
+  const body=document.getElementById("mBody");if(!body||body.dataset.ilWired)return;
+  body.dataset.ilWired="1";
+  body.addEventListener("click",e=>{
+    if(!document.getElementById("invLogClear"))return;   /* only while the log is the open dialog */
+    const t=e.target;let m;
+    if((m=t.closest("[data-ilfilter]"))){_invLogFilter=m.dataset.ilfilter;paint();return;}
+    if((m=t.closest("[data-invundo]"))){const why=invUndo(m.dataset.invundo);if(why)toast(why);paint();return;}
+    if(t.closest("#invLogClear")){if(confirm("Clear the whole inventory log? Undo will no longer be possible for any of it.")){character.invLog=[];scheduleSave();paint();}return;}
+  });
+}

@@ -436,6 +436,8 @@ for(const sys of ['homebrew','srd52']){
      /id="iRecover">\$\{recoverOptionsHTML\(it\)\}<\/select>/.test(js) && /rec\.recover=rv/.test(js));
   ck("#104 the item editor's Quantity allows 0, so a thrown weapon at ×0 stays at ×0",
      /id="iQty" type="number" min="0"/.test(js) && !/qty:num\(document\.getElementById\("iQty"\)\.value\)\|\|1/.test(js));
+  ck('#47 Settings → Sheet display has the Inventory log size select, wired to the character',
+     /Inventory log size/.test(js) && /id="setInvLogSize"/.test(js));
 }
 
 // ---------- the app's ammo tables agree with the SRD 5.2 data (#6)

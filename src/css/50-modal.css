@@ -241,3 +241,33 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 .cd-track{margin:4px 0}
 .cd-ties{display:flex;gap:8px;margin-top:8px}
 .cd-ties .tbtn,.cd .m-actions .tbtn{min-height:44px}
+
+/* ---- the inventory log dialog (#47) ---- */
+.il-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.il-f{font-family:var(--head);font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+  background:var(--field);border:1.5px solid var(--line);border-radius:99px;color:var(--ink-soft);padding:6px 12px;cursor:pointer;min-height:32px}
+.il-f.on{background:var(--accent);color:#20160a;border-color:var(--accent)}
+.il-day{font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);
+  margin:14px 0 4px;padding-bottom:4px;border-bottom:1.5px solid var(--line)}
+.il-day:first-of-type{margin-top:2px}
+.il-e{display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:8px 0;border-bottom:1px dotted var(--hair)}
+.il-ic{flex:0 0 22px;text-align:center;font-size:15px;line-height:1.6;color:var(--accent)}
+.il-tx{flex:1 1 auto;min-width:0}
+.il-tx b{font-weight:700}
+.il-tx details{margin-top:2px}
+.il-tx summary{cursor:pointer;font-size:12px;color:var(--accent-2)}
+.il-l{font-size:13px;color:var(--ink-soft)}
+.il-l.in{color:var(--hb-healthy)}
+.il-l.out{color:var(--brick)}
+.il-side{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.il-t{font-family:var(--head);font-size:11px;color:var(--ink-soft)}
+.il-undo{min-height:32px;padding:4px 10px}
+.il-why{display:block;max-width:150px;text-align:right;font-size:11px;color:var(--ink-soft);line-height:1.3}
+.il-e.undone{opacity:.55}
+.il-e.undone .il-tx b,.il-e.undone .il-l{text-decoration:line-through}
+.il-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1.5px solid var(--line)}
+.il-foot span{font-size:12px;color:var(--ink-soft)}
+/* the Inventory card sits in the plain stack, not the Sheet's container-query
+   columns (30-sheet.css), so the narrow-card rule below ~380px of card width
+   uses a media query instead: the Log button drops its word, keeps its icon. */
+@media(max-width:480px){.il-word{display:none}}
