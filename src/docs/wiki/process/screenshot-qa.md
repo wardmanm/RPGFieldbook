@@ -54,8 +54,17 @@ project root as their working directory, which is all a relative path needs.
 Tab names are `sheet`, `inventory`, `spells`, `story`, `rules`, `journal` and `combat`. The combat tab's
 button is the crossed swords (`#btnCombat`), not a `.tab`.
 
-By local convention the shots go in `.claude/qa/` (gitignored) as `<issue>-before-<what>.png` and
-`<issue>-after-<what>.png`. This is a habit, not something anything enforces.
+The shots go in `.claude/qa/` (gitignored), **one folder per issue, in two lanes** (Mike, 2026-10-25):
+
+- `.claude/qa/in-progress/<issue>-<slug>/` while the issue's branch is open, for example
+  `.claude/qa/in-progress/47-trade-window/`. The slug is the issue title, lowercased and hyphenated.
+- When the branch merges, the whole folder moves to `.claude/qa/complete/<issue>-<slug>/`. The merge
+  step does the move, so `in-progress/` only ever holds open work.
+- Shots that belong to no issue (a release smoke test, a one-off check) go in `complete/misc/`.
+
+Inside a folder, name each shot `<issue>-before-<what>.png`, `<issue>-after-<what>.png`, or
+`<issue>-t<N>-<what>.png` for a task's own shot. When dispatching an implementer or reviewer, give it
+the absolute folder path. Nothing enforces this; it is how the folder stays usable.
 
 ### What it does not cover
 
@@ -120,3 +129,4 @@ as "fully tested".
 - 2026-09-01 — `.mcp.json` moves to the cross-platform launcher, whose `${CLAUDE_PROJECT_DIR}` path never resolved. → ledger L3361, #42
 - 2026-09-24 — Launcher path made relative, and the server connects again. → ledger L3361
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
+- 2026-10-25 — Shots are filed by issue, in `in-progress/` and `complete/` lanes. → ledger L7261

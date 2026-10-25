@@ -7257,3 +7257,13 @@ found three Important gaps and nine minors; the rulings at the end of `progress.
 
 Pages: [Combat view](../wiki/features/combat-view.md), [Character model](../wiki/architecture/character-model.md),
 the spec's As built (`src/docs/specs/2026-10-25-initiative-tracker-design.md`).
+
+## QA screenshots filed by issue (2026-10-25)
+
+Mike: `.claude/qa/` had grown to 556 loose files. Shots now live in one folder per issue under
+two lanes: `.claude/qa/in-progress/<issue>-<slug>/` while the branch is open, moved whole to
+`.claude/qa/complete/<issue>-<slug>/` when it merges. Shots with no issue go in `complete/misc/`.
+Every existing shot was moved into `complete/` (all of their branches had merged), slugged from
+the issue's title. Still gitignored; still the project's Playwright MCP, absolute paths.
+
+Pages: [Screenshot QA](../wiki/process/screenshot-qa.md).
