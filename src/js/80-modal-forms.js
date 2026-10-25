@@ -603,7 +603,7 @@ function addStatusByName(name){
    the status lands on another tab, so a silent apply leaves the player hunting
    for the change. */
 function applyItemUse(it,u,heal,note){
-  const snap0=invSnap(it),atk0=invSnap((character.attacks||[]).find(a=>a.itemId===it.id)||null);
+  const snap0=invSnap(it),atk0=invSnap((character.attacks||[]).find(a=>a.itemId===it.id)||null),at0=character.inventory.indexOf(it);
   const lines=[];
   if(heal>0){
     adjustHP(heal);renderHP();
@@ -629,7 +629,7 @@ function applyItemUse(it,u,heal,note){
     }else{it.qty=left;lines.push(`${left} left`);}
   }
   logInv({kind:"use",title:"Used "+(it.name||"item"),lines:[{dir:"-",text:u.consume?"−1":"1 use"}],
-    undo:{id:it.id,qty:u.consume?1:0,used:mx>0?1:0,snap:u.consume&&itemQty(snap0)<=1?snap0:null,atk:u.consume&&itemQty(snap0)<=1?atk0:null}});
+    undo:{id:it.id,qty:u.consume?1:0,used:mx>0?1:0,snap:u.consume&&itemQty(snap0)<=1?snap0:null,atk:u.consume&&itemQty(snap0)<=1?atk0:null,at:u.consume&&itemQty(snap0)<=1?at0:null}});
   renderInventory();renderStatuses();renderAttacks();recompute();scheduleSave();
   restSummary("Used "+(it.name||"item"),lines.length?lines:["Nothing to apply — this item has no effect set."],"");
 }

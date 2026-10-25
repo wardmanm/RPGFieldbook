@@ -92,7 +92,9 @@ function openBrowse(cfg){
     else if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
   host.onchange=e=>{if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
   host.onclick=e=>{let m;
-    /* cfg.onClose: closed WITHOUT adding (#47: the trade window comes back) */
+    /* cfg.onClose fires on the Close button only. Add calls cfg.onAdd and
+       + Custom calls cfg.onCustom instead; neither calls onClose (#47: the
+       trade window comes back through whichever of the three ran). */
     if(e.target.closest("#brClose")){closeBrowse();if(cfg.onClose)cfg.onClose();return;}
     if(e.target.closest("#brFilters")){st.showFilters=!st.showFilters;render();return;}
     if(e.target.closest("#brCustom")){closeBrowse();if(cfg.onCustom)cfg.onCustom();return;}

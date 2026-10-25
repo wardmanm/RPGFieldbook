@@ -68,17 +68,20 @@ function invRemoveQty(id,qty){
   const it=(character.inventory||[]).find(x=>x.id===id);if(!it)return {removed:false,snap:null,atk:null};
   const left=itemQty(it)-num(qty);
   if(left<=0){
-    const snap=invSnap(it),atk=invSnap((character.attacks||[]).find(a=>a.itemId===id)||null);
+    const at=character.inventory.indexOf(it),snap=invSnap(it),atk=invSnap((character.attacks||[]).find(a=>a.itemId===id)||null);
     character.inventory=character.inventory.filter(x=>x.id!==id);
     character.attacks=(character.attacks||[]).filter(a=>a.itemId!==id);
     forgetAmmo(character,id);
-    return {removed:true,snap,atk};
+    return {removed:true,snap,atk,at};
   }
   it.qty=left;return {removed:false,snap:null,atk:null};
 }
-function invRestore(snap,atk){
+/* `at` is where the row stood: it goes back there, clamped to the list, as
+   the ammo undo does (62-ammo.js undoFire). An old line with no `at` appends. */
+function invRestore(snap,atk,at){
   const it=invSnap(snap);if((character.inventory||[]).some(x=>x.id===it.id))it.id=uid();
-  character.inventory.push(it);
+  if(Number.isInteger(at)&&at>=0)character.inventory.splice(Math.min(character.inventory.length,at),0,it);
+  else character.inventory.push(it);
   if(atk){const a=invSnap(atk);a.itemId=it.id;if((character.attacks||[]).some(x=>x.id===a.id))a.id=uid();character.attacks.push(a);it.attackId=a.id;}
   return it.id;
 }
@@ -102,14 +105,15 @@ function invUndoCheck(e){
 function invApplyPart(kind,u){
   if(kind==="add")(u.items||[]).forEach(p=>{const it=character.inventory.find(x=>x.id===p.id);if(!it)return;if(p.created&&itemQty(it)<=num(p.qty))invRemoveQty(p.id,itemQty(it));else invRemoveQty(p.id,p.qty);});
   else if(kind==="edit"){const i=character.inventory.findIndex(x=>x.id===u.after.id);if(i>=0){character.inventory[i]=invSnap(u.before);syncItemAttack(character.inventory[i]);}}
-  else if(kind==="delete")invRestore(u.snap,u.atk);
+  else if(kind==="delete")invRestore(u.snap,u.atk,u.at);
   else if(kind==="use"){
     const it=(character.inventory||[]).find(x=>x.id===u.id);
     if(it){if(num(u.qty))it.qty=itemQty(it)+num(u.qty);if(num(u.used)&&it.uses)it.uses.used=Math.max(0,num(it.uses.used)-num(u.used));}
-    else if(u.snap)invRestore(u.snap,u.atk||null);
+    else if(u.snap)invRestore(u.snap,u.atk||null,u.at);
   }
   else if(kind==="coins"){character.coins=character.coins||{};Object.keys(u.delta||{}).forEach(k=>{character.coins[k]=num(character.coins[k])-num(u.delta[k]);});}
-  else if(kind==="give")(u.items||[]).forEach(p=>{const it=character.inventory.find(x=>x.id===p.id);if(it)it.qty=itemQty(it)+num(p.qty);else if(p.snap)invRestore(p.snap,p.atk);});
+  /* newest removal first: each `at` was read with the earlier removals already gone */
+  else if(kind==="give")(u.items||[]).slice().reverse().forEach(p=>{const it=character.inventory.find(x=>x.id===p.id);if(it)it.qty=itemQty(it)+num(p.qty);else if(p.snap)invRestore(p.snap,p.atk,p.at);});
 }
 function invUndo(id){
   const e=(character.invLog||[]).find(x=>x.id===id);if(!e)return "That line is no longer in the log.";
@@ -166,11 +170,22 @@ let _trade=null,_trPick=false;
 function newTradeDraft(opts){
   const o=opts||{},arr=a=>Array.isArray(a)?a:[],coins=c=>Object.assign({},(c&&typeof c==="object")?c:{});
   const give=o.give||{},get=o.get||{};
-  return {with:String(o.with||""),
+  const d={with:String(o.with||""),
     give:{items:arr(give.items).filter(x=>x&&x.id!=null).map(x=>({id:String(x.id),qty:Math.max(1,num(x.qty)||1)})),coins:coins(give.coins)},
     get:{items:arr(get.items).filter(x=>x&&typeof x==="object").map(x=>({key:String(x.key||uid()),name:String(x.name||(x.def&&x.def.name)||""),qty:Math.max(1,num(x.qty)||1),
       cost:x.cost!=null?Math.max(0,fnum(x.cost)):(x.def?(costToGp(x.def.cost)||0):0),def:x.def||null,custom:!!x.custom||!x.def})),coins:coins(get.coins)},
     applyGive:true,applyGet:true,tab:"give"};
+  return tradeClamp(d,character);
+}
+/* What you give is capped at what you hold: whole coins, owned items. Run on
+   a seeded draft (#105) and again at Complete, so the balance, the receipt and
+   meta.giveCp all describe exactly what is applied. */
+function tradeClamp(d,ch){
+  const inv=(ch&&ch.inventory)||[],held=(ch&&ch.coins)||{},seen=new Set();
+  d.give.items=d.give.items.filter(g=>{const it=inv.find(x=>x.id===g.id);if(!it||seen.has(g.id))return false;seen.add(g.id);g.qty=Math.min(Math.max(0,num(g.qty)),itemQty(it));return g.qty>0;});
+  Object.keys(d.give.coins).forEach(k=>{d.give.coins[k]=Math.min(Math.max(0,num(d.give.coins[k])),Math.max(0,num(held[k])));});
+  Object.keys(d.get.coins).forEach(k=>{d.get.coins[k]=Math.max(0,num(d.get.coins[k]));});
+  return d;
 }
 function tradeEmpty(d){return !d.give.items.length&&!d.get.items.length&&!coinsToCp(d.give.coins)&&!coinsToCp(d.get.coins);}
 /* cost is gp of ONE and may be fractional: fnum, as itemWorthCp() reads it */
@@ -185,7 +200,7 @@ function tradeBalance(d,ch){
 /* "n is the number of lines": each item, and each coin that moves */
 function tradeCount(side){return side.items.length+Object.keys(side.coins||{}).filter(k=>num(side.coins[k])>0).length;}
 function tradeTabsInner(d){
-  return ["give","get"].map(s=>`<button type="button" class="tr-tab" role="tab" data-trtab="${esc(s)}" aria-selected="${d.tab===s?"true":"false"}">You ${s} · ${tradeCount(d[s])}</button>`).join("");
+  return ["give","get"].map(s=>`<button type="button" class="tr-tab" role="tab" id="${esc(s==="get"?"trTabGet":"trTabGive")}" aria-controls="${esc(s==="get"?"trSideGet":"trSideGive")}" data-trtab="${esc(s)}" aria-selected="${d.tab===s?"true":"false"}">You ${s} · ${tradeCount(d[s])}</button>`).join("");
 }
 function tradeBalHTML(d,ch){
   const b=tradeBalance(d,ch),n=cpToGpText(Math.abs(b.diff));
@@ -227,10 +242,10 @@ function tradeHTML(d,ch){
     (sugg.length?`<div class="tr-chips">${sugg.map(n=>`<button type="button" class="tr-chip" data-trwith="${esc(n)}">${esc(n)}</button>`).join("")}</div>`:"")+`</div>`+
     `<div class="tr-tabs" role="tablist">${tradeTabsInner(d)}</div>`+
     `<div class="tr-sides">`+
-      `<section class="tr-side" data-side="give"><h5>You give</h5>${give}`+
+      `<section class="tr-side" data-side="give" id="trSideGive" role="tabpanel" aria-labelledby="trTabGive"><h5>You give</h5>${give}`+
         `<button type="button" class="tr-add" id="trPickGive" aria-expanded="${_trPick?"true":"false"}">+ From your inventory</button>${pick}`+
         `${tradeCoinsHTML("give",d.give.coins,held)}${tradeSwitchHTML("trApplyGive",d.applyGive)}</section>`+
-      `<section class="tr-side" data-side="get"><h5>You get</h5>${get}`+
+      `<section class="tr-side" data-side="get" id="trSideGet" role="tabpanel" aria-labelledby="trTabGet"><h5>You get</h5>${get}`+
         `<div class="tr-adds"><button type="button" class="tr-add" id="trFind">+ Find an item</button><button type="button" class="tr-add" id="trCustom">+ Custom item</button></div>`+
         `${tradeCoinsHTML("get",d.get.coins,null)}${tradeSwitchHTML("trApplyGet",d.applyGet)}</section>`+
     `</div>`+
@@ -239,14 +254,16 @@ function tradeHTML(d,ch){
   `</div>`;
 }
 function completeTrade(d){
-  if(!d||tradeEmpty(d))return null;
+  if(!d)return null;
+  tradeClamp(d,character);
+  if(tradeEmpty(d))return null;
   const who=String(d.with||"").trim(),b=tradeBalance(d,character),lines=[],giveRecs=[],gotRecs=[];
   /* 1. what you give: capped at what you own, as the window caps it */
   d.give.items.forEach(g=>{
     const it=(character.inventory||[]).find(x=>x.id===g.id);if(!it)return;
     const q=Math.min(Math.max(0,num(g.qty)),itemQty(it)),nm=String(it.name||"Item");if(q<=0)return;
     const r=invRemoveQty(g.id,q);
-    giveRecs.push({id:g.id,qty:q,snap:r.removed?r.snap:null,atk:r.removed?r.atk:null});
+    giveRecs.push({id:g.id,qty:q,snap:r.removed?r.snap:null,atk:r.removed?r.atk:null,at:r.removed?r.at:null});
     lines.push({dir:"-",text:`${nm} ×${q}`});
   });
   /* 2. coins: the net change per denomination, giving capped at what you hold */
@@ -331,7 +348,7 @@ function tradeFind(){
       if(!_trade)return;
       entries.forEach(x=>{
         const ex=_trade.get.items.find(g=>!g.custom&&String(g.name).toLowerCase()===String(x.name||"").toLowerCase());
-        if(ex){ex.qty=Math.min(999,ex.qty+finderQty(qty));return;}
+        if(ex){ex.qty=Math.min(999,ex.qty+finderQty(qty));if(costOverride!=null)ex.cost=costOverride;return;}
         _trade.get.items.push({key:uid(),name:String(x.name||""),qty:finderQty(qty),cost:costOverride??costToGp(x.cost)??0,def:x,custom:false});
       });
       _trade.tab="get";closeBrowse();back();
@@ -387,8 +404,9 @@ function openTrade(opts){
     if(t.id==="trWith"){d.with=t.value;return;}
     if(t.dataset.trcoin){
       const [side,k]=t.dataset.trcoin.split(":"),s=d[side==="get"?"get":"give"];let v=Math.max(0,num(t.value));
-      if(side==="give"){const cap=Math.max(0,num((character.coins||{})[k]));if(v>cap){v=cap;t.value=String(cap);}}
-      if(num(t.value)<0)t.value=String(v);
+      if(side==="give")v=Math.min(v,Math.max(0,num((character.coins||{})[k])));
+      /* coins are whole: the box shows what the draft holds (2.5 → 2, −3 → 0, over the cap → the cap) */
+      if(t.value!==""&&t.value!==String(v))t.value=String(v);
       s.coins[k]=v;return tradeRefresh();
     }
     if(t.dataset.trcost){const g=d.get.items.find(x=>x.key===t.dataset.trcost);if(g)g.cost=Math.max(0,fnum(t.value));return tradeRefresh();}

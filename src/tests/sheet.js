@@ -6602,9 +6602,79 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
        JSON.stringify({inv: JSON.parse(before).inv.map(i => ({n: i.name, q: i.qty})).sort((a, b) => a.n < b.n ? -1 : 1), coins: 40}), X.character.inventory);
     ck('#47 an empty trade cannot complete', X.completeTrade(X.newTradeDraft({})) === null);
   } finally { Object.assign(ctx, {scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, renderCoins: keep.rc, recompute: keep.rq}); X.character = keep.ch; X.rules = keep.rules; }
+  /* Review Focus 2, as named: a whole stack given AND a same-named item received.
+     Undo must restore the given row (same id, same place, its attack) and take
+     back the new row, leaving items, attacks and coins exactly as before. */
+  {
+    const keep2 = {ch: X.character, rs: ctx.scheduleSave, ri: ctx.renderInventory, ra: ctx.renderAttacks, rc: ctx.renderCoins, rq: ctx.recompute};
+    ['scheduleSave', 'renderInventory', 'renderAttacks', 'renderCoins', 'recompute'].forEach(n => ctx[n] = () => {});
+    try {
+      const seed = () => {
+        X.character = X.blankChar(); X.character.system = 'dnd';
+        X.character.attacks = [{id: 'a1', name: 'Dagger', itemId: 'dg'}];
+        X.character.inventory = [{id: 'dg', name: 'Dagger', qty: 1, cost: 2, weapon: {dice: '1d4'}, attackId: 'a1'}, {id: 'ro', name: 'Rope', qty: 2, cost: 1}, {id: 'tc', name: 'Torch', qty: 5, cost: 0.01}];
+        X.character.coins = {gp: 40, sp: 0, cp: 0};
+        return JSON.stringify({inv: X.character.inventory, atk: X.character.attacks, coins: X.character.coins});
+      };
+      const now = () => JSON.stringify({inv: X.character.inventory, atk: X.character.attacks, coins: X.character.coins});
+      /* case A: the whole Rope stack given, a library Rope received */
+      let before = seed(), d = X.newTradeDraft({with: 'Olvin'});
+      d.give.items = [{id: 'ro', qty: 2}];
+      d.get.items = [{key: 'k', name: 'Rope', qty: 1, cost: 1, def: {name: 'Rope', cost: '1 gp'}, custom: false}];
+      let e = X.completeTrade(d);
+      ck('#47 case A (whole Rope given, a Rope received): the old row leaves, a new Rope row arrives, one trade line',
+         !X.character.inventory.some(i => i.id === 'ro') && X.character.inventory.filter(i => i.name === 'Rope').length === 1 &&
+         X.character.invLog.length === 1 && X.character.invLog[0].kind === 'trade', X.character.inventory);
+      ck('#47 ...undo restores items, order, attacks and coins exactly', X.invUndo(e.id) === '' && now() === before, now());
+      /* case D: the whole Dagger (with its attack) given, a Dagger received, plus 5 gp */
+      before = seed(); d = X.newTradeDraft({with: 'Olvin'});
+      d.give.items = [{id: 'dg', qty: 1}]; d.give.coins = {gp: 5};
+      d.get.items = [{key: 'k', name: 'Dagger', qty: 1, cost: 2, def: {name: 'Dagger', cost: '2 gp', weapon: {dice: '1d4'}}, custom: false}];
+      e = X.completeTrade(d);
+      ck('#47 case D (whole Dagger + attack given, a Dagger received): one trade line, the new Dagger has its own attack',
+         X.character.invLog.length === 1 && X.character.invLog[0].kind === 'trade' && !X.character.attacks.some(a => a.id === 'a1') &&
+         X.character.attacks.length === 1 && X.character.inventory.some(i => i.name === 'Dagger' && i.id !== 'dg') && X.character.coins.gp === 35, X.character);
+      ck('#47 ...undo restores items, order, attacks and coins exactly', X.invUndo(e.id) === '' && now() === before, now());
+      /* two whole rows given: each goes back to its own place */
+      before = seed(); d = X.newTradeDraft({});
+      d.give.items = [{id: 'dg', qty: 1}, {id: 'ro', qty: 2}];
+      e = X.completeTrade(d);
+      ck('#47 two whole rows given and undone come back in their order', X.invUndo(e.id) === '' && now() === before, now());
+      /* delete and use undo reinsert at the row's place too */
+      before = seed();
+      const ro = X.character.inventory[1]; X.character.inventory.splice(1, 1);
+      const de = X.logInv({kind: 'delete', title: 'Deleted Rope', lines: [], undo: {snap: X.invSnap(ro), at: 1, atk: null}});
+      ck('#47 undo delete puts the row back where it was', X.invUndo(de.id) === '' && X.character.inventory.map(i => i.id).join() === 'dg,ro,tc', X.character.inventory);
+      const dg = X.character.inventory[0], atk = X.character.attacks[0];
+      X.character.inventory.splice(0, 1); X.character.attacks = [];
+      const ue = X.logInv({kind: 'use', title: 'Used Dagger', lines: [], undo: {id: 'dg', qty: 1, used: 0, snap: X.invSnap(dg), atk: X.invSnap(atk), at: 0}});
+      ck('#47 undo use of the last one puts the row back where it was', X.invUndo(ue.id) === '' && X.character.inventory.map(i => i.id).join() === 'dg,ro,tc' && now() === before, now());
+      /* a seeded draft (#105) is clamped to what you hold */
+      seed();
+      d = X.newTradeDraft({give: {items: [{id: 'ro', qty: 9}, {id: 'gone', qty: 1}], coins: {gp: 99, sp: 2.7}}});
+      ck('#47 a seeded draft gives no more than you hold', d.give.items.length === 1 && d.give.items[0].qty === 2 && d.give.coins.gp === 40 && d.give.coins.sp === 0, d.give);
+      ck('#47 ...so its balance is what Complete applies', X.tradeBalance(d, X.character).giveCp === 4200);
+      /* hostile names are escaped: a give item, a library get item, a custom name in its box */
+      seed();
+      X.character.inventory[1].name = 'Rope"><img src=x onerror=alert(1)>';
+      d = X.newTradeDraft({});
+      d.give.items = [{id: 'ro', qty: 1}];
+      d.get.items = [{key: 'k1', name: 'Potion<script>x</script>', qty: 1, cost: 50, def: {name: 'Potion<script>x</script>'}, custom: false},
+        {key: 'k9', name: 'Lucky "coin" <b>', qty: 1, cost: 0, def: null, custom: true}];
+      const hh = X.tradeHTML(d, X.character);
+      ck('#47 the window escapes a give item\'s name', hh.includes('Rope&quot;&gt;&lt;img src=x onerror=alert(1)&gt;') && !hh.includes('<img'), hh);
+      ck('#47 ...a library item\'s name', hh.includes('Potion&lt;script&gt;x&lt;/script&gt;') && !hh.includes('<script'));
+      ck('#47 ...and a custom name inside its box', /data-trname="k9" value="Lucky &quot;coin&quot; &lt;b&gt;"/.test(hh) && !hh.includes('"coin"'));
+      ck('#47 the tabs control their panels', /id="trTabGive" aria-controls="trSideGive"/.test(hh) && /id="trSideGive" role="tabpanel" aria-labelledby="trTabGive"/.test(hh) &&
+         /id="trTabGet" aria-controls="trSideGet"/.test(hh) && /id="trSideGet" role="tabpanel" aria-labelledby="trTabGet"/.test(hh));
+    } finally { Object.assign(ctx, {scheduleSave: keep2.rs, renderInventory: keep2.ri, renderAttacks: keep2.ra, renderCoins: keep2.rc, recompute: keep2.rq}); X.character = keep2.ch; }
+  }
   const src = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
   ck('#47 the Trade button opens the trade window', /t\.closest\("#btnTrade"\)\)return openTrade\(\{\}\)/.test(src('90-boot.js')));
   ck('#47 the picker reads a fractional Cost override (0.5 gp is not 0)', /costOverride=\(oc&&oc\.value!==""\)\?Math\.max\(0,fnum\(oc\.value\)\)/.test(src('85-browse.js')));
+  ck('#47 a coin box shows the whole number the draft holds', /if\(t\.value!==""&&t\.value!==String\(v\)\)t\.value=String\(v\)/.test(src('67-trade.js')));
+  ck('#47 a merged finder add keeps its Cost override', /if\(ex\)\{ex\.qty=[^}]*if\(costOverride!=null\)ex\.cost=costOverride;return;\}/.test(src('67-trade.js')));
+  ck('#47 Use records where the row stood', /at:u\.consume&&itemQty\(snap0\)<=1\?at0:null/.test(src('80-modal-forms.js')));
   ck('#47 the picker calls cfg.onClose only when it closes without adding', /#brClose"\)\)\{closeBrowse\(\);if\(cfg\.onClose\)cfg\.onClose\(\);/.test(src('85-browse.js')));
 }
 
