@@ -254,3 +254,101 @@ function setInitMode(mode){
   renderCombatChrome();renderInitTable();scheduleSave();
 }
 function toggleInitRolls(){character.initShowRolls=character.initShowRolls===false;renderCombatChrome();renderInitTable();scheduleSave();}
+
+/* ---- one combatant's dialog: big targets (Mike: bands are too small to tap
+   on a phone). Foe: band buttons. Party: Exact HP / Estimate, Dead. You:
+   initiative only. Ties break here with Act earlier / Act later. */
+function initTie(list,i,dir){const j=i+dir;return j>=0&&j<list.length&&list[j].init===list[i].init;}
+function combatantDialogHTML(r,ch){
+  const list=ch.combatants||[],i=list.findIndex(x=>x.id===r.id);
+  const bands=n=>`<div class="cd-lbl">How hurt?</div>`+[0,1,2,3,4].slice(0,n).map(b=>`<button type="button" class="cd-band${r.band===b?" on":""}" data-cband="${esc(String(b))}">`+
+    `${hbBarHTML({band:b===4?null:b,share:null})}<span>${esc(HB_NAMES[b])}<small>${esc(HB_SAYS[b])}</small></span></button>`).join("");
+  const fields=`<div class="cd-two"><label class="cd-fld"><span class="cd-k">Initiative</span><input id="cdInit" inputmode="numeric" value="${esc(r.init===null?"":String(r.init))}"></label>`+
+    (r.kind==="you"?"":`<label class="cd-fld"><span class="cd-k">${r.kind==="foe"?"AC guess":"AC"} (optional)</span><input id="cdAC" inputmode="numeric" value="${esc(String(r.ac))}"></label>`)+`</div>`;
+  const ties=(initTie(list,i,-1)?`<button type="button" class="tbtn" data-cmove="-1">Act earlier</button>`:"")+(initTie(list,i,1)?`<button type="button" class="tbtn" data-cmove="1">Act later</button>`:"");
+  let body="";
+  if(r.kind==="foe")body=bands(5);
+  else if(r.kind==="party"){
+    const ex=r.track==="exact";
+    body=`<div class="seg cd-track">${[["exact","Exact HP"],["estimate","Estimate"]].map(([v,l])=>`<button type="button" data-ctrack="${esc(v)}" class="${r.track===v?"on":""}" aria-pressed="${r.track===v?"true":"false"}">${esc(l)}</button>`).join("")}</div>`+
+      (ex?`<div class="cd-lbl">Hit points</div><div class="cd-step"><button type="button" class="cd-pm" data-chp="-1" aria-label="One less">−</button>`+
+        `<input id="cdHp" inputmode="numeric" value="${esc(String(r.hp))}" aria-label="Current HP"><span class="cd-k">/ ${esc(r.maxHp===""?"?":String(r.maxHp))}</span>`+
+        `<button type="button" class="cd-pm" data-chp="1" aria-label="One more">+</button></div>`:bands(4))+
+      `<button type="button" class="cd-toggle" id="cdDead" role="switch" aria-checked="${r.dead?"true":"false"}"><span>Dead</span><span class="switch ${r.dead?"on":""}"></span></button>`;
+  }
+  else body=`<p class="hint">HP ${esc(String(num(character.hp.cur)))} / ${esc(String(effMaxHP()))} and AC ${esc(String(youAC()))}, from your sheet. Your HP changes on the Vitals card.</p>`;
+  return `<div class="cd">${body}${fields}${ties?`<div class="cd-ties">${ties}</div>`:""}`+
+    `<div class="m-actions">${r.kind==="you"?"":`<button type="button" class="tbtn danger" id="cdRemove">Remove</button>`}<span class="grow"></span><button type="button" class="tbtn primary" id="cdDone">Done</button></div></div>`;
+}
+function setCombatant(id,patch){
+  const list=character.combatants||[],r=list.find(x=>x.id===id);if(!r)return;
+  if("band" in patch)r.band=(Number.isInteger(patch.band)&&patch.band>=0&&patch.band<=4)?patch.band:null;
+  if("track" in patch&&r.kind==="party")r.track=patch.track==="estimate"?"estimate":"exact";
+  if("hp" in patch&&r.kind==="party"){const h=initOpt(patch.hp);r.hp=h===""?"":(num(r.maxHp)>0?Math.min(h,num(r.maxHp)):h);}
+  if("dead" in patch&&r.kind==="party")r.dead=patch.dead===true;
+  if("ac" in patch&&r.kind!=="you")r.ac=initOpt(patch.ac);
+  if("init" in patch){r.init=initInt(patch.init);character.combatants=initSort(list);}
+  if(character.initMode==="turns"&&!(character.combatants||[]).some(x=>x.id===character.combatTurn&&!combatantDead(x)))
+    character.combatTurn=initNextTurn(character.combatants,character.combatTurn).turnId||initFirstAlive(character.combatants);
+  renderCombatChrome();renderInitTable();scheduleSave();
+}
+function removeCombatant(id){
+  const list=character.combatants||[],r=list.find(x=>x.id===id);if(!r||r.kind==="you")return;
+  if(character.combatTurn===id)character.combatTurn=initNextTurn(list,id).turnId;
+  character.combatants=list.filter(x=>x.id!==id);
+  if(character.combatTurn===id)character.combatTurn=initFirstAlive(character.combatants);
+  renderCombatChrome();renderInitTable();scheduleSave();
+}
+function moveCombatant(id,dir){
+  const list=character.combatants||[],i=list.findIndex(x=>x.id===id);
+  if(i<0||!initTie(list,i,dir))return false;
+  const j=i+dir;[list[i],list[j]]=[list[j],list[i]];
+  renderCombatChrome();renderInitTable();scheduleSave();return true;
+}
+function addCombatant(name,init,ac){
+  const nm=String(name||"").trim().slice(0,60);if(!nm)return "Give it a name.";
+  const row=buildCombatants({name:""},[],[{name:nm,count:1,ac,init}]).find(r=>r.kind==="foe");
+  character.combatants=initSort((character.combatants||[]).concat([row]));
+  if(character.initMode==="turns"&&!character.combatTurn)character.combatTurn=initFirstAlive(character.combatants);
+  renderCombatChrome();renderInitTable();scheduleSave();return "";
+}
+/* The dialog wires its own clicks on #mBody, delegated, rather than one
+   listener per open: openModal() keeps the same #mBody element across every
+   open/close (only innerHTML changes), and openCombatant() re-opens itself
+   after most changes, so a fresh listener per open would stack one more
+   every time. Bound once (guarded by a dataset flag on the element itself,
+   which survives the innerHTML swap), reading which combatant is current
+   from _cdId rather than a captured id. */
+let _cdId="";
+function openCombatant(id){
+  const r=(character.combatants||[]).find(x=>x.id===id);if(!r)return;
+  _cdId=id;
+  openModal(r.kind==="you"?(character.name||"You"):r.name,combatantDialogHTML(r,character));
+  const body=document.getElementById("mBody");if(!body)return;
+  if(!body.dataset.cdWired){
+    body.dataset.cdWired="1";
+    body.addEventListener("click",e=>{
+      const t=e.target,cid=_cdId;let m;
+      if((m=t.closest("[data-cband]"))){setCombatant(cid,{band:num(m.dataset.cband)});closeModal();return;}
+      if((m=t.closest("[data-ctrack]"))){setCombatant(cid,{track:m.dataset.ctrack});openCombatant(cid);return;}
+      if((m=t.closest("[data-chp]"))){const x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{hp:Math.max(0,num(x&&x.hp)+num(m.dataset.chp))});openCombatant(cid);return;}
+      if(t.closest("#cdDead")){const x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{dead:!(x&&x.dead)});openCombatant(cid);return;}
+      if((m=t.closest("[data-cmove]"))){moveCombatant(cid,num(m.dataset.cmove));openCombatant(cid);return;}
+      if(t.closest("#cdRemove")){if(confirm("Remove them from this fight?")){removeCombatant(cid);closeModal();}return;}
+      if(t.closest("#cdDone")){closeModal();return;}
+    });
+  }
+  const ch=(elId,key)=>{const el=document.getElementById(elId);if(el)el.addEventListener("change",()=>setCombatant(_cdId,{[key]:el.value}));};
+  ch("cdInit","init");ch("cdAC","ac");ch("cdHp","hp");
+}
+function openAddCombatant(){
+  openModal("Add combatant",`<div class="field"><label class="f" for="acName">Name</label><input id="acName" autocomplete="off"></div>`+
+    `<div class="g2"><div class="field"><label class="f" for="acInit">Initiative</label><input id="acInit" inputmode="numeric"></div>`+
+    `<div class="field"><label class="f" for="acAC">AC (optional)</label><input id="acAC" inputmode="numeric"></div></div>`+
+    `<p class="hint" id="acWhy" aria-live="polite"></p><div class="m-actions"><button class="tbtn" id="acCancel">Cancel</button><button class="tbtn primary" id="acSave">Add</button></div>`);
+  document.getElementById("acCancel").addEventListener("click",closeModal);
+  document.getElementById("acSave").addEventListener("click",()=>{
+    const why=addCombatant(document.getElementById("acName").value,document.getElementById("acInit").value,document.getElementById("acAC").value);
+    if(why){document.getElementById("acWhy").textContent=why;return;}closeModal();
+  });
+}

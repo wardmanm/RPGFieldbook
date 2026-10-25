@@ -90,6 +90,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'initRollHTML', 'openInitRoll', 'irState', 'irSetTyped', 'irRoll', 'startInitFight',
   'hbBarHTML', 'combatantHealthText', 'initStripHTML', 'initTableHTML', 'renderInitTable',
   'initNext', 'setInitMode', 'toggleInitRolls', 'toggleInitTable',
+  'initTie', 'combatantDialogHTML', 'setCombatant', 'removeCombatant', 'moveCombatant',
+  'addCombatant', 'openCombatant', 'openAddCombatant',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -6172,6 +6174,51 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     X.character.combatants = []; X.character.combatTurn = '';
     ck('#91 a fight with no list offers Roll initiative', /id="iniRollNow"/.test(X.initStripHTML(X.character)));
   } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.advanceRound = keep.ar; ctx.setCombatLive = keep.live; ctx.renderInitTable = keep.rt; }
+}
+
+// ---------- #91 the combatant dialog and editing
+{
+  const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, rt: ctx.renderInitTable, cm: ctx.closeModal};
+  ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {}; ctx.closeModal = () => {};
+  try {
+    X.character = X.blankChar(); X.character.combatActive = true; X.character.combatRound = 1;
+    X.character.combatants = X.buildCombatants({name: 'Mira', init: 12}, [{id: 'p1', name: 'Thorn', ac: '', maxHp: 22, init: 12}], [{name: 'Goblin', count: 1, ac: '', init: 15}]);
+    const [gob, mira, thorn] = X.character.combatants;
+    X.character.combatTurn = gob.id;
+    const foeD = X.combatantDialogHTML(gob, X.character);
+    ck('#91 a foe\'s dialog: five band buttons with the DM\'s words, initiative, optional AC, Remove',
+       (foeD.match(/data-cband="[0-4]"/g) || []).length === 5 && /barely hurt/.test(foeD) && /id="cdInit"/.test(foeD) && /id="cdAC"/.test(foeD) && /id="cdRemove"/.test(foeD), foeD);
+    const pD = X.combatantDialogHTML(thorn, X.character);
+    ck('#91 a party member\'s dialog: Exact/Estimate, the HP stepper on Exact, Dead, Remove',
+       /data-ctrack="exact"/.test(pD) && /data-ctrack="estimate"/.test(pD) && /id="cdHp"/.test(pD) && /id="cdDead"/.test(pD) && /id="cdRemove"/.test(pD) && !/data-cband/.test(pD), pD);
+    const yD = X.combatantDialogHTML(mira, X.character);
+    ck('#91 your dialog: initiative only, no Remove, no Dead', /id="cdInit"/.test(yD) && !/id="cdRemove"/.test(yD) && !/id="cdDead"/.test(yD) && /Vitals card/.test(yD));
+    ck('#91 a tie shows Act earlier / Act later', /data-cmove="-1"/.test(X.combatantDialogHTML(X.character.combatants[2], X.character)) || /data-cmove="1"/.test(X.combatantDialogHTML(mira, X.character)));
+
+    X.setCombatant(gob.id, {band: 2});
+    ck('#91 setting a band', X.character.combatants.find(r => r.id === gob.id).band === 2);
+    X.setCombatant(thorn.id, {track: 'estimate'});
+    ck('#91 flipping a party member to Estimate', X.character.combatants.find(r => r.id === thorn.id).track === 'estimate');
+    X.setCombatant(thorn.id, {hp: 30});
+    ck('#91 an exact HP is clamped to 0..max', X.character.combatants.find(r => r.id === thorn.id).hp === 22);
+
+    /* Review Focus 5: ties */
+    const order = () => X.character.combatants.map(r => r.name || 'Mira').join();
+    ck('#91 test setup: Mira and Thorn tied at 12', order() === 'Goblin,Mira,Thorn', order());
+    ck('#91 Act later swaps tied neighbours', X.moveCombatant(mira.id, 1) === true && order() === 'Goblin,Thorn,Mira', order());
+    ck('#91 ...but never past a different roll', X.moveCombatant(X.character.combatants[1].id, -1) === false && order() === 'Goblin,Thorn,Mira', order());
+    X.setCombatant(gob.id, {init: 5});
+    ck('#91 a changed initiative re-sorts and keeps the actor', order() === 'Thorn,Mira,Goblin' && X.character.combatTurn === gob.id, order());
+
+    /* Review Focus 1: remove the actor */
+    X.removeCombatant(gob.id);
+    ck('#91 removing the actor moves the marker to the next living row', X.character.combatants.length === 2 && X.character.combatTurn === X.character.combatants[0].id);
+    ck('#91 you cannot be removed', (X.removeCombatant(mira.id), X.character.combatants.some(r => r.kind === 'you')));
+
+    ck('#91 adding mid-fight needs a name', X.addCombatant('', '10', '') === 'Give it a name.');
+    X.addCombatant('Ogre', '20', '11');
+    ck('#91 ...and slots it in by initiative', X.character.combatants[0].name === 'Ogre' && X.character.combatants[0].ac === 11 && X.character.combatants[0].kind === 'foe', order());
+  } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.closeModal = keep.cm; }
 }
 
 ck.done();

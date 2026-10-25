@@ -2988,6 +2988,12 @@ function block(html, needle, tag) {
   ck('#91 strip chips are at least 44px tall', /\.ini-chip\{[^}]*min-height:44px/.test(cc));
 }
 
+// ---------- #91 the combatant dialog's targets are big enough to tap
+{
+  const mc = fs.readFileSync(path.join(__dirname, '..', 'css', '50-modal.css'), 'utf8');
+  ck('#91 the combatant dialog\'s band buttons are 48px and its steppers 44px', /\.cd-band\{[^}]*min-height:48px/.test(mc) && /\.cd-pm\{[^}]*min-(?:width|height):44px/.test(mc));
+}
+
 /* ================= Fetch all never loses what is loaded (issue #65) ===========
    fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
    imported from a file was discarded, and when the fetch then failed (offline,

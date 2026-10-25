@@ -168,6 +168,9 @@ function wire(){
     if(t.closest("#cvInitMore"))return toggleInitTable();
     if((m=t.closest("[data-inimode]")))return setInitMode(m.dataset.inimode);
     if(t.closest("#iniRolls"))return toggleInitRolls();
+    if((m=t.closest("[data-inichip]")))return openCombatant(m.dataset.inichip);
+    if((m=t.closest("[data-inirow]")))return openCombatant(m.dataset.inirow);
+    if(t.closest("#iniAdd"))return openAddCombatant();
     if((m=t.closest("[data-edtoggle]")))return toggleEditCard(m.dataset.edtoggle);
     // chips: defences, senses, languages (#103)
     if((m=t.closest("[data-chipadd]")))return openChipChooser(m.dataset.chipadd);
