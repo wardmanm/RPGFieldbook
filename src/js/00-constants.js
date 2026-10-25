@@ -99,8 +99,10 @@ function blankChar(){
        weapon id -> {n, hits, misses, kind, snap}. `ammoInit` is NOT defaulted:
        the one-time pass sets it. `ammoRecovery` is the character's rule for what
        comes back (#104): half, all, hits or none; half is the rules as written
-       and what every sheet did before. */
-    ammoSpent:{}, ammoRecovery:"half",
+       and what every sheet did before. `ammoFight` is what a row's Recover
+       gave back during the current fight, per kind: kind -> {fired, back}, so
+       End combat's log line counts it (#47); End combat clears it. */
+    ammoSpent:{}, ammoRecovery:"half", ammoFight:{},
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);

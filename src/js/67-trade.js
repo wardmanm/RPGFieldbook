@@ -10,18 +10,36 @@ function coinsToCp(coins){let t=0;Object.keys(COIN_CP).forEach(k=>{t+=Math.round
 function cpToGpText(cp){const v=Math.round(num(cp))/100;return `${String(Math.round(v*100)/100)} gp`;}
 /* cost is gp and may be fractional (an arrow costs 0.05 gp) — fnum, not num,
    matching inventoryTotal()'s own read of it (25-origins-items.js). */
-function itemWorthCp(it,qty){return Math.round(fnum(it&&it.cost)*100)*Math.max(0,num(qty));}
+function itemWorthCp(it,qty){return Math.round(fnum(it&&it.cost)*100*Math.max(0,num(qty)));}
+/* " · 2 gp" for a line that names what something cost; nothing when it cost nothing */
+function invCostText(cp,pre){return cp>0?pre+cpToGpText(cp)+(pre===" ("?")":""):"";}
 function invSnap(it){return it==null?null:JSON.parse(JSON.stringify(it));}
 function invSame(a,b){
   const norm=v=>Array.isArray(v)?v.map(norm):(v&&typeof v==="object")?Object.keys(v).sort().reduce((o,k)=>{o[k]=norm(v[k]);return o;},{}):v;
   return JSON.stringify(norm(a))===JSON.stringify(norm(b));
+}
+/* What each kind's `undo` must look like to be applied (final review M2): an
+   imported, hand-edited or future file's undo that doesn't fit is dropped,
+   keeping its line, so the Log dialog never reads a field that isn't there. */
+function invIsObj(v){return !!v&&typeof v==="object"&&!Array.isArray(v);}
+function invUndoShape(kind,u){
+  if(!invIsObj(u))return null;
+  const copy=v=>v==null||invIsObj(v);
+  const rows=a=>Array.isArray(a)&&a.every(p=>invIsObj(p)&&p.id!=null&&copy(p.snap)&&copy(p.atk));
+  if(kind==="add"||kind==="give")return rows(u.items)?u:null;
+  if(kind==="edit")return invIsObj(u.before)&&invIsObj(u.after)&&u.after.id!=null?u:null;
+  if(kind==="delete")return invIsObj(u.snap)&&copy(u.atk)?u:null;
+  if(kind==="use")return u.id!=null&&copy(u.snap)&&copy(u.atk)?u:null;
+  if(kind==="coins")return invIsObj(u.delta)?u:null;
+  if(kind==="trade")return Array.isArray(u.parts)&&u.parts.every(p=>invIsObj(p)&&["give","add","coins"].indexOf(p.kind)>=0&&invUndoShape(p.kind,p.u))?u:null;
+  return null;   /* grant and ammo have no undo */
 }
 function cleanInvLog(v,size){
   const n=INV_LOG_SIZES.indexOf(num(size))>=0?num(size):500;
   return (Array.isArray(v)?v:[]).filter(e=>e&&typeof e==="object"&&INV_KINDS.indexOf(e.kind)>=0&&num(e.at)>0)
     .map(e=>({id:String(e.id||uid()),at:num(e.at),kind:e.kind,title:String(e.title||""),
       lines:(Array.isArray(e.lines)?e.lines:[]).filter(l=>l&&typeof l==="object").map(l=>({dir:l.dir==="+"||l.dir==="-"?l.dir:"",text:String(l.text||"")})),
-      undo:(e.undo&&typeof e.undo==="object")?e.undo:null,undone:e.undone===true,meta:(e.meta&&typeof e.meta==="object")?e.meta:{}}))
+      undo:invUndoShape(e.kind,e.undo),undone:e.undone===true,meta:(e.meta&&typeof e.meta==="object")?e.meta:{}}))
     .slice(0,n);
 }
 function logInv(entry){
@@ -32,23 +50,36 @@ function logInv(entry){
   if(character.invLog.length>n)character.invLog.length=n;
   return e;
 }
+/* The log size setting (final review M1). A smaller size trims at once — but
+   when that would drop lines it asks first, and declined, the size stays.
+   (Spec §2 decision 3 said "at the next write"; trimming at once is the
+   deliberate deviation, recorded in As built.) Returns whether it changed. */
+function setInvLogSize(n){
+  if(INV_LOG_SIZES.indexOf(num(n))<0)return false;
+  const len=(character.invLog||[]).length,drop=len-num(n);
+  if(drop>0&&!confirm(`Keep the newest ${num(n).toLocaleString("en-US")}? This removes ${drop.toLocaleString("en-US")} older line${drop===1?"":"s"}.`))return false;
+  character.invLogSize=num(n);
+  character.invLog=cleanInvLog(character.invLog,character.invLogSize);
+  scheduleSave();
+  return true;
+}
 function grantSourceName(sid){const s=String(sid||"");return s.slice(s.indexOf(":")+1)||s;}
 /* One line per source: a class's starting gear arrives as several calls in a row. */
 function logGrant(sid,line){
   const top=(character.invLog||[])[0];
-  if(top&&top.kind==="grant"&&top.meta&&top.meta.sid===sid&&Date.now()-num(top.at)<5000){top.lines.push(line);return top;}
+  if(top&&top.kind==="grant"&&top.meta&&top.meta.sid===sid&&!top.meta.revert&&Date.now()-num(top.at)<5000){top.lines.push(line);return top;}
   return logInv({kind:"grant",title:"Granted by "+grantSourceName(sid),lines:[line],undo:null,meta:{sid}});
 }
 /* ---- every writer logs exactly once (#47 Task 2) ---- */
 function invName(id){const it=(character.inventory||[]).find(x=>x.id===id);return it?String(it.name||"Item"):"Item";}
 function logFinderAdd(did){
   if(!did||!did.length)return;
-  const lines=did.map(d=>({dir:"+",text:`${invName(d.id)} ×${d.qty}`}));
+  const lines=did.map(d=>{const it=(character.inventory||[]).find(x=>x.id===d.id);return {dir:"+",text:`${invName(d.id)} ×${d.qty}${invCostText(itemWorthCp(it,d.qty)," · ")}`};});
   logInv({kind:"add",title:did.length===1?"Added "+invName(did[0].id):`Added ${did.length} items`,lines,undo:{items:did}});
 }
 /* The item form: a new item is an add; an edit is logged only if something changed. */
 function logItemSave(before,after){
-  if(!before){logInv({kind:"add",title:"Added "+(after.name||"Item"),lines:[{dir:"+",text:`${after.name||"Item"} ×${itemQty(after)}`}],undo:{items:[{id:after.id,qty:itemQty(after),created:true}]}});return;}
+  if(!before){const q=itemQty(after);logInv({kind:"add",title:"Added "+(after.name||"Item"),lines:[{dir:"+",text:`${after.name||"Item"} ×${q}${invCostText(itemWorthCp(after,q)," · ")}`}],undo:{items:[{id:after.id,qty:q,created:true}]}});return;}
   if(invSame(before,after))return;
   const lines=[];
   if(itemQty(before)!==itemQty(after))lines.push({dir:"",text:`Quantity ${itemQty(before)} → ${itemQty(after)}`});
@@ -64,56 +95,84 @@ function logCoins(title,delta){
   return logInv({kind:"coins",title,lines,undo:{delta:d}});
 }
 /* ---- item helpers for undo (and the trade) ---- */
+/* Takes `qty` off a row, removing it (and its attack) at 0. It ALWAYS returns
+   a copy of the row, its attack and where both stood, taken before the change
+   (final review K1): an undo can then bring the row back even when it has
+   gone since for some other reason — fired, sold, deleted. */
 function invRemoveQty(id,qty){
-  const it=(character.inventory||[]).find(x=>x.id===id);if(!it)return {removed:false,snap:null,atk:null};
-  const left=itemQty(it)-num(qty);
+  const it=(character.inventory||[]).find(x=>x.id===id);if(!it)return {removed:false,snap:null,atk:null,at:null,atkAt:null};
+  const left=itemQty(it)-num(qty),at=character.inventory.indexOf(it),snap=invSnap(it);
+  const a0=(character.attacks||[]).find(a=>a.itemId===id)||null,atk=invSnap(a0),atkAt=a0?character.attacks.indexOf(a0):null;
   if(left<=0){
-    const at=character.inventory.indexOf(it),snap=invSnap(it),atk=invSnap((character.attacks||[]).find(a=>a.itemId===id)||null);
     character.inventory=character.inventory.filter(x=>x.id!==id);
     character.attacks=(character.attacks||[]).filter(a=>a.itemId!==id);
     forgetAmmo(character,id);
-    return {removed:true,snap,atk,at};
+    return {removed:true,snap,atk,at,atkAt};
   }
-  it.qty=left;return {removed:false,snap:null,atk:null};
+  it.qty=left;return {removed:false,snap,atk,at,atkAt};
 }
-/* `at` is where the row stood: it goes back there, clamped to the list, as
-   the ammo undo does (62-ammo.js undoFire). An old line with no `at` appends. */
-function invRestore(snap,atk,at){
+/* `at` is where the row stood and `atkAt` where its attack stood: each goes
+   back there, clamped to its list, as the ammo undo does (62-ammo.js
+   undoFire). An old line with no index appends. `qty`, when given, is how many
+   come back (a copy taken before a partial Use or give holds the whole stack).
+   A granted item whose source has since been removed comes back as an
+   ordinary item (final review M3): nothing could ever revert that grant. */
+function invRestore(snap,atk,at,atkAt,qty){
   const it=invSnap(snap);if((character.inventory||[]).some(x=>x.id===it.id))it.id=uid();
-  if(Number.isInteger(at)&&at>=0)character.inventory.splice(Math.min(character.inventory.length,at),0,it);
-  else character.inventory.push(it);
-  if(atk){const a=invSnap(atk);a.itemId=it.id;if((character.attacks||[]).some(x=>x.id===a.id))a.id=uid();character.attacks.push(a);it.attackId=a.id;}
+  if(qty!=null)it.qty=num(qty);
+  if(it.grant&&!grantSidLive(character,it.grant)){if(!it.origin)it.origin=originFromSid(it.grant);delete it.grant;}
+  const put=(list,x,i)=>{if(Number.isInteger(i)&&i>=0)list.splice(Math.min(list.length,i),0,x);else list.push(x);};
+  put(character.inventory,it,at);
+  if(atk){const a=invSnap(atk);a.itemId=it.id;if(!Array.isArray(character.attacks))character.attacks=[];if(character.attacks.some(x=>x.id===a.id))a.id=uid();put(character.attacks,a,atkAt);it.attackId=a.id;}
   return it.id;
 }
 /* ---- undo ---- */
-const INV_WHY={add:"It has since been used, sold or removed.",edit:"It has been changed again since.",gone:"It is no longer in your inventory."};
-function invCheckPart(kind,u){
-  if(kind==="add"){for(const p of (u.items||[])){const it=(character.inventory||[]).find(x=>x.id===p.id);if(!it||itemQty(it)<num(p.qty))return INV_WHY.add;}return "";}
-  if(kind==="edit"){const it=(character.inventory||[]).find(x=>x.id===u.after.id);return (it&&invSame(it,u.after))?"":INV_WHY.edit;}
+/* The check is exactly what the apply step can do (final review K1): a line
+   passes only when its undo will put something back. Inside a trade (`named`)
+   a reason names the item, since one trade moves several. */
+const INV_WHY={add:"It has since been used, sold or removed.",edit:"It has been changed again since.",gone:"It is no longer in your inventory.",broken:"This line can't be undone."};
+function invRow(id){return (character.inventory||[]).find(x=>x.id===id)||null;}
+function invCheckPart(kind,u,named){
+  if(kind==="add"){for(const p of u.items){const it=invRow(p.id);if(!it||itemQty(it)<num(p.qty)){const nm=String(p.name||(it&&it.name)||"");return named&&nm?`The ${nm} you got has since been used, sold or removed.`:INV_WHY.add;}}return "";}
+  if(kind==="give"){for(const p of u.items){if(!invRow(p.id)&&!p.snap){const nm=String(p.name||"");return nm?`The ${nm} you gave can't come back: this line kept no copy of it.`:INV_WHY.gone;}}return "";}
+  if(kind==="edit"){const it=invRow(u.after.id);return (it&&invSame(it,u.after))?"":INV_WHY.edit;}
   if(kind==="coins"){
-    for(const k of Object.keys(u.delta||{})){const d=num(u.delta[k]);if(d>0&&num((character.coins||{})[k])<d){const c=COIN_ALL.find(x=>x[0]===k);return `Not enough ${c?c[1]:k.toUpperCase()} left to take back.`;}}
+    for(const k of Object.keys(u.delta)){const d=num(u.delta[k]);if(d>0&&num((character.coins||{})[k])<d){const c=COIN_ALL.find(x=>x[0]===k);return `Not enough ${c?c[1]:k.toUpperCase()} left to take back.`;}}
     return "";
   }
-  return "";   /* delete and use are always clean */
+  if(kind==="use"){
+    /* the row gives back the quantity or the use; a copy brings back what was used up */
+    const it=invRow(u.id);
+    if(it)return num(u.qty)>0||(num(u.used)>0&&it.uses)?"":INV_WHY.edit;
+    return u.snap&&num(u.qty)>0?"":INV_WHY.gone;
+  }
+  if(kind==="delete")return "";   /* its shape guarantees the copy */
+  return INV_WHY.broken;
 }
 function invUndoCheck(e){
   if(!e||e.undone)return {ok:false,why:e&&e.undone?"Already undone.":""};
   if(!e.undo||e.kind==="grant"||e.kind==="ammo")return {ok:false,why:""};
-  if(e.kind==="trade"){for(const p of (e.undo.parts||[])){const w=invCheckPart(p.kind,p.u);if(w)return {ok:false,why:w};}return {ok:true,why:""};}
-  const w=invCheckPart(e.kind,e.undo);return {ok:!w,why:w};
+  /* never throws: a shape cleanInvLog() didn't see (or a future one) is refused */
+  try{
+    if(!invUndoShape(e.kind,e.undo))return {ok:false,why:INV_WHY.broken};
+    if(e.kind==="trade"){for(const p of e.undo.parts){const w=invCheckPart(p.kind,p.u,true);if(w)return {ok:false,why:w};}return {ok:true,why:""};}
+    const w=invCheckPart(e.kind,e.undo,false);return {ok:!w,why:w};
+  }catch(err){return {ok:false,why:INV_WHY.broken};}
 }
 function invApplyPart(kind,u){
   if(kind==="add")(u.items||[]).forEach(p=>{const it=character.inventory.find(x=>x.id===p.id);if(!it)return;if(p.created&&itemQty(it)<=num(p.qty))invRemoveQty(p.id,itemQty(it));else invRemoveQty(p.id,p.qty);});
   else if(kind==="edit"){const i=character.inventory.findIndex(x=>x.id===u.after.id);if(i>=0){character.inventory[i]=invSnap(u.before);syncItemAttack(character.inventory[i]);}}
-  else if(kind==="delete")invRestore(u.snap,u.atk,u.at);
+  else if(kind==="delete")invRestore(u.snap,u.atk,u.at,u.atkAt);
   else if(kind==="use"){
-    const it=(character.inventory||[]).find(x=>x.id===u.id);
+    /* the row still here: add back; gone: its copy, with the quantity used */
+    const it=invRow(u.id);
     if(it){if(num(u.qty))it.qty=itemQty(it)+num(u.qty);if(num(u.used)&&it.uses)it.uses.used=Math.max(0,num(it.uses.used)-num(u.used));}
-    else if(u.snap)invRestore(u.snap,u.atk||null,u.at);
+    else if(u.snap)invRestore(u.snap,u.atk||null,u.at,u.atkAt,num(u.qty));
   }
   else if(kind==="coins"){character.coins=character.coins||{};Object.keys(u.delta||{}).forEach(k=>{character.coins[k]=num(character.coins[k])-num(u.delta[k]);});}
-  /* newest removal first: each `at` was read with the earlier removals already gone */
-  else if(kind==="give")(u.items||[]).slice().reverse().forEach(p=>{const it=character.inventory.find(x=>x.id===p.id);if(it)it.qty=itemQty(it)+num(p.qty);else if(p.snap)invRestore(p.snap,p.atk,p.at);});
+  /* newest removal first: each `at` was read with the earlier removals already
+     gone. The row still here: add back; gone: its copy, with the quantity given. */
+  else if(kind==="give")(u.items||[]).slice().reverse().forEach(p=>{const it=invRow(p.id);if(it)it.qty=itemQty(it)+num(p.qty);else if(p.snap)invRestore(p.snap,p.atk,p.at,p.atkAt,num(p.qty));});
 }
 function invUndo(id){
   const e=(character.invLog||[]).find(x=>x.id===id);if(!e)return "That line is no longer in the log.";
@@ -135,6 +194,9 @@ function invDayLabel(at){
 function invLogHTML(list,filter,size){
   const kinds=INV_FILTERS[filter]||null,rows=(list||[]).filter(e=>!kinds||kinds.indexOf(e.kind)>=0);
   let day="",out=`<div class="il-filters">`+Object.keys(INV_FILTERS).map(f=>`<button type="button" class="il-f${f===filter?" on":""}" data-ilfilter="${esc(f)}" aria-pressed="${f===filter?"true":"false"}">${esc(f[0].toUpperCase()+f.slice(1))}</button>`).join("")+`</div>`;
+  /* one scroller for the rows (final review C5), as the trade's .tr-sides is:
+     the filters and the foot stay put above and below it */
+  out+=`<div class="il-scroll">`;
   if(!rows.length)out+=`<p class="empty">Nothing logged yet.</p>`;
   rows.forEach(e=>{
     const dl=invDayLabel(e.at);if(dl!==day){day=dl;out+=`<div class="il-day">${esc(dl)}</div>`;}
@@ -144,10 +206,10 @@ function invLogHTML(list,filter,size){
            :`<button type="button" class="tbtn il-undo" data-invundo="${esc(e.id)}" disabled title="${esc(c.why)}">Undo</button><small class="il-why">${esc(c.why)}</small>`);
     const lines=(e.lines||[]).map(l=>`<div class="il-l ${esc(l.dir==="+"?"in":l.dir==="-"?"out":"")}">${esc(l.text)}</div>`).join("");
     out+=`<div class="il-e${e.undone?" undone":""}" data-ilid="${esc(e.id)}"><span class="il-ic" aria-hidden="true">${INV_ICON[e.kind]||"•"}</span>`+
-      `<div class="il-tx"><b>${esc(e.title)}</b>${e.kind==="trade"?`<details><summary>Receipt</summary>${lines}</details>`:lines}</div>`+
+      `<div class="il-tx"><b>${esc(e.title)}</b>${e.kind==="trade"&&lines?`<details><summary>Receipt</summary>${lines}</details>`:lines}</div>`+
       `<div class="il-side"><span class="il-t">${esc(time)}</span>${undo}</div></div>`;
   });
-  return out+`<div class="il-foot"><span>Keeps the newest ${esc(String(size))}.</span><button type="button" class="tbtn danger" id="invLogClear">Clear log</button></div>`;
+  return out+`</div><div class="il-foot"><span>Keeps the newest ${esc(String(size))}.</span><button type="button" class="tbtn danger" id="invLogClear">Clear log</button></div>`;
 }
 function openInvLog(){
   const paint=()=>{const b=document.getElementById("mBody");if(b)b.innerHTML=invLogHTML(character.invLog||[],_invLogFilter,character.invLogSize||500);};
@@ -189,7 +251,7 @@ function tradeClamp(d,ch){
 }
 function tradeEmpty(d){return !d.give.items.length&&!d.get.items.length&&!coinsToCp(d.give.coins)&&!coinsToCp(d.get.coins);}
 /* cost is gp of ONE and may be fractional: fnum, as itemWorthCp() reads it */
-function tradeGetCp(g){return Math.round(fnum(g.cost)*100)*Math.max(0,num(g.qty));}
+function tradeGetCp(g){return Math.round(fnum(g.cost)*100*Math.max(0,num(g.qty)));}
 function tradeBalance(d,ch){
   const inv=(ch&&ch.inventory)||[];
   let giveCp=coinsToCp(d.give.coins),getCp=coinsToCp(d.get.coins);
@@ -262,14 +324,16 @@ function completeTrade(d){
   d.give.items.forEach(g=>{
     const it=(character.inventory||[]).find(x=>x.id===g.id);if(!it)return;
     const q=Math.min(Math.max(0,num(g.qty)),itemQty(it)),nm=String(it.name||"Item");if(q<=0)return;
-    const r=invRemoveQty(g.id,q);
-    giveRecs.push({id:g.id,qty:q,snap:r.removed?r.snap:null,atk:r.removed?r.atk:null,at:r.removed?r.at:null});
-    lines.push({dir:"-",text:`${nm} ×${q}`});
+    const worth=itemWorthCp(it,q),r=invRemoveQty(g.id,q);
+    /* a copy every time (final review K1): undo restores it if the row has gone since */
+    giveRecs.push({id:g.id,qty:q,name:nm,snap:r.snap,atk:r.atk,at:r.at,atkAt:r.atkAt});
+    lines.push({dir:"-",text:`${nm} ×${q}${invCostText(worth," (")}`});
   });
-  /* 2. coins: the net change per denomination, giving capped at what you hold */
+  /* 2. coins: the net change per denomination, giving capped at what you hold;
+     the receipt lists them high to low, as the coin card does (pp → cp) */
   character.coins=character.coins||{};
   const delta={},cl=k=>{const c=COIN_ALL.find(x=>x[0]===k);return c?c[1]:k.toUpperCase();};
-  Object.keys(COIN_CP).forEach(k=>{
+  Object.keys(COIN_CP).reverse().forEach(k=>{
     const gv=Math.min(Math.max(0,Math.round(num(d.give.coins[k]))),Math.max(0,num(character.coins[k]))),gt=Math.max(0,Math.round(num(d.get.coins[k])));
     if(gv)lines.push({dir:"-",text:`${gv} ${cl(k)}`});
     if(gt)lines.push({dir:"+",text:`${gt} ${cl(k)}`});
@@ -281,12 +345,14 @@ function completeTrade(d){
     const q=Math.min(999,Math.max(1,num(g.qty))),cost=Math.max(0,fnum(g.cost));
     if(g.custom||!g.def){
       const name=String(g.name||"").trim()||"Custom item";
-      const it={id:uid(),name,qty:q,cost,origin:{kind:"custom",detail:who?"traded from "+who:"traded",at:Date.now()}};
-      character.inventory.push(it);gotRecs.push({id:it.id,qty:q,created:true});
-      lines.push({dir:"+",text:`${name} ×${q}`});
+      /* the fields every other way of making an item gives it (final review I1) */
+      const it={id:uid(),name,qty:q,description:"",effects:[],equipped:false,cost,origin:{kind:"custom",detail:who?"traded from "+who:"traded",at:Date.now()}};
+      character.inventory.push(it);gotRecs.push({id:it.id,qty:q,created:true,name});
+      lines.push({dir:"+",text:`${name} ×${q}${invCostText(Math.round(cost*100*q)," (")}`});
     }else{
-      addLibraryItems([g.def],{kind:"traded",detail:who,at:Date.now()},cost,q).forEach(r=>gotRecs.push(r));
-      lines.push({dir:"+",text:`${g.name||g.def.name||"Item"} ×${q}`});
+      const nm=String(g.name||g.def.name||"Item");
+      addLibraryItems([g.def],{kind:"traded",detail:who,at:Date.now()},cost,q).forEach(r=>gotRecs.push(Object.assign(r,{name:nm})));
+      lines.push({dir:"+",text:`${nm} ×${q}${invCostText(Math.round(cost*100*q)," (")}`});
     }
   });
   lines.push({dir:"",text:`You gave ${cpToGpText(b.giveCp)} · you got ${cpToGpText(b.getCp)}`});

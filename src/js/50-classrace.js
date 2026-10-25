@@ -117,8 +117,11 @@ function applyEquipGrants(grants,sid,pending){
     else if(block)applyEquipOption(block,sid);
   });
 }
-/* remove everything a source granted: inventory items + their linked attacks + granted gold */
+/* remove everything a source granted: inventory items + their linked attacks + granted gold.
+   #47 (final review I2): what left is logged as ONE line, "Removed with <source>",
+   with no Undo — granting again belongs to the source, not to the log. */
 function revertEquipmentGrants(sid){
+  const gone=character.inventory.filter(i=>i.grant===sid).map(i=>({dir:"-",text:`${String(i.name||"Item")} ×${itemQty(i)}`}));
   const rmIds=character.inventory.filter(i=>i.grant===sid).map(i=>i.id);
   /* a granted stack's spent count goes with it, or Recover would bring it back —
      by id for a stack still here, and by the snapshot's own grant for one
@@ -127,7 +130,10 @@ function revertEquipmentGrants(sid){
   forgetGrantAmmo(character,sid);
   character.inventory=character.inventory.filter(i=>i.grant!==sid);
   if(rmIds.length)character.attacks=(character.attacks||[]).filter(a=>!rmIds.includes(a.itemId));
-  if(character.grantGold&&character.grantGold[sid]){const k=goldKey();character.coins=character.coins||{};character.coins[k]=Math.max(0,num(character.coins[k])-num(character.grantGold[sid]));delete character.grantGold[sid];}
+  if(character.grantGold&&character.grantGold[sid]){const k=goldKey();character.coins=character.coins||{};
+    const was=num(character.coins[k]);character.coins[k]=Math.max(0,was-num(character.grantGold[sid]));delete character.grantGold[sid];
+    if(was-character.coins[k]>0)gone.push({dir:"-",text:`${was-character.coins[k]} ${k.toUpperCase()}`});}
+  if(gone.length)logInv({kind:"grant",title:"Removed with "+grantSourceName(sid),lines:gone,undo:null,meta:{sid,revert:true}});
 }
 function grantFeatDef(featName,origin,pending){
   const fd=findFeatDef(featName)||{name:featName,description:"",effects:[]};

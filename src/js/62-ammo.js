@@ -344,6 +344,26 @@ function ammoFightSummary(c){
   });
   return [...by.values()];
 }
+/* What a row's Recover gave back during a fight (#47, final review I2): it
+   clears the counts ammoFightSummary() reads, so it is kept per kind in
+   c.ammoFight until End combat, whose log line adds it in. Outside a fight
+   there is no fight line to count it in, so nothing is kept. */
+function ammoFightMap(c){const m=c&&c.ammoFight;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
+function ammoFightKeep(c,list){
+  if(!inCombat(c)||!list.length)return;
+  if(!c.ammoFight||typeof c.ammoFight!=="object"||Array.isArray(c.ammoFight))c.ammoFight={};
+  list.forEach(r=>{const k=ammoKindOf(r.kind);if(!k)return;const o=ammoFightMap(c)[k]||{};
+    c.ammoFight[k]={fired:Math.max(0,num(o.fired))+num(r.fired),back:Math.max(0,num(o.back))+num(r.back)};});
+}
+/* The fight's totals per kind for End combat's line: what is still counted
+   (ammoFightSummary) plus what the rows already recovered (ammoFight). */
+function ammoFightTotals(c){
+  const by=new Map(ammoFightSummary(c).map(r=>[r.kind,Object.assign({},r)]));
+  Object.keys(ammoFightMap(c)).forEach(k=>{const o=ammoFightMap(c)[k],f=Math.max(0,num(o&&o.fired)),b=Math.max(0,num(o&&o.back));if(!f&&!b)return;
+    const r=by.get(k)||{kind:k,fired:0,back:0};r.fired+=f;r.back+=b;by.set(k,r);});
+  return [...by.values()];
+}
+function ammoLogTitle(kind,fired,back){const nm=ammoPlural(kind);return `${nm.charAt(0).toUpperCase()+nm.slice(1)}: ${fired} fired, ${back} recovered`;}
 /* Gives back what each entry's rule allows (#104), for the kinds asked
    (every kind when none are) — or, when `ids` is given, for those ammoSpent
    entries only (a thrown weapon's row recovers its own entry: final review,
@@ -711,6 +731,7 @@ function recoverWeaponAmmo(itemId,viaKey){
   const list=thrown?(e.n&&e.kind?[{kind:e.kind,fired:e.n,back:ammoThrownBack(character,it)}]:[])
                    :ammoRecoverable(character).filter(r=>r.kind===kind);
   const back=thrown?recoverAmmo(character,null,undefined,[it.id]):recoverAmmo(character,[kind]);
+  ammoFightKeep(character,list);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
   toast(back?`Recovered ${ammoSummaryText(list)}`:`No ${ammoPlural(kind)} to recover`);
@@ -733,12 +754,17 @@ function applyAmmoRecovery(){
   recoverAmmo(character,null,rec);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
-  return list.length?{text:`recovered ${ammoSummaryText(list)}`,rec}:null;
+  return list.length?{text:`recovered ${ammoSummaryText(list)}`,rec,list}:null;
 }
-/* The End combat toast's Undo recovery: only for the character it was shown for. */
-function undoRecoveryTap(rec,who){
+/* The End combat toast's Undo recovery: only for the character it was shown for.
+   `amend` ({lines, list}) is End combat's log lines and what its recovery gave
+   per kind: undone, that comes back off each line's "recovered" (#47). */
+function undoRecoveryTap(rec,who,amend){
   if(!character||character!==who)return false;
   if(!undoRecovery(character,rec))return false;
+  if(amend&&Array.isArray(amend.lines)&&Array.isArray(amend.list))amend.list.forEach(r=>{
+    const l=amend.lines.find(x=>x.kind===r.kind);if(!l||!l.e||!l.e.meta)return;
+    l.e.meta.back=Math.max(0,num(l.e.meta.back)-num(r.back));l.e.title=ammoLogTitle(r.kind,num(l.e.meta.fired),l.e.meta.back);});
   scheduleSave();
   renderInventory();renderAttacks();recompute();
   toast("Recovery undone");

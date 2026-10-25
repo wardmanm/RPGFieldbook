@@ -239,7 +239,7 @@ function openSettings(){
     b.classList.toggle("on",show);b.setAttribute("aria-checked",show?"true":"false");
   }));
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
-  {const s=document.getElementById("setInvLogSize");if(s)s.addEventListener("change",()=>{character.invLogSize=num(s.value);character.invLog=cleanInvLog(character.invLog,character.invLogSize);scheduleSave();});}
+  {const s=document.getElementById("setInvLogSize");if(s)s.addEventListener("change",()=>{if(!setInvLogSize(num(s.value)))s.value=String(character.invLogSize);});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());

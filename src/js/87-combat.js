@@ -62,7 +62,7 @@ function moveCombatSection(list,from,to){
 
 /* Start always means round 1, even over a round the Active Spells card left
    behind. Active spells are not touched: their time moves only when rounds do. */
-function combatStart(c){c.combatActive=true;c.combatRound=1;}
+function combatStart(c){c.combatActive=true;c.combatRound=1;c.ammoFight={};}
 /* The summary counts the round being ended as finished (round 7 → 7 rounds,
    42 sec), while the header shows the time at the START of the current round
    (combatElapsedSec: round 7 → 36 sec). Both on purpose — don't "fix" one to
@@ -356,16 +356,18 @@ function endCombatAsk(){
   const r=num(character.combatRound);
   if(!confirm(`End combat at round ${r}?`))return false;
   /* one log line per ammunition kind fired this fight (#47) — read before
-     combatEnd/applyAmmoRecovery below ever touch ammoSpent; no undo, so it's
-     written and done */
-  ammoFightSummary(character).forEach(a=>{const nm=ammoPlural(a.kind);
-    logInv({kind:"ammo",title:`${nm.charAt(0).toUpperCase()+nm.slice(1)}: ${a.fired} fired, ${a.back} recovered`,lines:[],undo:null,meta:{rounds:r}});});
+     combatEnd/applyAmmoRecovery below ever touch ammoSpent, and counting what
+     the rows' Recover already gave back (ammoFight). No undo of its own; the
+     toast's Undo recovery takes its recovery back off the line. */
+  const logged=ammoFightTotals(character).map(a=>({kind:a.kind,e:logInv({kind:"ammo",title:ammoLogTitle(a.kind,a.fired,a.back),
+    lines:[{dir:"",text:`Fight of ${r} round${r===1?"":"s"}`}],undo:null,meta:{rounds:r,kind:a.kind,fired:a.fired,back:a.back}})}));
+  character.ammoFight={};
   const s=combatEnd(character);
   renderActiveSpells();renderCombatChrome();scheduleSave();
   /* then the ammunition (#104): recovered by the rule, with an Undo recovery on the toast */
   const got=applyAmmoRecovery(), who=character;
   const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`+(got?` · ${got.text}`:"");
-  toast(msg,got?{label:"Undo recovery",run:()=>undoRecoveryTap(got.rec,who)}:undefined);setCombatLive(msg);
+  toast(msg,got?{label:"Undo recovery",run:()=>undoRecoveryTap(got.rec,who,{lines:logged,list:got.list})}:undefined);setCombatLive(msg);
   return true;
 }
 

@@ -246,10 +246,10 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 .il-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .il-f{font-family:var(--head);font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
   background:var(--field);border:1.5px solid var(--line);border-radius:99px;color:var(--ink-soft);padding:6px 12px;cursor:pointer;min-height:44px}
-.il-f.on{background:var(--accent);color:#20160a;border-color:var(--accent)}
+.il-f.on{background:var(--accent);color:var(--paper);border-color:var(--accent)}
 .il-day{font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);
   margin:14px 0 4px;padding-bottom:4px;border-bottom:1.5px solid var(--line)}
-.il-day:first-of-type{margin-top:2px}
+.il-scroll>.il-day:first-child{margin-top:2px}
 .il-e{display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:8px 0;border-bottom:1px dotted var(--hair)}
 .il-ic{flex:0 0 22px;text-align:center;font-size:15px;line-height:1.6;color:var(--accent)}
 .il-tx{flex:1 1 auto;min-width:0}
@@ -267,12 +267,14 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 .il-e.undone .il-tx b,.il-e.undone .il-l{text-decoration:line-through}
 .il-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1.5px solid var(--line)}
 .il-foot span{font-size:12px;color:var(--ink-soft)}
-/* The log sits straight in the wide dialog's body, which does not scroll (it is
-   a flex column for Settings' own scrollers): with more lines than fit, the rows
-   shrank into each other and the rest could not be reached. Here the body
-   scrolls, and each piece keeps its height. */
-.modal.wide .m-body:has(> .il-filters){overflow-y:auto;padding-right:14px}
-.m-body>.il-filters,.m-body>.il-day,.m-body>.il-e,.m-body>.il-foot,.m-body>.empty{flex:none}
+/* The log sits in the wide dialog's body, which does not scroll (it is a flex
+   column for Settings' own scrollers). Its rows scroll in their own box, as the
+   trade's .tr-sides does, with the filters above and the foot below staying put
+   (final review C5: this was a :has() rule on the body, which a browser without
+   :has() never applied, leaving a long log squashed and out of reach). */
+.il-filters,.il-foot{flex:none}
+.il-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:10px}
+.il-foot{padding-bottom:12px}
 /* the Inventory card sits in the plain stack, not the Sheet's container-query
    columns (30-sheet.css), so the narrow-card rule below ~380px of card width
    uses a media query instead: the Log button drops its word, keeps its icon. */

@@ -6538,7 +6538,7 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     X.character.ammoSpent = {s1: {n: 12, kind: 'arrow', snap: {id: 's1', name: 'Arrow'}}};
     const sum = X.ammoFightSummary(X.character);
     ck('#47 ammoFightSummary totals what was fired per kind', sum.length === 1 && sum[0].kind === 'arrow' && sum[0].fired === 12, sum);
-    ck('#47 End combat logs one ammo line per kind fired', /ammoFightSummary\(character\)[\s\S]{0,400}logInv\(\{kind:"ammo"/.test(src('87-combat.js')));
+    ck('#47 End combat logs one ammo line per kind fired', /ammoFightTotals\(character\)[\s\S]{0,400}logInv\(\{kind:"ammo"/.test(src('87-combat.js')));
   } finally { Object.assign(ctx, {scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, renderCoins: keep.rc, recompute: keep.rq, restSummary: keep.rsum, renderStatuses: keep.rst}); X.character = keep.ch; X.rules = keep.rules; }
 }
 
@@ -6674,8 +6674,305 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#47 the picker reads a fractional Cost override (0.5 gp is not 0)', /costOverride=\(oc&&oc\.value!==""\)\?Math\.max\(0,fnum\(oc\.value\)\)/.test(src('85-browse.js')));
   ck('#47 a coin box shows the whole number the draft holds', /if\(t\.value!==""&&t\.value!==String\(v\)\)t\.value=String\(v\)/.test(src('67-trade.js')));
   ck('#47 a merged finder add keeps its Cost override', /if\(ex\)\{ex\.qty=[^}]*if\(costOverride!=null\)ex\.cost=costOverride;return;\}/.test(src('67-trade.js')));
-  ck('#47 Use records where the row stood', /at:u\.consume&&itemQty\(snap0\)<=1\?at0:null/.test(src('80-modal-forms.js')));
+  /* "Use records where the row stood" now holds for every Use: the final-review K1 check below */
   ck('#47 the picker calls cfg.onClose only when it closes without adding', /#brClose"\)\)\{closeBrowse\(\);if\(cfg\.onClose\)cfg\.onClose\(\);/.test(src('85-browse.js')));
+}
+
+
+// ---------- #47 final review fixes (K1, I1, I2, C1, C4, C5, M1-M9)
+{
+  const fs = require('fs'), path = require('path');
+  const src = n => fs.readFileSync(path.join(__dirname, '..', 'js', n), 'utf8');
+  const css = n => fs.readFileSync(path.join(__dirname, '..', 'css', n), 'utf8');
+  const STUB = ['scheduleSave', 'renderInventory', 'renderAttacks', 'renderCoins', 'recompute', 'restSummary', 'renderStatuses', 'renderHP',
+    'renderActiveSpells', 'renderCombatChrome', 'setCombatLive', 'toast', 'openModal', 'closeModal'];
+  const keep = {ch: X.character, rules: X.rules, conf: state.confirm, gid: ctx.document.getElementById};
+  STUB.forEach(n => { keep[n] = ctx[n]; ctx[n] = () => null; });
+  const fresh = () => { X.character = X.blankChar(); X.character.system = 'dnd'; X.character.inventory = []; X.character.attacks = []; X.character.coins = {gp: 40, sp: 0, cp: 0}; return X.character; };
+  const top = () => X.character.invLog[0];
+  const undids = () => X.character.invLog.filter(e => /^Undid:/.test(e.title)).length;
+  try {
+    /* ---- K1: an undo never reports success while restoring nothing ---- */
+    fresh(); X.character.inventory = [{id: 'p', name: 'Potion', qty: 2, use: {consume: true}}];
+    X.applyItemUse(X.character.inventory[0], {consume: true}, 0, '');
+    const useA = top();
+    X.character.inventory = [];   /* the other potion deleted */
+    ck('#47 K1 case A: use 1 of 2 potions, delete the other, undo the Use: one potion back',
+       X.invUndoCheck(useA).ok === true && X.invUndo(useA.id) === '' && X.character.inventory.length === 1 &&
+       X.character.inventory[0].name === 'Potion' && X.character.inventory[0].qty === 1 && useA.undone === true, X.character.inventory);
+
+    fresh(); X.character.coins = {gp: 0, sp: 0, cp: 0};
+    X.character.inventory = [{id: 'bow', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+      {id: 'ar', name: 'Arrow', qty: 5, cost: 0.05, ammo: {kind: 'arrow'}}];
+    let d = X.newTradeDraft({with: 'Olvin'}); d.give.items = [{id: 'ar', qty: 2}]; d.get.coins = {sp: 1};
+    const tB = X.completeTrade(d);
+    for (let i = 0; i < 3; i++) X.fireAmmo(X.character, X.character.inventory[0]);
+    ck('#47 K1 case B: the other 3 arrows fired to zero, so the row is gone', !X.character.inventory.some(i => i.id === 'ar') && X.character.coins.sp === 1);
+    ck('#47 K1 case B: undo the trade: 2 arrows back and the 1 sp returned',
+       X.invUndo(tB.id) === '' && (X.character.inventory.find(i => i.name === 'Arrow') || {}).qty === 2 && X.character.coins.sp === 0 && tB.undone === true,
+       [X.character.inventory, X.character.coins]);
+    ck('#47 K1 ...the arrows come back where the row stood', X.character.inventory.map(i => i.name).join() === 'Longbow,Arrow');
+
+    /* an old line, with no copy kept, whose row is gone: refused, never marked */
+    fresh();
+    const oldUse = X.logInv({kind: 'use', title: 'Used Potion', lines: [], undo: {id: 'gone', qty: 1, used: 0, snap: null}});
+    const before = X.character.invLog.length;
+    const ch = X.invUndoCheck(oldUse);
+    ck('#47 K1 an old Use line with no row and no copy is refused, with a reason', ch.ok === false && ch.why === 'It is no longer in your inventory.', ch);
+    ck('#47 K1 ...invUndo restores nothing, leaves it not undone, writes no "Undid:" line',
+       X.invUndo(oldUse.id) !== '' && oldUse.undone === false && X.character.invLog.length === before && undids() === 0 && X.character.inventory.length === 0);
+    fresh();
+    const oldTrade = X.logInv({kind: 'trade', title: 'Traded', lines: [], undo: {parts: [{kind: 'give', u: {items: [{id: 'gone', qty: 2, snap: null, name: 'Arrow'}]}}, {kind: 'add', u: {items: []}}, {kind: 'coins', u: {delta: {sp: 1}}}]}});
+    X.character.coins.sp = 1;
+    const ct = X.invUndoCheck(oldTrade);
+    ck('#47 K1 an old trade whose given row is gone and has no copy is refused, naming the item', ct.ok === false && /Arrow/.test(ct.why), ct);
+    ck('#47 K1 ...and nothing of it is applied: the sp stays, no "Undid:" line', X.invUndo(oldTrade.id) !== '' && X.character.coins.sp === 1 && oldTrade.undone === false && undids() === 0);
+    ck('#47 K1 Use always keeps a copy of the item, its attack and its place', /undo:\{id:it\.id,[^}]*snap:snap0,atk:atk0,at:at0/.test(src('80-modal-forms.js')));
+
+    /* ---- M3: a granted item whose source is gone comes back as an ordinary item ---- */
+    fresh(); X.character.classes = [];
+    X.character.inventory = [{id: 'g', name: 'Rope', qty: 2, grant: 'class:Fighter'}];
+    d = X.newTradeDraft({}); d.give.items = [{id: 'g', qty: 2}]; d.get.coins = {gp: 1};
+    const tG = X.completeTrade(d);
+    X.invUndo(tG.id);
+    const rope = X.character.inventory.find(i => i.name === 'Rope');
+    ck('#47 M3 undoing a trade of a granted Rope after the class is gone: the Rope is ordinary, its origin kept',
+       rope && rope.qty === 2 && !('grant' in rope) && rope.origin && rope.origin.kind === 'class' && rope.origin.detail === 'Fighter', rope);
+    fresh(); X.character.classes = [{name: 'Fighter', level: 1}];
+    X.character.inventory = [{id: 'g', name: 'Rope', qty: 2, grant: 'class:Fighter'}];
+    d = X.newTradeDraft({}); d.give.items = [{id: 'g', qty: 2}];
+    X.invUndo(X.completeTrade(d).id);
+    ck('#47 M3 ...while the class is still there, it keeps its grant', X.character.inventory[0].grant === 'class:Fighter');
+
+    /* ---- M6: a restored attack goes back at its own index ---- */
+    fresh();
+    X.character.attacks = [{id: 'a0', name: 'Unarmed'}, {id: 'a1', name: 'Dagger', itemId: 'dg'}, {id: 'a2', name: 'Fire Bolt'}];
+    X.character.inventory = [{id: 'dg', name: 'Dagger', qty: 1, cost: 2, weapon: {dice: '1d4'}, attackId: 'a1'}];
+    d = X.newTradeDraft({}); d.give.items = [{id: 'dg', qty: 1}];
+    X.invUndo(X.completeTrade(d).id);
+    ck('#47 M6 undo puts the Dagger\'s attack back in its place', X.character.attacks.map(a => a.id).join() === 'a0,a1,a2', X.character.attacks);
+
+    /* ---- M4: a Use that changes no inventory writes no line ---- */
+    fresh(); X.character.hp = {cur: 5, max: 20, temp: 0};
+    X.character.inventory = [{id: 'h', name: 'Herb', qty: 1, use: {heal: '2'}}];
+    X.applyItemUse(X.character.inventory[0], {heal: '2'}, 2, '');
+    ck('#47 M4 a heal-only Use writes no line', X.character.invLog.length === 0);
+
+    /* ---- M9: the Use line says what is left ---- */
+    fresh(); X.character.inventory = [{id: 'p', name: 'Potion', qty: 3, use: {consume: true}}];
+    X.applyItemUse(X.character.inventory[0], {consume: true}, 0, '');
+    ck('#47 M9 the Use line says what is left', top().lines.length === 1 && top().lines[0].text === '−1 · 2 left' && top().lines[0].dir === '-', top().lines);
+    fresh(); X.character.inventory = [{id: 'w', name: 'Wand', qty: 1, uses: {max: 3, used: 0, per: 'long'}}];
+    X.applyItemUse(X.character.inventory[0], {}, 0, '');
+    ck('#47 M9 ...and for uses, how many uses are left', top().lines[0].text === '1 use · 2 of 3 left', top().lines);
+
+    /* ---- M5: worth multiplies before rounding ---- */
+    ck('#47 M5 20 sling bullets at 0.002 gp are worth 4 cp', X.itemWorthCp({cost: 0.002}, 20) === 4);
+    ck('#47 M5 ...and a got item at 0.002 gp ×20 is too', ctx.tradeGetCp({cost: 0.002, qty: 20}) === 4);
+
+    /* ---- M2: a malformed undo is dropped, the line kept; invUndoCheck never throws ---- */
+    const m = X.migrate({abilities: {}, invLog: [
+      {kind: 'edit', at: 9, title: 'e', undo: {}},
+      {kind: 'trade', at: 8, title: 't', undo: {parts: [{kind: 'add'}]}},
+      {kind: 'use', at: 7, title: 'u', undo: {qty: 1}},
+      {kind: 'delete', at: 6, title: 'd', undo: {snap: 'x'}},
+      {kind: 'coins', at: 5, title: 'c', undo: {delta: 'x'}},
+      {kind: 'add', at: 4, title: 'a', undo: {items: [{qty: 1}]}},
+      {kind: 'coins', at: 3, title: 'ok', undo: {delta: {gp: 1}}},
+      {kind: 'grant', at: 2, title: 'g', undo: {delta: {gp: 1}}}]});
+    ck('#47 M2 a malformed undo is dropped and its line kept', m.invLog.length === 8 && m.invLog.slice(0, 6).every(e => e.undo === null) && m.invLog[7].undo === null, m.invLog.map(e => e.undo));
+    ck('#47 M2 ...a well-formed one is kept', m.invLog[6].undo && m.invLog[6].undo.delta.gp === 1);
+    X.character = m;
+    let threw = false; try { X.invLogHTML(m.invLog, 'all', 500); } catch (e) { threw = String(e); }
+    ck('#47 M2 ...and the Log dialog paints', threw === false, threw);
+    let gc; threw = false;
+    try { gc = X.invUndoCheck({id: 'z', kind: 'trade', at: 1, undo: {parts: [{kind: 'give', u: null}]}}); } catch (e) { threw = String(e); }
+    ck('#47 M2 invUndoCheck is guarded: a broken shape is refused, not thrown', threw === false && gc.ok === false && gc.why === "This line can't be undone.", [threw, gc]);
+
+    /* ---- C4 + M9: line text ---- */
+    fresh(); X.rules = Object.assign({}, X.rules, {items: [{name: 'Rope', cost: '1 gp'}, {name: 'Torch', cost: '1 cp'}]});
+    ctx.logFinderAdd(X.addLibraryItems([{name: 'Rope', cost: '1 gp'}], null, null, 2));
+    ck('#47 C4 the finder add line carries the cost', top().lines[0].text === 'Rope ×2 · 2 gp', top().lines);
+    fresh();
+    X.character.inventory = [{id: 'dg', name: 'Dagger', qty: 1, cost: 2}, {id: 'ro', name: 'Rope', qty: 3, cost: 1}];
+    X.character.coins = {pp: 2, gp: 40, sp: 5, cp: 5};
+    d = X.newTradeDraft({with: 'Olvin'});
+    d.give.items = [{id: 'dg', qty: 1}, {id: 'ro', qty: 2}]; d.give.coins = {cp: 3, gp: 1, pp: 1};
+    d.get.items = [{key: 'k', name: 'Healing Potion', qty: 1, cost: 50, def: {name: 'Healing Potion', cost: '50 gp'}, custom: false},
+      {key: 'c', name: 'Lucky coin', qty: 2, cost: 0.5, def: null, custom: true}];
+    d.get.coins = {sp: 2};
+    const tr = X.completeTrade(d), rl = tr.lines.map(l => l.text);
+    ck('#47 C4 receipt item lines carry costs', rl.includes('Dagger ×1 (2 gp)') && rl.includes('Rope ×2 (2 gp)') && rl.includes('Healing Potion ×1 (50 gp)') && rl.includes('Lucky coin ×2 (1 gp)'), rl);
+    const coinAt = k => rl.findIndex(t => new RegExp('^\\d+ ' + k + '$').test(t));
+    ck('#47 C4 receipt coins run pp → cp', coinAt('PP') >= 0 && coinAt('PP') < coinAt('GP') && coinAt('GP') < coinAt('SP') && coinAt('SP') < coinAt('CP'), rl);
+    const lucky = X.character.inventory.find(i => i.name === 'Lucky coin');
+    ck('#47 I1 a custom item from a trade has the standard item fields', lucky.description === '' && Array.isArray(lucky.effects) && lucky.effects.length === 0 && lucky.equipped === false, lucky);
+    X.character.inventory.find(i => i.name === 'Healing Potion').qty = 0;
+    const blk = X.invUndoCheck(tr);
+    ck('#47 C4 a blocked trade undo names the item', blk.ok === false && /Healing Potion/.test(blk.why), blk);
+    X.character.inventory.find(i => i.name === 'Healing Potion').qty = 1;
+    X.invUndo(tr.id);
+    const hU = X.invLogHTML(X.character.invLog, 'all', 500);
+    const undidRow = hU.slice(hU.indexOf('Undid: Traded with Olvin'), hU.indexOf('Undid: Traded with Olvin') + 400);
+    ck('#47 C4 an "Undid:" trade line shows no empty Receipt', !/<details>/.test(undidRow.split('il-side')[0]), undidRow);
+    ck('#47 C4 ...while the trade itself keeps its receipt', /<details><summary>Receipt<\/summary>/.test(hU));
+
+    /* ---- C5: the log scrolls through its own scroller ---- */
+    ck('#47 C5 the log rows sit in one scroller, filters and foot outside it',
+       /^<div class="il-filters">[\s\S]*<\/div><div class="il-scroll">[\s\S]*<\/div><div class="il-foot">/.test(hU), hU.slice(0, 300));
+    ck('#47 C5 the scroller is a real scrolling element and the :has() rule is gone',
+       /\.il-scroll\{[^}]*overflow-y:auto/.test(css('50-modal.css')) && /\.il-scroll\{[^}]*min-height:0/.test(css('50-modal.css')) && !/:has\(> \.il-filters\)/.test(css('50-modal.css')));
+    /* ---- M7 ---- */
+    ck('#47 M7 the first day header rule matches (.il-filters + .il-day), no :first-of-type', !/\.il-day:first-of-type/.test(css('50-modal.css')) && /\.il-scroll>\.il-day:first-child|\.il-filters ?\+ ?\.il-day/.test(css('50-modal.css')));
+    ck('#47 M7 the active filter uses a theme token, not #20160a', !/#20160a/i.test((css('50-modal.css').match(/\.il-f\.on\{[^}]*\}/) || [''])[0]) && /\.il-f\.on\{[^}]*var\(--/.test(css('50-modal.css')));
+    /* ---- C1 ---- */
+    const html = require('./harness').loadHTML(), lb = (html.match(/<button[^>]*id="btnInvLog"[\s\S]*?<\/button>/) || [''])[0];
+    ck('#47 C1 the Log button is an inline SVG, keeps its label, no 🕮', /<svg viewBox="0 0 24 24"/.test(lb) && /aria-label="Inventory log"/.test(lb) && !/🕮/.test(lb) && /il-word">Log</.test(lb), lb);
+
+    /* ---- I2: removing a source writes one "Removed with" line ---- */
+    fresh(); X.rules = Object.assign({}, X.rules, {items: [{name: 'Chain Mail', cost: '75 gp'}, {name: 'Shield', cost: '10 gp'}]});
+    X.character.coins = {gp: 0};
+    let t = 1000; const realNow = ctx.Date.now; ctx.Date.now = () => t;
+    try {
+      X.grantItemByName('Chain Mail', 1, 'class:Fighter'); X.grantItemByName('Shield', 1, 'class:Fighter'); ctx.addGrantGold(10, 'class:Fighter');
+      t += 500; const n0 = X.character.invLog.length;
+      X.revertEquipmentGrants('class:Fighter');
+      const rv = top();
+      ck('#47 I2 removing a class that granted items and gold writes ONE line, no Undo',
+         X.character.invLog.length === n0 + 1 && rv.kind === 'grant' && rv.meta.revert === true && rv.title === 'Removed with Fighter' && rv.undo === null &&
+         rv.lines.map(l => l.text).join('|') === 'Chain Mail ×1|Shield ×1|10 GP' && rv.lines.every(l => l.dir === '-') && X.invUndoCheck(rv).ok === false, rv);
+      ck('#47 I2 ...it files under Items, as a grant line does', /Removed with Fighter/.test(X.invLogHTML(X.character.invLog, 'items', 500)));
+      t += 500; X.grantItemByName('Shield', 1, 'class:Fighter');
+      ck('#47 I2 ...a grant straight after starts its own line, never folding into the removal', top().title === 'Granted by Fighter' && rv.lines.length === 3);
+      t += 9000; const n1 = X.character.invLog.length; X.revertEquipmentGrants('bg:Nobody');
+      ck('#47 I2 removing a source that granted nothing writes nothing', X.character.invLog.length === n1);
+    } finally { ctx.Date.now = realNow; }
+
+    /* ---- I2: Recover N counts in the fight's tally; Undo recovery takes End combat's off ---- */
+    fresh(); state.confirm = true;
+    X.character.inventory = [{id: 'bow', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+      {id: 'ar', name: 'Arrow', qty: 20, ammo: {kind: 'arrow'}}];
+    X.startCombatNow(); X.character.combatRound = 3;
+    for (let i = 0; i < 4; i++) X.fireAmmo(X.character, X.character.inventory[0]);
+    X.recoverWeaponAmmo('bow', false);
+    ck('#47 I2 a row Recover writes no line of its own', X.character.invLog.length === 0 && X.character.inventory[1].qty === 18);
+    for (let i = 0; i < 2; i++) X.fireAmmo(X.character, X.character.inventory[0]);
+    let offer = null; ctx.toast = (msg, action) => { offer = action; return null; };
+    X.endCombatAsk();
+    const am = top();
+    ck('#47 I2 End combat\'s line includes what the row recovered', am.kind === 'ammo' && am.title === 'Arrows: 6 fired, 3 recovered', am.title);
+    ck('#47 M9 ...and reads "Fight of N rounds"', am.lines.length === 1 && am.lines[0].text === 'Fight of 3 rounds' && am.meta.rounds === 3, am.lines);
+    ck('#47 I2 ...the tally is cleared with the fight', JSON.stringify(X.character.ammoFight) === '{}');
+    ck('#47 I2 Undo recovery on the toast takes End combat\'s recovery back off the line', offer && offer.run() === true && am.title === 'Arrows: 6 fired, 2 recovered' && X.character.invLog.length === 1, am.title);
+    ck('#47 I2 a new character has an empty fight tally', JSON.stringify(X.blankChar().ammoFight) === '{}' && JSON.stringify(X.migrate({abilities: {}, ammoFight: 'x'}).ammoFight) === '{}');
+    fresh(); X.character.inventory = [{id: 'bow', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+      {id: 'ar', name: 'Arrow', qty: 20, ammo: {kind: 'arrow'}}];
+    X.startCombatNow(); X.character.combatRound = 1;
+    for (let i = 0; i < 2; i++) X.fireAmmo(X.character, X.character.inventory[0]);
+    X.recoverWeaponAmmo('bow', false); offer = 'none';
+    X.endCombatAsk();
+    ck('#47 I2 every shot recovered by the row still gets its line at End combat', top().kind === 'ammo' && top().title === 'Arrows: 2 fired, 1 recovered' && top().lines[0].text === 'Fight of 1 round' && offer === undefined, top());
+    ctx.toast = () => null;
+
+    /* ---- M1: lowering the log size asks first when lines would go ---- */
+    fresh(); X.character.invLogSize = 2500;
+    for (let i = 0; i < 2500; i++) X.logInv({kind: 'coins', title: 'c' + i, lines: [], undo: null});
+    state.confirm = false; state.lastConfirm = null;
+    ck('#47 M1 declining keeps the size and every line', ctx.setInvLogSize(100) === false && state.lastConfirm === 'Keep the newest 100? This removes 2,400 older lines.' &&
+       X.character.invLogSize === 2500 && X.character.invLog.length === 2500, state.lastConfirm);
+    state.confirm = true;
+    ck('#47 M1 accepting trims at once', ctx.setInvLogSize(100) === true && X.character.invLogSize === 100 && X.character.invLog.length === 100 && X.character.invLog[0].title === 'c2499');
+    state.lastConfirm = null;
+    ck('#47 M1 raising it never asks', ctx.setInvLogSize(1000) === true && state.lastConfirm === null && X.character.invLogSize === 1000);
+    ck('#47 M1 the select uses it, and puts itself back when declined', /setInvLogSize\(num\(s\.value\)\)/.test(src('88-settings.js')));
+  } finally {
+    STUB.forEach(n => { ctx[n] = keep[n]; });
+    X.character = keep.ch; X.rules = keep.rules; state.confirm = keep.conf; ctx.document.getElementById = keep.gid;
+  }
+}
+
+// ---------- #47 I1: the item form, unchanged open → Save, writes no line
+{
+  const VOID = new Set(['input', 'img', 'br', 'hr', 'path', 'circle', 'line', 'rect', 'polyline', 'polygon', 'meta']);
+  const unesc = s => String(s).replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  /* a tiny DOM for one form: elements by id, values, classes, listeners */
+  function parse(html, parent, byId) {
+    const re = /<!--[\s\S]*?-->|<(\/?)([a-zA-Z][\w-]*)((?:[^>"]|"[^"]*")*?)(\/?)>|([^<]+)/g;
+    let cur = parent, m;
+    while ((m = re.exec(html))) {
+      if (m[5] !== undefined) { if (cur.tag === 'textarea' || cur.tag === 'option') cur.text += unesc(m[5]); continue; }
+      if (!m[2]) continue;
+      const tag = m[2].toLowerCase();
+      if (m[1]) { let x = cur; while (x && x.tag !== tag) x = x.parent; if (x) cur = x.parent; continue; }
+      const attrs = {}; let a; const ar = /([\w-]+)(?:="([^"]*)")?/g;
+      while ((a = ar.exec(m[3]))) attrs[a[1]] = a[2] === undefined ? '' : unesc(a[2]);
+      const n = mk(tag, attrs, byId); n.parent = cur; cur.children.push(n);
+      if (!VOID.has(tag) && !m[4]) cur = n;
+    }
+  }
+  function mk(tag, attrs, byId) {
+    const cls = new Set((attrs.class || '').split(/\s+/).filter(Boolean));
+    const n = {tag, attrs, parent: null, children: [], text: '', _on: {}, _val: null, dataset: {}, disabled: 'disabled' in attrs,
+      style: {display: /display:none/.test(attrs.style || '') ? 'none' : ''}, placeholder: attrs.placeholder || '',
+      classList: {contains: c => cls.has(c), add: c => cls.add(c), remove: c => cls.delete(c), toggle: (c, on) => { const v = on === undefined ? !cls.has(c) : !!on; if (v) cls.add(c); else cls.delete(c); return v; }},
+      get id() { return attrs.id; },
+      get value() {
+        if (this._val !== null) return this._val;
+        if (tag === 'textarea') return this.text;
+        if (tag === 'select') { const os = this.querySelectorAll('option'); const o = os.find(x => 'selected' in x.attrs) || os[0]; return o ? ('value' in o.attrs ? o.attrs.value : o.text) : ''; }
+        if (tag === 'option') return 'value' in attrs ? attrs.value : this.text;
+        return attrs.value || '';
+      },
+      set value(v) { this._val = String(v); },
+      addEventListener(type, fn) { (this._on[type] = this._on[type] || []).push(fn); },
+      fire(type) { (this._on[type] || []).forEach(fn => fn({target: this})); },
+      matches(sel) { return sel[0] === '.' ? cls.has(sel.slice(1)) : sel[0] === '#' ? attrs.id === sel.slice(1) : tag === sel; },
+      querySelectorAll(sel) { const out = []; const walk = x => x.children.forEach(c => { if (c.matches(sel)) out.push(c); walk(c); }); walk(this); return out; },
+      querySelector(sel) { return this.querySelectorAll(sel)[0] || null; },
+      closest(sel) { for (let x = this; x && x.matches; x = x.parent) if (x.matches(sel)) return x; return null; },
+      set innerHTML(h) { this.children = []; parse(h, this, byId); },
+      insertAdjacentHTML(_, h) { parse(h, this, byId); },
+      remove() { if (this.parent) this.parent.children.splice(this.parent.children.indexOf(this), 1); },
+      setAttribute() {}, removeAttribute() {}, focus() {}, textContent: ''};
+    if (attrs.id) byId[attrs.id] = n;
+    return n;
+  }
+  const keep = {ch: X.character, rules: X.rules, gid: ctx.document.getElementById, open: ctx.openModal, close: ctx.closeModal,
+    rs: ctx.scheduleSave, ri: ctx.renderInventory, ra: ctx.renderAttacks, rq: ctx.recompute, rc: ctx.renderCoins};
+  let byId = {};
+  ctx.openModal = (title, html) => { byId = {}; const root = mk('root', {}, byId); parse(html, root, byId); };
+  ctx.closeModal = () => {};
+  ctx.document.getElementById = id => byId[id] || null;
+  ['scheduleSave', 'renderInventory', 'renderAttacks', 'recompute', 'renderCoins'].forEach(n => ctx[n] = () => {});
+  const saveUnchanged = it => { const n = X.character.invLog.length; ctx.openItemForm(it); byId.iSave.fire('click'); return X.character.invLog.length - n; };
+  try {
+    const items = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'items.json'), 'utf8')).items;
+    const magic = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'items-magic.json'), 'utf8')).items;
+    const def = n => items.concat(magic).find(x => x.name === n);
+    X.rules = Object.assign({}, X.rules, {items: items.concat(magic)});
+    X.character = X.blankChar(); X.character.system = 'dnd'; X.character.inventory = []; X.character.attacks = [];
+    X.addLibraryItems([def('Potion of Healing'), def('Chain Mail'), def('Longsword')], {kind: 'purchased', detail: '', at: 5}, null, 1);
+    X.character.inventory.push({id: 'wand', name: 'Wand of Sparks', qty: 1, description: '', effects: [], equipped: false, uses: {max: 7, per: 'long'}});
+    X.character.inventory.push({id: 'lant', name: 'Lantern', description: '', effects: [], equipped: false});
+    const d = X.newTradeDraft({with: 'Olvin'}); d.get.items = [{key: 'k', name: 'Lucky coin', qty: 1, cost: 0, def: null, custom: true}];
+    X.completeTrade(d);
+    X.character.invLog = [];
+    const inv = X.character.inventory, by = n => inv.find(i => i.name === n);
+    ck('#47 I1 the fake form opens the real item form', (ctx.openItemForm(by('Potion of Healing')), !!byId.iSave && byId.iName.value === 'Potion of Healing' && byId.iHeal.value === '2d4+2'), Object.keys(byId).length);
+    ck('#47 I1 an unchanged Save of a Potion of Healing writes no line', saveUnchanged(by('Potion of Healing')) === 0, X.character.invLog[0]);
+    ck('#47 I1 ...of Chain Mail', saveUnchanged(by('Chain Mail')) === 0, X.character.invLog[0]);
+    ck('#47 I1 ...of a Wand with uses but no used', saveUnchanged(by('Wand of Sparks')) === 0, X.character.invLog[0]);
+    ck('#47 I1 ...of an item with no qty', saveUnchanged(by('Lantern')) === 0, X.character.invLog[0]);
+    ck('#47 I1 ...of a custom item received in a trade', saveUnchanged(by('Lucky coin')) === 0, X.character.invLog[0]);
+    ck('#47 I1 ...of a Longsword', saveUnchanged(by('Longsword')) === 0, X.character.invLog[0]);
+    ctx.openItemForm(by('Longsword')); byId.iQty.value = '2'; byId.iSave.fire('click');
+    ck('#47 I1 a real change (qty 1 → 2) still writes exactly one line', X.character.invLog.length === 1 && X.character.invLog[0].kind === 'edit' && X.character.invLog[0].lines[0].text === 'Quantity 1 → 2', X.character.invLog);
+    ctx.openItemForm(null); byId.iName.value = 'Rope'; byId.iCost.value = '1'; byId.iQty.value = '3'; byId.iSave.fire('click');
+    ck('#47 C4 the item form\'s add line carries the cost', X.character.invLog[0].kind === 'add' && X.character.invLog[0].lines[0].text === 'Rope ×3 · 3 gp', X.character.invLog[0].lines);
+  } finally {
+    Object.assign(ctx, {openModal: keep.open, closeModal: keep.close, scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, recompute: keep.rq, renderCoins: keep.rc});
+    ctx.document.getElementById = keep.gid; X.character = keep.ch; X.rules = keep.rules;
+  }
 }
 
 ck.done();
