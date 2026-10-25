@@ -149,6 +149,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `86-rules-browser.js` | the Rules tab browser: `RB_CATS`, `rbShown()`, `renderRulesBrowser()` | [Rules & tables](features/rules-and-tables.md) |
 | `87-notes.js` | `NOTE_SECTIONS`, section notes, `noteHTML()`, the Section Notes card | [Story & notes](features/story-and-notes.md), [Rich text](architecture/rich-text.md), [Sections & layout](ui/sections-and-layout.md) |
 | `87-combat.js` | the combat tab and tracker | [Combat view](features/combat-view.md) |
+| `87-initiative.js` | the initiative tracker: party, combatants, turns, bands, the strip and dialogs | [Combat view](features/combat-view.md), [Story & notes](features/story-and-notes.md) |
 | `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
 | `87-trackers.js` | the Trackers card: counters, grouped-tag tiles, totals, the close rule, `migrateTrackerPages()` | [Journal](features/journal.md) |
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()`, pack credits (`rulesCreditsHTML()`) | [Settings & updates](features/settings-and-updates.md), [Data archive](architecture/data-archive.md) |

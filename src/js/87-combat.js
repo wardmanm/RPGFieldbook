@@ -70,6 +70,7 @@ function combatStart(c){c.combatActive=true;c.combatRound=1;}
 function combatEnd(c){
   const rounds=Math.max(0,num(c.combatRound));
   c.combatActive=false;c.combatRound=0;
+  c.combatants=[];c.combatTurn="";
   return {rounds,sec:rounds*6};
 }
 function combatElapsedSec(c){return Math.max(0,num(c&&c.combatRound)-1)*6;}

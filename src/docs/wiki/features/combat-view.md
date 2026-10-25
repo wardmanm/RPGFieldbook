@@ -14,7 +14,9 @@ its own tab. Leaving the tab never ends combat.
 `openCombatView()`, `closeCombatView()`, `enterCombatTab()`, `leaveCombatTab()` (#52),
 `renderCombatHeader()`, `setCombatLive()`, `toggleCombatSection()`, `undoCombatRemove()`,
 `cvNeighbours()`, `syncCombatView()`, `startCombatNow()`, `endCombatAsk()`, `startCombatDrag()`,
-`moveCombatCard()`, `setCombatOrder()`, `combatHeaderHTML()` in `87-combat.js` · `toggleInspiration()` in `10-compute.js` · `COMBAT_DEFAULTS` in `00-constants.js` ·
+`moveCombatCard()`, `setCombatOrder()`, `combatHeaderHTML()` in `87-combat.js` ·
+`cleanCombatants()`, `initNextTurn()`, `buildCombatants()` in `87-initiative.js` ·
+`toggleInspiration()` in `10-compute.js` · `COMBAT_DEFAULTS` in `00-constants.js` ·
 `selectTab()`, `scrollToCard()` in `40-sheet.js` · `advanceRound()`, `toast()` in
 `60-attacks.js` · `applyAmmoRecovery()`, `undoRecoveryTap()` in `62-ammo.js` · markup
 `src/html/70-combat.html`, styles `src/css/45-combat.css` · **Tests:**

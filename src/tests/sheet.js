@@ -83,6 +83,9 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
   'isTabHidden', 'cleanHiddenTabs', 'setTabHidden', 'applyHiddenTabs', 'HIDEABLE_TABS', 'TAB_LABELS', 'selectTab',
   'leaveCombatTab', 'tabsGroupHTML',
+  'HB_NAMES', 'HB_SAYS', 'initInt', 'initOpt', 'cleanParty', 'cleanCombatants', 'combatantDead',
+  'initSort', 'initFirstAlive', 'initNextTurn', 'bandOfShare', 'combatantBar', 'initRollCheck',
+  'initRollLine', 'initModOf', 'youAC', 'buildCombatants',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -6006,6 +6009,69 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   const set = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '88-settings.js'), 'utf8');
   ck('#52 the display page includes the Tabs group', /tabsGroupHTML\(character\)/.test(set));
   ck('#52 each switch writes through setTabHidden', /\[data-tabsw\][\s\S]{0,300}setTabHidden\(/.test(set));
+}
+
+// ---------- #91 initiative: the fields and the pure core
+{
+  const b = X.blankChar();
+  ck('#91 a new character: no party, no fight, Turns, rolls shown',
+     JSON.stringify(b.party) === '[]' && JSON.stringify(b.combatants) === '[]' && b.combatTurn === '' && b.initMode === 'turns' && b.initShowRolls === true);
+  const P = X.cleanParty([{id: 'p1', name: '  Thorn ', ac: '14', maxHp: 22}, {name: ''}, null, 'x', {name: 'A'.repeat(200), ac: '-2', maxHp: 'lots'}]);
+  ck('#91 cleanParty keeps named members, trims, cuts to 60, optional numbers or ""',
+     P.length === 2 && P[0].name === 'Thorn' && P[0].ac === 14 && P[0].maxHp === 22 && P[1].name.length === 60 && P[1].ac === '' && P[1].maxHp === '', P);
+  /* Review Focus 3 and 4 */
+  const C = X.cleanCombatants([{kind: 'you', id: 'y', init: '17'}, {kind: 'you', id: 'y2'}, {kind: 'boss'}, 7,
+    {kind: 'foe', id: 'f', name: '<img onerror=1>', init: 19, band: 2, ac: '15'}, {kind: 'party', id: 'p', name: 'Thorn', init: null, maxHp: 22, hp: 9, dead: 'yes'},
+    {kind: 'foe', id: 'g', name: 'Wolf', band: 9}], true);
+  ck('#91 cleanCombatants: one "you", known kinds only, types forced', C.length === 4 && C.filter(r => r.kind === 'you').length === 1 &&
+     C[0].init === 17 && C[1].band === 2 && C[1].ac === 15 && C[1].name === '<img onerror=1>' && C[2].dead === false && C[2].track === 'exact' && C[3].band === null, C);
+  ck('#91 ...and out of a fight the list is always empty', X.cleanCombatants([{kind: 'you'}], false).length === 0);
+  const m = X.migrate({abilities: {}, combatActive: true, combatants: 'junk', initMode: 'sideways', initShowRolls: 'no', party: [{name: 'Bree'}]});
+  ck('#91 migrate cleans the five fields; a fight in progress keeps an empty list',
+     JSON.stringify(m.combatants) === '[]' && m.initMode === 'turns' && m.initShowRolls === true && m.party.length === 1 && m.combatTurn === '', m);
+  ck('#91 ...a save → load round trip keeps a fight', (() => { const g = X.blankChar(); g.combatActive = true; g.combatRound = 2;
+     g.combatants = [{id: 'y', kind: 'you', name: '', init: 12, ac: '', track: '', band: null, hp: '', maxHp: '', dead: false, partyId: ''}]; g.combatTurn = 'y';
+     const r = X.migrate(JSON.parse(JSON.stringify(g))); return r.combatants.length === 1 && r.combatTurn === 'y'; })());
+
+  /* sort: stable, unrolled last (Review Focus 5) */
+  const S = X.initSort([{id: 'a', init: 10}, {id: 'b', init: null}, {id: 'c', init: 15}, {id: 'd', init: 10}]);
+  ck('#91 initSort: highest first, ties keep their order, unrolled last', S.map(r => r.id).join() === 'c,a,d,b', S.map(r => r.id));
+
+  /* next turn (Review Focus 1) */
+  const L = [{id: 'f1', kind: 'foe', band: 1}, {id: 'y', kind: 'you'}, {id: 'p', kind: 'party', dead: true}, {id: 'f2', kind: 'foe', band: 4}, {id: 'f3', kind: 'foe', band: null}];
+  const nt = (t) => X.initNextTurn(L, t);
+  ck('#91 Next skips a dead party member and a dead foe', nt('y').turnId === 'f3' && nt('y').wrapped === false, nt('y'));
+  ck('#91 Next wraps past the end, once', nt('f3').turnId === 'f1' && nt('f3').wrapped === true, nt('f3'));
+  ck('#91 an unknown actor starts at the first living row without a wrap', nt('gone').turnId === 'f1' && nt('gone').wrapped === false);
+  const solo = [{id: 'f', kind: 'foe', band: 4}, {id: 'y', kind: 'you'}];
+  ck('#91 everyone else dead: you again, and every Next wraps', X.initNextTurn(solo, 'y').turnId === 'y' && X.initNextTurn(solo, 'y').wrapped === true);
+  ck('#91 you are never dead', X.combatantDead({kind: 'you', band: 4, dead: true}) === false);
+
+  /* bands */
+  ck('#91 bandOfShare: full Healthy, >½ Injured, ≤½ Bloodied, ≤¼ Near death (0 too), no max → null',
+     X.bandOfShare(22, 22) === 0 && X.bandOfShare(12, 22) === 1 && X.bandOfShare(11, 22) === 2 && X.bandOfShare(5, 22) === 3 && X.bandOfShare(0, 22) === 3 && X.bandOfShare(5, '') === null);
+  ck('#91 a party member on Exact shows a share; on Estimate their band', (() => {
+     const e = X.combatantBar({kind: 'party', track: 'exact', hp: 9, maxHp: 22}); const s = X.combatantBar({kind: 'party', track: 'estimate', band: 1});
+     return e.band === 2 && Math.abs(e.share - 9 / 22) < 1e-9 && s.band === 1 && s.share === null; })());
+
+  /* your roll (Review Focus 2) */
+  const ok = v => X.initRollCheck(v).ok;
+  ck('#91 a typed d20 takes 1..20', ok('1') && ok('20') && ok(' 14 ') && !ok('0') && !ok('21') && !ok('-3') && !ok('2.5') && !ok(''));
+  ck('#91 ...saying why', X.initRollCheck('21').why === 'A d20 rolls 1 to 20.' && X.initRollCheck('').why === 'Type the number you rolled.');
+  ck('#91 the working: one die, a negative modifier, and advantage',
+     X.initRollLine([14], 3) === '14 + 3 = 17' && X.initRollLine([9], -1) === '9 − 1 = 8' && X.initRollLine([6, 14], 3) === 'Rolled 6, 14 → 14 + 3 = 17',
+     [X.initRollLine([14], 3), X.initRollLine([9], -1), X.initRollLine([6, 14], 3)]);
+
+  /* building a fight */
+  const B = X.buildCombatants({name: 'Mira', init: 17}, [{id: 'p1', name: 'Thorn', ac: 14, maxHp: 22, init: 14}, {id: 'p2', name: 'Bree', ac: '', maxHp: '', init: null}],
+    [{name: 'Goblin', count: 2, ac: 13, init: 11}, {name: 'Goblin boss', count: 1, ac: '', init: 19}, {name: '', count: 1, ac: '', init: 5}]);
+  ck('#91 buildCombatants: sorted, "× 2" numbered, AC optional, unnamed foes dropped, unrolled last',
+     B.map(r => r.name).join('|') === 'Goblin boss|Mira|Thorn|Goblin 1|Goblin 2|Bree' && B[1].kind === 'you' && B[2].track === 'exact' && B[2].hp === 22 && B[5].track === 'estimate' && B[0].ac === '',
+     B.map(r => r.name));
+
+  const e = X.blankChar(); e.combatActive = true; e.combatRound = 3; e.combatants = B; e.combatTurn = B[0].id;
+  X.combatEnd(e);
+  ck('#91 End combat clears the fight', JSON.stringify(e.combatants) === '[]' && e.combatTurn === '');
 }
 
 ck.done();

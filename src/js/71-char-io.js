@@ -150,6 +150,12 @@ function migrate(s){
      sheet from before gets the icon only if it has a familiar. */
   base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
   base.hiddenTabs=cleanHiddenTabs(s.hiddenTabs);   /* #52 */
+  /* #91: the party and the fight; out of a fight there is none */
+  base.party=cleanParty(s.party);
+  base.combatants=cleanCombatants(s.combatants,base.combatActive===true);
+  base.combatTurn=base.combatants.some(r=>r.id===s.combatTurn)?String(s.combatTurn):initFirstAlive(base.combatants);
+  base.initMode=s.initMode==="rounds"?"rounds":"turns";
+  base.initShowRolls=s.initShowRolls!==false;
   migrateSheet103(base);
   return base;
 }
