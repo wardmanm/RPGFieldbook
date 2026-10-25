@@ -16,7 +16,7 @@ background or drop a class without hand-cleaning the sheet.
 `56-class.js`; `runChoices()`,
 `commitChoices()`, `sidToOrigin()` in `58-choices.js`; `originFromSid()`, `itemOrigin()`,
 `costToGp()` in `25-origins-items.js`; `syncResources()` in `65-resources.js`;
-`forgetGrantAmmo()` in `62-ammo.js`; `grantLanguages()`, `dropLanguages()`, `langParse()` in
+`forgetGrantAmmo()` in `62-ammo.js`; `logGrant()`, `grantSourceName()` in `67-trade.js`; `grantLanguages()`, `dropLanguages()`, `langParse()` in
 `41-chips.js` · **Tests:**
 `char-update.js` (grant and revert, `grantItemByName()` called for real, the pending equipment
 picker travelling with its window, the order the choice windows open in), `sheet.js` (`invSection()` filing) · **See also:** [Character building](../features/character-building.md),
@@ -73,6 +73,13 @@ so "Arrows (20)" grants 20 single arrows, each tagged with the grant's `sid` —
 [Ammunition](../features/ammunition.md). It stamps the copy, and a weapon gets its attack. An
 unmatched name becomes a plain named item. A second grant of the same name from the same sid adds to
 the quantity. The item's origin badge (C, B or A) comes from `originFromSid()`.
+
+**The grant's line in the inventory log (#47).** `grantItemByName()` and `addGrantGold()` each
+report what they added through `logGrant(sid, line)` in `67-trade.js`, which writes one `grant`
+line per source to the [inventory log](../features/inventory.md) — "Granted by Fighter", the source
+read from the sid by `grantSourceName()` — and folds in every later grant from the same sid within
+5 seconds, so a class's starting gear and gold are one line. The line has no Undo: removing the
+source is what reverts a grant, and `revertEquipmentGrants()` writes no line of its own.
 
 **Languages** (#103). A species or background whose definition lists `languages` (a string,
 "Common, Elvish and one other language of your choice") grants them as chips: `langParse()` splits on
@@ -173,6 +180,7 @@ features and grants before applying the new one.
 | Removing the first class while another remains | The new first class takes its saving throws, under its own sid | Leaving the sheet with no save proficiencies (L3886) |
 | Stripping extra grants from multiclass characters saved earlier | No: `migrate()` is untouched | Retroactive strip: it would silently change sheets players have been playing (L3886) |
 | How a species or background grants languages (#103) | Chips stamped with the grant's sid, removed with it; a choice ("one of your choice") is the player's to add | Appending "Languages: …" to Proficiencies: it never reverted. Player-entered only: grants would keep writing prose |
+| What the inventory log records for a grant (#47) | One line per source, no Undo | One line per item: a class's starting gear floods the log. An Undo: it would take back part of a grant the source still claims; removing the source reverts it |
 
 ## Open
 
@@ -209,3 +217,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-02 — The final review's fixes: a hostile item name no longer stops a sheet loading; removing a class forgets its spent arrows; End combat asks only about new shots; recovery joins an equivalent stack; the picker shows +N. → ledger L4989, #6
 - 2026-10-23 — Species and backgrounds grant languages as chips stamped `race:`/`bg:`, taken back by `dropLanguages()`; nothing appends "Languages:" to Proficiencies any more. → ledger L6633, #103
 - 2026-10-23 — Lifted languages noted as the player's own; an unknown language `src` reads as the player's. → ledger L6729, #103
+- 2026-10-25 — Grants write one inventory-log line per source (`logGrant()`), with no Undo. → ledger L7291, #47

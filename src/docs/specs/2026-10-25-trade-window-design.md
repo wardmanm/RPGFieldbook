@@ -264,3 +264,111 @@ Settings → Sheet display gets an **Inventory log size** select with the five v
 - Exporting the log.
 - Redo.
 - #105's Loot section, which only calls `openTrade`.
+
+## As built
+
+As specified, §1–§9, with the differences below, built in five tasks on `issue/47-trade-window`
+(the implementer and reviewer reports, every `Ruling:` and `minor (deferred)` line, and the
+browser-QA account are in `.superpowers/sdd/2026-10-25-trade-window/`; the ledger entry "Trade
+window and inventory log (#47, 2026-10-25)" is the condensed version).
+
+**The plan-level `use` Ruling.** §5 makes `use` clean only while the item exists. The plan widened
+it and told Mike at handoff: **every Use is undoable**, the last one too. `applyItemUse()` keeps a
+copy of the item (and its linked attack and its index) whenever that Use spends the last one, and
+Undo puts it back where it was. Cost if this turns out wrong: one condition in `invCheckPart()`.
+
+**Rulings made during the build:**
+- **A custom item received in a trade gets origin `custom`**, detail "traded from *who*" (or
+  "traded"), as §6.2 step 2 says; library items get `traded` with the other party as detail. The
+  Task 4 brief's test asked for `traded` on both. Cost if wrong: a label string.
+- **The finder's Cost override now reads `fnum()`** (it read `num()`, which truncated 0.5 gp to 0).
+  The fix is shared by the ordinary Add finder, so it has its own `UNRELEASED.md` bullet.
+- **Open for Mike, not decided: selling above an item's worth reads red.** The balance is give
+  minus get with no exception (§1, §2 decision 8, §6.2), so giving a 2 gp Dagger for 5 gp reads
+  "3 gp short" in red and Complete asks to confirm. The brainstorm mockup's note said "coins you
+  receive (selling) never turn it red". The code follows the spec. The options:
+  1. **Keep the spec's rule**: any shortfall is red and confirms, selling included.
+  2. **Never red for coins received**: a shortfall made up of coins you get (selling) reads plainly
+     and skips the confirm; only a shortfall in items stays red. One condition in `tradeBalance()`
+     and `tradeBalHTML()`, plus the confirm in `openTrade()`.
+  Shot: `.claude/qa/in-progress/47-trade-window/47-after-trade-selling-reads-short-1280.png`.
+
+**Fixed mid-build, not left open:**
+- At 390px the Log dialog's time and Undo column ran past the dialog's right edge, and the filter
+  chips and Undo were 32px. The row now wraps its time and Undo onto a second line under 480px,
+  and every target is 44px (Task 3, `d96acd8`).
+- Undo after giving a whole row put it back at the end of the list. `invRemoveQty()` now returns the
+  row's index and `invRestore()` splices it back there; a delete and a last Use record it too, and
+  a trade's given rows come back newest removal first, or two whole rows swapped places (Task 4
+  review, `b112251`).
+- A seeded draft (#105's `opts`) was not capped at what you hold; `tradeClamp()` now caps it at
+  creation and again at Complete, so the balance, the receipt and `meta.giveCp` describe what is
+  applied. Coin boxes rewrite a typed 2.5 or −3 to the whole number the draft holds. A merged
+  finder add keeps its Cost override. The tabs carry `aria-controls` and the sides `role="tabpanel"`
+  (Task 4 review, `b112251`).
+- **Found in Task 5's QA, fixed in CSS** (`style(#47)`):
+  - **The Log dialog could not scroll.** It sits straight in the wide dialog's body, which is a
+    non-scrolling flex column built for Settings' own scrollers, so a log longer than one screen
+    squashed its rows into each other and the rest could not be reached. Task 3's shots held four
+    lines and never showed it. `.modal.wide .m-body:has(> .il-filters)` now scrolls, and the
+    log's pieces keep their height. A browser without `:has()` keeps the old behaviour.
+  - **The Equipment heading pushed the page sideways at 390px.** + Add, ⇄ Trade and Log made it
+    wider than a phone, so its edit, combat and note buttons ran 91px off the page and the page
+    scrolled horizontally. At 480px and under the heading now wraps its buttons onto a second row.
+  - The trade's five coin boxes wrapped to four and one on a phone; under 700px they share one row.
+
+**Where the build differs from §1–§9:**
+- **§7's names.** The coin text is `cpToGpText()`, not `cpToText`; `tradeBalance(draft, character)`
+  takes the draft, not four arguments. The fragment also holds helpers §7 doesn't list:
+  `itemWorthCp()`, `invSnap()`, `invSame()`, `logGrant()`, `logFinderAdd()`, `logItemSave()`,
+  `logCoins()`, `invRemoveQty()`, `invRestore()`, `newTradeDraft()`, `tradeClamp()`,
+  `completeTrade()`, and the dialog's painters.
+- **§4, the item form's delete.** The item form has no delete and there is no bulk delete; the
+  row's 🗑 is the one delete path, and it logs `delete`.
+- **§4, grants** fold every grant from one sid within 5 seconds into one line, which is how a
+  class's starting gear and gold become one "Granted by Fighter".
+- **§4, the finder's add line** names each item and its quantity, not its cost.
+- **§4, the ammo line** keeps the round count in `meta.rounds`; the line itself doesn't show it.
+- **§5, a blocked trade's reason** is the failing part's own reason ("It has since been used, sold
+  or removed."), not one naming the item.
+- **§6.1, the Log button** is 🕮 and the word "Log", the word hidden at 480px and under.
+- **§6.2:**
+  - at 700px and under, Cancel is hidden (mockup panel B): × and Escape close the window, through
+    a "Discard this trade?" confirm when the draft isn't empty;
+  - Complete is disabled while the draft is empty, and a toast follows a completed trade;
+  - the trade's finder hides the Origin select, since a trade always stamps Traded, and its
+    "added" badge marks what is already in the trade;
+  - the receipt adds two lines: the totals given and got, and the two switches in words.
+- **§6.3:** an "Undid:" line for a trade shows an empty Receipt; a receipt lists coins low to high
+  (CP before GP), not in the coin card's order.
+
+**Found in Task 5's QA and reported, not fixed (JS or markup, outside a QA task):**
+- **The Log button's 🕮 (U+1F56E) has no glyph** in the app's fonts on macOS: in headless Chrome it
+  draws as an empty box, which on a phone, with the word hidden, is the whole button. An SVG like
+  the card's other buttons would fix it (`src/html/10-inventory.html`).
+- **An unchanged save of a potion whose healing is read from its description writes "Edited …
+  Details changed".** Open the Potion of Healing's editor and press Save: the form saves the
+  detected `use` (`{heal:"2d4+2", consume:true}`) that it displayed, so `invSame()` sees a field
+  that wasn't there before. A Longsword's unchanged save writes nothing, as §9 asks. Armour whose AC
+  the form reads from its description may do the same (not driven).
+
+**Deferred minors, from code review across Tasks 1–4 (all recorded in progress.md; those marked ✔
+were fixed in Task 4's fix round, the rest left by ruling):**
+- The coins-undo reason's fallback to `k.toUpperCase()` is dead code: every key comes from a real
+  denomination (Task 1).
+- `invUndo()` re-renders the inventory, attacks and coins and recomputes for every kind, even one
+  that touched only coins or only items (Task 1).
+- The item form reads the item by `it.id` and the saved copy by `rec.id`, always equal but not
+  self-evidently so (Task 2).
+- `logItemSave()` computes `itemQty(after)` twice (Task 2).
+- `ammoFightSummary()` and `ammoRecoverable()` are near-duplicate tallies, differing only in the
+  final filter (Task 2).
+- `invLogHTML()` relies on `logInv()` keeping the log newest first and does no sort of its own
+  (Task 3).
+- The foot's "Keeps the newest N." has a trailing full stop the brief's snippet didn't (Task 3).
+- ✔ Given rows came back at the end of the list; ✔ coin boxes showed 2.5 while the draft held 2;
+  ✔ seeded drafts were not clamped; ✔ a merged finder add dropped its Cost override; ✔ the
+  `onClose` comment overstated when it fires; ✔ the tabs lacked `aria-controls` and tabpanels
+  (Task 4).
+- The finder's `fnum()` fix needed a player note: it is the third `UNRELEASED.md` bullet (Task 4,
+  Minor 7, taken in Task 5).

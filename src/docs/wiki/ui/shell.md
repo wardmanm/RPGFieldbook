@@ -159,10 +159,13 @@ One `#modal` backdrop holds `.modal` (`role="dialog"`, `aria-modal`, `tabindex="
 
 `openBrowse()` takes a config: `items`, `id`, `row` (title and tag), `search`, `facets`, `sort`,
 `group` / `groupKey` / `groupBadge`, `added`, `preview`, `onAdd` (chosen, origin, cost override, qty),
-`onCustom`, `noun` / `noun1`, and the footer switches `originSelect`, `qtyInput`, `costInput`. There
-are three callers, `browseItems()`, `browseSpells()` and `browseFeatures()`, reached through the
-`data-add` buttons ([Inventory](../features/inventory.md), [Spells](../features/spells.md),
-[Features & traits](../features/features-and-traits.md)).
+`onCustom`, `onClose` (#47), `noun` / `noun1`, and the footer switches `originSelect`, `qtyInput`,
+`costInput`. There are four callers: `browseItems()`, `browseSpells()` and `browseFeatures()`,
+reached through the `data-add` buttons ([Inventory](../features/inventory.md),
+[Spells](../features/spells.md), [Features & traits](../features/features-and-traits.md)), and the
+trade window's "+ Find an item" (`tradeFind()` in `67-trade.js`). The item finder's list, search,
+facets, Qty and Cost come from `itemBrowseCfg(lib)`, which `browseItems()` and the trade share; each
+adds its own `added`, `onAdd` and `onCustom`, and the trade an `onClose` that brings its window back.
 
 State is per call: query, facet sets, the selection, filters shown, and whether it has drawn. A row
 tap toggles that row in place and calls `foot()`, which repaints the Add label, the count and the
@@ -170,8 +173,9 @@ group badges without redrawing the list. `render()` redraws the whole finder for
 chip or Clear, reading Origin, Detail, Qty and Cost first and restoring them afterwards
 (`readFoot()` / `writeFoot()`, only after the first draw, so a reopened finder starts clean). The
 handlers are assigned as `host.oninput` / `onchange` / `onclick` properties, so each open replaces
-the last set rather than adding to it. Opening focuses `#brSearch`. Close shuts it, "+ Custom" shuts
-it and runs `onCustom`, and Add runs `onAdd` then shuts it. The eye button runs `preview`, which
+the last set rather than adding to it. Opening focuses `#brSearch`. Close shuts it and runs `onClose`, if
+given; "+ Custom" shuts it and runs `onCustom`, and Add runs `onAdd` then shuts it, so `onClose`
+fires on Close alone. The eye button runs `preview`, which
 opens the modal over the finder.
 
 ### The toast
@@ -386,3 +390,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-24 — The ☰ section flyout is retired (Mike): `buildToc()`, `openToc()`, `closeToc()` and their markup go; `scrollToCard()` stays. A back-to-top button (`#btnToTop`) arrives, with its collisions handled. → ledger L6804, #103
 - 2026-10-25 — A player can hide the word tabs a character doesn't use, per character: `HIDEABLE_TABS`, `applyHiddenTabs()`, `.tab[hidden]`, and a `selectTab()` guard; the Sheet and the combat swords can never be hidden. → ledger L6989, #52
 - 2026-10-25 — Final review fixes: `applyHiddenTabs()`'s redirect to the Sheet now scrolls to the top; corrected the Settings-flip repaint path and the hidden-tab guard's rationale. → ledger L7064, #52
+- 2026-10-25 — `openBrowse()` takes an `onClose`, run by Close only; the item finder's config is `itemBrowseCfg()`, shared with the trade window. → ledger L7291, #47

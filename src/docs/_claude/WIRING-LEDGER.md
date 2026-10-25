@@ -7287,3 +7287,51 @@ Mike, correcting the entry above: #110 (shapeshifting) has **no milestone**; it 
 backlog. 2.0 is already large. Its milestone is cleared on GitHub; the 2.0 page no longer plans it.
 
 Pages: [1.9.0](../wiki/roadmap/1.9.0.md), [2.0](../wiki/roadmap/2.0.md).
+
+## Trade window and inventory log (#47, 2026-10-25)
+
+Built on `issue/47-trade-window` in five tasks (spec `src/docs/specs/2026-10-25-trade-window-design.md`,
+plan `src/docs/plans/2026-10-25-trade-window.md`; the implementer and reviewer reports and every
+Ruling are in `.superpowers/sdd/2026-10-25-trade-window/`).
+
+- **A new fragment, `67-trade.js`,** after `66-coins-hp.js` (37 JS fragments). It holds the coin
+  maths (`coinsToCp()`, `cpToGpText()`, `itemWorthCp()`, all cost reads through `fnum()`), the log
+  (`logInv()`, `cleanInvLog()`, `logGrant()`, `logFinderAdd()`, `logItemSave()`, `logCoins()`),
+  the item helpers undo and the trade share (`invRemoveQty()`, `invRestore()`, which puts a row
+  back at its old index), undo (`invUndoCheck()`, `invUndo()`), the Log dialog (`invLogHTML()`,
+  `openInvLog()`) and the trade window (`newTradeDraft()`, `tradeClamp()`, `tradeBalance()`,
+  `tradeHTML()`, `completeTrade()`, `openTrade()`).
+- **Character fields:** `invLog` `[]` and `invLogSize` `500` (100 · 250 · 500 · 1,000 · 2,500) in
+  `blankChar()`; `migrate()` cleans both after keeping every field.
+- **Every writer logs once:** the finder's Add, the item form (an add; an edit only when a saved
+  field changed), the row's delete, `applyItemUse()`, Adjust, a coin box, Convert, grants
+  (`grantItemByName()` and `addGrantGold()`, one line per source within 5 seconds), and End combat
+  (one `ammo` line per kind fired, from `ammoFightSummary()`, read before recovery clears the
+  counts). Grant and ammo lines have no Undo.
+- **Undo** per kind, refused with a reason when it is no longer clean. A trade undoes as one step;
+  its given rows come back newest removal first, each at its old place. Every Use is undoable,
+  including the last one, from a copy kept at Use time (a plan-level Ruling, wider than the spec).
+- **UI:** ⇄ Trade and Log on the Equipment card; the Log dialog with filters, a receipt per trade,
+  Undo and Clear log; Settings → Sheet display → Inventory → Inventory log size, which trims at
+  once. The trade window: "With" with chips from the Party card and earlier trades, You give / You
+  get with steppers capped at what you own, the finder (`openBrowse()` gained `cfg.onClose`, fired
+  by Close only) and custom items, coin boxes, the two Apply item value switches, the balance, a
+  short confirm. Side by side above 700px; tabs and a ✓ button at 700px and under.
+- **The finder's Cost override reads `fnum()`:** it truncated 0.5 gp to 0 on every Add.
+- **QA fixes in Task 5 (CSS only):** the log, sitting straight in the wide dialog's non-scrolling
+  flex body, squashed its rows into each other and could not scroll past the first screen once it
+  held more than a screenful (`.modal.wide .m-body:has(> .il-filters)` scrolls, the pieces keep
+  their height); the Equipment heading pushed its edit, combat and note buttons off a 390px page,
+  which then scrolled sideways (it wraps at 480px and under); the trade's coin boxes fit one row
+  on a phone.
+- **Open for Mike:** selling above an item's worth reads "N short" in red and confirms — the spec's
+  rule, against the mockup's note. Found in QA and reported, not fixed: the Log button's 🕮 has
+  no glyph in the app's fonts on macOS (a box); an unchanged save of a potion whose healing is read
+  from its description writes an "Edited" line.
+
+Pages: [Inventory](../wiki/features/inventory.md), [Ammunition](../wiki/features/ammunition.md),
+[Grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[Character model](../wiki/architecture/character-model.md),
+[Settings & updates](../wiki/features/settings-and-updates.md), [Shell](../wiki/ui/shell.md),
+[Overview](../wiki/overview.md), [Known issues](../wiki/roadmap/known-issues.md),
+[1.9.0](../wiki/roadmap/1.9.0.md), the spec's As built.

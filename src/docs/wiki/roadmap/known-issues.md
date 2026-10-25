@@ -258,6 +258,14 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   `racesForCharacter()` filters by system. → [Theming & icons](../ui/theming-and-icons.md)
 - **Print includes hidden attacks**: `printSheet()` prints the attacks of unequipped weapons.
   → [Attacks & damage](../features/attacks-and-damage.md)
+- **The inventory Log button's 🕮 has no glyph** in the app's fonts on macOS, so on a phone, where
+  the word "Log" is hidden, the button is an empty box. Found in #47's QA. → [Inventory](../features/inventory.md)
+- **An unchanged save of a potion writes an "Edited" log line** when its healing is read from its
+  description: the item form saves the detected `use` it showed, so `invSame()` sees a change.
+  Found in #47's QA. → [Inventory](../features/inventory.md)
+- **Selling for more than an item's worth reads "N short" in red** and asks to confirm, because the
+  trade balance makes no exception for coins received; the brainstorm mockup said received coins
+  never turn it red. Open for Mike. → [Inventory](../features/inventory.md)
 
 ### Keyboard access
 
@@ -502,3 +510,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-23 — Removed with the #103 final review: Familiars not addable to the combat view (the paw's menu has the toggle). Added: lifted languages are the player's own. The system-chip swap's entry now records the plan-time ruling. → ledger L6729, #103
 - 2026-10-24 — Removed: the Features Favourites group not being in the ☰ menu, which is retired. → ledger L6804, #103
 - 2026-10-24 — Added: what the #101 final review left (a long card at 390, the scene's page not inert, `luSummary()`'s cut, focus after a skip). → ledger L6928, #101
+- 2026-10-25 — Added from #47's QA: the Log button's missing glyph, the potion's unchanged save writing a line, and selling reading short. → ledger L7291, #47

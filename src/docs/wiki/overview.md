@@ -138,7 +138,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `62-ammo.js` | ammunition: kinds, stacks, unpacking, the one-time pass, firing and recovery | [Ammunition](features/ammunition.md) |
 | `65-resources.js` | death saves, rests, Hit Dice, dice expressions, resource trackers, slot bubbles | [Vitals & rest](features/vitals-and-rest.md), [Class resources](features/class-resources.md) |
 | `66-coins-hp.js` | portrait, coins and the Adjust transaction, HP entry, `renderAll()` | [Inventory](features/inventory.md), [Vitals & rest](features/vitals-and-rest.md) |
-| `67-trade.js` | the trade window and the inventory log: one line per change, undo | [Inventory](features/inventory.md) |
+| `67-trade.js` | the inventory log (one line per item or coin change), its undo and its dialog, and the trade window | [Inventory](features/inventory.md), [Grants & provenance](architecture/grants-and-provenance.md), [Character model](architecture/character-model.md) |
 | `70-persistence.js` | localStorage keys, the character library, backups, IndexedDB with timeouts, LZW | [Storage](architecture/storage.md), [Home & characters](features/home-and-characters.md) |
 | `71-char-io.js` | IDB rules-cache hydration, `migrate()`, export/import, print | [Character model](architecture/character-model.md), [Home & characters](features/home-and-characters.md), [Storage](architecture/storage.md) |
 | `72-char-update.js` | pure diff of a sheet against its packs: `stampSrc()`, `diffCharacter()` | [Rules-update tool](features/rules-update-tool.md) |
@@ -221,3 +221,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-23 — The code map follows the Sheet makeover: the header in `40-sheet.js`, chips and their grants in `41-chips.js`, the Bio tab. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired: the template and `40-sheet.js` rows of the code map, and the glossary's "section", drop it. → ledger L6804, #103
 - 2026-10-25 — `87-initiative.js` joins the code map (JS fragment count 35→36): the initiative tracker's party, combatants, turns, bands, the strip and dialogs, placed right after `87-combat.js`. → ledger L7097, #91
+- 2026-10-25 — `67-trade.js` joins the code map (JS fragment count 36→37): the inventory log, its undo and dialog, and the trade window, placed right after `66-coins-hp.js`. → ledger L7291, #47
