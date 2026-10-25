@@ -207,5 +207,17 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 .ir-row,.ir-foe{display:flex;align-items:center;gap:8px;min-height:44px;border-bottom:1px dotted var(--hair);flex-wrap:wrap}
 .ir-row>span{flex:1;min-width:0}
 .ir-foe input[data-irf="name"]{flex:1;min-width:120px}
-.ir-k{font-family:var(--head);font-size:11px;color:var(--ink-soft)}
+.ir-k{font-family:var(--head);font-size:11px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:4px}
 .hd-res.bad{color:var(--brick)}
+/* #91 fix round 1: the general input{width:100%} rule forces every narrow
+   box in a row onto its own full-width line (flex-wrap has nowhere else to
+   put it). Only the name input should flex; count/AC/initiative are fixed,
+   narrow boxes that sit beside their label on the same line. */
+.ir-row input[data-irparty],.ir-foe input[data-irf="count"],.ir-foe input[data-irf="ac"],.ir-foe input[data-irf="init"]{
+  width:60px;flex:0 0 auto;min-height:44px}
+/* #91 fix round 1: "+ Add a monster" used .label .add's look, but that rule
+   is scoped to .label — here it sits in a plain modal body (or, later, the
+   initiative table's own foot), so it needs its own scoped copy. */
+#mBody .add,.ini-foot .add{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;color:var(--accent-2);
+  background:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 6px;border-radius:6px}
+#mBody .add:hover,.ini-foot .add:hover{background:color-mix(in srgb,var(--accent-2) 16%,transparent)}
