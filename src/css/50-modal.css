@@ -201,3 +201,11 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 @keyframes luMote{0%{opacity:0;transform:translateY(0)}20%{opacity:1}100%{opacity:0;transform:translateY(-70vh)}}
 @media (prefers-reduced-motion:reduce){.lu-fx{display:none}}
 @media print{.lu-fx{display:none!important}}
+
+/* ---- Roll initiative (#91) ---- */
+.ir-you{padding:8px 0;border-bottom:1px dotted var(--hair)}
+.ir-row,.ir-foe{display:flex;align-items:center;gap:8px;min-height:44px;border-bottom:1px dotted var(--hair);flex-wrap:wrap}
+.ir-row>span{flex:1;min-width:0}
+.ir-foe input[data-irf="name"]{flex:1;min-width:120px}
+.ir-k{font-family:var(--head);font-size:11px;color:var(--ink-soft)}
+.hd-res.bad{color:var(--brick)}

@@ -87,6 +87,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'initSort', 'initFirstAlive', 'initNextTurn', 'bandOfShare', 'combatantBar', 'initRollCheck',
   'initRollLine', 'initModOf', 'youAC', 'buildCombatants',
   'partyRowsHTML', 'savePartyMember', 'removePartyMember',
+  'initRollHTML', 'openInitRoll', 'irState', 'irSetTyped', 'irRoll', 'startInitFight',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -6101,6 +6102,32 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
      X.NOTE_SECTIONS.some(s => s.k === 'party' && s.tab === 'story' && s.nocv === true) && X.EDIT_CARDS.indexOf('party') >= 0);
   const html = require('./harness').loadHTML();
   ck('#91 the Bio tab carries the card with its list and add button', /<div class="card" data-note="party">[\s\S]*?id="partyAdd"[\s\S]*?id="partyList"/.test(html));
+}
+
+// ---------- #91 Roll initiative and starting a fight
+{
+  const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, ra: ctx.renderActiveSpells, cm: ctx.closeModal};
+  ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderActiveSpells = () => {}; ctx.closeModal = () => {};
+  try {
+    X.character = X.blankChar(); X.character.name = 'Mira';
+    const h = X.initRollHTML([{id: 'p1', name: 'Thorn', ac: 14, maxHp: 22}], false);
+    ck('#91 the window lists you with the roll controls, and the party with typed totals',
+       /Mira/.test(h) && /id="irRoll"/.test(h) && /id="irTyped"/.test(h) && /id="irApply"/.test(h) && /id="irAdv"/.test(h) && /data-irparty="p1"/.test(h) && /Thorn/.test(h), h);
+    ck('#91 ...a foe row and + Add a monster', /data-irfoe/.test(h) && /id="irAddFoe"/.test(h));
+    ck('#91 a typed 21 is refused, a 14 kept', X.irSetTyped('21') === 'A d20 rolls 1 to 20.' && X.irState().set === false && X.irSetTyped('14') === '' && X.irState().faces.join() === '14');
+    X.startInitFight({name: 'Mira', init: 17}, [{id: 'p1', name: 'Thorn', ac: 14, maxHp: 22, init: 14}], [{name: 'Goblin', count: 2, ac: '', init: 19}]);
+    ck('#91 Start: round 1, combat on, sorted, Turns marker on the first living row',
+       X.character.combatActive === true && X.num(X.character.combatRound) === 1 && X.character.combatants.map(r => r.name).join() === 'Goblin 1,Goblin 2,Mira,Thorn' &&
+       X.character.combatTurn === X.character.combatants[0].id, X.character.combatants.map(r => r.name));
+    X.character.combatRound = 4;
+    X.startInitFight({name: 'Mira', init: 10}, [], []);
+    ck('#91 rolling for a fight already running keeps its round', X.num(X.character.combatRound) === 4 && X.character.combatants.length === 1);
+    X.character.initMode = 'rounds'; X.character.combatActive = false;
+    X.startInitFight({name: 'Mira', init: 10}, [], []);
+    ck('#91 Rounds mode sets no marker', X.character.combatTurn === '');
+  } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderActiveSpells = keep.ra; ctx.closeModal = keep.cm; }
+  const boot = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8');
+  ck('#91 Start combat opens Roll initiative', /closest\("#cvStart"\)\)return openInitRoll\(\)/.test(boot));
 }
 
 ck.done();

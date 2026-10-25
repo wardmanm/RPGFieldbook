@@ -155,7 +155,7 @@ function wire(){
        leave the cursor in the box. */
     if((m=t.closest(".search-clear"))){const i=m.parentNode.querySelector("input");if(i){i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();}return;}
     if(t.closest("#btnCombat"))return combatViewOpen()?leaveCombatTab():enterCombatTab();
-    if(t.closest("#cvStart"))return startCombatNow();
+    if(t.closest("#cvStart"))return openInitRoll();
     /* #103: the combat header's own star — the sheet's #starBtn is in the
        header, which the view does not bring unless the player adds it */
     if(t.closest("[data-inspire]"))return toggleInspiration();

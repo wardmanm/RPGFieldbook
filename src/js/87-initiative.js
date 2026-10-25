@@ -116,3 +116,71 @@ function openPartyForm(id){
     if(why){document.getElementById("pmWhy").textContent=why;return;}closeModal();
   });
 }
+
+/* ---- Roll initiative ----
+   Your row copies the hit-die spend box: Roll for me (d20 + your modifier),
+   or the d20 you rolled + Apply; Advantage rolls two, keeps the higher.
+   Everyone else's total is typed. Opened by Start combat, and by the strip's
+   "Roll initiative" when an old save has a fight but no list (midFight). */
+let _ir={faces:[],set:false,adv:false};
+function irState(){return _ir;}
+function irFoeRowHTML(){
+  return `<div class="ir-foe" data-irfoe><input data-irf="name" placeholder="Monster" aria-label="Monster name" autocomplete="off">`+
+    `<label class="ir-k">× <input data-irf="count" inputmode="numeric" size="2" value="1" aria-label="How many"></label>`+
+    `<label class="ir-k">AC <input data-irf="ac" inputmode="numeric" size="2" aria-label="AC guess (optional)"></label>`+
+    `<input data-irf="init" inputmode="numeric" size="3" placeholder="Init" aria-label="Initiative"></div>`;
+}
+function initRollHTML(party,midFight){
+  const mod=initModOf();
+  return `<p class="hint">${midFight?"Roll for the fight already running.":"Your party and you are in. Add the monsters, then everyone's roll."}</p>`+
+    `<div class="ir-you"><b>${esc(character.name||"You")}</b> <span class="ir-k">you · initiative ${esc((mod<0?"−":"+")+Math.abs(mod))}</span>`+
+    `<div class="hd-how"><button type="button" class="tbtn primary" id="irRoll">🎲 Roll for me</button> <span>or</span> `+
+    `<label>I rolled <input id="irTyped" inputmode="numeric" size="3"></label> <button type="button" class="tbtn" id="irApply">Apply</button> `+
+    `<button type="button" class="switch" id="irAdv" role="switch" aria-checked="false" aria-label="Advantage"></button><span class="ir-k">Advantage</span></div>`+
+    `<div class="hd-res" id="irRes" aria-live="polite"></div></div>`+
+    (party.length?`<div class="ir-party">`+party.map(p=>`<label class="ir-row"><span>${esc(p.name)} <span class="ir-k">party</span></span>`+
+      `<input data-irparty="${esc(p.id)}" inputmode="numeric" size="3" aria-label="${esc(p.name+"'s initiative")}"></label>`).join("")+`</div>`:"")+
+    `<div id="irFoes">${irFoeRowHTML()}</div><button type="button" class="add" id="irAddFoe">+ Add a monster</button>`+
+    `<p class="hint">A blank initiative goes last; you can fill it in later.</p>`+
+    `<div class="m-actions"><button class="tbtn" id="irCancel">Cancel</button><button class="tbtn primary" id="irStart">Start ▸</button></div>`;
+}
+function irPaint(why){
+  const r=document.getElementById("irRes");if(!r)return;
+  r.textContent=why||(_ir.set?initRollLine(_ir.faces,initModOf()):"");
+  if(r.classList)r.classList.toggle("bad",!!why);
+}
+function irSetTyped(raw){
+  const c=initRollCheck(raw);if(!c.ok){_ir.set=false;_ir.faces=[];irPaint(c.why);return c.why;}
+  _ir.faces=[c.face];_ir.set=true;irPaint("");return "";
+}
+function irRoll(){
+  const d=()=>rollDiceExpr({dice:[{n:1,sides:20,sign:1}],mod:0}).total;
+  _ir.faces=_ir.adv?[d(),d()]:[d()];_ir.set=true;
+  const box=document.getElementById("irTyped");if(box)box.value=String(Math.max.apply(null,_ir.faces));
+  irPaint("");
+}
+function startInitFight(you,party,foes){
+  if(!inCombat(character))combatStart(character);
+  character.combatants=buildCombatants(you,party,foes);
+  character.combatTurn=character.initMode==="turns"?initFirstAlive(character.combatants):"";
+  renderActiveSpells();renderCombatChrome();scheduleSave();
+}
+function openInitRoll(){
+  const mid=inCombat(character),party=cleanParty(character.party);
+  _ir={faces:[],set:false,adv:false};
+  openModal("Roll initiative",initRollHTML(party,mid),"",{wide:true});
+  const on=(id,ev,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener(ev,fn);};
+  on("irRoll","click",irRoll);
+  on("irApply","click",()=>irSetTyped(document.getElementById("irTyped").value));
+  on("irTyped","keydown",e=>{if(e.key==="Enter"){e.preventDefault();irSetTyped(e.target.value);}});
+  on("irAdv","click",e=>{_ir.adv=!_ir.adv;e.currentTarget.classList.toggle("on",_ir.adv);e.currentTarget.setAttribute("aria-checked",_ir.adv?"true":"false");});
+  on("irAddFoe","click",()=>{const f=document.getElementById("irFoes");if(f)f.insertAdjacentHTML("beforeend",irFoeRowHTML());});
+  on("irCancel","click",closeModal);
+  on("irStart","click",()=>{
+    const you={name:character.name||"You",init:_ir.set?Math.max.apply(null,_ir.faces)+initModOf():null};
+    const party2=party.map(p=>{const i=document.querySelector(`[data-irparty="${CSS.escape(p.id)}"]`);return Object.assign({},p,{init:i?i.value:""});});
+    const foes=Array.from(document.querySelectorAll("[data-irfoe]")).map(row=>{const v=k=>{const i=row.querySelector(`[data-irf="${k}"]`);return i?i.value:"";};
+      return {name:v("name"),count:v("count"),ac:v("ac"),init:v("init")};});
+    closeModal();startInitFight(you,party2,foes);
+  });
+}
