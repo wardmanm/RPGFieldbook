@@ -286,8 +286,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the log lives (#47)** — A Log button on the Equipment card, opening a dialog
 - **How long the log is (#47)** — Per character, `invLogSize` 100 · 250 · 500 · 1,000 · 2,500, default 500
 - **What can be undone (#47)** — Any line that can still be reversed cleanly, with the reason when not; not grants nor ammo
-- **How far Use is undoable (#47)** — Always, from a copy kept at every Use (and every trade's give); refused only for an old line with neither a row nor a copy
-- **What removing a source logs (#47)** — One "Removed with *source*" line listing the items and gold that left, no Undo
+- **How far Use is undoable (#47)** — Always, from a copy kept at every Use (and every trade's give); refused only when nothing can give it back (an old line with no copy, or a uses-only Use whose row is gone or lost its uses)
 - **A row's Recover in the log (#47)** — Counted in that fight's End combat line; no line of its own
 - **Item-use pips in the log (#47)** — Not logged: they change uses, not quantity
 - **Lowering the log size (#47)** — Trims at once, asking first when lines would go

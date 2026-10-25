@@ -7383,3 +7383,17 @@ Pages: [Inventory](../wiki/features/inventory.md), [Ammunition](../wiki/features
 [Settings & updates](../wiki/features/settings-and-updates.md),
 [Known issues](../wiki/roadmap/known-issues.md), [Decisions](../wiki/decisions.md), the spec's As
 built.
+
+## #47 re-review residuals (2026-10-25)
+
+The re-review of the final fixes approved them and left two Minors, both fixed here.
+
+- `invCheckPart()` sums an `add` part's records per row before checking. Received items of one name
+  stack onto one row, so two records of 2 on a row of 3 passed one by one, and the undo then took
+  back 3 while claiming 4. It is now refused unless the row still holds them all. Test in
+  `src/tests/sheet.js`.
+- Three doc statements made true: Use is refused not only for an old line with no copy but also
+  for a uses-only Use whose row is gone or lost its uses; the duplicate "removing a source"
+  Decisions line is gone.
+
+Pages: [inventory](../wiki/features/inventory.md), [decisions](../wiki/decisions.md).

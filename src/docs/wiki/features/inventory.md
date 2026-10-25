@@ -149,15 +149,17 @@ trade's sides do. The foot says how many lines are kept and holds **Clear log**,
 applies it as one step, marks the line `undone` (struck through and faded) and writes its own
 "Undid: …" line with no undo. The check is exactly what the apply step can do, so an Undo that
 passes always puts something back, and one that is refused changes nothing and marks nothing.
-- `add` needs the item still there with at least the quantity added ("It has since been used, sold
-  or removed.").
+- `add` needs the item still there with at least the quantity added; records of one line that
+  stacked onto one row are summed first ("It has since been used, sold or removed.").
 - `edit` needs the item to still match its after-copy ("It has been changed again since.").
 - `coins` needs every coin it would take back still in the purse ("Not enough GP left to take
   back.").
 - `delete` puts its copy back.
 - `use` adds the quantity or the use back to the row; if the row has gone since (deleted, sold,
-  used up), it restores the copy with the quantity used. Only an old line, from before every Use
-  kept a copy, with its row gone is refused ("It is no longer in your inventory.").
+  used up), it restores the copy with the quantity used. It is refused when nothing can give back
+  what was used: an old line, from before every Use kept a copy, whose row is gone ("It is no
+  longer in your inventory."), or a Use that spent only a use (a wand's charge) whose row is gone or
+  has since lost its uses ("It has been changed again since.").
 - `trade` checks every part before applying any. Its give part works as `use` does: back onto the
   row, or the copy with the quantity given (a trade keeps a copy of every given row). Inside a
   trade the reason names the item ("The Healing Potion you got has since been used, sold or
@@ -321,7 +323,7 @@ the inventory and recompute, because coins have weight.
 | Where the log lives (#47) | A Log button on the Equipment card, opening a dialog | A collapsible card at the bottom of Inventory: the tab is already long |
 | How long the log is (#47) | Per character, `invLogSize` 100 · 250 · 500 · 1,000 · 2,500, default 500 | A fixed 1,000: Mike wants it settable. Everything: grows forever |
 | What can be undone (#47) | Any line that can still be reversed cleanly; otherwise Undo is disabled with the reason. Not grants (removing the source reverts them) nor ammo (recovery has its own Undo) | Newest only: a trade three changes back couldn't be reached |
-| How far Use is undoable (#47) | Always, from a copy of the item kept at every Use (and every trade's give); refused only for an old line with neither a row nor a copy | Only while the item exists (the spec): a used-up potion couldn't come back. A copy only when the Use removed the row: Undo then did nothing once the row went another way |
+| How far Use is undoable (#47) | Always, from a copy of the item kept at every Use (and every trade's give); refused only when nothing can give it back: an old line with neither a row nor a copy, or a uses-only Use whose row is gone or lost its uses | Only while the item exists (the spec): a used-up potion couldn't come back. A copy only when the Use removed the row: Undo then did nothing once the row went another way |
 | What removing a source logs (#47) | One "Removed with *source*" line listing the items and gold that left, no Undo | No line: a class's whole kit vanished without a trace. An Undo: granting again belongs to the source |
 | A row's Recover in the log (#47) | Counted in that fight's End combat line; no line of its own | A line per Recover: one more line per tap. Not counted: the fight's line under-reported |
 | Item-use pips in the log (#47) | Not logged: they change uses, not quantity, as equipping and rest resets do | A line per pip: Use already logs the deliberate spend |
@@ -376,3 +378,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-24 — The ☰ section flyout is retired, so a section is no longer listed anywhere. → ledger L6804, #103
 - 2026-10-25 — The trade window and the inventory log: one log line per item and coin change, Undo, the Log dialog and its size setting; the finder's Cost override keeps fractions. → ledger L7291, #47
 - 2026-10-25 — Final review: Undo never succeeds while restoring nothing; an unchanged form Save writes no line; removing a source and a row's Recover are logged; costs, pp → cp and "what is left" in the lines; the log scrolls in its own box; the size confirm. → ledger L7339, #47
+- 2026-10-25 — Re-review: an `add` undo sums the records that stacked onto one row; Use's refusals stated in full. → ledger L7387, #47

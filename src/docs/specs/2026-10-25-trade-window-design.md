@@ -276,8 +276,10 @@ window and inventory log (#47, 2026-10-25)" is the condensed version).
 it and told Mike at handoff: **every Use is undoable**, the last one too. Since the final review
 (K1, below) `applyItemUse()` keeps a copy of the item, its linked attack and both indexes at
 *every* Use, and a trade keeps one of every row it gives: Undo adds back to the row while it is
-there, or restores the copy with the quantity used or given, at its old place. Only an old line
-with neither a row nor a copy is refused. Cost if this turns out wrong: one condition in
+there, or restores the copy with the quantity used or given, at its old place. It is refused only
+when nothing can give back what was used: an old line with neither a row nor a copy, or a Use that
+spent only a use (a wand's charge) whose row is gone or has lost its uses. An `add` part sums its
+records per row before checking, since received items of one name stack onto one row. Cost if this turns out wrong: one condition in
 `invCheckPart()`.
 
 **Rulings made during the build:**
