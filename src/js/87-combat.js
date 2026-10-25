@@ -67,10 +67,14 @@ function combatStart(c){c.combatActive=true;c.combatRound=1;}
    42 sec), while the header shows the time at the START of the current round
    (combatElapsedSec: round 7 → 36 sec). Both on purpose — don't "fix" one to
    match the other. */
+/* It also clears the fight (#91) and hands back the list it cleared, so the
+   end-of-fight dialog (#105) reads `combatants` from this return value rather
+   than from the character, where it is already gone. */
 function combatEnd(c){
-  const rounds=Math.max(0,num(c.combatRound));
+  const rounds=Math.max(0,num(c.combatRound)),combatants=Array.isArray(c.combatants)?c.combatants:[];
   c.combatActive=false;c.combatRound=0;
-  return {rounds,sec:rounds*6};
+  c.combatants=[];c.combatTurn="";
+  return {rounds,sec:rounds*6,combatants};
 }
 function combatElapsedSec(c){return Math.max(0,num(c&&c.combatRound)-1)*6;}
 function fmtCombatTime(sec){
@@ -102,6 +106,11 @@ function renderCombatButton(){
    these are. A reload starts on the sheet; combat itself is saved on the
    character. */
 let cvOpen=false, cvScroll=0, cvPageScroll=0, cvCharId=null, cvPrevTab="sheet";
+/* The round #cvLive last said, so a repaint that did not move the round says
+   nothing (#91 final review m2: toggling ▾ used to replace "Ogre's turn" with
+   "Round 1"). 0 = say the next one; reset on open, on a character switch and
+   out of combat. initNext() sets it when a wrap says the round itself. */
+let cvLiveRound=0;
 function combatViewOpen(){return cvOpen;}
 
 /* Found fresh every time, never cached: a card re-rendered while it sat in the
@@ -209,7 +218,7 @@ function combatHeaderHTML(c){
     `<span class="cv-track"><button class="tbtn" id="cvPrev" aria-label="Previous round"${r<=1?" disabled":""}>◀</button>`+
     `<span class="cv-round">Round <b>${r}</b><span class="cv-sep"> · </span><span class="cv-time">${fmtCombatTime(combatElapsedSec(c))}</span></span>`+
     `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span>`+
-    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`;
+    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`+initStripHTML(c);
 }
 /* Repainting replaces every button, so focus is carried across by id. When that
    button is gone or disabled — ◀ at round 1, Start once combat starts, End once
@@ -217,10 +226,13 @@ function combatHeaderHTML(c){
 function renderCombatHeader(){
   const h=document.getElementById("cvHead");if(!h)return;
   const a=document.activeElement,had=a&&a.id&&h.contains(a)?a.id:"";
+  const oc=h.querySelector(".ini-chips"),sl=oc?oc.scrollLeft:0;   /* the strip's sideways scroll, kept (#91 I2) */
   h.innerHTML=combatHeaderHTML(character);
   h.classList.toggle("fighting",inCombat(character));   // the two-row phone layout is for combat only
-  if(inCombat(character))setCombatLive("Round "+num(character.combatRound));
-  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart"};
+  if(!inCombat(character))cvLiveRound=0;
+  else if(num(character.combatRound)!==cvLiveRound){cvLiveRound=num(character.combatRound);setCombatLive("Round "+cvLiveRound);}
+  initKeepActorInView(sl);
+  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart",cvTurn:"cvNext"};
   for(let id=had,i=0;id&&i<4;id=instead[id],i++){
     const b=document.getElementById(id);
     if(b&&!b.disabled){b.focus();break;}
@@ -237,6 +249,7 @@ function openCombatView(){
   fillCombatView();
   cvOpen=true;
   setCombatLive("");   // no stale "Combat ended…" from another fight or character
+  cvLiveRound=0;       // ...and say the round again on the way in
   renderCombatHeader();
   cvStickyTop();
 }
@@ -318,14 +331,14 @@ function undoCombatRemove(k,at,who,viaKey){
 /* Everything that shows combat state repaints through here. The round moves from
    three places — the view's arrows, the Active Spells card's own buttons, and
    Start/End — so none of them can disagree. */
-function renderCombatChrome(){renderCombatButton();if(cvOpen)renderCombatHeader();}
+function renderCombatChrome(){renderCombatButton();if(cvOpen){renderCombatHeader();renderInitTable();}}
 /* The last thing renderAll() does — and every character switch ends in
    renderAll(). An open view re-lays itself from THIS character's list, keeping
    its scroll for the same character; another character's remembered scroll is
    dropped, since it belonged to other cards. */
 function syncCombatView(){
   const switched=character.id!==cvCharId;
-  if(switched){cvCharId=character.id;cvScroll=0;}
+  if(switched){cvCharId=character.id;cvScroll=0;cvLiveRound=0;}
   if(cvOpen){
     emptyCombatView();fillCombatView();
     if(switched)window.scrollTo({top:0});
@@ -334,6 +347,9 @@ function syncCombatView(){
 }
 
 /* ---- the tracker ---- */
+/* A start with no roll and no list. No button calls it since #91 (#cvStart
+   opens Roll initiative, which starts through startInitFight()); sheet.js's
+   combat-view and ammunition (#104) tests call it to begin a fight. */
 function startCombatNow(){combatStart(character);renderActiveSpells();renderCombatChrome();scheduleSave();}
 /* Asked first: the round count is the one thing here a stray tap would lose. */
 function endCombatAsk(){

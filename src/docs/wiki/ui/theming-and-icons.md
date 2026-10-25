@@ -74,7 +74,12 @@ theme (`--lu-night`/`--lu-night-2`, the gradient's edge and centre), so it is de
 block rather than once per theme block — Humblewood's values are on `:root` and the classic skin's
 on `html[data-skin="classic"]`, which wins as usual (`00-tokens.css`). Classic is a violet night with pale
 arcane blue (`--lu-glow`); Humblewood is a deep forest green (`#0d1a12`) with a warm gold-green glow.
-`--lu-spark` (the banner's gold sparks) is the same gold in both skins. The fonts are `--display`
+`--lu-spark` (the banner's gold sparks) is the same gold in both skins. **`--hb-healthy`,
+`--hb-injured`, `--hb-bloodied`, `--hb-near` and `--hb-empty`** (#91, the initiative tracker's
+health bands, [Combat view](../features/combat-view.md)) go a step further: one green/amber/
+orange/red/grey set on bare `:root`, shared by **every** skin and theme — a fixed semaphore so
+"Bloodied" always reads the same colour whichever palette is open, rather than following `--warn`/
+`--brick`'s per-palette drift. The fonts are `--display`
 (Grenze Gotisch; Cinzel on the classic skin), `--head`
 (Cinzel) and `--body` (EB Garamond). They load from Google Fonts through a `<link>` in the template,
 and each stack falls back to Georgia or Times New Roman, which is what renders offline. Most text on
@@ -173,6 +178,9 @@ removed".
   follows.
 - **Every palette defines every token.** `rules-data.js` asserts that `--warn` appears as often as
   `--brick`. A token missing from a classic block would quietly fall back to the Humblewood value.
+  The two deliberate exceptions, each defined once rather than per palette and asserted as such,
+  are the level-up scene's tokens (once per **skin**, #101) and the initiative tracker's band
+  tokens (once on bare `:root`, shared by all four palettes, #91).
 - **`applyTheme()` is the only writer of the four attributes**, and the template keeps its defaults.
   A test asserts `data-tabs="labels"` is on the root element.
 
@@ -240,3 +248,4 @@ removed".
   violet-night value per skin shared by light and dark; the card's class line and banner number move
   to `--body` so a "1" doesn't read as "I". → ledger L6840, #101
 - 2026-10-24 — Corrected: Humblewood's scene tokens are on `:root`, not `html[data-theme]`. → ledger L6928, #101
+- 2026-10-25 — `--hb-healthy`, `--hb-injured`, `--hb-bloodied`, `--hb-near` and `--hb-empty` join `:root`, one set for all four palettes, for the initiative tracker's health bands. → ledger L7097, #91

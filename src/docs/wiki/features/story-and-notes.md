@@ -2,8 +2,8 @@
 
 Two kinds of free text, easy to confuse. The **Bio tab** (called Story until #103; its id is still
 `story`) holds the character's own writing: eight bio cards (Appearance through a card called
-**Notes**) and the "Proficiencies, Senses & Languages" card. **Section
-notes** are something else — a note pinned to any of 18 cards on the Sheet, Spells, Inventory,
+**Notes**), the "Proficiencies, Senses & Languages" card, and the **Party** card (#91). **Section
+notes** are something else — a note pinned to any of 19 cards on the Sheet, Spells, Inventory,
 Bio and Journal tabs, opened from an icon in the card's heading and gathered in the **Section Notes** card on
 the **Journal tab**, below the player's own journal pages ([Journal](journal.md)). Both render
 the same markdown-on-top-of-glossary grammar.
@@ -13,10 +13,13 @@ the same markdown-on-top-of-glossary grammar.
 `saveNote()`, `noteWhen()`, `noteBtnHTML()`, `notePreview()`, `renderNoteIcons()`, `notesHTML()`,
 `noteEntryHTML()`, `renderNotes()`, `toggleNoteGroup()`, `jumpToNote()` (#52), `openNoteEditor()` in
 `87-notes.js` · `mergeNoteInto()`, `migrateSheet103()` in `71-char-io.js` · `chipsHTML()`,
-`renderBioChips()` in `41-chips.js` · `selectTab()`, `scrollToCard()` in `40-sheet.js` · markup `src/html/30-story.html`,
+`renderBioChips()` in `41-chips.js` · `selectTab()`, `scrollToCard()` in `40-sheet.js` ·
+**the Party card** (#91), in `87-initiative.js`: `partyRowsHTML()`, `renderParty()`,
+`savePartyMember()`, `removePartyMember()`, `openPartyForm()` · markup `src/html/30-story.html`,
 `src/html/60-journal.html` · **Tests:** `rules-data.js` (registry ↔ template, storage guards, the pure
 renderers), `tables.js` (the markdown) · **See also:** [Rich text](../architecture/rich-text.md),
-[Character model](../architecture/character-model.md),
+[Character model](../architecture/character-model.md), [Combat view](combat-view.md) (the fight each
+party member joins),
 [Sections & layout](../ui/sections-and-layout.md), [Shell](../ui/shell.md)
 
 ## How it works
@@ -48,10 +51,19 @@ the chips' ×.
 (`NOTE_TABS.story`); the id stays `story`, because saved Section Notes fold state (`noteCollapse`)
 keys on it.
 
-**Section notes.** `NOTE_SECTIONS` is the registry: 18 entries of `{k, tab, title}` — nine on the
+**The Party card** (#91, the `party` section, `nocv:true`) sits right after Proficiencies: a list of
+companions (`partyRowsHTML()`, name plus optional AC/HP pills, an edit and a remove button per row,
+the #97 pencil pattern), **+ Add** opening a small form (`openPartyForm()` → `savePartyMember()`,
+name required, AC/max HP optional whole numbers), stored as `character.party`. It is `nocv` because
+it is the roster the next fight copies from, not a fight's own combatants — those live on the
+combat view's tracker ([Combat view](combat-view.md)). Starting a fight copies each member's
+current name/AC/maxHp into that fight's `combatants`; editing or removing a party member afterwards
+never touches a fight already running.
+
+**Section notes.** `NOTE_SECTIONS` is the registry: 19 entries of `{k, tab, title}` — nine on the
 Sheet (the header, titled "Character", and the rail, strip, Skills, Defences, Statuses, Resources,
 Features and the hidden Familiars), four on Spells, three on Inventory (Attacks, Equipment, Coins),
-one (Proficiencies) on Bio, one (Trackers) on the Journal tab. A card opts in with
+two on Bio (Proficiencies, Party), one (Trackers) on the Journal tab. A card opts in with
 `data-note="<k>"` on its card element. `renderNoteIcons()` puts a note button at the end of
 each such card's `.label`, lit (`.on`) when a note exists, with a hover preview (`notePreview()`)
 inside it. The button opens `openNoteEditor(k)`: a textarea, a one-line formatting key, the dates,
@@ -97,7 +109,7 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
   card). Merging or renaming either into the other breaks the Bio tab silently.
 - **Registry ids are stable and never derived from headings.** Headings get reworded; a note keyed to
   one would be orphaned. `rules-data.js` checks the registry against the template both ways and
-  counts exactly 18 note-bearing card openings.
+  counts exactly 19 note-bearing card openings.
 - **A retired section's notes are merged, never dropped**, and the merge is idempotent.
 - **The note button is a `<button>` and its preview a `<span>` inside it**, so the button carries its
   own preview: `renderNoteIcons()` replaces one element, and a sibling preview would be left behind.
@@ -140,6 +152,7 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 | How notes are keyed | A stable id per section in `NOTE_SECTIONS` | The heading text: headings get reworded and the note would be orphaned |
 | What the hover preview renders | Phrasing markup only, block markers represented, chips unwrapped | The full `noteHTML()` output: blocks and `role="button"` chips are illegal in a button, and a chip on a hover card vanishes as you reach for it |
 | A jump into a hidden tab (#52) | Unhides the tab, saves, and toasts "*Label* tab shown again; hide it in Settings → Sheet display." before carrying on | Refusing the jump: the note's own link would do nothing |
+| The party (#91) | A Party card on the Bio tab: name, optional AC and max HP per member; every fight the player starts adds them, and the player | Typing the party each fight: the issue asked for it to join automatically |
 
 ## Open
 
@@ -162,3 +175,4 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - 2026-10-23 — The Story tab is Bio; its first card holds Alignment, Languages and Senses chips and the prose; 18 sections; the Class, Ancestry & Background and Rest notes merge into Character and Vitals; By ability's hidden Skills note is gone with it. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired: the Bio tab has no ☰ title, and the note preview's `<span>` rule rests on `renderNoteIcons()` alone. → ledger L6804, #103
 - 2026-10-25 — `jumpToNote()` unhides the note's tab first when it is hidden, toasts the tab's own label, then jumps as before. → ledger L6989, #52
+- 2026-10-25 — The Party card: a roster of companions that joins every fight the player starts; 19 sections. → ledger L7097, #91

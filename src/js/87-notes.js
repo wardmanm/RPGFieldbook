@@ -32,11 +32,14 @@ const NOTE_SECTIONS=[
   {k:"inventory",    tab:"inventory", title:"Equipment & Inventory"},
   {k:"coins",        tab:"inventory", title:"Coins"},
   {k:"proficiencies",tab:"story",     title:"Proficiencies, Senses & Languages"},
+  {k:"party",        tab:"story",     title:"Party", nocv:true},
   {k:"trackers",     tab:"journal",   title:"Trackers"}
 ];
 /* nocv: never offered to the combat view. The header (`portrait`) holds the
    rest buttons, which are not a fight action, and the portrait itself rides in
-   with Vitals (#103); migrate() turns a saved `portrait` there into `vitals`. */
+   with Vitals (#103); migrate() turns a saved `portrait` there into `vitals`.
+   `party` is the roster, not a fight's combatants — those live on the combat
+   view's own tracker (#91). */
 const NOTE_TABS={sheet:"Sheet",spells:"Spells",inventory:"Inventory",story:"Bio",journal:"Journal"};
 function noteDef(k){return NOTE_SECTIONS.find(s=>s.k===k)||null;}
 /* Kept as the one way to title a section (#103 removed the one heading that
@@ -289,7 +292,7 @@ function renderNoteIcons(){
    its pencil was out of reach, and the familiar's own window, where Edit and
    Delete now live, is not a list in play. A stored editHide.familiars is left
    and ignored, as class and origin's are. */
-const EDIT_CARDS=["statuses","attacks","resources","features","spells","inventory","trackers","journal","secnotes","defences","proficiencies"];
+const EDIT_CARDS=["statuses","attacks","resources","features","spells","inventory","trackers","journal","secnotes","defences","proficiencies","party"];
 function editHideMap(c){const m=c&&c.editHide;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
 /* `=== true`, so anything else a hand-edited file holds reads as shown. */
 function editHidden(c,k){return EDIT_CARDS.includes(k)&&editHideMap(c)[k]===true;}

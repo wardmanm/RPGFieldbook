@@ -149,6 +149,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `86-rules-browser.js` | the Rules tab browser: `RB_CATS`, `rbShown()`, `renderRulesBrowser()` | [Rules & tables](features/rules-and-tables.md) |
 | `87-notes.js` | `NOTE_SECTIONS`, section notes, `noteHTML()`, the Section Notes card | [Story & notes](features/story-and-notes.md), [Rich text](architecture/rich-text.md), [Sections & layout](ui/sections-and-layout.md) |
 | `87-combat.js` | the combat tab and tracker | [Combat view](features/combat-view.md) |
+| `87-initiative.js` | the initiative tracker: party, combatants, turns, bands, the strip and dialogs | [Combat view](features/combat-view.md), [Story & notes](features/story-and-notes.md) |
 | `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
 | `87-trackers.js` | the Trackers card: counters, grouped-tag tiles, totals, the close rule, `migrateTrackerPages()` | [Journal](features/journal.md) |
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()`, pack credits (`rulesCreditsHTML()`) | [Settings & updates](features/settings-and-updates.md), [Data archive](architecture/data-archive.md) |
@@ -218,3 +219,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-17 — The `87-trackers.js` code-map row updated: counters only, tiles and totals, not checklists and tasks. → ledger L6047, #95, #93, #94
 - 2026-10-23 — The code map follows the Sheet makeover: the header in `40-sheet.js`, chips and their grants in `41-chips.js`, the Bio tab. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired: the template and `40-sheet.js` rows of the code map, and the glossary's "section", drop it. → ledger L6804, #103
+- 2026-10-25 — `87-initiative.js` joins the code map (JS fragment count 35→36): the initiative tracker's party, combatants, turns, bands, the strip and dialogs, placed right after `87-combat.js`. → ledger L7097, #91

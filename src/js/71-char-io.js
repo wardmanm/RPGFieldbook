@@ -150,6 +150,13 @@ function migrate(s){
      sheet from before gets the icon only if it has a familiar. */
   base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
   base.hiddenTabs=cleanHiddenTabs(s.hiddenTabs);   /* #52 */
+  /* #91: the party and the fight; out of a fight there is none */
+  base.party=cleanParty(s.party);
+  base.combatants=cleanCombatants(s.combatants,base.combatActive===true);
+  base.initMode=s.initMode==="rounds"?"rounds":"turns";
+  /* a marker only in Turns mode, and never on a dead row (final review m1) */
+  base.combatTurn=base.initMode!=="turns"?"":base.combatants.some(r=>r.id===s.combatTurn&&!combatantDead(r))?String(s.combatTurn):initFirstAlive(base.combatants);
+  base.initShowRolls=s.initShowRolls!==false;
   migrateSheet103(base);
   return base;
 }

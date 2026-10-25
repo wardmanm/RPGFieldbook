@@ -83,6 +83,16 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
   'isTabHidden', 'cleanHiddenTabs', 'setTabHidden', 'applyHiddenTabs', 'HIDEABLE_TABS', 'TAB_LABELS', 'selectTab',
   'leaveCombatTab', 'tabsGroupHTML',
+  'HB_NAMES', 'HB_SAYS', 'initInt', 'initOpt', 'cleanParty', 'cleanCombatants', 'combatantDead',
+  'initSort', 'initFirstAlive', 'initNextTurn', 'bandOfShare', 'combatantBar', 'initRollCheck',
+  'initRollLine', 'initModOf', 'youAC', 'buildCombatants',
+  'partyRowsHTML', 'savePartyMember', 'removePartyMember',
+  'initRollHTML', 'openInitRoll', 'irState', 'irSetTyped', 'irRoll', 'startInitFight',
+  'hbBarHTML', 'combatantHealthText', 'initStripHTML', 'initTableHTML', 'renderInitTable',
+  'initNext', 'setInitMode', 'toggleInitRolls', 'toggleInitTable',
+  'initTie', 'combatantDialogHTML', 'setCombatant', 'removeCombatant', 'moveCombatant',
+  'addCombatant', 'openCombatant', 'openAddCombatant',
+  'renderInitStrip', 'initChipScroll', 'irStart', 'renderCombatHeader',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -2343,8 +2353,9 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   // #103: class and origin leave (their Remove sits behind the header's flyout
   // and window, with a confirm); defences and proficiencies joined in Task 4
   // #103 final review I-3: familiars leaves (its card is hidden on the Sheet)
-  ck('#97 the eleven cards', JSON.stringify(X.EDIT_CARDS) ===
-     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies']));
+  // #91: the Party card joins (eleven → twelve)
+  ck('#97 the twelve cards', JSON.stringify(X.EDIT_CARDS) ===
+     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies', 'party']));
   ck('#97 a sheet from before, and junk, read as {}',
      JSON.stringify(X.migrate({abilities: {}}).editHide) === '{}' &&
      ['x', [], null, 7].every(v => JSON.stringify(X.migrate({abilities: {}, editHide: v}).editHide) === '{}'));
@@ -4592,9 +4603,10 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const m2 = X.migrate({abilities: {}, combatSections: ['vitals', 'portrait', 'rest', 'statuses']});
   ck('#103 ...once, beside a vitals (and a rest) already there', same(m2.combatSections, ['vitals', 'statuses']), m2.combatSections);
   ck('#103 ...and migrating again changes nothing', same(X.migrate(JSON.parse(JSON.stringify(m2))).combatSections, ['vitals', 'statuses']));
-  ck('#103 the header is not combat-addable; every other section is',
+  // #91: the Party card joins the header as the only other nocv section
+  ck('#103 the header and the Party card are not combat-addable; every other section is',
      !X.combatAddable('portrait') && X.combatAddable('vitals') && X.combatAddable('familiars') && !X.combatAddable('nope') &&
-     X.NOTE_SECTIONS.filter(s => !X.combatAddable(s.k)).map(s => s.k).join() === 'portrait');
+     X.NOTE_SECTIONS.filter(s => !X.combatAddable(s.k)).map(s => s.k).join() === 'portrait,party');
   ck('#103 a portrait that reaches the view unmigrated is dropped', same(X.combatSectionsOf({combatSections: ['portrait', 'vitals']}), ['vitals']));
   const c = X.blankChar(); X.character = c;
   X.toggleCombatSection('portrait');
@@ -4609,8 +4621,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     return {querySelector: s => s === '.label' ? label : null};
   };
   try { X.renderCombatToggles(); } finally { doc.querySelector = q; }
+  // #91: the Party card is nocv too, so two registry sections carry no toggle
   ck('#103 the header carries no combat toggle', !got.some(([k]) => k === 'portrait') && got.some(([k]) => k === 'vitals') &&
-     got.length === X.NOTE_SECTIONS.length - 1, got.map(([k]) => k));
+     got.length === X.NOTE_SECTIONS.length - 2, got.map(([k]) => k));
 }
 
 /* ---- #103: a jump to the familiars note with the paw hidden (Task 7 review M4) ----
@@ -6006,6 +6019,383 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   const set = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '88-settings.js'), 'utf8');
   ck('#52 the display page includes the Tabs group', /tabsGroupHTML\(character\)/.test(set));
   ck('#52 each switch writes through setTabHidden', /\[data-tabsw\][\s\S]{0,300}setTabHidden\(/.test(set));
+}
+
+// ---------- #91 initiative: the fields and the pure core
+{
+  const b = X.blankChar();
+  ck('#91 a new character: no party, no fight, Turns, rolls shown',
+     JSON.stringify(b.party) === '[]' && JSON.stringify(b.combatants) === '[]' && b.combatTurn === '' && b.initMode === 'turns' && b.initShowRolls === true);
+  const P = X.cleanParty([{id: 'p1', name: '  Thorn ', ac: '14', maxHp: 22}, {name: ''}, null, 'x', {name: 'A'.repeat(200), ac: '-2', maxHp: 'lots'}]);
+  ck('#91 cleanParty keeps named members, trims, cuts to 60, optional numbers or ""',
+     P.length === 2 && P[0].name === 'Thorn' && P[0].ac === 14 && P[0].maxHp === 22 && P[1].name.length === 60 && P[1].ac === '' && P[1].maxHp === '', P);
+  /* Review Focus 3 and 4 */
+  const C = X.cleanCombatants([{kind: 'you', id: 'y', init: '17'}, {kind: 'you', id: 'y2'}, {kind: 'boss'}, 7,
+    {kind: 'foe', id: 'f', name: '<img onerror=1>', init: 19, band: 2, ac: '15'}, {kind: 'party', id: 'p', name: 'Thorn', init: null, maxHp: 22, hp: 9, dead: 'yes'},
+    {kind: 'foe', id: 'g', name: 'Wolf', band: 9}], true);
+  ck('#91 cleanCombatants: one "you", known kinds only, types forced', C.length === 4 && C.filter(r => r.kind === 'you').length === 1 &&
+     C[0].init === 17 && C[1].band === 2 && C[1].ac === 15 && C[1].name === '<img onerror=1>' && C[2].dead === false && C[2].track === 'exact' && C[3].band === null, C);
+  ck('#91 ...and out of a fight the list is always empty', X.cleanCombatants([{kind: 'you'}], false).length === 0);
+  const m = X.migrate({abilities: {}, combatActive: true, combatants: 'junk', initMode: 'sideways', initShowRolls: 'no', party: [{name: 'Bree'}]});
+  ck('#91 migrate cleans the five fields; a fight in progress keeps an empty list',
+     JSON.stringify(m.combatants) === '[]' && m.initMode === 'turns' && m.initShowRolls === true && m.party.length === 1 && m.combatTurn === '', m);
+  ck('#91 ...a save → load round trip keeps a fight', (() => { const g = X.blankChar(); g.combatActive = true; g.combatRound = 2;
+     g.combatants = [{id: 'y', kind: 'you', name: '', init: 12, ac: '', track: '', band: null, hp: '', maxHp: '', dead: false, partyId: ''}]; g.combatTurn = 'y';
+     const r = X.migrate(JSON.parse(JSON.stringify(g))); return r.combatants.length === 1 && r.combatTurn === 'y'; })());
+
+  /* sort: stable, unrolled last (Review Focus 5) */
+  const S = X.initSort([{id: 'a', init: 10}, {id: 'b', init: null}, {id: 'c', init: 15}, {id: 'd', init: 10}]);
+  ck('#91 initSort: highest first, ties keep their order, unrolled last', S.map(r => r.id).join() === 'c,a,d,b', S.map(r => r.id));
+
+  /* next turn (Review Focus 1) */
+  const L = [{id: 'f1', kind: 'foe', band: 1}, {id: 'y', kind: 'you'}, {id: 'p', kind: 'party', dead: true}, {id: 'f2', kind: 'foe', band: 4}, {id: 'f3', kind: 'foe', band: null}];
+  const nt = (t) => X.initNextTurn(L, t);
+  ck('#91 Next skips a dead party member and a dead foe', nt('y').turnId === 'f3' && nt('y').wrapped === false, nt('y'));
+  ck('#91 Next wraps past the end, once', nt('f3').turnId === 'f1' && nt('f3').wrapped === true, nt('f3'));
+  ck('#91 an unknown actor starts at the first living row without a wrap', nt('gone').turnId === 'f1' && nt('gone').wrapped === false);
+  const solo = [{id: 'f', kind: 'foe', band: 4}, {id: 'y', kind: 'you'}];
+  ck('#91 everyone else dead: you again, and every Next wraps', X.initNextTurn(solo, 'y').turnId === 'y' && X.initNextTurn(solo, 'y').wrapped === true);
+  ck('#91 you are never dead', X.combatantDead({kind: 'you', band: 4, dead: true}) === false);
+
+  /* bands */
+  ck('#91 bandOfShare: full Healthy, >½ Injured, ≤½ Bloodied, ≤¼ Near death (0 too), no max → null',
+     X.bandOfShare(22, 22) === 0 && X.bandOfShare(12, 22) === 1 && X.bandOfShare(11, 22) === 2 && X.bandOfShare(5, 22) === 3 && X.bandOfShare(0, 22) === 3 && X.bandOfShare(5, '') === null);
+  ck('#91 a party member on Exact shows a share; on Estimate their band', (() => {
+     const e = X.combatantBar({kind: 'party', track: 'exact', hp: 9, maxHp: 22}); const s = X.combatantBar({kind: 'party', track: 'estimate', band: 1});
+     return e.band === 2 && Math.abs(e.share - 9 / 22) < 1e-9 && s.band === 1 && s.share === null; })());
+
+  /* your roll (Review Focus 2) */
+  const ok = v => X.initRollCheck(v).ok;
+  ck('#91 a typed d20 takes 1..20', ok('1') && ok('20') && ok(' 14 ') && !ok('0') && !ok('21') && !ok('-3') && !ok('2.5') && !ok(''));
+  ck('#91 ...saying why', X.initRollCheck('21').why === 'A d20 rolls 1 to 20.' && X.initRollCheck('').why === 'Type the number you rolled.');
+  ck('#91 the working: one die, a negative modifier, and advantage',
+     X.initRollLine([14], 3) === '14 + 3 = 17' && X.initRollLine([9], -1) === '9 − 1 = 8' && X.initRollLine([6, 14], 3) === 'Rolled 6, 14 → 14 + 3 = 17',
+     [X.initRollLine([14], 3), X.initRollLine([9], -1), X.initRollLine([6, 14], 3)]);
+
+  /* building a fight */
+  const B = X.buildCombatants({name: 'Mira', init: 17}, [{id: 'p1', name: 'Thorn', ac: 14, maxHp: 22, init: 14}, {id: 'p2', name: 'Bree', ac: '', maxHp: '', init: null}],
+    [{name: 'Goblin', count: 2, ac: 13, init: 11}, {name: 'Goblin boss', count: 1, ac: '', init: 19}, {name: '', count: 1, ac: '', init: 5}]);
+  ck('#91 buildCombatants: sorted, "× 2" numbered, AC optional, unnamed foes dropped, unrolled last',
+     B.map(r => r.name).join('|') === 'Goblin boss|Mira|Thorn|Goblin 1|Goblin 2|Bree' && B[1].kind === 'you' && B[2].track === 'exact' && B[2].hp === 22 && B[5].track === 'estimate' && B[0].ac === '',
+     B.map(r => r.name));
+
+  const e = X.blankChar(); e.combatActive = true; e.combatRound = 3; e.combatants = B; e.combatTurn = B[0].id;
+  X.combatEnd(e);
+  ck('#91 End combat clears the fight', JSON.stringify(e.combatants) === '[]' && e.combatTurn === '');
+}
+
+// ---------- #91 the Party card
+{
+  const keep = {ch: X.character, sv: ctx.scheduleSave, rp: ctx.renderParty};
+  ctx.scheduleSave = () => {}; ctx.renderParty = () => {};
+  try {
+    X.character = X.blankChar();
+    ck('#91 saving a member needs a name', X.savePartyMember('', '  ', '', '') === 'Give them a name.' && X.character.party.length === 0);
+    ck('#91 ...and adds one with optional AC and max HP', X.savePartyMember('', 'Thorn', '14', '') === '' && X.character.party.length === 1 &&
+       X.character.party[0].ac === 14 && X.character.party[0].maxHp === '', X.character.party);
+    const id = X.character.party[0].id;
+    X.savePartyMember(id, 'Thorn the Bold', '', '22');
+    ck('#91 ...edits in place by id', X.character.party.length === 1 && X.character.party[0].name === 'Thorn the Bold' && X.character.party[0].ac === '' && X.character.party[0].maxHp === 22);
+    const h = X.partyRowsHTML([{id: 'q"1', name: '<b>Bree</b>', ac: '', maxHp: 9}]);
+    ck('#91 rows escape, show a blank AC as nothing, and carry #97-hideable edit and remove buttons',
+       h.includes('&lt;b&gt;Bree&lt;/b&gt;') && !h.includes('<b>Bree') && !/AC\s*—/.test(h) && /class="icon ed" data-partyedit="q&quot;1"/.test(h) && /class="icon danger ed" data-partydel="q&quot;1"/.test(h), h);
+    ck('#91 an empty party says how it works', /Add the friends who fight beside you/.test(X.partyRowsHTML([])));
+    X.removePartyMember(id);
+    ck('#91 removing takes them off the card', X.character.party.length === 0);
+  } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderParty = keep.rp; }
+  ck('#91 the Party card is a registered Bio section that never enters the combat view',
+     X.NOTE_SECTIONS.some(s => s.k === 'party' && s.tab === 'story' && s.nocv === true) && X.EDIT_CARDS.indexOf('party') >= 0);
+  const html = require('./harness').loadHTML();
+  ck('#91 the Bio tab carries the card with its list and add button', /<div class="card" data-note="party">[\s\S]*?id="partyAdd"[\s\S]*?id="partyList"/.test(html));
+}
+
+// ---------- #91 Roll initiative and starting a fight
+{
+  const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, ra: ctx.renderActiveSpells, cm: ctx.closeModal};
+  ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderActiveSpells = () => {}; ctx.closeModal = () => {};
+  try {
+    X.character = X.blankChar(); X.character.name = 'Mira';
+    const h = X.initRollHTML([{id: 'p1', name: 'Thorn', ac: 14, maxHp: 22}], false);
+    ck('#91 the window lists you with the roll controls, and the party with typed totals',
+       /Mira/.test(h) && /id="irRoll"/.test(h) && /id="irTyped"/.test(h) && /id="irApply"/.test(h) && /id="irAdv"/.test(h) && /data-irparty="p1"/.test(h) && /Thorn/.test(h), h);
+    ck('#91 ...a foe row and + Add a monster', /data-irfoe/.test(h) && /id="irAddFoe"/.test(h));
+    ck('#91 a typed 21 is refused, a 14 kept', X.irSetTyped('21') === 'A d20 rolls 1 to 20.' && X.irState().set === false && X.irSetTyped('14') === '' && X.irState().faces.join() === '14');
+    X.startInitFight({name: 'Mira', init: 17}, [{id: 'p1', name: 'Thorn', ac: 14, maxHp: 22, init: 14}], [{name: 'Goblin', count: 2, ac: '', init: 19}]);
+    ck('#91 Start: round 1, combat on, sorted, Turns marker on the first living row',
+       X.character.combatActive === true && X.num(X.character.combatRound) === 1 && X.character.combatants.map(r => r.name).join() === 'Goblin 1,Goblin 2,Mira,Thorn' &&
+       X.character.combatTurn === X.character.combatants[0].id, X.character.combatants.map(r => r.name));
+    X.character.combatRound = 4;
+    X.startInitFight({name: 'Mira', init: 10}, [], []);
+    ck('#91 rolling for a fight already running keeps its round', X.num(X.character.combatRound) === 4 && X.character.combatants.length === 1);
+    X.character.initMode = 'rounds'; X.character.combatActive = false;
+    X.startInitFight({name: 'Mira', init: 10}, [], []);
+    ck('#91 Rounds mode sets no marker', X.character.combatTurn === '');
+  } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderActiveSpells = keep.ra; ctx.closeModal = keep.cm; }
+  const boot = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '90-boot.js'), 'utf8');
+  ck('#91 Start combat opens Roll initiative', /closest\("#cvStart"\)\)return openInitRoll\(\)/.test(boot));
+}
+
+// ---------- #91 the strip, Next and the table
+{
+  const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, ar: ctx.advanceRound, live: ctx.setCombatLive, rt: ctx.renderInitTable};
+  let rounds = 0, live = '';
+  ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {};
+  ctx.advanceRound = d => { rounds += d; }; ctx.setCombatLive = t => { live = t; };
+  try {
+    X.character = X.blankChar(); X.character.name = 'Mira'; X.character.combatActive = true; X.character.combatRound = 1; X.character.hp.max = 30; X.character.hp.cur = 30;
+    X.character.combatants = X.buildCombatants({name: 'Mira', init: 17}, [], [{name: '<img onerror=1>', count: 1, ac: 15, init: 19}, {name: 'Wolf', count: 1, ac: '', init: 8}]);
+    X.character.combatants[2].band = 4;
+    X.character.combatTurn = X.character.combatants[0].id;
+    const s = X.initStripHTML(X.character);
+    ck('#91 the strip escapes names and marks the actor', s.includes('&lt;img onerror=1&gt;') && !s.includes('<img onerror') && /class="ini-chip now"/.test(s), s);
+    ck('#91 ...strikes the dead and shows rolls', /class="ini-chip dead"/.test(s) && />19</.test(s));
+    ck('#91 ...a not-set band is a "?" bar; yours is a share', /hb-q/.test(s) && /hb-share/.test(s));
+    ck('#91 ...Next and ▾ in Turns mode', /id="cvTurn"/.test(s) && /id="cvInitMore"/.test(s));
+    X.character.initShowRolls = false;
+    ck('#91 Show rolls off hides the numbers', !/class="ini-n"/.test(X.initStripHTML(X.character)));
+    X.character.initShowRolls = true;
+    X.initNext();
+    ck('#91 Next moves to Mira and announces it', X.character.combatTurn === X.character.combatants[1].id && live === "Mira's turn" && rounds === 0, live);
+    X.initNext();
+    ck('#91 Next past the end (the Wolf is dead) wraps and advances the round once', X.character.combatTurn === X.character.combatants[0].id && rounds === 1, rounds);
+    X.setInitMode('rounds');
+    ck('#91 Rounds mode: no marker, no Next', X.character.initMode === 'rounds' && X.character.combatTurn === '' && !/id="cvTurn"/.test(X.initStripHTML(X.character)));
+    X.setInitMode('turns');
+    ck('#91 back to Turns: the marker on the first living row', X.character.combatTurn === X.character.combatants[0].id);
+    const t = X.initTableHTML(X.character);
+    ck('#91 the table: a row per combatant, + Add, the mode switch, Show rolls', (t.match(/data-inirow=/g) || []).length === 3 && /id="iniAdd"/.test(t) && /data-inimode="rounds"/.test(t) && /id="iniRolls"/.test(t), t);
+    /* fix round 1: the ▾ button must not forget it is open across a repaint */
+    X.toggleInitTable();
+    ck('#91 ▾ opens: ▴ and aria-expanded="true"', /aria-expanded="true"/.test(X.initStripHTML(X.character)) && />▴</.test(X.initStripHTML(X.character)));
+    X.initNext();
+    ck('#91 ...a repaint (Next) still says so', /aria-expanded="true"/.test(X.initStripHTML(X.character)) && />▴</.test(X.initStripHTML(X.character)));
+    X.toggleInitTable();
+    ck('#91 a second toggle closes it', /aria-expanded="false"/.test(X.initStripHTML(X.character)) && />▾</.test(X.initStripHTML(X.character)));
+    /* Review Focus 4: a fight with no list */
+    X.character.combatants = []; X.character.combatTurn = '';
+    ck('#91 a fight with no list offers Roll initiative', /id="iniRollNow"/.test(X.initStripHTML(X.character)));
+  } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.advanceRound = keep.ar; ctx.setCombatLive = keep.live; ctx.renderInitTable = keep.rt; }
+}
+
+// ---------- #91 the combatant dialog and editing
+{
+  const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, rt: ctx.renderInitTable, cm: ctx.closeModal, ar: ctx.advanceRound};
+  let rounds = 0;
+  ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {}; ctx.closeModal = () => {}; ctx.advanceRound = d => { rounds += d; };
+  try {
+    X.character = X.blankChar(); X.character.combatActive = true; X.character.combatRound = 1;
+    X.character.combatants = X.buildCombatants({name: 'Mira', init: 12}, [{id: 'p1', name: 'Thorn', ac: '', maxHp: 22, init: 12}], [{name: 'Goblin', count: 1, ac: '', init: 15}]);
+    const [gob, mira, thorn] = X.character.combatants;
+    X.character.combatTurn = gob.id;
+    const foeD = X.combatantDialogHTML(gob, X.character);
+    ck('#91 a foe\'s dialog: five band buttons with the DM\'s words, initiative, optional AC, Remove',
+       (foeD.match(/data-cband="[0-4]"/g) || []).length === 5 && /barely hurt/.test(foeD) && /id="cdInit"/.test(foeD) && /id="cdAC"/.test(foeD) && /id="cdRemove"/.test(foeD), foeD);
+    const pD = X.combatantDialogHTML(thorn, X.character);
+    ck('#91 a party member\'s dialog: Exact/Estimate, the HP stepper on Exact, Dead, Remove',
+       /data-ctrack="exact"/.test(pD) && /data-ctrack="estimate"/.test(pD) && /id="cdHp"/.test(pD) && /id="cdDead"/.test(pD) && /id="cdRemove"/.test(pD) && !/data-cband/.test(pD), pD);
+    const yD = X.combatantDialogHTML(mira, X.character);
+    ck('#91 your dialog: initiative only, no Remove, no Dead', /id="cdInit"/.test(yD) && !/id="cdRemove"/.test(yD) && !/id="cdDead"/.test(yD) && /Vitals card/.test(yD));
+    ck('#91 a tie shows Act earlier / Act later', /data-cmove="-1"/.test(X.combatantDialogHTML(X.character.combatants[2], X.character)) || /data-cmove="1"/.test(X.combatantDialogHTML(mira, X.character)));
+
+    X.setCombatant(gob.id, {band: 2});
+    ck('#91 setting a band', X.character.combatants.find(r => r.id === gob.id).band === 2);
+    X.setCombatant(thorn.id, {track: 'estimate'});
+    ck('#91 flipping a party member to Estimate', X.character.combatants.find(r => r.id === thorn.id).track === 'estimate');
+    X.setCombatant(thorn.id, {hp: 30});
+    ck('#91 an exact HP is clamped to 0..max', X.character.combatants.find(r => r.id === thorn.id).hp === 22);
+
+    /* Review Focus 5: ties */
+    const order = () => X.character.combatants.map(r => r.name || 'Mira').join();
+    ck('#91 test setup: Mira and Thorn tied at 12', order() === 'Goblin,Mira,Thorn', order());
+    ck('#91 Act later swaps tied neighbours', X.moveCombatant(mira.id, 1) === true && order() === 'Goblin,Thorn,Mira', order());
+    ck('#91 ...but never past a different roll', X.moveCombatant(X.character.combatants[1].id, -1) === false && order() === 'Goblin,Thorn,Mira', order());
+    X.setCombatant(gob.id, {init: 5});
+    ck('#91 a changed initiative re-sorts and keeps the actor', order() === 'Thorn,Mira,Goblin' && X.character.combatTurn === gob.id, order());
+
+    /* Review Focus 1: remove the actor */
+    X.removeCombatant(gob.id);
+    ck('#91 removing the actor moves the marker to the next living row', X.character.combatants.length === 2 && X.character.combatTurn === X.character.combatants[0].id);
+    ck('#91 T5-M2 ...and, the actor being last, that wraps: the round advances once', rounds === 1, rounds);
+    ck('#91 you cannot be removed', (X.removeCombatant(mira.id), X.character.combatants.some(r => r.kind === 'you')));
+
+    ck('#91 adding mid-fight needs a name', X.addCombatant('', '10', '') === 'Give it a name.');
+    X.addCombatant('Ogre', '20', '11');
+    ck('#91 ...and slots it in by initiative', X.character.combatants[0].name === 'Ogre' && X.character.combatants[0].ac === 11 && X.character.combatants[0].kind === 'foe', order());
+  } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.closeModal = keep.cm; ctx.advanceRound = keep.ar; }
+}
+
+// ---------- #91 the final review's fixes
+{
+  const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, rt: ctx.renderInitTable, cm: ctx.closeModal, ar: ctx.advanceRound,
+    live: ctx.setCombatLive, cvo: ctx.combatViewOpen, qs: ctx.document.querySelector, gid: ctx.document.getElementById, ra: ctx.renderActiveSpells};
+  let rounds = 0, live = [];
+  ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.closeModal = () => {}; ctx.renderActiveSpells = () => {};
+  ctx.advanceRound = d => { rounds += d; X.character.combatRound = X.num(X.character.combatRound) + d; };
+  ctx.setCombatLive = t => { live.push(t); };
+  const fight = (turnIdx) => {
+    X.character = X.blankChar(); X.character.name = 'Mira'; X.character.combatActive = true; X.character.combatRound = 1;
+    X.character.hp.max = 20; X.character.hp.cur = 20;
+    X.character.combatants = X.buildCombatants({name: 'Mira', init: 10}, [{id: 'p1', name: 'Thorn', ac: '', maxHp: 22, init: 8}], [{name: 'Ogre', count: 1, ac: '', init: 20}, {name: 'Wolf', count: 1, ac: '', init: 5}]);
+    X.character.combatTurn = X.character.combatants[turnIdx].id;   // Ogre, Mira, Thorn, Wolf
+    rounds = 0; live = [];
+    return X.character.combatants;
+  };
+  try {
+    /* I1: your chip and row follow your HP, patched in place */
+    {
+      const mkEl = (key, id) => { const e = {dataset: {[key]: id}, attrs: {}, html: '', cls: '', eq: false,
+        isEqualNode() { return this.eq; }, setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; },
+        set innerHTML(v) { this.html = v; }, get innerHTML() { return this.html; }, set className(v) { this.cls = v; }}; return e; };
+      const parsed = html => ({set innerHTML(v) { this.src = v; }, get content() { const src = this.src;
+        return {firstElementChild: {className: (/class="([^"]*)"/.exec(src) || [])[1], getAttribute: k => ((new RegExp(k + '="([^"]*)"')).exec(src) || [])[1],
+          hasAttribute: k => src.indexOf(k + '=') >= 0, innerHTML: src.replace(/^<button[^>]*>|<\/button>$/g, '')}}; }});
+      const L0 = fight(0), me = L0.find(r => r.kind === 'you');
+      const chip = mkEl('inichip', me.id), other = mkEl('inichip', L0[0].id), row = mkEl('inirow', me.id);
+      ctx.combatViewOpen = () => true;
+      const qsa = ctx.document.querySelectorAll, ce = ctx.document.createElement;
+      ctx.document.querySelectorAll = q => q === '#cvHead [data-inichip]' ? [other, chip] : q === '#cvInitTable [data-inirow]' ? [row] : [];
+      ctx.document.createElement = () => parsed();
+      X.character.hp.cur = 5; X.renderHP();
+      ck('#91 I1 an HP change on the sheet repaints your chip', /HP 5 \/ 20/.test(chip.attrs['aria-label']) && /width:25%/.test(chip.html) && chip.cls === 'ini-chip', [chip.attrs, chip.html]);
+      ck('#91 I1 ...and your table row', /HP 5 \/ 20/.test(row.html), row.html);
+      ck('#91 I1 ...and nothing else: no other chip is touched', other.html === '' && !('aria-label' in other.attrs));
+      chip.html = ''; chip.eq = true; X.renderHP();
+      ck('#91 I1 ...a chip that would come out the same is left alone (the blur after a typed HP)', chip.html === '');
+      chip.eq = false; X.character.combatActive = false; X.renderHP();
+      ck('#91 I1 ...out of a fight it repaints nothing', chip.html === '');
+      X.character.combatActive = true; ctx.combatViewOpen = () => false; X.renderHP();
+      ck('#91 I1 ...nor with the combat view closed', chip.html === '');
+      ctx.document.querySelectorAll = qsa; ctx.document.createElement = ce; ctx.combatViewOpen = keep.cvo;
+    }
+    ctx.renderInitTable = () => {};
+
+    /* I2: the actor kept in view */
+    const box = {left: 0, right: 240};
+    ck('#91 I2 an actor past the right edge scrolls into view', X.initChipScroll(0, box, {left: 580, right: 645}) === 413, X.initChipScroll(0, box, {left: 580, right: 645}));
+    ck('#91 I2 ...one past the left edge too', X.initChipScroll(400, box, {left: -100, right: -40}) === 292, X.initChipScroll(400, box, {left: -100, right: -40}));
+    ck('#91 I2 ...one already in view keeps the scroll', X.initChipScroll(120, box, {left: 30, right: 95}) === 120);
+    ck('#91 I2 ...and nobody acting keeps it too', X.initChipScroll(120, box, null) === 120);
+    ck('#91 I2 ...never below 0', X.initChipScroll(5, box, {left: -20, right: 40}) === 0);
+
+    /* I3: Start ▸ applies a typed roll */
+    {
+      let typed = '14';
+      ctx.document.getElementById = id => id === 'irTyped' ? {value: typed} : keep.gid(id);
+      X.character = X.blankChar(); X.character.name = 'Mira';
+      X.irState().set = false; X.irState().faces = [];
+      ck('#91 I3 Start without Apply takes the typed roll', X.irStart([]) === '' && X.character.combatants[0].kind === 'you' &&
+         X.character.combatants[0].init === 14 + X.initModOf(), X.character.combatants);
+      X.character = X.blankChar(); typed = '25'; X.irState().set = false; X.irState().faces = [];
+      ck('#91 I3 ...a bad one stops Start, saying why', X.irStart([]) === 'A d20 rolls 1 to 20.' && !X.inCombat(X.character));
+      typed = ''; X.irState().set = false;
+      ck('#91 I3 ...a blank box still starts, unrolled', X.irStart([]) === '' && X.inCombat(X.character) && X.character.combatants[0].init === null);
+      ctx.document.getElementById = keep.gid;
+    }
+    ck('#91 party rows in Roll initiative are labelled Init', /data-irparty="p1"[^>]*placeholder="Init"/.test(X.initRollHTML([{id: 'p1', name: 'Thorn', ac: '', maxHp: ''}], false)));
+
+    /* T5-M2: a wrap on remove or on dead advances the round once */
+    let L = fight(3);
+    X.removeCombatant(L[3].id);
+    ck('#91 T5-M2 removing the last-placed actor wraps to the top and advances the round once',
+       X.character.combatTurn === L[0].id && rounds === 1, [X.character.combatTurn, rounds]);
+    L = fight(3);
+    X.setCombatant(L[3].id, {band: 4});
+    ck('#91 T5-M2 marking the last-placed actor dead does the same', X.character.combatTurn === L[0].id && rounds === 1, [X.character.combatTurn, rounds]);
+    L = fight(2);
+    X.setCombatant(L[2].id, {dead: true});
+    ck('#91 T5-M2 ...a dead party member mid-order moves on without a new round', X.character.combatTurn === L[3].id && rounds === 0, [X.character.combatTurn, rounds]);
+    L = fight(0);
+    X.removeCombatant(L[0].id);
+    ck('#91 T5-M2 ...nor does removing an actor with someone after them', X.character.combatTurn === L[1].id && rounds === 0);
+
+    /* the HP box: clamped, never negative, and shown as stored */
+    L = fight(0);
+    const th = L.find(r => r.kind === 'party');
+    X.setCombatant(th.id, {hp: -4});
+    ck('#91 a typed negative HP clamps to 0', th.hp === 0, th.hp);
+    {
+      const els = {};
+      const el = id => els[id] || (els[id] = {id, value: '', dataset: {}, ls: {}, addEventListener(ev, fn) { (this.ls[ev] = this.ls[ev] || []).push(fn); }, focus() { focused = this.sel || this.id; }});
+      let focused = '';
+      ctx.document.getElementById = el;
+      const btn = sel => ({sel, focus() { focused = sel; }});
+      ctx.document.querySelector = q => { const m = /^#mBody (.+)$/.exec(q); return m ? btn(m[1]) : null; };
+      X.openCombatant(th.id);
+      els.cdHp.value = '99'; els.cdHp.ls.change.forEach(f => f());
+      ck('#91 the HP box shows the clamped value after a typed over-max', th.hp === 22 && els.cdHp.value === '22', [th.hp, els.cdHp.value]);
+      els.cdHp.value = '-3'; els.cdHp.ls.change.forEach(f => f());
+      ck('#91 ...and 0 after a typed negative', th.hp === 0 && els.cdHp.value === '0', [th.hp, els.cdHp.value]);
+      /* focus goes back to the control that was pressed */
+      const click = (attr, val) => { const t = {closest: q => (q === `[${attr}]` || q === `#${attr}`) ? {dataset: val} : null};
+        els.mBody.ls.click.forEach(f => f({target: t})); };
+      click('data-chp', {chp: '1'});
+      ck('#91 after + the dialog reopens with focus on +', focused === '[data-chp="1"]' && th.hp === 1, [focused, th.hp]);
+      click('data-ctrack', {ctrack: 'estimate'});
+      ck('#91 ...after a track flip, on that track', focused === '[data-ctrack="estimate"]', focused);
+      click('cdDead', {});
+      ck('#91 ...after Dead, on Dead', focused === '#cdDead', focused);
+      ctx.document.getElementById = keep.gid; ctx.document.querySelector = keep.qs;
+    }
+    ck('#91 the HP box is at least 44px tall', /\.cd-step input\{[^}]*min-height:44px/.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'css', '50-modal.css'), 'utf8')));
+
+    /* m1: no marker on a dead row */
+    {
+      const g = X.blankChar(); g.combatActive = true; g.initMode = 'rounds';
+      g.combatants = [{id: 'w', kind: 'foe', name: 'Wolf', init: 15, band: null}, {id: 'y', kind: 'you', name: '', init: 10}];
+      ck('#91 m1 migrate sets no marker in Rounds mode', X.migrate(JSON.parse(JSON.stringify(g))).combatTurn === '');
+      L = fight(0); X.character.initMode = 'rounds'; X.character.combatTurn = L[0].id; L[0].band = 4;
+      X.setInitMode('turns');
+      ck('#91 m1 back to Turns: a stored actor that died is not kept', X.character.combatTurn === L[1].id, X.character.combatTurn);
+    }
+
+    /* m2: the round is said once, and a wrap says round and turn together */
+    {
+      L = fight(0); X.character.combatRound = 7; live = [];
+      X.renderCombatHeader(); X.renderCombatHeader();
+      ck('#91 m2 "Round N" is announced once, not on every repaint', live.filter(t => t === 'Round 7').length === 1, live);
+      X.character.combatRound = 8; X.renderCombatHeader();
+      ck('#91 m2 ...and again when the round moves', live[live.length - 1] === 'Round 8', live);
+      L = fight(3); L[0].band = 4; live = [];
+      X.initNext();
+      ck('#91 m2 a wrap announces the round and the turn in one message', live[live.length - 1] === "Round 2 — Mira's turn" && rounds === 1, live);
+      X.initNext();
+      ck('#91 m2 ...a plain Next only the turn', live[live.length - 1] === "Thorn's turn", live);
+    }
+
+    /* m3: Exact with no max */
+    {
+      const p = {kind: 'party', track: 'exact', hp: 7, maxHp: '', band: 1, name: 'Bree'};
+      ck('#91 m3 a party member on Exact with no max shows HP n', X.combatantHealthText(p) === 'HP 7', X.combatantHealthText(p));
+      L = fight(0); const t = L.find(r => r.kind === 'party'); t.maxHp = ''; t.hp = 7;
+      ck('#91 m3 ...and their dialog no "/ ?"', !/\/ \?/.test(X.combatantDialogHTML(t, X.character)));
+    }
+
+    /* m4: ids deduped, names never blank */
+    {
+      const C = X.cleanCombatants([{kind: 'you', id: 'x'}, {kind: 'foe', id: 'x', name: ''}, {kind: 'party', id: 'x', name: null}, {kind: 'foe', id: 'z', name: 'Rat'}], true);
+      ck('#91 m4 a repeated id gets a fresh one', C[0].id === 'x' && new Set(C.map(r => r.id)).size === 4, C.map(r => r.id));
+      ck('#91 m4 a blank foe is "Unnamed", a blank party member "Party member"', C[1].name === 'Unnamed' && C[2].name === 'Party member' && C[3].name === 'Rat', C.map(r => r.name));
+      const P = X.cleanParty([{id: 'q', name: 'A'}, {id: 'q', name: 'B'}]);
+      ck('#91 m4 the party roster dedupes ids too', P.length === 2 && P[0].id === 'q' && P[1].id !== 'q', P);
+    }
+
+    /* m5: End hands back the fight it cleared, for #105 */
+    {
+      L = fight(0); const before = L.slice();
+      const s = X.combatEnd(X.character);
+      ck('#91 m5 combatEnd returns {rounds, sec, combatants}', s.rounds === 1 && s.sec === 6 && s.combatants.length === 4 && s.combatants[0] === before[0] &&
+         JSON.stringify(X.character.combatants) === '[]', s);
+    }
+
+    /* m9: a name added mid-fight keeps 60 characters */
+    L = fight(0);
+    X.addCombatant('B'.repeat(70), '3', '');
+    ck('#91 m9 Add combatant caps the name at 60', X.character.combatants.some(r => r.name === 'B'.repeat(60)));
+  } finally {
+    X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.closeModal = keep.cm;
+    ctx.advanceRound = keep.ar; ctx.setCombatLive = keep.live; ctx.combatViewOpen = keep.cvo; ctx.document.querySelector = keep.qs;
+    ctx.document.getElementById = keep.gid; ctx.renderActiveSpells = keep.ra;
+  }
 }
 
 ck.done();

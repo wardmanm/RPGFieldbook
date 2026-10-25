@@ -66,3 +66,5 @@ Bullets below this line — leave the heading in place.
   you and your hit-point roll.
 - Paladin and Ranger spell slots follow the 2024 rule (half your levels, rounded up), so a level 1
   Paladin has its two slots.
+- An initiative tracker in the combat view: roll initiative when combat starts, follow the order turn by turn or round by round, and track everyone's health at a glance.
+- A Party card on the Bio tab: your companions join every fight you start.

@@ -1242,7 +1242,8 @@ function block(html, needle, tag) {
   const inTemplate = (t.match(/data-note="([a-z]+)"/g) || []).map(s => s.slice(11, -1));
 
   // #103: 21 → 18 — the Class, Ancestry & Background and Rest cards are gone
-  ck('the registry has 18 sections', X.NOTE_SECTIONS.length === 18, X.NOTE_SECTIONS.length);
+  // #91: 18 → 19, the Party card
+  ck('the registry has 19 sections', X.NOTE_SECTIONS.length === 19, X.NOTE_SECTIONS.length);
   ck('every section id is unique',
      new Set(X.NOTE_SECTIONS.map(s => s.k)).size === X.NOTE_SECTIONS.length);
   ck('every section names a tab the Section Notes card can group under',
@@ -1261,10 +1262,11 @@ function block(html, needle, tag) {
   // rail, the strip and Features carry one layout class after "card" (the
   // brief's `card rail` / `card strip` / `card wide`) — data-note still
   // straight after the class attribute, which is what the count guards
+  // #91: 18 → 19, the Party card
   ck('every data-note is on a card element',
-     (t.match(/data-note="[a-z]+"/g) || []).length === 18 &&
+     (t.match(/data-note="[a-z]+"/g) || []).length === 19 &&
      (t.match(/<div class="card(?: [a-z-]+)?" data-note="[a-z]+"/g) || []).length +
-     (t.match(/<header class="card sheet-head" data-note="[a-z]+"/g) || []).length === 18,
+     (t.match(/<header class="card sheet-head" data-note="[a-z]+"/g) || []).length === 19,
      (t.match(/<div class="card"[^>]*data-note[^>]*>/g) || []).length);
   /* The Journal panel, sliced to the next panel so a card on a LATER tab can
      neither satisfy nor break these. The regex this replaced ran on to the end
@@ -2975,6 +2977,21 @@ function block(html, needle, tag) {
   /* #52: .tab sets display, which beats the browser's [hidden] rule */
   const chrome = fs.readFileSync(path.join(__dirname, '..', 'css', '10-chrome.css'), 'utf8');
   ck('#52 a hidden tab button really leaves the bar', /\.tab\[hidden\]\{display:none!important\}/.test(chrome));
+}
+
+// ---------- #91 the strip's band colours are tokens, and chips are tall enough
+{
+  const cc = fs.readFileSync(path.join(__dirname, '..', 'css', '45-combat.css'), 'utf8');
+  const tk = fs.readFileSync(path.join(__dirname, '..', 'css', '00-tokens.css'), 'utf8');
+  const root = tk.slice(tk.indexOf(':root{'), tk.indexOf('}', tk.indexOf(':root{')));
+  ck('#91 the band colours are tokens', ['--hb-healthy', '--hb-injured', '--hb-bloodied', '--hb-near', '--hb-empty'].every(t => root.includes(t + ':')));
+  ck('#91 strip chips are at least 44px tall', /\.ini-chip\{[^}]*min-height:44px/.test(cc));
+}
+
+// ---------- #91 the combatant dialog's targets are big enough to tap
+{
+  const mc = fs.readFileSync(path.join(__dirname, '..', 'css', '50-modal.css'), 'utf8');
+  ck('#91 the combatant dialog\'s band buttons are 48px and its steppers 44px', /\.cd-band\{[^}]*min-height:48px/.test(mc) && /\.cd-pm\{[^}]*min-(?:width|height):44px/.test(mc));
 }
 
 /* ================= Fetch all never loses what is loaded (issue #65) ===========

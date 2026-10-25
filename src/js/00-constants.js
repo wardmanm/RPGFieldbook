@@ -70,6 +70,10 @@ function blankChar(){
        combatRound>0: the Active Spells card has always moved the round, so plenty
        of sheets carry a round with no fight behind it. */
     activeSpells:[], combatRound:0, combatActive:false, combatSections:COMBAT_DEFAULTS.slice(), grantGold:{},
+    /* The initiative tracker (87-initiative.js, #91): the party roster, the
+       fight's rows (cleared by combatEnd()), whose turn it is, and the two
+       display settings. */
+    party:[], combatants:[], combatTurn:"", initMode:"turns", initShowRolls:true,
     size:"", encumbrance:"none", coinWeight:true, hpColor:true, hdStyle:"full", statStyle:"classic",
     /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO

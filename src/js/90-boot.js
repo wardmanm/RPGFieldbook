@@ -132,6 +132,10 @@ function wire(){
     if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){if(m.closest("#mBody"))closeModal();character.familiars=character.familiars.filter(x=>x.id!==f.id);renderFamiliars();recompute();scheduleSave();}return;}
     /* ...and the keyboard goes back to the toggle the repaint replaced (M-14) */
     if((m=t.closest("[data-toggle-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.toggleFamiliar);if(f){f.active=!f.active;renderFamiliars();recompute();scheduleSave();if(m.closest("#mBody")){openFamiliar(f.id);const b=document.querySelector("#mBody "+attrSel("data-toggle-familiar",f.id));if(b)b.focus();}}return;}
+    // the Party card (#91)
+    if(t.closest("#partyAdd"))return openPartyForm("");
+    if((m=t.closest("[data-partyedit]")))return openPartyForm(m.dataset.partyedit);
+    if((m=t.closest("[data-partydel]"))){if(confirm("Remove this party member? Fights already started keep them."))removePartyMember(m.dataset.partydel);return;}
     if((m=t.closest("[data-res-dec]"))){const r=character.resources.find(x=>x.id===m.dataset.resDec);if(r){r.cur=Math.max(0,num(r.cur)-1);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-inc]"))){const r=character.resources.find(x=>x.id===m.dataset.resInc);if(r){r.cur=Math.min(num(r.max),num(r.cur)+1);renderResources();scheduleSave();}return;}
     if((m=t.closest("[data-res-reset]"))){const r=character.resources.find(x=>x.id===m.dataset.resReset);if(r){r.cur=num(r.max);renderResources();scheduleSave();}return;}
@@ -151,13 +155,22 @@ function wire(){
        leave the cursor in the box. */
     if((m=t.closest(".search-clear"))){const i=m.parentNode.querySelector("input");if(i){i.value="";i.dispatchEvent(new Event("input",{bubbles:true}));i.focus();}return;}
     if(t.closest("#btnCombat"))return combatViewOpen()?leaveCombatTab():enterCombatTab();
-    if(t.closest("#cvStart"))return startCombatNow();
+    if(t.closest("#cvStart"))return openInitRoll();
     /* #103: the combat header's own star — the sheet's #starBtn is in the
        header, which the view does not bring unless the player adds it */
     if(t.closest("[data-inspire]"))return toggleInspiration();
     if(t.closest("#cvPrev"))return advanceRound(-1);
     if(t.closest("#cvNext"))return advanceRound(1);
     if(t.closest("#cvEnd"))return endCombatAsk();
+    // the initiative strip and table (#91)
+    if(t.closest("#cvTurn"))return initNext();
+    if(t.closest("#iniRollNow"))return openInitRoll();
+    if(t.closest("#cvInitMore"))return toggleInitTable();
+    if((m=t.closest("[data-inimode]")))return setInitMode(m.dataset.inimode);
+    if(t.closest("#iniRolls"))return toggleInitRolls();
+    if((m=t.closest("[data-inichip]")))return openCombatant(m.dataset.inichip);
+    if((m=t.closest("[data-inirow]")))return openCombatant(m.dataset.inirow);
+    if(t.closest("#iniAdd"))return openAddCombatant();
     if((m=t.closest("[data-edtoggle]")))return toggleEditCard(m.dataset.edtoggle);
     // chips: defences, senses, languages (#103)
     if((m=t.closest("[data-chipadd]")))return openChipChooser(m.dataset.chipadd);

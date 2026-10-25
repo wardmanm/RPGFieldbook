@@ -35,7 +35,7 @@ Settings and Rules sections), `sheet.js` (`featGroups()`, the shared favourites 
 | `00-sheet.html` | `#tab-sheet` | the header (`<header class="card sheet-head">`), then `.sheet-grid` | portrait (the header) · the grid: vitals (the rail), abilities (the strip), skills, then in `.col-r` defences, statuses, resources; features full width; familiars hidden |
 | `10-inventory.html` | `#tab-inventory` | one `.stack`, centred, max 720px | attacks, inventory, coins |
 | `20-spells.html` | `#tab-spells` | one `.stack` | spellcasting, slots, activespells, spells; plus `#concCard`, untagged ([Conditions & concentration](../features/conditions-and-concentration.md)) |
-| `30-story.html` | `#tab-story` (the **Bio** tab) | `.cols` | proficiencies ("Proficiencies, Senses & Languages"); `#bioStack` is filled by `buildBio()` with the eight bio cards, untagged by design |
+| `30-story.html` | `#tab-story` (the **Bio** tab) | `.cols` | proficiencies ("Proficiencies, Senses & Languages"), party (#91, `nocv`); `#bioStack` is filled by `buildBio()` with the eight bio cards, untagged by design |
 | `40-rules.html` | `#tab-rules` | one `.stack` | none: one card, the Rules browser ([Rules & tables](../features/rules-and-tables.md)) |
 | `60-journal.html` | `#tab-journal` | one `.stack`, centred, max 820px: Journal (`#journalCard`), Trackers (`data-note="trackers"`), Section Notes | Trackers only |
 | `70-combat.html` | `#tab-combat` | `.cview`: header, live region, `#cvList` | none in markup: the real cards are moved in at runtime |
@@ -84,8 +84,9 @@ The Sheet is one condensed page after Foundry VTT's sheet (spec
 
 ### The section registry
 
-`NOTE_SECTIONS` in `87-notes.js` lists 18 sections as `{k, tab, title}`, with `nocv:true` on the
-one the combat view may not take (`portrait`, the header). Each one's card carries `data-note="k"`
+`NOTE_SECTIONS` in `87-notes.js` lists 19 sections as `{k, tab, title}`, with `nocv:true` on the
+two the combat view may not take (`portrait`, the header; `party`, the Bio-tab roster — it is the
+template the next fight copies from, not a fight's own combatants, #91). Each one's card carries `data-note="k"`
 as the attribute right after its class attribute (`class="card"`, or `card` plus one layout class:
 `card rail`, `card strip`, and the header's `card sheet-head`). Its consumers:
 
@@ -115,9 +116,10 @@ mis-tap from losing a feature, an item or a resistance — and leaves every play
 folds, Use, Fire, Throw, Cast, equip, On/Off, prepared pins, resource −/+/reset, the familiar's
 Summoned switch, + Add). One switch per card, per character, shown by default.
 
-`EDIT_CARDS` in `87-notes.js` lists the eleven keys: the nine `NOTE_SECTIONS` ids `statuses`,
-`attacks`, `resources`, `features`, `spells`, `inventory`, `trackers`, `defences`,
-`proficiencies` (the last two hide the chips' ×), plus
+`EDIT_CARDS` in `87-notes.js` lists the twelve keys: the ten `NOTE_SECTIONS` ids `statuses`,
+`attacks`, `resources`, `features`, `spells`, `inventory`, `trackers`, `defences` and
+`proficiencies` (these two hide the chips' ×), plus `party` (#91; hides a roster row's edit and
+remove icons), plus
 `journal` and `secnotes` — the two cards outside that registry, found by id (`#journalCard`,
 `#notesCard`, which the Section Notes card carries for this). A class's, species' or background's
 Remove sits behind the header's flyout or info window, with a confirm, so those carry `ed` but no
@@ -293,7 +295,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 
 ## Rules that must hold
 
-- **Registry and template agree both ways.** `rules-data.js` asserts 18 entries, unique ids, a card
+- **Registry and template agree both ways.** `rules-data.js` asserts 19 entries, unique ids, a card
   for every entry, an entry for every tagged card, no card tagged twice, and each title equal to
   the heading inside that card's own element (sliced to its closing tag, so a card that lost its
   `.label` cannot borrow the next card's).
@@ -421,3 +423,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-23 — Final review fixes: the paw's menu gains Combat view and Note; `familiars` leaves `EDIT_CARDS` (eleven); `sheetHeadHTML()` is `pawHTML()`. → ledger L6729, #103
 - 2026-10-23 — Mike's changes: the middle and right columns are independent stacks (Features follows Skills); the rests read as words; the header runs rests, paw, star, level, note. → ledger L6776, #103
 - 2026-10-24 — The ☰ section flyout is retired: the header's `.label` caption is read by nothing now, and the note button, pencil and combat toggle are what a section card's `.label` is for. → ledger L6804, #103
+- 2026-10-25 — The Party card joins the registry as `party` (Bio, `nocv:true`) and `EDIT_CARDS` (twelve); the registry grows to 19 sections. → ledger L7097, #91

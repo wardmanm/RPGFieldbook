@@ -223,6 +223,8 @@ function renderHP(){
     lk.setAttribute("aria-pressed",locked?"true":"false");
     lk.title=locked?"Max HP is locked — tap to edit it":"Max HP is unlocked — tap to lock it";
   }
+  /* #91: your chip and row in the initiative tracker read this HP live */
+  renderInitStrip();
 }
 /* Commit one HP box. Returns false if the entry was refused. */
 function applyHPInput(inp){
@@ -270,7 +272,7 @@ function renderAll(){
      way the mirror never saw — reconciles on load rather than showing a
      condition for a spell that isn't running. */
   syncConcStatus();
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderChipsAll();renderFamiliars();ensureSpellAttacks();renderSpells();renderRulesBrowser();renderNoteIcons();renderEditToggles();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();applyHiddenTabs();
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderChipsAll();renderParty();renderFamiliars();ensureSpellAttacks();renderSpells();renderRulesBrowser();renderNoteIcons();renderEditToggles();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();applyHiddenTabs();
   /* LAST: the combat toggles sit beside the note buttons drawn above, and an open
      combat view refills from THIS character — every character switch ends here. */
   syncCombatView();

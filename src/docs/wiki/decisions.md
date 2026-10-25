@@ -297,6 +297,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The Story tab's name (#103)** — **Bio**, with the id kept as `story`
 - **Notes on a retired card (#103)** — Merged once into the card that took its controls, under a heading
 - **A jump into a hidden tab (#52)** — Unhides the tab, saves, and toasts before carrying on
+- **The party (#91)** — A Party card on the Bio tab; every fight the player starts adds them, and the player
 
 ### [Journal](features/journal.md)
 
@@ -351,6 +352,18 @@ When a page gains a Decisions row, add its line here under that page.
 - **Dragging** — Pointer events; neighbours hop, the dragged card stays
 - **Esc** — Not handled
 - **Cards from a hidden tab (#52)** — They stay in the view; hiding a tab is a tab-bar fact, not a combat-layout one
+- **Where the fight is kept (#91)** — Saved with the character while a fight is on, beside `combatActive`/`combatRound`; End combat clears it
+- **Turns or rounds (#91)** — Both, per character (`initMode`); Turns has a marker and Next, Rounds has neither
+- **Where the tracker sits (#91)** — A strip of chips stuck under the combat header; ▾ opens the full table
+- **Editing a combatant (#91)** — One dialog per combatant, targets ≥44px; the table is read-only
+- **Health (#91)** — Five bands (Healthy·Injured·Bloodied·Near death·Dead) plus "?" for not set
+- **A party member's health (#91)** — Exact HP or Estimate, chosen per member, flippable any time
+- **AC (#91)** — Optional for party members and enemies; yours is read from the sheet
+- **Your initiative (#91)** — The hit-die spend box's own controls: Roll for me, or a typed roll + Apply, with Advantage
+- **Everyone else's initiative (#91)** — A typed total
+- **Who is skipped (#91)** — Dead foes and Dead party members; you never are
+- **Show rolls (#91)** — A switch (`initShowRolls`, default on)
+- **Ties (#91)** — Act earlier / Act later in the combatant dialog, never a drag on the table
 
 ### [Rules-update tool](features/rules-update-tool.md)
 
