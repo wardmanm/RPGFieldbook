@@ -267,11 +267,21 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 .il-e.undone .il-tx b,.il-e.undone .il-l{text-decoration:line-through}
 .il-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1.5px solid var(--line)}
 .il-foot span{font-size:12px;color:var(--ink-soft)}
+/* The log sits straight in the wide dialog's body, which does not scroll (it is
+   a flex column for Settings' own scrollers): with more lines than fit, the rows
+   shrank into each other and the rest could not be reached. Here the body
+   scrolls, and each piece keeps its height. */
+.modal.wide .m-body:has(> .il-filters){overflow-y:auto;padding-right:14px}
+.m-body>.il-filters,.m-body>.il-day,.m-body>.il-e,.m-body>.il-foot,.m-body>.empty{flex:none}
 /* the Inventory card sits in the plain stack, not the Sheet's container-query
    columns (30-sheet.css), so the narrow-card rule below ~380px of card width
    uses a media query instead: the Log button drops its word, keeps its icon. */
 @media(max-width:480px){
   .il-word{display:none}
+  /* + Add, ⇄ Trade and Log made the Equipment heading wider than a phone: its
+     edit, combat and note buttons ran off the page and it scrolled sideways.
+     The heading wraps instead, its buttons onto a second row. */
+  .card[data-note="inventory"]>.label{flex-wrap:wrap;row-gap:4px}
   /* #47 fix round 1: .il-side was flex:0 0 auto beside .il-tx in a non-wrapping
      row, so at phone widths the time/Undo column had nowhere to shrink to and
      ran past the dialog's edge. Wrapping the row lets .il-tx keep its width
@@ -337,6 +347,9 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 @media(max-width:700px){
   .tr-tabs{display:flex}
   .tr-sides{grid-template-columns:minmax(0,1fr)}
+  .tr-coins{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);max-width:340px}
+  .tr-coin{min-width:0}
+  .tr-coin input{width:100%;padding:6px 2px}
   .tr-it.tr-custom{flex-wrap:wrap}
   .tr-custom .tr-nm{flex:1 1 100%}
   .tr-on-give .tr-side[data-side="get"],.tr-on-get .tr-side[data-side="give"]{display:none}
