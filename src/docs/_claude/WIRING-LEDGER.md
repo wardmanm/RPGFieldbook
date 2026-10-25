@@ -7280,3 +7280,10 @@ Mike, on the fifteen issues filed 2026-10-25 (#110–#124):
 Remaining 1.9.0 order (Mike, 2026-10-25): #47 → #102 → #118 → #105.
 
 Pages: [1.9.0](../wiki/roadmap/1.9.0.md), [2.0](../wiki/roadmap/2.0.md).
+
+## #110 to the backlog, not 2.0 (2026-10-25)
+
+Mike, correcting the entry above: #110 (shapeshifting) has **no milestone**; it is held on the
+backlog. 2.0 is already large. Its milestone is cleared on GitHub; the 2.0 page no longer plans it.
+
+Pages: [1.9.0](../wiki/roadmap/1.9.0.md), [2.0](../wiki/roadmap/2.0.md).

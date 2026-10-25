@@ -4,10 +4,10 @@ Updated: 2026-10-25 · Branch: main
 ## Current focus
 1.9.0 wave 3: #52 and #91 merged 2026-10-25. Remaining 1.9.0 order (Mike, 2026-10-25): #47 trade window →
 #102 packs from a public manifest → #118 feat support → #105 end-of-combat dialog. The thirteen
-`1.9.1`-labelled issues filed 2026-10-25 wait for 1.9.1; #110 moved to 2.0. No branch open.
+`1.9.1`-labelled issues filed 2026-10-25 wait for 1.9.1; #110 is on the backlog with no milestone. No branch open.
 
 ## Recent changes
-- 2026-10-25: Mike set 1.9.0's remaining scope: #118 in, #110 to the v2.0.0 milestone, #111–#117 and
+- 2026-10-25: Mike set 1.9.0's remaining scope: #118 in, #110 to the backlog (no milestone), #111–#117 and
   #119–#124 (labelled 1.9.1) deferred. QA screenshots now filed by issue in `.claude/qa/in-progress/` and `complete/`.
 - 2026-10-25: Merged #91, an initiative tracker in the combat view:
   - Start combat rolls initiative: yours with the HP step's controls and Advantage, typed totals for
