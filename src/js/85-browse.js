@@ -92,7 +92,8 @@ function openBrowse(cfg){
     else if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
   host.onchange=e=>{if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
   host.onclick=e=>{let m;
-    if(e.target.closest("#brClose"))return closeBrowse();
+    /* cfg.onClose: closed WITHOUT adding (#47: the trade window comes back) */
+    if(e.target.closest("#brClose")){closeBrowse();if(cfg.onClose)cfg.onClose();return;}
     if(e.target.closest("#brFilters")){st.showFilters=!st.showFilters;render();return;}
     if(e.target.closest("#brCustom")){closeBrowse();if(cfg.onCustom)cfg.onCustom();return;}
     if(e.target.closest("#brClear")||e.target.closest("#brClearF")){clearAll();render();return;}
@@ -100,7 +101,7 @@ function openBrowse(cfg){
     if((m=e.target.closest("[data-brinfo]"))){const e2=(cfg.items||[]).find(x=>idOf(x)===m.dataset.brinfo);if(e2&&cfg.preview)cfg.preview(e2);return;}
     if((m=e.target.closest("[data-facet]"))){const set=st.facets[m.dataset.facet];if(set.has(m.dataset.val))set.delete(m.dataset.val);else set.add(m.dataset.val);render();return;}
     if((m=e.target.closest("[data-toggle]"))){st.facets[m.dataset.toggle]=!st.facets[m.dataset.toggle];render();return;}
-    if(e.target.closest("#brAdd")){const chosen=(cfg.items||[]).filter(x=>st.sel.has(idOf(x)));const os=document.getElementById("brOrigin"),od=document.getElementById("brOrigDet"),oc=document.getElementById("brCost");const og=(os&&os.value)?{kind:os.value,detail:(od?od.value.trim():""),at:Date.now()}:null;const costOverride=(oc&&oc.value!=="")?num(oc.value):null;const oq=document.getElementById("brQty"),qty=oq?finderQty(oq.value):1;if(chosen.length&&cfg.onAdd)cfg.onAdd(chosen,og,costOverride,qty);closeBrowse();return;}
+    if(e.target.closest("#brAdd")){const chosen=(cfg.items||[]).filter(x=>st.sel.has(idOf(x)));const os=document.getElementById("brOrigin"),od=document.getElementById("brOrigDet"),oc=document.getElementById("brCost");const og=(os&&os.value)?{kind:os.value,detail:(od?od.value.trim():""),at:Date.now()}:null;const costOverride=(oc&&oc.value!=="")?Math.max(0,fnum(oc.value)):null;const oq=document.getElementById("brQty"),qty=oq?finderQty(oq.value):1;if(chosen.length&&cfg.onAdd)cfg.onAdd(chosen,og,costOverride,qty);closeBrowse();return;}
     if((m=e.target.closest("[data-row]"))){const id=m.dataset.row;if(st.sel.has(id))st.sel.delete(id);else st.sel.add(id);m.classList.toggle("sel",st.sel.has(id));const mk=m.querySelector(".brk");if(mk)mk.textContent=st.sel.has(id)?"✓":(added((cfg.items||[]).find(x=>idOf(x)===id))?"•":"");foot();return;}
   };
   render();host.classList.add("show");const si=document.getElementById("brSearch");if(si)si.focus();
@@ -168,24 +169,31 @@ function spellFacets(lib,opts){
     {key:"conc",label:"Concentration",type:"toggle",match:e=>/concentration/i.test(e.meta||"")}
   ];
 }
-function browseItems(){
-  const lib=rules.items||[];
-  if(!lib.length)return openItemForm();
-  openBrowse({
+/* The item picker's list, search, filters, Qty and Cost: shared by Add and by
+   the trade window's "+ Find an item" (#47), which supplies its own added,
+   onCustom, onAdd and onClose, and no Origin (a trade's is always Traded). */
+function itemBrowseCfg(lib){
+  return {
     noun:"items", noun1:"item", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.type||""} ${x.category||""} ${x.rarity||""}`,
     row:x=>({title:x.name,tag:(x.rarity&&x.rarity!=="Mundane")?x.rarity:(x.cost||"")}),
     sort:(a,b)=>String(itemCatOf(a)).localeCompare(String(itemCatOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
     group:x=>itemCatOf(x),
-    added:x=>character.inventory.some(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
     preview:x=>openItemInfo(x),
-    onCustom:()=>openItemForm(),
-    originSelect:true,
     costInput:true,
     facets:itemFacets(lib),
-    qtyInput:true,
+    qtyInput:true
+  };
+}
+function browseItems(){
+  const lib=rules.items||[];
+  if(!lib.length)return openItemForm();
+  openBrowse(Object.assign(itemBrowseCfg(lib),{
+    added:x=>character.inventory.some(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
+    onCustom:()=>openItemForm(),
+    originSelect:true,
     onAdd:(entries,og,costOverride,qty)=>{const did=addLibraryItems(entries,og,costOverride,qty);logFinderAdd(did);renderInventory();renderAttacks();recompute();scheduleSave();}
-  });
+  }));
 }
 /* create an Attacks & Weapons entry linked to a weapon inventory item */
 function addAttackForItem(item){

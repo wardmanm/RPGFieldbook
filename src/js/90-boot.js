@@ -196,8 +196,9 @@ function wire(){
     /* Same "click pip i" semantics the feature and hit-dice pips have: tapping
        the pip that is currently the last spent one gives that use back. */
     if((m=t.closest("[data-iuse]"))){const it=character.inventory.find(x=>x.id===m.dataset.iuse);if(it&&it.uses){const i=num(m.dataset.i);it.uses.used=(num(it.uses.used)===i)?i-1:i;renderInventory();scheduleSave();}return;}
-    /* #47: the Log opens its own dialog; Trade (Task 4) is wired separately */
+    /* #47: the Log and the trade window each open their own dialog */
     if(t.closest("#btnInvLog"))return openInvLog();
+    if(t.closest("#btnTrade"))return openTrade({});
     // spells
     if((m=t.closest("[data-edit-spell]")))return openSpellForm(character.spells.find(x=>x.id===m.dataset.editSpell));
     if((m=t.closest("[data-view-spell]")))return openSpellView(character.spells.find(x=>x.id===m.dataset.viewSpell));

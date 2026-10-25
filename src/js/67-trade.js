@@ -158,3 +158,240 @@ function openInvLog(){
     if(t.closest("#invLogClear")){if(confirm("Clear the whole inventory log? Undo will no longer be possible for any of it.")){character.invLog=[];scheduleSave();paint();}return;}
   });
 }
+/* ---- the trade window (#47 Task 4) ----
+   A draft holds the trade until Complete applies it as one step, logged as one
+   `trade` line whose undo has three parts: give (always clean), add (what you
+   got must still be there) and coins (the net change). Spec §6.2 and §8. */
+let _trade=null,_trPick=false;
+function newTradeDraft(opts){
+  const o=opts||{},arr=a=>Array.isArray(a)?a:[],coins=c=>Object.assign({},(c&&typeof c==="object")?c:{});
+  const give=o.give||{},get=o.get||{};
+  return {with:String(o.with||""),
+    give:{items:arr(give.items).filter(x=>x&&x.id!=null).map(x=>({id:String(x.id),qty:Math.max(1,num(x.qty)||1)})),coins:coins(give.coins)},
+    get:{items:arr(get.items).filter(x=>x&&typeof x==="object").map(x=>({key:String(x.key||uid()),name:String(x.name||(x.def&&x.def.name)||""),qty:Math.max(1,num(x.qty)||1),
+      cost:x.cost!=null?Math.max(0,fnum(x.cost)):(x.def?(costToGp(x.def.cost)||0):0),def:x.def||null,custom:!!x.custom||!x.def})),coins:coins(get.coins)},
+    applyGive:true,applyGet:true,tab:"give"};
+}
+function tradeEmpty(d){return !d.give.items.length&&!d.get.items.length&&!coinsToCp(d.give.coins)&&!coinsToCp(d.get.coins);}
+/* cost is gp of ONE and may be fractional: fnum, as itemWorthCp() reads it */
+function tradeGetCp(g){return Math.round(fnum(g.cost)*100)*Math.max(0,num(g.qty));}
+function tradeBalance(d,ch){
+  const inv=(ch&&ch.inventory)||[];
+  let giveCp=coinsToCp(d.give.coins),getCp=coinsToCp(d.get.coins);
+  if(d.applyGive)d.give.items.forEach(g=>{const it=inv.find(x=>x.id===g.id);if(it)giveCp+=itemWorthCp(it,g.qty);});
+  if(d.applyGet)d.get.items.forEach(g=>{getCp+=tradeGetCp(g);});
+  return {giveCp,getCp,diff:giveCp-getCp};
+}
+/* "n is the number of lines": each item, and each coin that moves */
+function tradeCount(side){return side.items.length+Object.keys(side.coins||{}).filter(k=>num(side.coins[k])>0).length;}
+function tradeTabsInner(d){
+  return ["give","get"].map(s=>`<button type="button" class="tr-tab" role="tab" data-trtab="${esc(s)}" aria-selected="${d.tab===s?"true":"false"}">You ${s} · ${tradeCount(d[s])}</button>`).join("");
+}
+function tradeBalHTML(d,ch){
+  const b=tradeBalance(d,ch),n=cpToGpText(Math.abs(b.diff));
+  const net=b.diff<0?`${esc(n)} short`:b.diff>0?`${esc(n)} over`:"Even";
+  return `<div class="tr-bal${b.diff<0?" short":""}">You give <b>${esc(cpToGpText(b.giveCp))}</b> · you get <b>${esc(cpToGpText(b.getCp))}</b> · <span class="tr-net">${net}</span></div>`;
+}
+function tradeCoinsHTML(side,coins,held){
+  return `<div class="tr-coins">`+coinKeys().map(k=>{const c=COIN_ALL.find(x=>x[0]===k),lbl=c?c[1]:k.toUpperCase(),v=num((coins||{})[k]);
+    const cap=held?` max="${esc(String(num(held[k])))}"`:"";
+    return `<label class="tr-coin"><span>${esc(lbl)}</span><input type="number" inputmode="numeric" data-trcoin="${esc(side+":"+k)}" min="0"${cap} step="1" value="${esc(v?String(v):"")}" placeholder="0" aria-label="${esc((side==="give"?"Give ":"Get ")+(c?c[2]:k))}"></label>`;}).join("")+`</div>`;
+}
+function tradeSwitchHTML(id,on){
+  return `<button type="button" class="tr-apply" id="${esc(id)}" role="switch" aria-checked="${on?"true":"false"}"><span>Apply item value</span><span class="switch${on?" on":""}" aria-hidden="true"></span></button>`;
+}
+function tradeStepHTML(attr,key,qty,max,name){
+  const mx=max!=null?` data-max="${esc(String(max))}"`:"";
+  return `<span class="tr-q"><button type="button" class="tr-pm" ${attr}="${esc(key)}" data-d="-1"${mx} aria-label="${esc((qty<=1?"Remove ":"One fewer ")+name)}">−</button>`+
+    `<b>${esc(String(qty))}</b><button type="button" class="tr-pm" ${attr}="${esc(key)}" data-d="1"${mx} aria-label="${esc("One more "+name)}"${max!=null&&qty>=max?" disabled":""}>+</button></span>`;
+}
+function tradeHTML(d,ch){
+  const inv=(ch&&ch.inventory)||[],held=(ch&&ch.coins)||{};
+  const sugg=[];
+  cleanParty(ch&&ch.party).map(p=>p.name).concat(((ch&&ch.invLog)||[]).map(e=>e&&e.meta&&e.meta.with))
+    .forEach(n=>{n=String(n||"").trim();if(n&&sugg.indexOf(n)<0&&sugg.length<8)sugg.push(n);});
+  let give="";
+  d.give.items.forEach(g=>{const it=inv.find(x=>x.id===g.id);if(!it)return;const nm=String(it.name||"Item");
+    give+=`<div class="tr-it"><span class="tr-nm">${esc(nm)}</span>${tradeStepHTML("data-trgive",g.id,g.qty,itemQty(it),nm)}<span class="tr-worth">${esc(cpToGpText(itemWorthCp(it,g.qty)))}</span></div>`;});
+  if(!give)give=`<p class="tr-none">Nothing yet.</p>`;
+  const left=inv.filter(it=>itemQty(it)>0&&!d.give.items.some(g=>g.id===it.id));
+  const pick=_trPick?`<div class="tr-pick">`+(left.length?left.map(it=>`<button type="button" class="tr-pickrow" data-traddgive="${esc(it.id)}"><span>${esc(String(it.name||"Item"))} ×${esc(String(itemQty(it)))}</span><span class="tr-worth">${esc(cpToGpText(itemWorthCp(it,1)))} each</span></button>`).join(""):`<p class="tr-none">Everything you carry is already in the trade.</p>`)+`</div>`:"";
+  let get="";
+  d.get.items.forEach(g=>{const nm=String(g.name||"")||"Custom item";
+    const name=g.custom?`<input type="text" class="tr-name" data-trname="${esc(g.key)}" value="${esc(g.name)}" placeholder="Item name" aria-label="Custom item name" maxlength="80">`:esc(nm);
+    get+=`<div class="tr-it${g.custom?" tr-custom":""}"><span class="tr-nm">${name}</span>${tradeStepHTML("data-trget",g.key,g.qty,999,nm)}`+
+      `<label class="tr-cost"><input type="number" inputmode="decimal" data-trcost="${esc(g.key)}" min="0" step="0.01" value="${esc(String(fnum(g.cost)))}" aria-label="${esc("Cost of one "+nm+", in gp")}"><span>gp</span></label></div>`;});
+  if(!get)get=`<p class="tr-none">Nothing yet.</p>`;
+  return `<div class="tr-wrap tr-on-${d.tab==="get"?"get":"give"}">`+
+    `<div class="tr-with"><label class="f" for="trWith">With</label><input type="text" id="trWith" value="${esc(d.with)}" placeholder="Who you're trading with (optional)" autocomplete="off" maxlength="60">`+
+    (sugg.length?`<div class="tr-chips">${sugg.map(n=>`<button type="button" class="tr-chip" data-trwith="${esc(n)}">${esc(n)}</button>`).join("")}</div>`:"")+`</div>`+
+    `<div class="tr-tabs" role="tablist">${tradeTabsInner(d)}</div>`+
+    `<div class="tr-sides">`+
+      `<section class="tr-side" data-side="give"><h5>You give</h5>${give}`+
+        `<button type="button" class="tr-add" id="trPickGive" aria-expanded="${_trPick?"true":"false"}">+ From your inventory</button>${pick}`+
+        `${tradeCoinsHTML("give",d.give.coins,held)}${tradeSwitchHTML("trApplyGive",d.applyGive)}</section>`+
+      `<section class="tr-side" data-side="get"><h5>You get</h5>${get}`+
+        `<div class="tr-adds"><button type="button" class="tr-add" id="trFind">+ Find an item</button><button type="button" class="tr-add" id="trCustom">+ Custom item</button></div>`+
+        `${tradeCoinsHTML("get",d.get.coins,null)}${tradeSwitchHTML("trApplyGet",d.applyGet)}</section>`+
+    `</div>`+
+    `<div class="tr-foot">${tradeBalHTML(d,ch)}<div class="tr-acts"><button type="button" class="tbtn" id="trCancel">Cancel</button>`+
+      `<button type="button" class="tbtn primary" id="trComplete" aria-label="Complete trade" title="Complete trade"${tradeEmpty(d)?" disabled":""}><span class="tr-done-ic" aria-hidden="true">✓</span><span class="tr-done-lbl">Complete Trade</span></button></div></div>`+
+  `</div>`;
+}
+function completeTrade(d){
+  if(!d||tradeEmpty(d))return null;
+  const who=String(d.with||"").trim(),b=tradeBalance(d,character),lines=[],giveRecs=[],gotRecs=[];
+  /* 1. what you give: capped at what you own, as the window caps it */
+  d.give.items.forEach(g=>{
+    const it=(character.inventory||[]).find(x=>x.id===g.id);if(!it)return;
+    const q=Math.min(Math.max(0,num(g.qty)),itemQty(it)),nm=String(it.name||"Item");if(q<=0)return;
+    const r=invRemoveQty(g.id,q);
+    giveRecs.push({id:g.id,qty:q,snap:r.removed?r.snap:null,atk:r.removed?r.atk:null});
+    lines.push({dir:"-",text:`${nm} ×${q}`});
+  });
+  /* 2. coins: the net change per denomination, giving capped at what you hold */
+  character.coins=character.coins||{};
+  const delta={},cl=k=>{const c=COIN_ALL.find(x=>x[0]===k);return c?c[1]:k.toUpperCase();};
+  Object.keys(COIN_CP).forEach(k=>{
+    const gv=Math.min(Math.max(0,Math.round(num(d.give.coins[k]))),Math.max(0,num(character.coins[k]))),gt=Math.max(0,Math.round(num(d.get.coins[k])));
+    if(gv)lines.push({dir:"-",text:`${gv} ${cl(k)}`});
+    if(gt)lines.push({dir:"+",text:`${gt} ${cl(k)}`});
+    const v=gt-gv;if(v){delta[k]=v;character.coins[k]=num(character.coins[k])+v;}
+  });
+  /* 3. what you get: library items through the finder's own path (so they stack
+     as the finder stacks them); custom items with origin `custom` (spec §6.2) */
+  d.get.items.forEach(g=>{
+    const q=Math.min(999,Math.max(1,num(g.qty))),cost=Math.max(0,fnum(g.cost));
+    if(g.custom||!g.def){
+      const name=String(g.name||"").trim()||"Custom item";
+      const it={id:uid(),name,qty:q,cost,origin:{kind:"custom",detail:who?"traded from "+who:"traded",at:Date.now()}};
+      character.inventory.push(it);gotRecs.push({id:it.id,qty:q,created:true});
+      lines.push({dir:"+",text:`${name} ×${q}`});
+    }else{
+      addLibraryItems([g.def],{kind:"traded",detail:who,at:Date.now()},cost,q).forEach(r=>gotRecs.push(r));
+      lines.push({dir:"+",text:`${g.name||g.def.name||"Item"} ×${q}`});
+    }
+  });
+  lines.push({dir:"",text:`You gave ${cpToGpText(b.giveCp)} · you got ${cpToGpText(b.getCp)}`});
+  lines.push({dir:"",text:`Item value: ${d.applyGive?"counted":"not counted"} on what you gave, ${d.applyGet?"counted":"not counted"} on what you got`});
+  /* 4. one line */
+  const e=logInv({kind:"trade",title:who?"Traded with "+who:"Traded",lines,
+    meta:{with:who,applyGive:!!d.applyGive,applyGet:!!d.applyGet,giveCp:b.giveCp,getCp:b.getCp},
+    undo:{parts:[{kind:"give",u:{items:giveRecs}},{kind:"add",u:{items:gotRecs}},{kind:"coins",u:{delta}}]}});
+  /* 5. */
+  renderInventory();renderAttacks();renderCoins();recompute();scheduleSave();
+  return e;
+}
+/* Where focus was, as a selector that finds the same control after a repaint:
+   its id, else its trade hook (+ the stepper's direction). */
+function tradeFocusSel(el){
+  if(!el||el===document.body||!el.closest||!el.closest("#mBody"))return null;
+  if(el.id)return attrSel("id",el.id);
+  for(const k of ["data-trgive","data-trget","data-trcost","data-trname","data-trcoin","data-trtab","data-traddgive","data-trwith"]){
+    if(el.hasAttribute(k))return attrSel(k,el.getAttribute(k))+(el.hasAttribute("data-d")?attrSel("data-d",el.getAttribute("data-d")):"");
+  }
+  return null;
+}
+function tradePaint(sel){
+  const body=document.getElementById("mBody");if(!body||!_trade)return;
+  const sc=body.querySelector(".tr-sides"),top=sc?sc.scrollTop:0;
+  if(sel===undefined)sel=tradeFocusSel(document.activeElement);
+  body.innerHTML=tradeHTML(_trade,character);
+  const sc2=body.querySelector(".tr-sides");if(sc2)sc2.scrollTop=top;
+  if(!sel)return;
+  let el=body.querySelector(sel);
+  /* a + at its cap is disabled: stay on the same row's − */
+  if(el&&el.disabled)el=body.querySelector(sel.replace('[data-d="1"]','[data-d="-1"]'));
+  if(!el||el.disabled){const box=document.querySelector("#modal .modal");if(box)box.focus({preventScroll:true});return;}
+  el.focus({preventScroll:true});
+}
+/* Typing changes the totals, not the rows: refresh those in place, so the box
+   being typed in is never replaced under the caret. */
+function tradeRefresh(){
+  const body=document.getElementById("mBody");if(!body||!_trade)return;
+  const bal=body.querySelector(".tr-bal");if(bal)bal.outerHTML=tradeBalHTML(_trade,character);
+  const tabs=body.querySelector(".tr-tabs");if(tabs)tabs.innerHTML=tradeTabsInner(_trade);
+  const done=document.getElementById("trComplete");if(done)done.disabled=tradeEmpty(_trade);
+}
+function showTrade(){
+  openModal("Trade",tradeHTML(_trade,character),"",{wide:true});
+  setDismissGuard(()=>_trade&&!tradeEmpty(_trade)?"Discard this trade?":null);
+}
+/* The finder is its own full-screen layer UNDER the modal, so the trade window
+   steps aside while it is up and comes back from the draft either way. */
+function tradeFind(){
+  const lib=rules.items||[];
+  if(!lib.length){toast("No rules items are loaded. Add a custom item instead.");return;}
+  const back=()=>{const bt=document.getElementById("btnTrade");if(bt&&bt.getClientRects().length)bt.focus({preventScroll:true});if(_trade)showTrade();};
+  closeModal();
+  openBrowse(Object.assign(itemBrowseCfg(lib),{
+    added:x=>!!_trade&&_trade.get.items.some(g=>!g.custom&&String(g.name).toLowerCase()===String(x.name||"").toLowerCase()),
+    onCustom:()=>{if(_trade){_trade.get.items.push({key:uid(),name:"",qty:1,cost:0,def:null,custom:true});_trade.tab="get";}back();},
+    onAdd:(entries,og,costOverride,qty)=>{
+      if(!_trade)return;
+      entries.forEach(x=>{
+        const ex=_trade.get.items.find(g=>!g.custom&&String(g.name).toLowerCase()===String(x.name||"").toLowerCase());
+        if(ex){ex.qty=Math.min(999,ex.qty+finderQty(qty));return;}
+        _trade.get.items.push({key:uid(),name:String(x.name||""),qty:finderQty(qty),cost:costOverride??costToGp(x.cost)??0,def:x,custom:false});
+      });
+      _trade.tab="get";closeBrowse();back();
+    },
+    onClose:back
+  }));
+}
+function openTrade(opts){
+  _trade=newTradeDraft(opts);_trPick=false;
+  showTrade();
+  const body=document.getElementById("mBody");if(!body||body.dataset.trWired)return;
+  body.dataset.trWired="1";
+  const open=()=>!!_trade&&!!document.getElementById("trComplete");   /* only while the trade is the open dialog */
+  body.addEventListener("click",e=>{
+    if(!open())return;
+    const t=e.target,d=_trade,inv=character.inventory||[];let m;
+    if((m=t.closest("[data-trtab]"))){d.tab=m.dataset.trtab==="get"?"get":"give";return tradePaint();}
+    if((m=t.closest("[data-trwith]"))){d.with=m.dataset.trwith;return tradePaint();}
+    if(t.closest("#trApplyGive")){d.applyGive=!d.applyGive;return tradePaint();}
+    if(t.closest("#trApplyGet")){d.applyGet=!d.applyGet;return tradePaint();}
+    if(t.closest("#trPickGive")){_trPick=!_trPick;return tradePaint();}
+    if((m=t.closest("[data-traddgive]"))){
+      const it=inv.find(x=>x.id===m.dataset.traddgive);
+      if(it&&itemQty(it)>0&&!d.give.items.some(g=>g.id===it.id))d.give.items.push({id:it.id,qty:1});
+      if(!inv.some(x=>itemQty(x)>0&&!d.give.items.some(g=>g.id===x.id)))_trPick=false;
+      return tradePaint(it?attrSel("data-trgive",it.id)+'[data-d="1"]':null);
+    }
+    if((m=t.closest("[data-trgive]"))){
+      const g=d.give.items.find(x=>x.id===m.dataset.trgive),it=inv.find(x=>x.id===m.dataset.trgive);
+      if(g){g.qty=Math.min(it?itemQty(it):0,g.qty+num(m.dataset.d));if(g.qty<=0)d.give.items=d.give.items.filter(x=>x!==g);}
+      return tradePaint();
+    }
+    if((m=t.closest("[data-trget]"))){
+      const g=d.get.items.find(x=>x.key===m.dataset.trget);
+      if(g){g.qty=Math.min(999,g.qty+num(m.dataset.d));if(g.qty<=0)d.get.items=d.get.items.filter(x=>x!==g);}
+      return tradePaint();
+    }
+    if(t.closest("#trCustom")){const k=uid();d.get.items.push({key:k,name:"",qty:1,cost:0,def:null,custom:true});d.tab="get";return tradePaint(attrSel("data-trname",k));}
+    if(t.closest("#trFind"))return tradeFind();
+    if(t.closest("#trCancel")){_trade=null;closeModal();return;}
+    if(t.closest("#trComplete")){
+      if(tradeEmpty(d))return;
+      const b=tradeBalance(d,character);
+      if(b.diff<0&&!confirm(`You're ${cpToGpText(-b.diff)} short. Complete the trade anyway?`))return;
+      const done=completeTrade(d);_trade=null;closeModal();
+      if(done)toast(done.title+". It's in the log.");
+      return;
+    }
+  });
+  body.addEventListener("input",e=>{
+    if(!open())return;
+    const t=e.target,d=_trade;
+    if(t.id==="trWith"){d.with=t.value;return;}
+    if(t.dataset.trcoin){
+      const [side,k]=t.dataset.trcoin.split(":"),s=d[side==="get"?"get":"give"];let v=Math.max(0,num(t.value));
+      if(side==="give"){const cap=Math.max(0,num((character.coins||{})[k]));if(v>cap){v=cap;t.value=String(cap);}}
+      if(num(t.value)<0)t.value=String(v);
+      s.coins[k]=v;return tradeRefresh();
+    }
+    if(t.dataset.trcost){const g=d.get.items.find(x=>x.key===t.dataset.trcost);if(g)g.cost=Math.max(0,fnum(t.value));return tradeRefresh();}
+    if(t.dataset.trname){const g=d.get.items.find(x=>x.key===t.dataset.trname);if(g)g.name=t.value;return;}
+  });
+}

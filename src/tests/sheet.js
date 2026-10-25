@@ -97,6 +97,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'cleanInvLog', 'logInv', 'logGrant', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
   'INV_FILTERS', 'invDayLabel', 'invLogHTML', 'openInvLog',
+  'newTradeDraft', 'tradeBalance', 'tradeHTML', 'completeTrade',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -6563,6 +6564,48 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   } finally { X.character = keep; }
   const html = require('./harness').loadHTML();
   ck('#47 the Equipment card has Trade and Log beside Add', /data-add="item"[\s\S]{0,400}id="btnTrade"[\s\S]{0,400}id="btnInvLog"/.test(html));
+}
+
+// ---------- #47 the trade window
+{
+  const keep = {ch: X.character, rules: X.rules, rs: ctx.scheduleSave, ri: ctx.renderInventory, ra: ctx.renderAttacks, rc: ctx.renderCoins, rq: ctx.recompute};
+  ['scheduleSave', 'renderInventory', 'renderAttacks', 'renderCoins', 'recompute'].forEach(n => ctx[n] = () => {});
+  try {
+    X.character = X.blankChar(); X.character.system = 'dnd'; X.character.attacks = [];
+    X.character.inventory = [{id: 'dg', name: 'Dagger', qty: 1, cost: 2, weapon: {dice: '1d4'}}, {id: 'ro', name: 'Rope', qty: 2, cost: 1}];
+    X.character.coins = {gp: 40, sp: 0, cp: 0};
+    const d = X.newTradeDraft({with: 'Olvin <i>'});
+    d.give.items = [{id: 'dg', qty: 1}]; d.give.coins = {gp: 30};
+    d.get.items = [{key: 'k1', name: 'Healing Potion', qty: 1, cost: 50, def: {name: 'Healing Potion', cost: '50 gp'}, custom: false},
+      {key: 'k2', name: 'Rope', qty: 1, cost: 1, def: {name: 'Rope', cost: '1 gp'}, custom: false}, {key: 'k3', name: 'Lucky coin', qty: 1, cost: 0, def: null, custom: true}];
+    let b = X.tradeBalance(d, X.character);
+    ck('#47 balance: coins plus item value on both sides', b.giveCp === 3200 && b.getCp === 5100 && b.diff === -1900, b);
+    d.applyGive = false; b = X.tradeBalance(d, X.character);
+    ck('#47 ...the give switch off drops the Dagger\'s 2 gp', b.giveCp === 3000 && b.diff === -2100);
+    d.applyGet = false; b = X.tradeBalance(d, X.character);
+    ck('#47 ...the get switch off drops the items\' cost (a gift)', b.getCp === 0 && b.diff === 3000);
+    d.applyGive = true; d.applyGet = true;
+    const h = X.tradeHTML(d, X.character);
+    ck('#47 the window escapes "With" and shows the shortfall in red', h.includes('Olvin &lt;i&gt;') && /class="tr-bal short"/.test(h) && /19 gp short/.test(h), h);
+    ck('#47 ...both switches, the tabs, and a ✓ button labelled for screen readers',
+       /id="trApplyGive"[^>]*aria-checked="true"/.test(h) && /id="trApplyGet"/.test(h) && /data-trtab="give"/.test(h) && /id="trComplete"[^>]*aria-label="Complete trade"/.test(h) && /class="tr-done-lbl">Complete Trade</.test(h));
+    ck('#47 ...giving is capped at what you own', /data-trgive="dg"[^>]*data-max="1"/.test(h) && /data-trcoin="give:gp"[^>]*max="40"/.test(h));
+    /* complete, then undo (Review Focus 2) */
+    const before = JSON.stringify({inv: X.character.inventory, coins: X.character.coins});
+    const e = X.completeTrade(d);
+    ck('#47 Complete: the Dagger and 30 gp leave; the Potion, a Rope (stacking on yours) and a custom Lucky coin arrive',
+       !X.character.inventory.some(i => i.id === 'dg') && X.character.coins.gp === 10 && X.character.inventory.some(i => i.name === 'Healing Potion') &&
+       X.character.inventory.find(i => i.name === 'Rope').qty === 3 && X.character.inventory.find(i => i.name === 'Lucky coin').origin.kind === 'custom', X.character.inventory);
+    ck('#47 ...one trade line, nothing else', X.character.invLog.length === 1 && X.character.invLog[0].kind === 'trade' && X.character.invLog[0].meta.with === 'Olvin <i>' && X.character.invLog[0].meta.applyGive === true);
+    ck('#47 undo the trade: everything back as it was', X.invUndo(e.id) === '' &&
+       JSON.stringify({inv: X.character.inventory.map(i => ({n: i.name, q: i.qty})).sort((a, b) => a.n < b.n ? -1 : 1), coins: X.character.coins.gp}) ===
+       JSON.stringify({inv: JSON.parse(before).inv.map(i => ({n: i.name, q: i.qty})).sort((a, b) => a.n < b.n ? -1 : 1), coins: 40}), X.character.inventory);
+    ck('#47 an empty trade cannot complete', X.completeTrade(X.newTradeDraft({})) === null);
+  } finally { Object.assign(ctx, {scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, renderCoins: keep.rc, recompute: keep.rq}); X.character = keep.ch; X.rules = keep.rules; }
+  const src = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
+  ck('#47 the Trade button opens the trade window', /t\.closest\("#btnTrade"\)\)return openTrade\(\{\}\)/.test(src('90-boot.js')));
+  ck('#47 the picker reads a fractional Cost override (0.5 gp is not 0)', /costOverride=\(oc&&oc\.value!==""\)\?Math\.max\(0,fnum\(oc\.value\)\)/.test(src('85-browse.js')));
+  ck('#47 the picker calls cfg.onClose only when it closes without adding', /#brClose"\)\)\{closeBrowse\(\);if\(cfg\.onClose\)cfg\.onClose\(\);/.test(src('85-browse.js')));
 }
 
 ck.done();

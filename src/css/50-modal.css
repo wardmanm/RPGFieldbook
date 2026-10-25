@@ -282,3 +282,67 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
     align-items:center;margin-top:4px}
   .il-why{flex:1 1 100%;max-width:none;text-align:left;margin-top:2px}
 }
+
+/* ---- the trade window (#47) ----
+   Inside the wide dialog's non-scrolling body: "With" on top, the two sides in
+   the one scroller, the balance and the buttons pinned at the foot so the
+   balance is always in view. Side by side above 700px; tabs at 700 and under. */
+/* the wide body keeps only 4px on the right (Settings' scroller); match the left */
+.tr-wrap{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding-right:14px}
+.tr-with{flex:none;margin-bottom:8px}
+.tr-with input{min-height:44px}
+.tr-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tr-chip{font-family:var(--head);font-size:12px;font-weight:600;background:var(--field);border:1.5px solid var(--hair);border-radius:99px;
+  color:var(--ink-soft);padding:4px 12px;min-height:44px;cursor:pointer}
+.tr-chip:hover{border-color:var(--accent-2);color:var(--ink)}
+.tr-tabs{display:none;flex:none;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.tr-tab{flex:1;min-height:44px;border:0;background:var(--field);color:var(--ink-soft);font-family:var(--head);font-weight:700;font-size:12px;
+  letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+.tr-tab[aria-selected="true"]{color:var(--ink);background:var(--paper-2);box-shadow:inset 0 -3px 0 var(--accent)}
+.tr-sides{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start;padding:2px 2px 8px}
+.tr-side{border:1.5px solid var(--hair);border-radius:9px;padding:8px 10px;background:var(--field)}
+.tr-side h5{margin:0 0 4px;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-2)}
+.tr-none{margin:4px 0;font-size:13px;color:var(--ink-soft)}
+.tr-it{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dotted var(--hair)}
+.tr-nm{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.tr-nm input{min-height:44px;font-size:16px;padding:6px 8px}
+.tr-q{display:inline-flex;align-items:center;gap:4px;flex:none}
+.tr-q b{min-width:20px;text-align:center}
+.tr-pm{min-width:44px;min-height:44px;border:1.5px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font-size:18px;font-weight:700;cursor:pointer}
+.tr-pm:disabled{opacity:.4;cursor:default}
+.tr-worth{flex:none;font-size:12px;color:var(--ink-soft);white-space:nowrap}
+.tr-cost{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-soft)}
+.tr-cost input{width:72px;min-height:44px;font-size:16px;padding:6px;text-align:right}
+.tr-adds{display:flex;gap:6px;flex-wrap:wrap}
+.tr-add{font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:.04em;color:var(--accent-2);background:none;border:1.5px dashed var(--hair);
+  border-radius:8px;min-height:44px;padding:6px 10px;margin-top:6px;cursor:pointer}
+.tr-add:hover{border-color:var(--accent-2)}
+.tr-pick{display:flex;flex-direction:column;gap:4px;margin-top:6px;padding:6px;border:1px dotted var(--hair);border-radius:8px;max-height:220px;overflow-y:auto}
+.tr-pickrow{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;padding:6px 10px;border:1px solid var(--hair);border-radius:7px;
+  background:var(--panel);color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.tr-pickrow:hover{border-color:var(--accent-2)}
+.tr-coins{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tr-coin{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink-soft)}
+.tr-coin input{width:62px;min-height:44px;font-size:16px;padding:6px;text-align:center}
+.tr-apply{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;margin-top:8px;padding:0 4px 0 0;
+  border:0;background:none;color:var(--ink);font:inherit;font-size:14px;cursor:pointer;text-align:left}
+.tr-apply .switch{pointer-events:none}
+.tr-foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 0 14px;border-top:1.5px solid var(--line)}
+.tr-bal{flex:1 1 260px;font-size:14px;padding:8px 10px;border:1.5px solid var(--hair);border-radius:8px}
+.tr-bal.short{border-color:var(--brick);color:var(--brick)}
+.tr-bal.short .tr-net{font-weight:700}
+.tr-acts{display:flex;gap:8px;flex:none}
+.tr-acts .tbtn{min-height:44px;min-width:44px}
+.tr-done-ic{display:none;font-size:20px;line-height:1}
+@media(max-width:700px){
+  .tr-tabs{display:flex}
+  .tr-sides{grid-template-columns:minmax(0,1fr)}
+  .tr-it.tr-custom{flex-wrap:wrap}
+  .tr-custom .tr-nm{flex:1 1 100%}
+  .tr-on-give .tr-side[data-side="get"],.tr-on-get .tr-side[data-side="give"]{display:none}
+  .tr-foot{flex-wrap:nowrap}
+  .tr-bal{flex:1 1 auto;min-width:0;font-size:13px}
+  .tr-acts #trCancel{display:none}
+  .tr-done-lbl{display:none}
+  .tr-done-ic{display:inline}
+}
