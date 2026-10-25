@@ -2395,7 +2395,7 @@ function block(html, needle, tag) {
   // final-review (a): the tab always opens on the category list, never the
   // last table a previous visit left on
   ck('#99 (a) entering the Rules tab from elsewhere resets to the category list',
-     /function selectTab\(name\)\{[\s\S]{0,500}if\(name==="rules"&&was!=="rules"\)rbToList\(\)/.test(sheetJs));
+     /function selectTab\(name\)\{[\s\S]{0,700}if\(name==="rules"&&was!=="rules"\)rbToList\(\)/.test(sheetJs));
 }
 
 // ---------- the combat view is a TAB: its icon in the tab bar, its panel in the page
@@ -2969,6 +2969,12 @@ function block(html, needle, tag) {
   const classic=tk.slice(tk.indexOf('html[data-skin="classic"]{'),tk.indexOf('}',tk.indexOf('html[data-skin="classic"]{')));
   ['--lu-night','--lu-night-2','--lu-glow','--lu-spark'].forEach(t=>
     ck('#101 '+t+' is defined for Humblewood (:root) and classic', root.indexOf(t+':')>=0&&classic.indexOf(t+':')>=0, t));
+}
+
+{
+  /* #52: .tab sets display, which beats the browser's [hidden] rule */
+  const chrome = fs.readFileSync(path.join(__dirname, '..', 'css', '10-chrome.css'), 'utf8');
+  ck('#52 a hidden tab button really leaves the bar', /\.tab\[hidden\]\{display:none!important\}/.test(chrome));
 }
 
 /* ================= Fetch all never loses what is loaded (issue #65) ===========

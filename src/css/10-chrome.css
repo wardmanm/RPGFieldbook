@@ -99,6 +99,7 @@ html[data-tabs="icons"] .tabicon{display:block}
 }
 .tab.active{color:var(--ink);border-bottom-color:var(--accent)}
 .tab:hover{color:var(--ink)}
+.tab[hidden]{display:none!important}   /* #52: .tab sets its own display, which beats [hidden] */
 .tab-tools{flex:0 0 auto;margin-left:auto;display:flex;align-items:center}
 .fav{background:none;border:0;cursor:pointer;font-size:15px;line-height:1;color:var(--hair);padding:0 2px}
 .fav.on{color:var(--accent)}

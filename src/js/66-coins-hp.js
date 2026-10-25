@@ -270,7 +270,7 @@ function renderAll(){
      way the mirror never saw — reconciles on load rather than showing a
      condition for a spell that isn't running. */
   syncConcStatus();
-  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderChipsAll();renderFamiliars();ensureSpellAttacks();renderSpells();renderRulesBrowser();renderNoteIcons();renderEditToggles();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();
+  renderPortrait();renderClassRace();renderFeatures();renderInventory();renderStatuses();renderChipsAll();renderFamiliars();ensureSpellAttacks();renderSpells();renderRulesBrowser();renderNoteIcons();renderEditToggles();renderNotes();renderJournal();renderTrackers();renderAllRT();recompute();applyHiddenTabs();
   /* LAST: the combat toggles sit beside the note buttons drawn above, and an open
      combat view refills from THIS character — every character switch ends here. */
   syncCombatView();

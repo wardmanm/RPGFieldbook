@@ -78,7 +78,7 @@ function blankChar(){
     /* #103: chips (41-chips.js), read only through chipList(); default
        languages are added at runtime (ensureDefaultLanguages), never here. */
     resists:[], immunes:[], senses:[], languages:[],
-    advancement:"xp", showFamiliars:false,
+    advancement:"xp", showFamiliars:false, hiddenTabs:[],
     /* Cards whose edit/delete buttons the player has hidden (87-notes.js, #97):
        card key -> true. Read only through editHidden(). */
     editHide:{},

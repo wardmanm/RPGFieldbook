@@ -1,7 +1,36 @@
+/* ---- hidden tabs (#52) ----
+   Per character: the word tabs a player has switched off in Settings → Sheet
+   display. The Sheet and the combat swords can never be hidden. */
+const HIDEABLE_TABS=["spells","inventory","story","journal","rules"];
+const TAB_LABELS={spells:"Spells",inventory:"Inventory",story:"Bio",journal:"Journal",rules:"Rules"};
+function isTabHidden(name,c){
+  c=c||character;
+  return HIDEABLE_TABS.indexOf(name)>=0&&!!c&&Array.isArray(c.hiddenTabs)&&c.hiddenTabs.indexOf(name)>=0;
+}
+/* migrate()'s cleaner: only real hideable names, each once, in order */
+function cleanHiddenTabs(v){
+  const out=[];
+  (Array.isArray(v)?v:[]).forEach(t=>{if(HIDEABLE_TABS.indexOf(t)>=0&&out.indexOf(t)<0)out.push(t);});
+  return out;
+}
+function applyHiddenTabs(){
+  document.querySelectorAll(".tab[data-tab]").forEach(b=>{b.hidden=isTabHidden(b.dataset.tab);});
+  const act=(document.querySelector(".tabpanel.active")||{id:""}).id.replace(/^tab-/,"");
+  if(isTabHidden(act))selectTab("sheet");
+}
+function setTabHidden(name,hide){
+  if(HIDEABLE_TABS.indexOf(name)<0)return;
+  const list=cleanHiddenTabs(character.hiddenTabs).filter(t=>t!==name);
+  if(hide)list.push(name);
+  character.hiddenTabs=list;
+  applyHiddenTabs();scheduleSave();
+}
+
 /* Show a tab. Deliberately does NOT scroll: the tab bar's own handler wants the
    top of the page, but jumping to a note wants that note's card — so the scroll
    is the caller's decision, not this function's. */
 function selectTab(name){
+  if(isTabHidden(name))name="sheet";   /* #52: a stale caller never opens a hidden panel */
   /* The combat view is a tab whose cards belong to the OTHER tabs. Leaving it
      sends them home first, or a note link would land on a tab with its cards
      missing; entering it remembers where it came from, for the swords. */
