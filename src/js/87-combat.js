@@ -258,7 +258,7 @@ function enterCombatTab(){
 /* The swords again: back to the tab it was opened from, where it was. Picking
    another tab goes there instead, like any tab. */
 function leaveCombatTab(){
-  const back=cvPrevTab||"sheet";
+  const back=(cvPrevTab&&!isTabHidden(cvPrevTab))?cvPrevTab:"sheet";   /* #52: never back to a hidden tab */
   selectTab(back);
   window.scrollTo({top:cvPageScroll});
   const t=document.querySelector(`.tab[data-tab="${back}"]`);if(t)t.focus({preventScroll:true});

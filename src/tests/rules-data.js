@@ -2307,8 +2307,8 @@ function block(html, needle, tag) {
   ck('encumbrance is a segmented choice now, not a dropdown', !/id="setEnc"/.test(src) &&
      /character\.encumbrance=b\.dataset\.enc;/.test(src) && ['none', 'standard', 'variant'].every(v => sec('secCarrying').includes('["' + v + '",')));
   ck('every switch on the dialog says its state to a screen reader',
-     // 7 since #103 added the familiars-icon switch
-     (src.match(/class="switch /g) || []).length === 7 && (src.match(/role="switch" aria-checked=/g) || []).length === 7 &&
+     // 8 since #52 added the per-character tabs switch (one literal occurrence in tabsGroupHTML)
+     (src.match(/class="switch /g) || []).length === 8 && (src.match(/role="switch" aria-checked=/g) || []).length === 8 &&
      /const s=e\.target\.closest\("\.switch"\);if\(s\)s\.setAttribute\("aria-checked",s\.classList\.contains\("on"\)\?"true":"false"\);/.test(src));
   ck('Settings opens wide, on the remembered page; a dialog opened from it does not',
      /openModal\("Settings",[\s\S]*?\{wide:true\}\);/.test(src) && /setPageOf\(settings\.setPage,hasChar\)/.test(src) &&

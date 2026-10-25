@@ -61,6 +61,14 @@ function setGroupHTML(title,body){return `<div class="set-grp"><div class="set-g
 function setRowHTML(name,help,control,inline){
   return `<div class="set-row${inline?" set-inline":""}"><div class="set-row-txt"><div class="t-lbl">${name}</div>${help?`<div class="t-sub">${help}</div>`:""}</div><div class="set-row-ctl">${control}</div></div>`;
 }
+/* #52: one switch per word tab; on means shown. Sheet is never listed. */
+function tabsGroupHTML(c){
+  return setGroupHTML("Tabs",HIDEABLE_TABS.map((t,i)=>{
+    const shown=!isTabHidden(t,c);
+    return setRowHTML(esc(TAB_LABELS[t]),i===0?"Hide the tabs this character doesn't use. Sheet always shows.":"",
+      `<button type="button" class="switch ${shown?"on":""}" id="swTab-${esc(t)}" data-tabsw="${esc(t)}" role="switch" aria-checked="${shown?"true":"false"}" aria-label="${esc("Show the "+TAB_LABELS[t]+" tab")}"></button>`,true);
+  }).join(""));
+}
 /* the Rules data tab's count, and a dot while a newer copy of a loaded pack is
    out; renderRulesData() keeps it current. The tab's aria-label replaces its
    contents, so the same facts are its description (setNavHTML() points
@@ -119,7 +127,8 @@ function openSettings(){
         `<button type="button" class="switch ${character.showFamiliars===true?"on":""}" id="swFamiliars" role="switch" aria-checked="${character.showFamiliars===true?"true":"false"}" aria-label="Familiars and companions icon"></button>`,true))+
     setGroupHTML("Ammunition",
       setRowHTML("Ammo recovery","What comes back after a fight. Thrown weapons and items set to Always come back anyway; firearm bullets never do.",
-        `<select id="setAmmoRec" aria-label="Ammo recovery">${AMMO_RECOVERY.map(([v,l])=>`<option value="${esc(v)}"${ammoRecoveryOf(character)===v?" selected":""}>${esc(l)}</option>`).join("")}</select>`)):"";
+        `<select id="setAmmoRec" aria-label="Ammo recovery">${AMMO_RECOVERY.map(([v,l])=>`<option value="${esc(v)}"${ammoRecoveryOf(character)===v?" selected":""}>${esc(l)}</option>`).join("")}</select>`))+
+    tabsGroupHTML(character):"";
   const secCarrying=hasChar?setGroupHTML("Size and weight",
       setRowHTML("Size","From your ancestry unless you choose one. It sets your carrying capacity.",
         `<select id="setSize" aria-label="Size">${sizeOptionsHTML(character.size)}</select>`)+
@@ -216,6 +225,11 @@ function openSettings(){
   /* #103: both repaint the sheet header */
   {const g=document.getElementById("segAdv");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-adv]");if(!b)return;character.advancement=advancementOf({advancement:b.dataset.adv});g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderSheetHead();scheduleSave();});}
   {const b=document.getElementById("swFamiliars");if(b)b.addEventListener("click",()=>{character.showFamiliars=character.showFamiliars!==true;b.classList.toggle("on",character.showFamiliars);renderSheetHead();scheduleSave();});}
+  document.querySelectorAll("[data-tabsw]").forEach(b=>b.addEventListener("click",()=>{
+    const t=b.dataset.tabsw,show=isTabHidden(t);   /* hidden now → this click shows it */
+    setTabHidden(t,!show);
+    b.classList.toggle("on",show);b.setAttribute("aria-checked",show?"true":"false");
+  }));
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
