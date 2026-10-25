@@ -28,6 +28,7 @@ Bullets below this line — leave the heading in place.
 
 ## Pending
 
+- Hide the tabs a character doesn't use (Settings → Sheet display → Tabs).
 - Journal pages can hold checklists: a line starting `[ ]` or `[x]` is a checkbox you can tick in
   the page itself, and the page list shows how many are done. Section notes and the text fields on
   the Bio tab tick the same way, and the journal and section-note editors have an Insert checkbox

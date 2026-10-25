@@ -8,7 +8,8 @@ the back-to-top button, and the wiring in `90-boot.js` that binds all of it once
 `src/html/` (see [Sections & layout](sections-and-layout.md)).
 
 **Code:** `selectTab()`, `scrollToCard()`, `toTopShown()`, `updateToTop()`, `toTopBehavior()`,
-`scrollToTop()` in `40-sheet.js` ·
+`scrollToTop()`, `HIDEABLE_TABS`, `TAB_LABELS`, `isTabHidden()`, `cleanHiddenTabs()`,
+`applyHiddenTabs()`, `setTabHidden()` (#52) in `40-sheet.js` ·
 `openModal()`, `closeModal()`, `dismissModal()`, `setDismissGuard()`, `modalTakeFocus()`,
 `modalGiveBackFocus()`, `openerSelector()` in `80-modal-forms.js` · `openBrowse()`, `closeBrowse()`
 in `85-browse.js` · `wire()`, `boot()` in `90-boot.js` · `toast()` in `60-attacks.js` ·
@@ -68,6 +69,21 @@ Every tab button holds both an `svg.tabicon` (`aria-hidden`) and a `span.tlbl`, 
 glyphs below 860px, or at any width when `html[data-tabs="icons"]` (Settings → Icon tabs, set by
 `applyTheme()`). Below 400px the bar scrolls sideways and `.tab-tools` becomes
 `position:sticky;right:0`, so the swords stay on screen.
+
+**Hiding a tab (#52).** A player can hide the word tabs a character doesn't use, per character,
+from Settings → Sheet display → Tabs ([Settings & updates](../features/settings-and-updates.md)).
+`HIDEABLE_TABS` is `spells`, `inventory`, `story`, `journal`, `rules` — the Sheet and the combat
+swords are structurally unreachable, not merely unlisted: `isTabHidden()` is always false for them
+and `setTabHidden()` refuses any other name. `applyHiddenTabs()` sets the `hidden` attribute on
+each `.tab[data-tab]` button `isTabHidden()` names and clears it on the rest; it runs from
+`renderAll()`, so load, a character switch and a Settings flip all repaint the bar the same way.
+`.tab[hidden]{display:none!important}` (`10-chrome.css`) removes the button from the flow at every
+width, icon tabs included — the `!important` is load-bearing, since `.tab` sets its own `display`.
+If the active panel's tab is now hidden, `applyHiddenTabs()` selects `"sheet"`; `selectTab(name)`
+carries the same guard for a stale caller, treating a hidden name as `"sheet"` on every call, not
+only this one. Two ways back in: `jumpToNote()` unhides a hidden tab and toasts before jumping
+([Story & notes](../features/story-and-notes.md)); `leaveCombatTab()` goes to the Sheet rather than
+a now-hidden `cvPrevTab` ([Combat view](../features/combat-view.md)).
 
 ### Jumping to a card
 
@@ -238,6 +254,12 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - **Tab names are lowercase and agree in three places:** `data-tab`, `id="tab-…"`, and every
   `selectTab()` caller. `rules-data.js` asserts six tabs, a panel for each, a tab for each panel
   (`combat` via `#btnCombat`), one active at load, and a glyph and a word in each.
+- **The Sheet and the combat swords can never be hidden (#52).** `isTabHidden()` is false for them
+  by construction (they are not in `HIDEABLE_TABS`) and `setTabHidden()` refuses any name outside
+  it, so a hidden-tab bug can't reach them even by a bad write to `character.hiddenTabs`.
+- **`selectTab()` treats a hidden tab as `"sheet"` (#52).** This is a guard, independent of
+  `applyHiddenTabs()`'s own redirect, so a stale caller — a saved deep link, a leftover `cvPrevTab`
+  — can never open a hidden panel.
 - **`selectTab()` never scrolls, and sends combat cards home before any other tab shows**, so a
   note jump never lands on a tab with its cards missing.
 - **No `<title>` inside a tab SVG** (asserted). Each is `aria-hidden` and its button has an
@@ -317,6 +339,8 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 | An index of a tab's sections (#103) | None: the ☰ section flyout is retired (Mike, 2026-10-24); the tabs are organised well enough to need no index | Keeping it: after the Sheet makeover each tab is short and plainly laid out, and the flyout was one more control in a crowded tab bar |
 | Where focus goes after Back to top (#103) | The active tab, or the swords in the combat view | Leaving it on the button: the button hides at the top, and a focused element that hides drops focus to `<body>`, stranding a keyboard user |
 | The button over a toast on a phone (#103) | It rises above the toast, by the toast's measured height | Hiding it while a toast shows: the button vanishes under the player's thumb. A fixed lift: a two-line toast with Undo is taller than a one-line one |
+| What can't be hidden (#52) | The Sheet tab and the combat swords | n/a — hiding Combat would drop the swords mid-fight |
+| A hidden tab that is active (#52) | The Sheet shows, both from `applyHiddenTabs()`'s own redirect and from a `selectTab()` guard | n/a |
 
 ## Open
 
@@ -357,3 +381,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-23 — The Story tab's button reads Bio (id `story` kept); the Sheet header is a card whose ☰ entry is "Character"; the header's own popover (`openShFly()`). → ledger L6633, #103
 - 2026-10-23 — The ☰ strips the Sheet header's `.sh-level`, now inside its `.label`. → ledger L6776, #103
 - 2026-10-24 — The ☰ section flyout is retired (Mike): `buildToc()`, `openToc()`, `closeToc()` and their markup go; `scrollToCard()` stays. A back-to-top button (`#btnToTop`) arrives, with its collisions handled. → ledger L6804, #103
+- 2026-10-25 — A player can hide the word tabs a character doesn't use, per character: `HIDEABLE_TABS`, `applyHiddenTabs()`, `.tab[hidden]`, and a `selectTab()` guard; the Sheet and the combat swords can never be hidden. → ledger L6989, #52

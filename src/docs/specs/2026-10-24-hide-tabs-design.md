@@ -113,3 +113,30 @@ The Sheet display page (`88-settings.js`, the `display` page) gets a new group, 
 - Reordering tabs.
 - Hiding the Sheet or the combat swords.
 - Hiding individual cards, which #97 and the existing card toggles cover.
+
+## As built
+
+As specified, §1–§9, with these notes from the three-task build (see the ledger entry, "Hide tabs
+(#52, 2026-10-25)", for the full QA account and screenshot paths):
+
+- **The Tabs group's help text sits under the first switch (Spells), not above the group.**
+  `setGroupHTML()` takes only a title, not a help line, so `tabsGroupHTML()` (`88-settings.js`)
+  reused the row-help slot of its first switch instead of giving the group its own. It reads, on
+  screen, as if "Hide the tabs this character doesn't use. Sheet always shows." belonged to Spells
+  rather than to the group — confirmed in `.claude/qa/52-after-settings-tabs-off.png`. Left for a
+  future fix wave: the clean fix is giving `setGroupHTML()` an optional help line, which touches
+  every other group that has none.
+- **Three deferred minors from code review, none of them behavioural:**
+  - `rules-data.js:182`'s `#99` regex window moved `{0,500}`→`{0,700}` with no comment saying why —
+    the new `selectTab()` guard line (§4) pushed an existing, unrelated check past its old budget.
+  - `HIDEABLE_TABS.indexOf(name)>=0` is written out three times in `40-sheet.js` rather than
+    through one shared test — the plan's own code, taken verbatim.
+  - `88-settings.js`'s `[data-tabsw]` click handler sets the button's `on` class and
+    `aria-checked` itself, which the dialog's generic `.switch` listener (`#setSections`) also does
+    on the same click — redundant, idempotent, harmless; matches the existing `swFamiliars`
+    handler's own pattern.
+- Everything else — `HIDEABLE_TABS`, `TAB_LABELS`, `isTabHidden()`, `cleanHiddenTabs()`,
+  `applyHiddenTabs()`, `setTabHidden()`, the `selectTab()` guard, the `.tab[hidden]` CSS rule, the
+  Tabs group's switches and their wiring, `jumpToNote()`'s unhide-and-toast, `leaveCombatTab()`'s
+  hidden-`cvPrevTab` redirect, combat cards staying put, and the browser QA across both skins, both
+  widths, icon tabs, two characters and a clean console — landed exactly as specified.

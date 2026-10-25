@@ -56,6 +56,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Pre-equip-era weapons** — Equip them once, recorded by `wpnEquipInit`
 - **The chip lists (#103)** — Their own fields, read through one guard, `chipList()`
 - **How often the Languages lift runs (#103)** — Once, flagged by `langLifted` (never in `blankChar()`)
+- **Where hidden tabs are scoped (#52)** — Per character, saved on `character.hiddenTabs`; a new character shows every tab
 
 ### [Rules packs](architecture/rules-packs.md)
 
@@ -295,6 +296,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **What the hover preview renders** — Phrasing markup only, block markers represented, chips unwrapped
 - **The Story tab's name (#103)** — **Bio**, with the id kept as `story`
 - **Notes on a retired card (#103)** — Merged once into the card that took its controls, under a heading
+- **A jump into a hidden tab (#52)** — Unhides the tab, saves, and toasts before carrying on
 
 ### [Journal](features/journal.md)
 
@@ -348,6 +350,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **"In combat"** — `combatActive`, its own flag
 - **Dragging** — Pointer events; neighbours hop, the dragged card stays
 - **Esc** — Not handled
+- **Cards from a hidden tab (#52)** — They stay in the view; hiding a tab is a tab-bar fact, not a combat-layout one
 
 ### [Rules-update tool](features/rules-update-tool.md)
 
@@ -384,6 +387,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **A settings file with an empty pool** — Treated as carrying no rules
 - **Where an import's outcome is shown** — A status line beside the Import button
 - **How a newer data release is shown** — Muted text on the row, one hint line above the list, a dot on the Settings sidebar's Rules data tab
+- **Where a player hides a tab (#52)** — Settings → Sheet display gets a Tabs group, one switch per word tab
 
 ## UI
 
@@ -405,6 +409,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **An index of a tab's sections (#103)** — None: ☰ section flyout retired (Mike, 2026-10-24): the tabs are organised well enough to need no index
 - **Where focus goes after Back to top (#103)** — The active tab, or the swords in the combat view
 - **The back-to-top button over a toast on a phone (#103)** — It rises above the toast, by the toast's measured height
+- **What can't be hidden (#52)** — The Sheet tab and the combat swords
+- **A hidden tab that is active (#52)** — The Sheet shows
 
 ### [Sections & layout](ui/sections-and-layout.md)
 

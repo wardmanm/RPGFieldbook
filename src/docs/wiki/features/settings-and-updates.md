@@ -7,7 +7,7 @@ options, the rules data — where it comes from, what is loaded, whether a loade
 this build expects, and whether a newer copy of it is out — backup of settings and rules, and the
 credits that the icons and the loaded packs require.
 
-**Code:** `SET_PAGES`, `setPageOf()`, `setNavHTML()`, `setPageHTML()`, `setRowHTML()`, `rulesNavBadgeHTML()`, `openSettings()`, `encSettingsHint()`,
+**Code:** `SET_PAGES`, `setPageOf()`, `setNavHTML()`, `setPageHTML()`, `setRowHTML()`, `tabsGroupHTML()` (#52), `rulesNavBadgeHTML()`, `openSettings()`, `encSettingsHint()`,
 `rulesStatusText()`, `updateRulesStatus()`, `refreshRulesUI()`, `loadedRulesGroups()`,
 `removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataUpdateFor()`, `dataStatusHTML()`,
 `rulesCacheWarning()`, `rulesBadge()`, `rulesCreditsHTML()`, `SETTINGS_KEYS`, `foldLegacySettings()`, `readSettingsFile()`, `importSettings()`,
@@ -44,7 +44,7 @@ and actions are buttons.
 | Page | Groups and settings |
 |---|---|
 | **Appearance** | *Look:* skin (changing it with a character open also sets its `system`), mode (system/light/dark), hand-drawn borders. *Interface:* icon tabs, "Tap outside to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)) |
-| **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card. *Ammunition* (#104): "Ammo recovery" — Half (rules as written) / All / Hits only / None, writing `character.ammoRecovery` |
+| **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card. *Ammunition* (#104): "Ammo recovery" — Half (rules as written) / All / Hits only / None, writing `character.ammoRecovery`. *Tabs* (#52): one switch per word tab, writing `character.hiddenTabs` |
 | **Carrying** | Only with a character open, titled "For *name*". *Size and weight:* size (a dropdown), encumbrance (segmented: Off, Standard, Variant), coins count as weight, and the live "carrying X of Y" line (`encSettingsHint()`) |
 | **Rules data** | *Sources:* the URL list and its Add box, Fetch all, Import files, Get templates, Clear all (set apart), the status line. *Loaded data:* the loaded-data list. *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against |
 | **Backup** | *Characters:* the character library. *Settings file:* Export and Import, and the status line that says what an import did (`#setImpStatus`) |
@@ -58,6 +58,17 @@ Icon tabs is on (`html[data-tabs="icons"]`) or the screen is 640px wide or less,
 52px rail of icons, each named for a screen reader and given a tooltip; on a narrow screen a
 segmented control or dropdown drops below its name while a switch stays beside it. Every switch is
 `role="switch"` with `aria-checked`, kept true by one click listener on the wrapper.
+
+**The Tabs group (#52).** Sheet display's last group, only with a character open: one
+`setRowHTML` switch per `HIDEABLE_TABS` entry (`tabsGroupHTML()`), labelled with the tab's own
+word — Spells, Inventory, Bio, Journal, Rules — on meaning shown. The Sheet and the combat swords
+are not listed; they can't be hidden ([Shell](../ui/shell.md)). Its id is `swTab-<name>`,
+`data-tabsw="<name>"`, and a delegated click handler calls `setTabHidden()`, which updates
+`character.hiddenTabs`, repaints the bar (`applyHiddenTabs()`) and saves — the `swFamiliars`
+pattern. Known as-built rough edge: the group's own help text, "Hide the tabs this character
+doesn't use. Sheet always shows.", sits under the first switch (Spells) rather than above the
+group, because `setGroupHTML()` takes only a title; it reads as if it belonged to Spells. Left for
+a later fix wave (ledger L6989, #52).
 
 **Which page opens.** Every shown page is built when the dialog opens and all but one are
 `hidden`, so every control keeps its id and its handler, and the lists keep refreshing behind any
@@ -251,6 +262,7 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 | A settings file with an empty pool | Treated as carrying no rules | Replacing with it: that silently unloads everything, which is Clear all's job and it confirms (L4134) |
 | Where an import's outcome is shown | A status line beside the Import button; from the Rules tab, where neither line shows, a toast without the counts, and an error toast that stays until tapped (#87) | The rules status line: it sits in the Rules data section, usually folded shut. A toast that hides on its own: a failed save must not vanish (L4134) |
 | How a newer data release is shown | Muted text on the row, one hint line above the list, a dot on the Settings sidebar's Rules data tab | The amber "update available" chip: that says the pack is behind the app it is loaded in, and a data release is optional (L5082) |
+| Where a player hides a tab (#52) | Settings → Sheet display gets a Tabs group, one switch per word tab | A long-press on the tab itself to unhide it: invisible, and clashes with the phone's own long-press gesture |
 
 ## Open
 
@@ -294,3 +306,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-16 — The page pane keeps its controls clear of its scrollbar. → ledger L5976, #107
 - 2026-10-19 — Sheet display gains an Ammunition group: "Ammo recovery" (half/all/hits/none), writing `character.ammoRecovery`. → ledger L6081, #104
 - 2026-10-19 — "Ammo recovery"'s first choice reads Half (rules as written), as built. → ledger L6147, #104
+- 2026-10-25 — Sheet display gains a Tabs group: one switch per word tab, writing `character.hiddenTabs` via `setTabHidden()`. → ledger L6989, #52

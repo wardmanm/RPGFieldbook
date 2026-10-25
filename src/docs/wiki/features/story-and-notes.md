@@ -11,7 +11,7 @@ the same markdown-on-top-of-glossary grammar.
 **Code:** `BIO`, `buildBio()` in `00-constants.js` · `renderRT()`, `renderAllRT()`, `rtKeys()`,
 `rtToggleCheckbox()` in `10-compute.js` · `NOTE_SECTIONS`, `NOTE_TABS`, `noteTitle()`, `noteMap()`, `getNote()`,
 `saveNote()`, `noteWhen()`, `noteBtnHTML()`, `notePreview()`, `renderNoteIcons()`, `notesHTML()`,
-`noteEntryHTML()`, `renderNotes()`, `toggleNoteGroup()`, `jumpToNote()`, `openNoteEditor()` in
+`noteEntryHTML()`, `renderNotes()`, `toggleNoteGroup()`, `jumpToNote()` (#52), `openNoteEditor()` in
 `87-notes.js` · `mergeNoteInto()`, `migrateSheet103()` in `71-char-io.js` · `chipsHTML()`,
 `renderBioChips()` in `41-chips.js` · `selectTab()`, `scrollToCard()` in `40-sheet.js` · markup `src/html/30-story.html`,
 `src/html/60-journal.html` · **Tests:** `rules-data.js` (registry ↔ template, storage guards, the pure
@@ -78,6 +78,9 @@ groups the notes by tab in registry order, lists only sections that have a note,
 state otherwise. Each group header is a `role="button"` toggle (click, Enter or Space) stored per
 character in `noteCollapse`; a closed group still renders its notes, hidden. Each entry has a jump
 link, the added/edited dates, an edit button and the note rendered by `noteHTML()`. `jumpToNote(k)`
+first checks whether the note's own tab is hidden (#52, [Shell](../ui/shell.md)): if so it unhides
+it (`setTabHidden(tab,false)`) and toasts "*Label* tab shown again; hide it in Settings → Sheet
+display.", using the tab's own word (Bio, never `story`) — then carries on exactly as before. It
 calls `selectTab()` — which never scrolls — then `scrollToCard()` and flashes the card; a card that
 is hidden (`offsetParent === null`: an empty Active Spells) scrolls to the top instead.
 Familiars' note opens the header paw's popover, hung from the header bar when the paw is hidden.
@@ -112,6 +115,8 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - **Markup builders stay pure strings** (`notesHTML()`, `noteEntryHTML()`, `noteBtnHTML()`,
   `notePreview()`): the harness stubs the DOM, so that is what makes grouping, counts, collapse,
   escaping and the empty state testable.
+- **A jump into a hidden tab always gets there (#52).** Refusing it would leave the note's own link
+  doing nothing; `jumpToNote()` unhides the tab first, so the jump never fails silently.
 
 ## Traps
 
@@ -134,6 +139,7 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 | Notes on a retired card (#103) | Merged once into the card that took its controls, under a heading | Dropping them: a player's words lost. Keeping the key: a note with no card to open it from |
 | How notes are keyed | A stable id per section in `NOTE_SECTIONS` | The heading text: headings get reworded and the note would be orphaned |
 | What the hover preview renders | Phrasing markup only, block markers represented, chips unwrapped | The full `noteHTML()` output: blocks and `role="button"` chips are illegal in a button, and a chip on a hover card vanishes as you reach for it |
+| A jump into a hidden tab (#52) | Unhides the tab, saves, and toasts "*Label* tab shown again; hide it in Settings → Sheet display." before carrying on | Refusing the jump: the note's own link would do nothing |
 
 ## Open
 
@@ -155,3 +161,4 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - 2026-10-17 — A checkbox in a Story field (Proficiencies or a bio card) is tickable in its read view, refused while editing. → ledger L6057, #95
 - 2026-10-23 — The Story tab is Bio; its first card holds Alignment, Languages and Senses chips and the prose; 18 sections; the Class, Ancestry & Background and Rest notes merge into Character and Vitals; By ability's hidden Skills note is gone with it. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired: the Bio tab has no ☰ title, and the note preview's `<span>` rule rests on `renderNoteIcons()` alone. → ledger L6804, #103
+- 2026-10-25 — `jumpToNote()` unhides the note's tab first when it is hidden, toasts the tab's own label, then jumps as before. → ledger L6989, #52
