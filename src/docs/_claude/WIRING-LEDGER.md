@@ -7093,3 +7093,118 @@ help, the Journal row's help appearing once, and `window.scrollTo` firing only o
 hidden-active-tab redirect.
 
 Pages: [Shell](../wiki/ui/shell.md), [Settings & updates](../wiki/features/settings-and-updates.md).
+
+## Initiative tracker (#91, 2026-10-25)
+
+An initiative tracker on the combat view: roll initiative when combat starts, a strip of chips
+under the combat header, a ▾ table, a dialog per combatant, and a Party card on Bio so companions
+join every fight automatically. Built in six tasks against
+`src/docs/specs/2026-10-25-initiative-tracker-design.md`; the full task-by-task account, every
+`Ruling:`/`minor (deferred)` line and the reviews are in
+`.superpowers/sdd/2026-10-25-initiative-tracker/progress.md` and the task reports beside it.
+
+**Data** (`00-constants.js` `blankChar()`: `party:[]`, `combatants:[]`, `combatTurn:""`,
+`initMode:"turns"`, `initShowRolls:true`; `71-char-io.js` `migrate()` cleans all five, immediately
+before `migrateSheet103()`; `combatEnd()` (`87-combat.js`) also clears `combatants`/`combatTurn`).
+`party` is `[{id,name,ac,maxHp}]`. `combatants` is `[{id,kind,name,init,ac,track,band,hp,maxHp,
+dead,partyId}]`, `kind` one of `you`/`party`/`foe`, at most one `you` row; the array order **is**
+the turn order.
+
+**A new fragment, `src/js/87-initiative.js`**, after `87-combat.js` in `src/manifest.json` (JS
+fragment count 35→36 in CLAUDE.md and ADR-001). Pure core: `HB_NAMES`, `HB_SAYS`, `initInt`,
+`initOpt`, `cleanParty`, `cleanCombatants`, `combatantDead`, `initSort`, `initFirstAlive`,
+`initNextTurn`, `bandOfShare`, `combatantBar`, `initRollCheck`, `initRollLine`, `initModOf`,
+`youAC`, `buildCombatants`. The Party card (Bio): `partyRowsHTML`, `renderParty`,
+`savePartyMember`, `removePartyMember`, `openPartyForm` — `NOTE_SECTIONS` gains `{k:"party",
+tab:"story", title:"Party", nocv:true}` (18→19 sections) and `EDIT_CARDS` gains `"party"` (eleven→
+twelve); the card sits in `30-story.html` right after Proficiencies. Roll initiative (opened by
+`#cvStart` in place of the old direct `startCombatNow()`): `irState`, `irFoeRowHTML`,
+`initRollHTML`, `irPaint`, `irSetTyped`, `irRoll`, `startInitFight`, `openInitRoll` — your row
+copies the hit-die spend box's Roll-for-me/typed-and-Apply/Advantage pattern, party rows take a
+typed total, foe rows take a name/×N/AC/total and "+ Add a monster" repeats the row. The strip
+(inside `#cvHead`, so it sticks with the header) and the ▾ table: `hbBarHTML`,
+`combatantHealthText`, `initStripHTML`, `initTableHTML`, `renderInitTable`, `toggleInitTable`,
+`initNext`, `setInitMode`, `toggleInitRolls`. The combatant dialog (one per combatant, every target
+≥44px): `initTie`, `combatantDialogHTML`, `setCombatant`, `removeCombatant`, `moveCombatant`,
+`addCombatant`, `openCombatant`, `openAddCombatant` — foe gets five band buttons that set-and-close
+in one tap; party gets an Exact HP/Estimate switch, an HP stepper clamped `0..max`, and a Dead
+switch; you gets initiative only, read-only HP/AC off the sheet. `openCombatant()` binds one
+delegated `click` listener on `#mBody`, guarded by a dataset flag so it survives every `innerHTML`
+swap, rather than one listener per open (a deviation from the plan's own sample code, flagged and
+reviewed clean).
+
+**Ruling (plan-level, told to Mike at handoff):** a tie breaks with **Act earlier / Act later**
+buttons inside the combatant dialog, never a drag on the table — the table's targets are 44px in a
+sideways-scrolling strip, where a drag gesture collides with the scroll; cost if wrong is adding a
+drag later.
+
+**CSS.** `00-tokens.css` gains `--hb-healthy`, `--hb-injured`, `--hb-bloodied`, `--hb-near`,
+`--hb-empty`. `45-combat.css` carries the strip/chip/table rules; `.cv-init-table` shares
+`.cv-head`/`#cvList`'s `max-width:780px;margin:0 auto` so the table doesn't run the full page
+width. `50-modal.css` carries Roll initiative's layout and the dialog's `.cd-band` (48px),
+`.cd-pm`/`.cd-fld input` (44px) rules, plus a scoped `.add` rule (`#mBody .add,.ini-foot .add`) so
+`#irAddFoe`/`#iniAdd` get the "+ Add" chip look the existing `.label .add` rule didn't reach.
+
+**Two fixes made mid-build, both already landed (not open findings):**
+- Roll initiative's inputs were going full-width under the app's general `input{width:100%}` rule,
+  so Thorn's initiative box and a foe's ×/AC/Init each sat alone on their own line; fixed with
+  scoped widths on `.ir-row input`/`.ir-foe input` (Task 3, commit `d5bacc3`).
+- `#cvInitMore`'s ▾/▴ and `aria-expanded` reset to closed on every header repaint
+  (`combatHeaderHTML()` → `renderCombatHeader()` rewrites `#cvHead` whole) while `#cvInitTable`
+  itself stayed open — a real tap right after any round/turn change could silently close an
+  already-open table. Fixed with one source of truth, a module-level `_iniTableOpen` flag that both
+  the strip's button and `renderInitTable()` read, and `toggleInitTable()` as the one place that
+  flips it (Task 4, commit `1da6e8d`).
+
+**Deferred minors, from code review across Tasks 1–5 (progress.md has the full list):**
+`initRollCheck` reports the generic "Type the number you rolled." for a negative like `-3` rather
+than the d20-range message; a stale `sheet.js` test name after `party` became the second `nocv`
+section; `.cv-head.fighting .cv-init{order:5}` sits in the media query ahead of the base `.cv-init`
+rule, against the fragment's own convention; the party-row initiative box in Roll initiative has no
+visible label; 4 of 8 newly exported functions have no direct unit test; an AC of literal `0`
+displays (the `ac!==''` check); the dialog's change listeners read the live `_cdId` rather than the
+id captured at open; a typed negative HP becomes blank instead of clamping to 0; `#cdHp` is 42px
+tall, under the 44px target convention; every dialog reopen moves focus to the first field, losing
+a keyboard user's place; the tie test is an OR of two conditions; the "you" branch of
+`combatantDialogHTML` reads the global `character` rather than its own `ch` parameter.
+
+**New finding from this task's browser QA, left for the controller:** typing an HP above max into
+`#cdHp` and blurring clamps `character.combatants[].hp` correctly (`setCombatant`'s `hp` patch,
+`87-initiative.js`), but the `#cdHp` input itself keeps showing the typed over-max number until the
+dialog is closed and reopened. `openCombatant()`'s `ch()` helper
+(`87-initiative.js:341-342`) wires `#cdInit`/`#cdAC`/`#cdHp` with a plain `change` listener that
+calls `setCombatant` but never re-renders the dialog, unlike every other control in it (band,
+track, HP step, Dead, Act earlier/later), which each call `openCombatant(cid)` again afterwards.
+Steps: Start combat with a party member on Exact HP, open their dialog, type a number above their
+max into the HP field, blur — the stored HP is correctly clamped (confirmed via
+`character.combatants`), but the field still reads the over-max number; reopening the dialog shows
+the correct, clamped value.
+
+**Browser QA** (project Playwright MCP, before shots from main's `dist/fieldbook.html`, after shots
+from the worktree build): before — the combat view in a fight and the Bio tab, at 1280 and 390
+(`91-before-*.png`). After — two party members, one with a max HP and one without
+(`91-after-bio-party-1280.png`); Start combat's Roll initiative with Roll-for-me, Advantage on and
+off, a refused 21 and an accepted 14+Apply, a foe row ×2 plus a second foe with no AC
+(`91-after-roll-*.png`); the strip at 1280 and 390 including a sideways scroll and Show rolls off
+(`91-after-strip-*.png`); Next through a full wrap — the round advanced from 1 to 2 exactly once
+and a manually-added active spell's `elapsedSec` ticked 0→6
+(`91-after-wrap-round2-1280.png`); the foe dialog through all five bands, including Dead retargeting
+the turn marker to the next living row (`91-after-foe-*.png`); the party dialog's Exact↔Estimate
+round trip, HP − and +, the over-max clamp (and the finding above), and Dead
+(`91-after-party-*.png`); Turns↔Rounds, including the marker landing on the first living row on the
+way back to Turns (`91-after-rounds-mode-1280.png`, `91-after-table-turns-1280.png`); adding an
+Ogre mid-fight and removing the then-current actor, retargeting the marker
+(`91-after-add-ogre-1280.png`, `91-after-remove-actor-1280.png`); a full reload mid-fight restoring
+`combatants`, `combatTurn`, `combatRound`, `initMode` and the active spell's elapsed time via
+`loadCharById()` (`91-after-reload-midfight-1280.png`); End combat clearing the strip
+(`91-after-end-combat-1280.png`); both skins at 1280 and dark mode once
+(`91-after-skin-classic-light-1280.png`, `91-after-skin-humblewood-light-1280.png`,
+`91-after-dark-humblewood-1280.png`, `91-after-dialog-dark-humblewood-1280.png`); the console
+stayed empty (`browser_console_messages`, `all:true`) across the whole session. Full suite
+(`./build.sh --no-zip && ./src/tests/run.sh`) green before each commit.
+
+Pages: [Combat view](../wiki/features/combat-view.md), [Story & notes](../wiki/features/story-and-notes.md),
+[Character model](../wiki/architecture/character-model.md), [Sections & layout](../wiki/ui/sections-and-layout.md),
+[Theming & icons](../wiki/ui/theming-and-icons.md), [Overview](../wiki/overview.md),
+[decisions](../wiki/decisions.md), [1.9.0](../wiki/roadmap/1.9.0.md), the spec's As built
+(`src/docs/specs/2026-10-25-initiative-tracker-design.md`).

@@ -12,7 +12,8 @@ comes from keeping that loop lossless: a sheet saved by any version must still o
 `loadCharById()` in `75-home-theme.js`; `charNeedsUpdate()` in `72-char-update.js`;
 `markCharChecked()` in `73-char-update-ui.js`; read-time guards `featCol()`, `invCol()`, `atkCol()`
 in `20-lists.js`, `encMode()` in `25-origins-items.js`,
-`noteMap()` in `87-notes.js`, `combatSectionsOf()` in `87-combat.js`, `chipList()`,
+`noteMap()` in `87-notes.js`, `combatSectionsOf()` in `87-combat.js`,
+`cleanParty()`, `cleanCombatants()` (#91, in `migrate()`'s own cleaning block) in `87-initiative.js`, `chipList()`,
 `advancementOf()` in `41-chips.js`; the #103 pass `migrateSheet103()`, `mergeNoteInto()`,
 `liftLanguages()` in `71-char-io.js`, `ensureDefaultLanguages()` in `41-chips.js` · **Tests:** `char-update.js`
 (the stamp is preserved and never advanced; unknown fields survive), `tables.js` (the round trip is
@@ -30,11 +31,11 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 |---|---|
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
-| lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers` |
+| lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers`, `party` `[{id, name, ac, maxHp}]` (#91, the Bio-tab roster), `combatants` `[{id, kind, name, init, ac, track, band, hp, maxHp, dead, partyId}]` (#91, always `[]` out of combat) |
 | chip lists (#103) | `resists` `[{id, name}]`, `immunes` `[{id, name}]`, `senses` `[{id, name, range}]` (`range` whole feet or `""`), `languages` `[{id, name, src}]` (`src` `""` the player's, `race:…` / `bg:…` a grant, `system` a ruleset default) — all `[]` in `blankChar()` |
 | maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
-| per-character settings | `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103), `hiddenTabs` (word tabs this character has switched off, `[]` default, cleaned by `migrate()`, #52) |
+| per-character settings | `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `combatTurn` (the acting combatant's id, `""` default, #91), `initMode` (`"turns"` or `"rounds"`, `"turns"` default, #91), `initShowRolls` (boolean, `true` default, #91), `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103), `hiddenTabs` (word tabs this character has switched off, `[]` default, cleaned by `migrate()`, #52) |
 | retired, kept for old sheets | `hdStyle` (the three hit-dice looks) and `statStyle` (the By ability layout), both gone with #103; `migrate()` still carries them so an old save round-trips, nothing reads them |
 | text | `alignment` (on Bio since #103), `xp` (a number or digits with commas; anything else shows as typed), `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
 
@@ -76,6 +77,11 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
 9. `hiddenTabs` is cleaned next, right before `migrateSheet103()`: `cleanHiddenTabs()` forces a
    non-array to `[]`, drops any name not in `HIDEABLE_TABS`, and drops a repeat, keeping first-seen
    order (#52, see [Shell](../ui/shell.md)).
+   Alongside it, `party` and `combatants` go through `cleanParty()`/`cleanCombatants()` (#91,
+   `87-initiative.js`): `party` drops any entry with no name and forces `ac`/`maxHp` to a whole
+   number or `""`; `combatants` reads `[]` outright when `combatActive!==true`, otherwise drops an
+   unknown `kind` and any second `kind:"you"` row and forces every other field's type. `combatTurn`
+   resets to the first living row if its id no longer exists in the cleaned list.
 10. `migrateSheet103()` (#103) runs last. Each step is a no-op on a sheet that does not need it, so
    it is safe on every load:
    - the four chip lists go through `chipClean()` (a non-array reads `[]`, an entry that is not an
@@ -218,3 +224,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-10-19 — `editHide` joins the collapse-style maps, defaulted `{}` in `blankChar()` and guarded the same way: a card key → `true` for a hidden card's edit, delete and remove buttons. → ledger L6248, #97
 - 2026-10-23 — The Sheet makeover: `resists`, `immunes`, `senses`, `languages`, `advancement`, `showFamiliars`; `statStyle` and `hdStyle` retired, kept; `migrateSheet103()` merges the retired cards' notes, maps `rest`/`portrait` in the combat view to `vitals`, lifts "Languages:" lines once and adds the default languages. → ledger L6633, #103
 - 2026-10-25 — `hiddenTabs` joins the per-character settings, `[]` in `blankChar()`, cleaned by `cleanHiddenTabs()` in `migrate()` right before `migrateSheet103()`: per character, so a new character shows every tab. → ledger L6989, #52
+- 2026-10-25 — `party`, `combatants`, `combatTurn`, `initMode` and `initShowRolls` join `blankChar()` for the initiative tracker; `migrate()` cleans the first two through `cleanParty()`/`cleanCombatants()` right before `migrateSheet103()`. → ledger L7097, #91
