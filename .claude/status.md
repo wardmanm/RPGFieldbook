@@ -2,10 +2,17 @@
 Updated: 2026-10-25 · Branch: main
 
 ## Current focus
-1.9.0 wave 3: #52 merged 2026-10-25. Left in this wave: #91 (initiative tracker), #47 (trade window)
-and #102 (packs from a public manifest; install route decided). Then wave 4 (#105). No branch open.
+1.9.0 wave 3: #52 and #91 merged 2026-10-25. Left in this wave: #47 (trade window) and #102 (packs
+from a public manifest; install route decided). Then wave 4 (#105). No branch open.
 
 ## Recent changes
+- 2026-10-25: Merged #91, an initiative tracker in the combat view:
+  - Start combat rolls initiative: yours with the HP step's controls and Advantage, typed totals for
+    everyone else.
+  - A strip of chips with health bars, Turns (Next moves a marker) or Rounds.
+  - A dialog per combatant: bands, Exact HP or Estimate, Dead, Act earlier/later for ties.
+  - A Party card on Bio, whose members join every fight.
+  - Claude's ruling: ties break in the dialog, not by drag.
 - 2026-10-25: Merged #52. Settings → Sheet display → Tabs hides Spells, Inventory, Bio, Journal or
   Rules per character. Sheet and the combat swords always show. A section note into a hidden tab
   brings it back with a toast.
@@ -28,7 +35,6 @@ and #102 (packs from a public manifest; install route decided). Then wave 4 (#10
 - 2026-10-21: Merged #97: a pencil in each list card's header hides its edit buttons.
 - 2026-10-19: Releases wait for Mike's approval in GitHub (#109); `/status` and `/release` skills (#108).
 - 2026-10-19: Merged #104: ammunition recovery rules, Throw, End combat recovery with Undo.
-- 2026-10-16: Released v1.8.1, and the first private data release, 1.8.1-1.
 
 ## Pending decisions
 - **End combat clears every outstanding ammunition count** (raised 2026-10-19, at #104's final
@@ -40,13 +46,14 @@ and #102 (packs from a public manifest; install route decided). Then wave 4 (#10
   2026-10-19). Options: keep / restore it.
 
 ## Loose ends
-- 16 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
-- Mike's device pass for #52, #101, #103, #97 and #99: touch, print, Safari and Firefox, and his own
+- 18 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
+- Mike's device pass for #91, #52, #101, #103, #97 and #99: touch, print, Safari and Firefox, and his own
   characters. Claude drove each at desktop and phone widths (`.claude/qa/`). Specific things to check:
   - #101: a long level card at phone width puts the HP step and Done below the fold;
   - #101: the card's class line and banner now use the body font;
   - #103: the phone AC shield overlaps the portrait;
   - #103: the ↑ button can sit over a row's delete button mid-scroll.
+  - #91: the strip's sideways scroll on a real phone; a fight with Mike's own characters.
 - #52 leftover: hiding a tab while the combat view is open, then pressing the swords, lands on the
   Sheet at that tab's scroll position.
 - #99 follow-ups:
