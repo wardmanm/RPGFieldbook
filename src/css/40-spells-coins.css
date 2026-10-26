@@ -33,7 +33,7 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
    centring a text glyph (.death .dskull). */
 .spell .pin{width:18px;height:18px;border-radius:5px;border:2px solid var(--line);background:transparent;cursor:pointer;flex:none;padding:0;display:grid;place-items:center;font-family:var(--head);line-height:1}
 .spell .pin.on{background:var(--accent)}
-.spell .pin.on::after{content:"✓";font-size:11px;font-weight:700;line-height:1;color:#20160a}
+.spell .pin.on::after{content:"✓";font-size:11px;font-weight:700;line-height:1;color:var(--on-accent)}
 /* The column caption. The tick had no visible meaning anywhere — only an
    aria-label — so it said nothing at all to a player on a phone. Same idiom as
    the hit-dice and feature-use pip captions, whose CSS comment says the words
