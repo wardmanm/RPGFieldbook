@@ -60,8 +60,8 @@ and actions are buttons.
 The sidebar lists Sheet display and Carrying under a "This character" caption, set apart from the
 rest. Extensions carries the entry count, and a dot while an update is pending
 (`rulesNavBadgeHTML()`, whose count's tooltip is `rulesBadge()`): `rulesUpdatePending()`, a loaded
-pack the data check calls `update`, or a source's update the Extensions pill still counts — so the
-pill's × clears the dot too. `renderRulesData()` and `renderExtUI()` redraw it, so it follows
+pack the data check calls `update`, or any update a source offers (`extUpdateRows()`). The pill's ×
+clears only the pill: the dot stays until the update is installed (Ruling 15). `renderRulesData()` and `renderExtUI()` redraw it, so it follows
 installs, fetches, removals, Remove all and both checks whichever page is showing. When
 Icon tabs is on (`html[data-tabs="icons"]`) or the screen is 640px wide or less, the sidebar is a
 52px rail of icons, each named for a screen reader and given a tooltip; on a narrow screen a
@@ -106,17 +106,25 @@ binds one delegated click listener to each fresh `#extPage`. From the top:
   pack) and the red "! N missing" chip; its manifest `summary`, or for a pack no manifest describes,
   its contents ("1 spell · 3 classes"); where it is from ("from *source*" when that source installed
   it, "imported from a file · *file*", "fetched from a source URL", or "from *source* · not
-  installed"); its chips (below); its version, or "*have* → **new**"; **Update** or **Install**; and
+  installed"), and on an update offered by a source that didn't install the pack, "· update from
+  *source*"; its chips (below); its version, or "*have* → **new**"; **Update** or **Install**; and
   a delete button for a loaded pack, which confirms with the entry count. The header's **Remove
   all** is the old Clear all (`clearAllRules()`), shown while anything is loaded.
 - **Unsupported**, only when a source offers a pack of a category this app doesn't install: listed,
   never installable.
 - **Sources**, with a count: Fieldbook public data, "built in · checked *time*", with its switch
-  (switching it on checks it); each manifest source by its manifest `name` or URL, "*host/path* ·
+  (switching it on checks it); each manifest source as "*name* (*host*)", "*host/path* ·
   checked *time*" or, in red, "couldn't check: *reason*", with **Remove**; each plain source with
   **Fetch** and **Remove**. Below: the URL box and **+ Add a source URL**, then **Check now** and
   **Manual install…**. The header's **Remove all** removes every added source and switches the
   official one off, after a confirm; installed packs stay.
+
+**How a source is named.** A manifest names itself, so anyone can publish one called "Fieldbook
+public data". `extSourceName()` gives every manifest source as "*name* (*host*)", the host taken from
+its URL (`extSourceHost()`), wherever a source is named: the rows, the plan, the details' Source box,
+"Also from *source*" and Sources. Only the built-in official source reads the bare "Fieldbook public
+data". A plain source is named by its URL. Without signing, that host is the player's only sight of
+who is offering a file (#102 final review I2, Ruling 16).
 
 Every section folds from its header (`extSecHTML()`, `aria-expanded`), remembered in
 `settings.setCollapse` under `ext:<section>`. The status line, `#rulesStatus`, is a `role="status"`
@@ -135,7 +143,7 @@ is small to see and 44px to tap.
 **The details dialog** (`openExtDetails()`, from a pack's name): "Rules data · *version* ·
 installed / not installed", the full `description` as escaped paragraphs (or the summary, or the
 contents line), the chips, a **Source** box (name, manifest, homepage as a link, last checked,
-licence and attribution; or "Imported from a file: *file*"), and **Also from this source**, each a
+licence and attribution; or "Imported from a file: *file*"), and **Also from *source***, each a
 button to its own details, a blocked one with its "requires Fieldbook" note. The foot has **Close**,
 back to Settings → Extensions, and **Update** or **Install** when that applies. A pack no longer
 listed says so, with Close.
@@ -144,8 +152,10 @@ listed says so, with Close.
 opens it over Settings: one row per line of `planInstall()` (see
 [Rules packs](../architecture/rules-packs.md)), each with a checkbox, the title, the versions
 ("1.0.0 → 1.1.0"), the size, and "New / Update / Replace / Same version / Older than yours", any
-"needed by *X*" or "Replace anyway", and where it comes from ("from QA Workshop", "from a file"), or
-a blocked line's "requires Fieldbook" chip. Only install and update lines start ticked; **Install
+"needed by *X*" or "Replace anyway", and where it comes from ("from QA Workshop (qa.example)", "from a file"), or
+a blocked line's "requires Fieldbook" chip. An update offered by a source other than the one that
+installed the pack (a file, or another source) reads "Update from *name (host)*" instead of
+"Update · from …". Only install and update lines start ticked; **Install
 N** counts the ticks. With nothing installable it says so and offers only Close. While the install
 runs, the ticks, Cancel and Install are disabled and the dialog can't be dismissed: × and Escape do
 nothing, and the status says "Installing… please wait." (`setDismissGuard()` returning `true`,
@@ -373,8 +383,6 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - **The phone notice row is open for Mike** (#102): at 560px and under a showing notice adds a third
   header row; the alternative is one combined "↑ N" pill with a menu. The Task 6 reviewer recommends
   keeping the row.
-- **The Settings dot follows the pill**, so clearing the pill also clears the dot while the page
-  still shows the update. The spec says the dot shows while updates are pending.
 - The header comment of `30-version.js` still says to bump `APP_VERSION` and add a `CHANGELOG` entry on
   every change; the UPDATE_REPO comment still describes the badge linking to the release page.
 - The update check runs once per load.
@@ -416,3 +424,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-25 — Sheet display gains an Inventory group: "Inventory log size", writing `character.invLogSize` and trimming the log at once. → ledger L7291, #47
 - 2026-10-25 — Lowering the log size asks first when it would drop lines. → ledger L7339, #47
 - 2026-10-26 — Rules data becomes Extensions: sections per category and Sources, the details dialog, the install plan, Manual install, the Extensions pill and a × on both pills; Fetch all, Import files and Get templates go. → ledger L7428, #102
+- 2026-10-26 — Final review fixes: the Settings dot stays while any update is pending; a manifest source is named "*name* (*host*)" everywhere, and an update from a source that didn't install the pack says "update from" it. → ledger L7477, #102

@@ -86,3 +86,6 @@ Bullets below this line — leave the heading in place.
 - Manual install takes rules files, a folder or a zip, chosen or dropped, and shows what will
   change before anything installs.
 - Update notices can be cleared with their ×, and stay cleared until a newer version arrives.
+- Every source you add is named with its web address, and an update offered by a different source
+  from the one that installed a pack says who is offering it, so you can always see where a file
+  comes from.

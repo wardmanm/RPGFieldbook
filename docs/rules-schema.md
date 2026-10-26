@@ -849,7 +849,7 @@ Per pack:
 Text over its limit is cut. `fbdata.py validate` (from the data kit) refuses it, along with an unsafe
 path, a wrong `sha256` or `size`, and a pack whose `system` or `dataVersion` disagrees with its
 entry, so check before you publish. It checks a folder whose packs sit beside the manifest, with
-nothing else in it:
+nothing else in it (hidden files whose names start with a dot, such as `.DS_Store`, are ignored):
 
 ```
 python3 fbdata.py validate path/to/your/folder
@@ -859,7 +859,8 @@ python3 fbdata.py validate path/to/your/folder
 
 - The manifest: at most **64 KB** and **1,000 packs**. A bigger one is refused whole.
 - Each pack file: at most **32 MB**.
-- `summary` 140 characters, `description` 4,000, `title` 200, `attribution` 2,000.
+- `summary` 140 characters, `description` 4,000, `title` 200, `attribution` 2,000, `license` 64.
+- `requires`: at most **50** entries per pack; any after the 50th are dropped.
 
 ### Hosting
 

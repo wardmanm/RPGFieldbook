@@ -7473,3 +7473,39 @@ Pages: [data archive](../wiki/architecture/data-archive.md),
 [overview](../wiki/overview.md), [1.9.0](../wiki/roadmap/1.9.0.md),
 [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md); and
 [RELEASING](../RELEASING.md).
+
+## #102 final review fixes (2026-10-26)
+
+The whole-branch review of #102 came back "With fixes"; the controller ruled on each (Rulings 15–18).
+
+- **The Settings dot (I1, Ruling 15).** `rulesUpdatePending()` reads `extUpdateRows().length>0`, not
+  `extPillCount()`, so the sidebar dot and the "· update" description stay while any update is
+  pending (spec §6.2) and only the top-bar pill is cleared by its ×. Taken off "Open for Mike".
+- **Who offers an update (I2, Ruling 16).** A manifest names itself, so a stranger's manifest could
+  call itself "Fieldbook public data" and offer an update to a pack imported by hand, with nothing
+  saying who. `extSourceName()` now gives a manifest source as "*name* (*host*)" (`extSourceHost()`,
+  from its URL) in the rows, the plan, the details' Source box, "Also from *source*" (once "Also from
+  this source") and Sources; only the built-in source reads the bare "Fieldbook public data". A loaded
+  pack's update row whose offering source isn't `packOrigin` (a file, "manual", or another source)
+  adds "· update from *name (host)*", and its plan line reads "Update from *name (host)*".
+- **Caps without Content-Length (I3, Ruling 17).** `extFetchBytes()` reads `r.body.getReader()` with a
+  running byte count and, past the cap, cancels the reader, aborts the request and rejects with the
+  cap's own message; `arrayBuffer()` is the fallback only without a body stream, and its length is
+  checked too. The timer still covers the whole stream and now also cancels the reader.
+  **`addSource()` passes `EXT_FILE_MAX`, not the ruled `EXT_MAN_MAX`:** spec §4 lets a plain source
+  be a whole pack file (SRD 5.2's `classes.json` is 269 KB), which a 64 KB cap would refuse; a
+  manifest over 64 KB is still refused by `readManifest()`'s own byte check. Flagged to the controller.
+- **Ruling 18.** A release list that isn't a JSON list reads "GitHub's release list couldn't be read"
+  on the official row (M8). `fbdata.py` `validate <folder>` ignores dotfiles such as `.DS_Store`, and
+  `release-files`' stale sweep removes only regular, non-dot `*.json` files (M9, and T1's deferred
+  `isfile` guard). `data-release.js`'s exit-handler cleanup is in try/catch, so a cleanup error
+  warns instead of turning a good release into exit 1. The `setCollapse` comment in
+  `00-constants.js` names the `ext:*` keys (M10). `docs/rules-schema.md` §8 limits add `license` 64
+  characters and `requires` 50 entries, and says `validate` ignores dotfiles.
+
+Tests: data-archive (the inverted dot test; I2 with the reviewer's repro; I3 with stubbed streams,
+over, under and exactly at the cap, a stall, `checkSource()` and `addSource()`; M8), data-kit (M9;
+the exit handler under a preload whose `fs.rmSync` throws).
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md),
+[rules packs](../wiki/architecture/rules-packs.md), [data kit](../wiki/data/data-kit.md).

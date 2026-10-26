@@ -228,7 +228,13 @@ neither; a network failure (a `TypeError`) adds a hint that the host must allow 
 once at boot, after the app and data checks and skipped when `navigator.onLine===false`, and on
 **Check now**. Each fetch is `extFetchBytes()`: `cache:"no-store"`, the **whole** response raced
 against a timer (10 s for a manifest), aborted through `AbortController` where it exists, and
-refused early when `Content-Length` is over the cap. A source that fails keeps its last good
+refused early when `Content-Length` is over the cap. The header is only a hint, so the body is read
+through its stream reader with a running byte count: past the cap (64 KB for a manifest, 32 MB
+for a pack file) the reader is cancelled, the request aborted and the fetch refused with the cap's
+message; the whole-body read (`arrayBuffer`) is used only where a response has no body stream, and its length is checked
+too. `addSource()` caps at 32 MB, since a plain source may be a whole pack; a manifest over 64 KB is
+still refused by `readManifest()`. A releases list that isn't a JSON list reads "GitHub's release
+list couldn't be read" on the official row. A source that fails keeps its last good
 manifest, and its row says "couldn't check: *reason*". At boot the check is quiet; a settings save it
 can't make is kept for the page to show (see [Storage](storage.md)).
 
@@ -422,6 +428,9 @@ files).
   fetch's success handler, so a bad sha256 escaped the error branch; verifying is its own `.then`.
 - **The timeout covered only the headers.** `Promise.race` around the `fetch` call alone let a host answer
   promptly and stall the body forever; the whole response is raced now.
+- **The size caps held only through `Content-Length`** (#102 final review I3). A chunked answer has
+  none, so the whole body was buffered first (80 MB against the 64 KB manifest cap, at every
+  boot for a source that turned hostile). The body is now counted as it streams.
 - **A pack labelled `__proto__` or `constructor`.** `rules.requires`/`rules.credits` were plain
   objects keyed by the pack's own label: `__proto__` set the object's prototype instead of a key
   (the declaration silently vanished), and `constructor` with no `requires` declared read back the
@@ -500,3 +509,4 @@ See [Known issues](../roadmap/known-issues.md).
   labelled `__proto__` or `constructor` is handled like any other label. → ledger L6519, #88
 - 2026-10-23 — A system pack may declare `defaultLanguages` and `advancement`, kept per label in null-prototype maps beside `requires` and `credits` and read per character's ruleset, with Common and the SRD table as fallbacks. → ledger L6633, #103
 - 2026-10-26 — Sources (official, manifest, plain) and one install pipeline: candidates, the plan, an all-or-nothing install checked by sha256; Manual install takes files, a folder or a zip; Fetch all becomes a plain source's own Fetch. → ledger L7428, #102
+- 2026-10-26 — `extFetchBytes()` counts the body stream and cancels past the cap, so the caps hold without `Content-Length`; `addSource()` is capped; a garbled GitHub release list gets a plain message. → ledger L7477, #102

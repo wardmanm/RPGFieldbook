@@ -471,18 +471,32 @@ above, the rulings made while building, what was deferred, and what is still ope
 14. **The plan can't be dismissed while it installs.** × and Escape do nothing and the status says
     "Installing… please wait." (`setDismissGuard()` returning `true`): a dismissed install still
     running and toasting later is more confusing than a wait bounded by the file timeout.
+15. **The Settings dot shows while any update is pending** (§6.2): `rulesUpdatePending()` reads
+    `extUpdateRows()`, not the pill's count, so a pill's × clears the pill and leaves the dot.
+16. **A manifest source is named "*name* (*host*)"** wherever it is named: rows, the plan, the
+    details' Source box, "Also from *source*" and Sources. Only the official source reads "Fieldbook
+    public data". A loaded pack's row and plan line say "update from *name (host)*" when the source
+    offering the update didn't install it (by `packOrigin`, a file or "manual" included).
+17. **The size caps count the body as it streams** and cancel past the cap, so they hold without a
+    `Content-Length`; `arrayBuffer()` only where a response has no body stream. `addSource()` is capped.
+18. **Folded into the fix wave:** the rules-schema limits (licence 64, `requires` 50), the
+    `data-release.js` exit handler's cleanup in try/catch, a plain message for a garbled GitHub
+    release list (M8), dotfiles ignored in `releases/data/` (M9), the `setCollapse` comment (M10).
 
 ### Where the build differs from the text above
 
 - **The plan has a `replace` outcome** (§5): a loaded pack with no readable version is replaced,
   ticked; a candidate with no readable version is "Replace anyway", unticked.
-- **The plan's rows name their source** ("from QA Workshop", "from a file"), as §5 step 3 asks.
+- **The plan's rows name their source** ("from QA Workshop (qa.example)", "from a file"), as §5 step 3 asks.
 - **`checkForDataUpdate()` does not hand its pick to the official source** (§7). The official source
   lists the releases itself (`extOfficialUrl()`), so a boot makes three GitHub API calls (M10).
 - **`dataUpdateHint()` stays** (§7), on the home screen's loaded-data list. On the Extensions page
   the "v*A* · v*B* out" chip shows only where no source offers the pack.
-- **The Settings dot follows the pill** (§6.2 says it shows while updates are pending): clearing the
-  pill also clears the dot, while the banner and rows still show the update.
+- **`addSource()` caps its read at 32 MB, not 64 KB** (Ruling 17 said `EXT_MAN_MAX`). §4 lets a
+  plain source be a whole pack file, far over 64 KB; a manifest over 64 KB is still refused, by
+  `readManifest()`'s own byte check. Flagged for the controller.
+- **A garbled release list** (not a JSON list) is "GitHub's release list couldn't be read" on the
+  official row; a JSON object that isn't a list counts as garbled too.
 - **The top bar has one auto margin**, on the save state, so the version and both pills pack left.
   **Up to 560px** the notices take a row after the buttons, and the Extensions pill reads "N
   updates" there (§6.1 said 390px).
@@ -505,12 +519,16 @@ above, the rulings made while building, what was deferred, and what is still ope
   declared `size`; a page with no `fetch` throws synchronously.
 - **Task 3:** a plain source's URL is only checked to be non-empty (old relative sources by design;
   it reaches only `fetch()`).
-- **Task 1:** `release-files`' stale-`*.json` loop has no `isfile` guard; it deletes then writes, not
-  atomically as `pack` does.
+- **Task 1:** `release-files` deletes then writes, not atomically as `pack` does. (Its stale loop's
+  missing `isfile` guard was fixed with M9.)
 - **Task 2:** `./build.sh --release --no-zip` skips `releases/data/` (the release skill always builds
-  the zips, and CI catches a missing folder); `data-release.js`'s exit handler's `fs.rmSync` is
-  unguarded, so a cleanup error after a successful release would exit 1; `data-kit.py`'s leak test
-  snapshots the shared temp folder, a narrow flake when two worktrees run the suite at once.
+  the zips, and CI catches a missing folder); `data-kit.py`'s leak test snapshots the shared temp
+  folder, a narrow flake when two worktrees run the suite at once. (The exit handler's unguarded
+  `fs.rmSync` was fixed under Ruling 18.)
+- **Final review M2–M7:** stored manifests aren't re-read through `extEntry()` on load (M2); every
+  source's manifest lives in the settings key (M3); render cost grows with a manifest's size (M4);
+  Manual install reads a chosen file whole before its size check (M5); the home screen doesn't point
+  at Extensions (M6); switching the official source on checks every source (M7).
 - **Task 6, minor 10:** needs no fix.
 
 ### Open for Mike
@@ -519,5 +537,3 @@ above, the rulings made while building, what was deferred, and what is still ope
   pills after the buttons). The alternative is one combined "↑ N" pill with a menu. The Task 6
   reviewer recommends keeping the row; see `.claude/qa/in-progress/102-extensions/`
   (`102-t6-fix2-pills-390.png`, `102-after-pills-390-*.png`).
-- **The Settings dot after a ×** (above): keep it following the pill, or show it while any update is
-  pending, as §6.2 says.
