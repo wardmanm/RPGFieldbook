@@ -139,7 +139,8 @@ Tapping an item's use pips is not logged: it changes uses, not quantity, as equi
 rests' resets don't.
 
 The **Log** button on the Equipment card opens `openInvLog()`, a wide dialog: filters All, Trades,
-Items (add, edit, delete, use, grant), Coins and Ammo (`INV_FILTERS`, remembered for the session),
+Items (add, edit, delete, use, grant), Coins and Ammo (`INV_FILTERS`, remembered for the session;
+`invInFilter()` also files a grant or "Removed with" line that moved gold under Coins),
 lines grouped by day newest first, each with its kind's icon, the ± details in green and red, the
 time, and Undo. A trade's details fold under Receipt (an "Undid:" line has none, so it draws
 none). The filters and the foot stay put; the rows scroll between them in `.il-scroll`, as the
@@ -151,7 +152,10 @@ applies it as one step, marks the line `undone` (struck through and faded) and w
 passes always puts something back, and one that is refused changes nothing and marks nothing.
 - `add` needs the item still there with at least the quantity added; records of one line that
   stacked onto one row are summed first ("It has since been used, sold or removed.").
-- `edit` needs the item to still match its after-copy ("It has been changed again since.").
+- `edit` needs the item to still match the row as edited ("It has been changed again since.").
+  An edit line keeps only what changed (`invEditUndo()`): each differing field's value before and
+  after, and an `invHash()` fingerprint of the row as edited, so the check stays exact and Undo
+  sets those fields back. A line saved with two whole copies is converted on load (`invEditU()`).
 - `coins` needs every coin it would take back still in the purse ("Not enough GP left to take
   back.").
 - `delete` puts its copy back.
@@ -182,9 +186,11 @@ dialog over a draft (`newTradeDraft()`; `opts` may seed `{with, give, get}`, for
   stamps Traded) and brings the choice back here, merging by name; "+ Custom item" adds a name, a
   quantity and a cost; coin boxes; and its own Apply item value switch.
 - **The balance** (`tradeBalance()`), worked in copper and shown in gp: what you give is its coins
-  plus item worth when its switch is on; what you get, likewise. Less given than got reads
-  "N gp short" in red and Complete asks "You're N gp short. Complete the trade anyway?"; more reads
-  "N gp over". It never blocks.
+  plus item worth when its switch is on; what you get, likewise. When the items you get are worth
+  more than everything you give, it reads "N gp short" in red and Complete asks "You're N gp short.
+  Complete the trade anyway?". Coins you receive never make it red: getting more than you give
+  because of them (selling) reads "N gp in your favour", and Complete doesn't ask. Giving more
+  reads "N gp over". It never blocks.
 - **Complete** (`completeTrade()`) applies it as one step: given items are reduced or removed (and
   their attacks with them), coins move by the net per denomination, library items arrive through
   `addLibraryItems()` with origin Traded and the agreed cost, custom items with origin Custom
@@ -328,10 +334,11 @@ the inventory and recompute, because coins have weight.
 | A row's Recover in the log (#47) | Counted in that fight's End combat line; no line of its own | A line per Recover: one more line per tap. Not counted: the fight's line under-reported |
 | Item-use pips in the log (#47) | Not logged: they change uses, not quantity, as equipping and rest resets do | A line per pip: Use already logs the deliberate spend |
 | Lowering the log size (#47) | Trims at once, asking first when lines would go | At the next write (the spec): a mis-tap still drops the lines, later and silently |
-| A trade's balance (#47) | Coins, plus item worth or cost on each side whose Apply item value switch is on; short is red and confirms, over is not | Coins only: bartering is common. Editable worth per item: more than asked for |
+| A trade's balance (#47) | Coins, plus item worth or cost on each side whose Apply item value switch is on; short (the items you get worth more than all you give) is red and confirms; coins received never make it red | Coins only: bartering is common. Editable worth per item: more than asked for |
 | A shortfall (#47) | Shown and confirmed, never blocked | Blocking Complete: gifts and haggling couldn't be recorded |
 | The trade's layout (#47) | Side by side above 700px; tabs and a ✓ button at 700px and under | One list: mixes giving and getting |
 | Other parties (#47) | Free text with chips from the Party card and earlier trades | A managed contact list: more than a trade needs |
+| How an edit line is stored (#47) | Only the changed fields, before and after, plus a fingerprint of the row as edited | Two whole copies (as built first): 500 lines of a magic item took 2.3 million characters of a ~5 MB browser limit shared by every character |
 | A custom item's origin in a trade (#47) | Custom, "traded from *who*"; library items get Traded | Traded for both: the spec names Custom for custom items |
 
 ## Open
@@ -343,13 +350,8 @@ the inventory and recompute, because coins have weight.
 - Stacking by name ignores the batch's origin and cost for an item already carried.
 - Use does not remove conditions (Elixir of Health) and prints nothing on the sheet.
 - Humblewood species all read Medium until the extractor learns sizes.
-- **Selling above an item's worth reads "short" in red and confirms** (#47), because the balance is
-  give minus get with no exception for coins received. The brainstorm mockup said received coins
-  never turn it red. Open for Mike: keep the spec's rule, or never show red when the shortfall is
-  made of coins you receive.
-- **The log can outgrow the browser's storage** (#47): an edit line holds two copies of the item,
-  so 2,500 edit lines take 3.7 to 5.3 million characters — see
-  [Known issues](../roadmap/known-issues.md).
+- **The log's Use, give and delete lines each keep one whole copy of the item** (#47), so a long
+  log of them is still large — see [Known issues](../roadmap/known-issues.md).
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -379,3 +381,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-25 — The trade window and the inventory log: one log line per item and coin change, Undo, the Log dialog and its size setting; the finder's Cost override keeps fractions. → ledger L7291, #47
 - 2026-10-25 — Final review: Undo never succeeds while restoring nothing; an unchanged form Save writes no line; removing a source and a row's Recover are logged; costs, pp → cp and "what is left" in the lines; the log scrolls in its own box; the size confirm. → ledger L7339, #47
 - 2026-10-25 — Re-review: an `add` undo sums the records that stacked onto one row; Use's refusals stated in full. → ledger L7387, #47
+- 2026-10-25 — Edit lines keep only what changed; coins received never make a trade red; grant lines that moved gold file under Coins. → ledger L7401, #47

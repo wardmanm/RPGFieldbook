@@ -82,9 +82,13 @@ orange/red/grey set on bare `:root`, shared by **every** skin and theme — a fi
 `--brick`'s per-palette drift. The fonts are `--display`
 (Grenze Gotisch; Cinzel on the classic skin), `--head`
 (Cinzel) and `--body` (EB Garamond). They load from Google Fonts through a `<link>` in the template,
-and each stack falls back to Georgia or Times New Roman, which is what renders offline. Most text on
-an `--accent` fill is a fixed `#20160a` in both themes (primary buttons, selected segments and
-pills). Print ignores the tokens: `#printArea` is forced to black on white. `prefers-reduced-motion`
+and each stack falls back to Georgia or Times New Roman, which is what renders offline. Text on an
+`--accent` fill uses **`--on-accent`** (#47), set per palette for contrast: near-black on
+Humblewood's ochre and gold and on classic dark's bright red, cream on classic light's deep red
+(lowest 4.8:1, Humblewood light). The rail sets its own, since it swaps `--accent` for
+`--rail-accent`. Primary buttons, the update pill, filter pills, selected segments, Use, the spell
+pin's tick, the level ring, the toast, the combat tab, the initiative chip, the log filter and the
+level-up banners all use it; a fixed `#20160a` used to read at 2:1 on classic light's red. Print ignores the tokens: `#printArea` is forced to black on white. `prefers-reduced-motion`
 switches every animation and transition off (`50-modal.css`), and never builds the level-up scene
 layer at all (#101).
 
@@ -220,6 +224,7 @@ removed".
 | An upstream icon with groups or transforms | The fetcher dies, naming it; pick another icon | Half-handling it: swapping a pick costs seconds, a silently mangled glyph an afternoon |
 | Artifact size | No size gate; path data kept as published | Coordinate rounding: about 15% smaller, but arc-flag digits are position-sensitive |
 | Where the credit appears | Settings (folded) and README §10, both generated or asserted | README only: `fieldbook.html` travels as a lone file |
+| Text on an accent fill | `--on-accent`, chosen per palette | A fixed dark brown: 2:1 on classic light's red. `--paper`: 3.6:1 on Humblewood light's ochre |
 | The mid-band HP colour | Its own `--warn` token in all four palettes | Reusing `--accent`: on the classic skin it is `--brick`, so two bands would be one colour |
 
 ## Open
@@ -249,3 +254,4 @@ removed".
   to `--body` so a "1" doesn't read as "I". → ledger L6840, #101
 - 2026-10-24 — Corrected: Humblewood's scene tokens are on `:root`, not `html[data-theme]`. → ledger L6928, #101
 - 2026-10-25 — `--hb-healthy`, `--hb-injured`, `--hb-bloodied`, `--hb-near` and `--hb-empty` join `:root`, one set for all four palettes, for the initiative tracker's health bands. → ledger L7097, #91
+- 2026-10-25 — `--on-accent` joins every palette and the rail; every rule with text on an accent fill uses it. → ledger L7401, #47

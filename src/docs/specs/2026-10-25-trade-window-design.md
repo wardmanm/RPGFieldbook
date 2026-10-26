@@ -288,7 +288,7 @@ records per row before checking, since received items of one name stack onto one
   Task 4 brief's test asked for `traded` on both. Cost if wrong: a label string.
 - **The finder's Cost override now reads `fnum()`** (it read `num()`, which truncated 0.5 gp to 0).
   The fix is shared by the ordinary Add finder, so it has its own `UNRELEASED.md` bullet.
-- **Open for Mike, not decided: selling above an item's worth reads red.** The balance is give
+- **Selling above an item's worth read red (decided after the build: option 2, see Follow-ups).** The balance is give
   minus get with no exception (§1, §2 decision 8, §6.2), so giving a 2 gp Dagger for 5 gp reads
   "3 gp short" in red and Complete asks to confirm. The brainstorm mockup's note said "coins you
   receive (selling) never turn it red". The code follows the spec. The options:
@@ -406,14 +406,28 @@ in `.superpowers/sdd/2026-10-25-trade-window/`).** Each finding was ruled by the
   writes no line. **M5:** `itemWorthCp()` multiplies before rounding (20 sling bullets at 0.002 gp
   are 4 cp); `tradeGetCp()` had the same bug and got the same fix. **M6:** a restored attack goes
   back at its own index. **M7:** the first day header's rule now matches, and the active filter's
-  text is `var(--paper)`, not `#20160a`.
+  text is `var(--paper)`, not `#20160a` (since `var(--on-accent)`, see Follow-ups).
 - **Line text (C4, M9):** costs on the finder and form add lines and on receipt items ("Dagger ×1
   (2 gp)"); receipt coins pp → cp; the Use line says what is left ("−1 · 2 left", "1 use · 2 of 3
   left").
-- **Still open for Mike: C3**, selling above an item's worth reading red (above).
+- **C3**, selling above an item's worth reading red: decided by Mike, see Follow-ups.
 - **Storage, measured** (Recommendation 5). An edit line holds two full copies of the item. On SRD
   items, a 2,500-line log of edits is about 1,470 characters a line for mundane gear — 3.7 million
   characters for the log alone — and 2,090 for a median magic item (5.3 million); the 20 longest
   magic items reach 5,460 a line (13.7 million). The default 500 lines is 0.7 to 1 million.
   Browsers commonly allow about 5 MB of localStorage a site, shared by every character, so the
   largest size can fill it on its own; a save that doesn't land says so. Recorded in known issues.
+
+**Follow-ups (Mike, 2026-10-25, after the merge; branch `issue/47-followups`):**
+- **Edit lines keep only what changed** (Mike chose this over a lower size cap or leaving it).
+  `invEditUndo()` stores each differing field's value before and after plus an `invHash()`
+  fingerprint of the row as edited; the check compares the fingerprint and Undo sets the fields
+  back. Old two-copy lines are converted on load. 500 edit lines of a long-described magic item:
+  2,346,581 characters before, 116,562 after. Use, give and delete lines still keep one whole copy.
+- **Coins received never make a trade red** (option 2 above). `tradeBalance()` returns `short`
+  only when the items you get are worth more than everything you give; a balance in your favour
+  because of coins received reads "N gp in your favour", and Complete doesn't ask.
+- **Grant and "Removed with" lines that moved gold also file under Coins** (`meta.gold`,
+  `invInFilter()`).
+- **`--on-accent`**: one text colour per palette for every accent fill, replacing the fixed
+  `#20160a`, `#fff` and `--paper`. Lowest contrast 4.8:1.
