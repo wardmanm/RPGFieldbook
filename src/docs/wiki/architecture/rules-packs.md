@@ -220,7 +220,8 @@ manifest, base}`:
 drops malformed entries, guarantees the one official source, first, turns `rulesSources` and the
 first builds' `rulesUrl` into plain sources (once each, by URL), deletes those two fields, and
 defaults `packOrigin` and `dismissedUpdates` to `{}`. **+ Add a source URL** (`addSource()`) fetches
-the URL once and sorts it, refusing a non-http(s) address, a duplicate (compared as `new URL().href`,
+the URL once, in its normalised form (`new URL().href`, which percent-encodes a raw bidi control),
+stores that form as the source's `url` and `base`, and sorts it, refusing a non-http(s) address, a duplicate (compared as `new URL().href`,
 so case and default ports don't count), a non-JSON answer, an unusable manifest or anything that is
 neither; a network failure (a `TypeError`) adds a hint that the host must allow cross-origin reads.
 
@@ -513,3 +514,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-26 — Sources (official, manifest, plain) and one install pipeline: candidates, the plan, an all-or-nothing install checked by sha256; Manual install takes files, a folder or a zip; Fetch all becomes a plain source's own Fetch. → ledger L7428, #102
 - 2026-10-26 — `extFetchBytes()` counts the body stream and cancels past the cap, so the caps hold without `Content-Length`; `addSource()` is capped; a garbled GitHub release list gets a plain message. → ledger L7477, #102
 - 2026-10-26 — `extText()` strips invisible format characters from every manifest string; `addSource()`'s over-cap message no longer says the host couldn't be reached. → ledger L7513, #102
+- 2026-10-26 — `addSource()` fetches and stores the normalised URL, so a raw U+202E in a typed URL is percent-encoded. → ledger L7546, #102

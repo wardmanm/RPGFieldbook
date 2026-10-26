@@ -7542,3 +7542,26 @@ on the row, the plan line and Sources; a stored unstripped name; an IDN host is 
 Pages: [settings & updates](../wiki/features/settings-and-updates.md),
 [rules packs](../wiki/architecture/rules-packs.md), [shell](../wiki/ui/shell.md),
 [homebrew](../wiki/data/homebrew.md), [known issues](../wiki/roadmap/known-issues.md).
+
+## #102 bidi strip: URLs (2026-10-26)
+
+The second re-review found that the U+202E trick still worked through a source's own URL.
+`addSource()` stored the raw text the player typed (`url`/`base`), and the Sources sub-line and the
+details' Manifest line showed it unstripped. Live, `https://good.example/‮noj.live-lifedoog` drew
+the path, the separator and "checked today, …" backwards. This falls under Ruling 20 (Mike's
+"strip invisible characters").
+
+- `addSource()` fetches and stores the normalised URL, `new URL(u).href`, as `url` and `base`.
+  That form percent-encodes a raw U+202E.
+- Every URL shown as text goes through `extPlain()`: the Sources sub-line, the details' Manifest
+  line and the Homepage link text. The Homepage link's `href` is the normalised URL. Plain sources
+  converted from old settings were already shown through `extSourceName()`, which strips them.
+  Stored URLs that predate the fix are covered by the display strip.
+
+Tests (data-archive):
+- an added URL with a raw U+202E is stored normalised;
+- the Sources and details HTML carry no U+202E and still show the host;
+- a raw stored URL and a converted plain source display without it.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md),
+[rules packs](../wiki/architecture/rules-packs.md).
