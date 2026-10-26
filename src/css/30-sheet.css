@@ -98,7 +98,7 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 .sh-ring{display:inline-grid;grid-auto-flow:column;align-items:center;justify-content:center;gap:6px;min-width:42px;height:42px;padding:0 6px;
   border-radius:999px;border:2.5px solid var(--accent);background:var(--panel);color:var(--ink);font-family:var(--display);font-weight:900;font-size:20px}
 .sh-ring b{font-weight:900}
-.sh-ring.ready{cursor:pointer;background:var(--accent);color:var(--panel);padding:0 12px}
+.sh-ring.ready{cursor:pointer;background:var(--accent);color:var(--on-accent);padding:0 12px}
 .sh-ring small{font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .sh-xpwrap{display:flex;flex-direction:column;gap:4px;width:110px}
 .sh-xp{min-height:0;padding:3px 7px;font-family:var(--head);font-size:14px;text-align:right}
@@ -162,7 +162,7 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
    Passive Perception. */
 .rail{--panel:var(--rail-bg);--paper:var(--rail-bg);--paper-2:var(--rail-field-focus);--ink:var(--rail-ink);--ink-soft:var(--rail-soft);
   --line:var(--rail-line);--hair:var(--rail-hair);--field:var(--rail-field);--field-focus:var(--rail-field-focus);
-  --accent:var(--rail-accent);--accent-2:var(--rail-good);--brick:var(--rail-bad);--warn:var(--rail-warn);
+  --accent:var(--rail-accent);--on-accent:#181410;--accent-2:var(--rail-good);--brick:var(--rail-bad);--warn:var(--rail-warn);
   color:var(--ink);display:flex;flex-direction:column;gap:12px;padding:12px}
 .rail>.label{margin:0;font-size:11px;color:var(--ink-soft)}
 .rail-pic{position:relative;margin-bottom:26px}
@@ -354,7 +354,7 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .item .row-meta>.qty,.item .row-meta>.atk-hit{white-space:nowrap}
 .orig-b{font:600 10px/1 var(--head);min-width:17px;height:17px;padding:0 4px;border-radius:9px;border:1px solid var(--hair);background:var(--panel);color:var(--ink-soft);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .orig-b:hover{color:var(--accent);border-color:var(--accent)}
-.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:#fff;padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s,visibility 0s .18s;visibility:hidden;pointer-events:none;max-width:80vw;text-align:center}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:var(--on-accent);padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s,visibility 0s .18s;visibility:hidden;pointer-events:none;max-width:80vw;text-align:center}
 .toast.show{opacity:1;visibility:visible;transition:opacity .18s,transform .18s;transform:translateX(-50%) translateY(0)}
 /* a failure the player must read (#87): the danger colour, and it takes taps —
    it stays until one lands on it or on its Dismiss button */

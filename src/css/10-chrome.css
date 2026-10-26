@@ -14,8 +14,7 @@
   background:var(--field);border:2px solid var(--line);color:var(--ink);
   padding:8px 12px;border-radius:8px;cursor:pointer;min-height:42px;display:inline-flex;align-items:center;gap:7px}
 .tbtn:hover{background:var(--paper-2)}
-.tbtn.primary{background:var(--accent);color:#20160a;border-color:var(--ink)}
-html[data-theme="dark"] .tbtn.primary{color:#20160a}
+.tbtn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--ink)}
 /* destructive action — reads as a warning before it is pressed, not after */
 .tbtn.danger{color:var(--brick);border-color:var(--brick)}
 .tbtn.danger:hover{background:color-mix(in srgb,var(--brick) 14%,transparent)}
@@ -71,7 +70,7 @@ body.saving-failed .to-top{bottom:calc(130px + env(safe-area-inset-bottom))}
 .verbtn:hover{color:var(--accent);border-color:var(--accent)}
 /* Takes over the version button's slot — same margin-right:auto, so it sits
    where the version did instead of being pushed to the far end of the bar. */
-.updpill{align-self:center;margin-right:auto;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:#20160a;background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
+.updpill{align-self:center;margin-right:auto;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--on-accent);background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
 .updpill:hover{filter:brightness(1.06)}
 @keyframes updpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}50%{box-shadow:0 0 0 4px transparent}}
 

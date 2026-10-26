@@ -258,16 +258,13 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   `racesForCharacter()` filters by system. → [Theming & icons](../ui/theming-and-icons.md)
 - **Print includes hidden attacks**: `printSheet()` prints the attacks of unequipped weapons.
   → [Attacks & damage](../features/attacks-and-damage.md)
-- **The inventory log can outgrow the browser's storage** (#47). An `edit` line keeps two full
-  copies of the item, and `delete`, `use` and a trade's give keep one, all saved with the character
-  in localStorage, which the app shares across every character. Measured on SRD items: a 2,500-line
-  log of edits is about 1,470 characters a line for mundane gear (3.7 million characters) and 2,090
-  for a median magic item (5.3 million); the default 500 lines is 0.7 to 1 million. Browsers
-  commonly allow about 5 MB a site, so the largest size can fill it on its own. A save that doesn't
-  land says so. Storing only an edit's changed fields would shrink it. → [Inventory](../features/inventory.md)
-- **Selling for more than an item's worth reads "N short" in red** and asks to confirm, because the
-  trade balance makes no exception for coins received; the brainstorm mockup said received coins
-  never turn it red. Open for Mike. → [Inventory](../features/inventory.md)
+- **A long inventory log of Use, give and delete lines is still large** (#47). Each keeps one
+  whole copy of the item so Undo can bring it back, saved with the character in localStorage, which
+  the app shares across every character (browsers commonly allow about 5 MB a site). Edit lines no
+  longer count: they keep only the fields that changed (500 edits of a magic item, 117,000
+  characters). The final review's estimate for 2,500 one-copy lines was 1.8 to 2.6 million
+  characters; the default 500 is a fifth of that. A save that doesn't land says so.
+  → [Inventory](../features/inventory.md)
 
 ### Keyboard access
 
@@ -514,3 +511,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-24 — Added: what the #101 final review left (a long card at 390, the scene's page not inert, `luSummary()`'s cut, focus after a skip). → ledger L6928, #101
 - 2026-10-25 — Added from #47's QA: the Log button's missing glyph, the potion's unchanged save writing a line, and selling reading short. → ledger L7291, #47
 - 2026-10-25 — #47's final review fixed the Log button's glyph and the potion's unchanged save; added the log's storage size, measured. → ledger L7339, #47
+- 2026-10-25 — Edit lines keep only what changed, so the log's storage entry narrows to one-copy lines; selling no longer reads short. → ledger L7401, #47

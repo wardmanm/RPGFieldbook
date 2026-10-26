@@ -45,7 +45,7 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .seg{display:flex;border:2px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{flex:1;font-family:var(--head);font-weight:600;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
   background:var(--field);border:0;color:var(--ink-soft);padding:10px 4px;cursor:pointer;min-height:44px}
-.seg button.on{background:var(--accent);color:#20160a}
+.seg button.on{background:var(--accent);color:var(--on-accent)}
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px dotted var(--hair)}
 .toggle .t-lbl{font-size:15px}
 .toggle .t-sub{font-family:var(--body);font-size:12px;color:var(--ink-soft);margin-top:2px}
@@ -153,7 +153,7 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 /* the banner number and the class line carry a digit ("1 → 2", "LEVEL 11"), and --display/--head
    (Cinzel on the classic skin) draw a "1" with no serif, reading as a capital "I"; the body font's
    figures don't, so these two use it instead of the heading faces (#101) */
-.lu-card .lu-bn{margin:0 0 10px;padding:6px;text-align:center;background:var(--accent);color:var(--paper);font:900 22px/1.1 var(--body);letter-spacing:.06em;border-radius:6px}
+.lu-card .lu-bn{margin:0 0 10px;padding:6px;text-align:center;background:var(--accent);color:var(--on-accent);font:900 22px/1.1 var(--body);letter-spacing:.06em;border-radius:6px}
 .lu-k{margin:0;font:700 11px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
 .lu-cls{margin:0 0 6px;font-family:var(--body);font-weight:700}
 .lu-list{list-style:none;margin:0;padding:0}
@@ -185,7 +185,7 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 .lu-new{opacity:0;animation:luIn .2s .8s forwards}
 .lu-flash{position:absolute;inset:0;opacity:0;background:radial-gradient(circle at 50% 42%,rgba(255,255,255,.95),transparent 55%);animation:luFlash .6s 1.1s ease-out forwards}
 .lu-banner{position:absolute;left:50%;top:16%;transform:translateX(-50%);min-width:min(80vw,320px);padding:10px 24px;box-sizing:border-box;text-align:center;
-  background:var(--accent);color:var(--paper);font:900 30px/1 var(--display);letter-spacing:.06em;clip-path:inset(0 50% 0 50%);animation:luUnfurl .6s 1.5s ease-out forwards}
+  background:var(--accent);color:var(--on-accent);font:900 30px/1 var(--display);letter-spacing:.06em;clip-path:inset(0 50% 0 50%);animation:luUnfurl .6s 1.5s ease-out forwards}
 .lu-spark{position:absolute;top:20%;width:7px;height:7px;border-radius:50%;background:var(--lu-spark);opacity:0;animation:luSparkFall 1.2s ease-out forwards}
 .lu-mote{position:absolute;bottom:-10px;width:5px;height:5px;border-radius:50%;background:var(--lu-glow);box-shadow:0 0 8px 2px var(--lu-glow);opacity:0;animation:luMote 2s ease-out forwards}
 @keyframes luScene{0%{opacity:0}8%{opacity:1}88%{opacity:1}100%{opacity:0}}
@@ -246,7 +246,7 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 .il-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .il-f{font-family:var(--head);font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
   background:var(--field);border:1.5px solid var(--line);border-radius:99px;color:var(--ink-soft);padding:6px 12px;cursor:pointer;min-height:44px}
-.il-f.on{background:var(--accent);color:var(--paper);border-color:var(--accent)}
+.il-f.on{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .il-day{font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);
   margin:14px 0 4px;padding-bottom:4px;border-bottom:1.5px solid var(--line)}
 .il-scroll>.il-day:first-child{margin-top:2px}

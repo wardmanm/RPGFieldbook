@@ -7,8 +7,8 @@
 .tab-combat .gicon{width:20px;height:20px;color:currentColor}
 .tab-combat:hover{color:var(--accent)}
 /* In combat: a filled pill, readable from any tab while you look something up. */
-.tab-combat.on{color:var(--paper);background:var(--accent);border-radius:8px;min-height:32px;margin:0 2px;padding:0 9px}
-.tab-combat.on:hover{color:var(--paper);filter:brightness(1.08)}
+.tab-combat.on{color:var(--on-accent);background:var(--accent);border-radius:8px;min-height:32px;margin:0 2px;padding:0 9px}
+.tab-combat.on:hover{color:var(--on-accent);filter:brightness(1.08)}
 /* Its tab is the one showing: the underline every tab wears. In combat the
    button is already a pill, so the pill takes a ring instead — an underline
    under a pill reads as a second, separate mark. */
@@ -53,7 +53,7 @@
 .ini-chips{flex:1;min-width:0;display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
 .ini-chip{flex:0 0 auto;min-height:44px;min-width:64px;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:4px 8px;
   border:1.5px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font-family:var(--head);font-size:12px;font-weight:700;cursor:pointer}
-.ini-chip.now{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.ini-chip.now{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .ini-chip.dead{opacity:.5}.ini-chip.dead .ini-nm{text-decoration:line-through}
 .ini-top{display:flex;gap:5px;align-items:baseline;white-space:nowrap}
 .ini-n{font-size:11px;color:var(--ink-soft)}.ini-chip.now .ini-n{color:inherit;opacity:.8}

@@ -291,7 +291,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Item-use pips in the log (#47)** — Not logged: they change uses, not quantity
 - **Lowering the log size (#47)** — Trims at once, asking first when lines would go
 - **A trade's balance (#47)** — Coins, plus item worth or cost on each side whose Apply item value switch is on
-- **A shortfall (#47)** — Shown and confirmed, never blocked
+- **A shortfall (#47)** — Shown and confirmed, never blocked; only the items you get can cause it, never coins received
+- **How an edit line is stored (#47)** — Only the changed fields, before and after, plus a fingerprint of the row as edited
 - **The trade's layout (#47)** — Side by side above 700px; tabs and a ✓ button at 700px and under
 - **Other parties (#47)** — Free text with chips from the Party card and earlier trades
 - **A custom item's origin in a trade (#47)** — Custom, "traded from *who*"; library items get Traded
@@ -472,6 +473,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **An upstream icon with groups or transforms** — The fetcher dies, naming it; pick another icon
 - **Artifact size** — No size gate; path data kept as published
 - **Where the credit appears** — Settings (folded) and README §10, both generated or asserted
+- **Text on an accent fill** — `--on-accent`, chosen per palette
 - **The mid-band HP colour** — Its own `--warn` token in all four palettes
 
 ## Data

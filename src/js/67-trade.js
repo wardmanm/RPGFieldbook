@@ -14,10 +14,33 @@ function itemWorthCp(it,qty){return Math.round(fnum(it&&it.cost)*100*Math.max(0,
 /* " · 2 gp" for a line that names what something cost; nothing when it cost nothing */
 function invCostText(cp,pre){return cp>0?pre+cpToGpText(cp)+(pre===" ("?")":""):"";}
 function invSnap(it){return it==null?null:JSON.parse(JSON.stringify(it));}
-function invSame(a,b){
-  const norm=v=>Array.isArray(v)?v.map(norm):(v&&typeof v==="object")?Object.keys(v).sort().reduce((o,k)=>{o[k]=norm(v[k]);return o;},{}):v;
-  return JSON.stringify(norm(a))===JSON.stringify(norm(b));
+function invNorm(v){return Array.isArray(v)?v.map(invNorm):(v&&typeof v==="object")?Object.keys(v).sort().reduce((o,k)=>{o[k]=invNorm(v[k]);return o;},{}):v;}
+function invSame(a,b){return JSON.stringify(invNorm(a))===JSON.stringify(invNorm(b));}
+/* A short fingerprint of a value (53-bit cyrb53, key order ignored): an edit line
+   keeps one of the row as edited instead of a whole copy of it. */
+function invHash(v){
+  const str=JSON.stringify(invNorm(v))||"";let h1=0xdeadbeef,h2=0x41c6ce57;
+  for(let i=0;i<str.length;i++){const c=str.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (h2>>>0).toString(36)+"."+(h1>>>0).toString(36);
 }
+/* An edit line keeps only what changed (Mike, 2026-10-25: two whole copies of
+   the item made the log too big for the browser's storage). For each top-level
+   field that differs: its value before (`b`) and after (`a`), a side left out
+   where the field was absent; and the fingerprint of the whole row as edited,
+   so "changed again since" stays exact and Undo rebuilds the row as it was. */
+function invEditUndo(before,after){
+  const has=(o,k)=>Object.prototype.hasOwnProperty.call(o,k)&&o[k]!==undefined,changed={};
+  Object.keys(Object.assign({},before,after)).forEach(k=>{
+    const hb=has(before,k),ha=has(after,k);
+    if(hb&&ha&&invSame(before[k],after[k]))return;
+    const c={};if(hb)c.b=invSnap(before[k]);if(ha)c.a=invSnap(after[k]);changed[k]=c;
+  });
+  return {id:after.id,changed,hash:invHash(after)};
+}
+/* a line written before edits kept only their changes: the same, from its two copies */
+function invEditU(u){return invIsObj(u.before)&&invIsObj(u.after)&&u.after.id!=null?invEditUndo(u.before,u.after):u;}
 /* What each kind's `undo` must look like to be applied (final review M2): an
    imported, hand-edited or future file's undo that doesn't fit is dropped,
    keeping its line, so the Log dialog never reads a field that isn't there. */
@@ -27,7 +50,7 @@ function invUndoShape(kind,u){
   const copy=v=>v==null||invIsObj(v);
   const rows=a=>Array.isArray(a)&&a.every(p=>invIsObj(p)&&p.id!=null&&copy(p.snap)&&copy(p.atk));
   if(kind==="add"||kind==="give")return rows(u.items)?u:null;
-  if(kind==="edit")return invIsObj(u.before)&&invIsObj(u.after)&&u.after.id!=null?u:null;
+  if(kind==="edit"){const e=invEditU(u);return e.id!=null&&typeof e.hash==="string"&&invIsObj(e.changed)&&Object.keys(e.changed).every(k=>invIsObj(e.changed[k]))?e:null;}
   if(kind==="delete")return invIsObj(u.snap)&&copy(u.atk)?u:null;
   if(kind==="use")return u.id!=null&&copy(u.snap)&&copy(u.atk)?u:null;
   if(kind==="coins")return invIsObj(u.delta)?u:null;
@@ -85,7 +108,7 @@ function logItemSave(before,after){
   if(itemQty(before)!==itemQty(after))lines.push({dir:"",text:`Quantity ${itemQty(before)} → ${itemQty(after)}`});
   if(before.name!==after.name)lines.push({dir:"",text:`Name ${before.name} → ${after.name}`});
   if(!lines.length)lines.push({dir:"",text:"Details changed"});
-  logInv({kind:"edit",title:"Edited "+(after.name||"Item"),lines,undo:{before:invSnap(before),after:invSnap(after)}});
+  logInv({kind:"edit",title:"Edited "+(after.name||"Item"),lines,undo:invEditUndo(before,after)});
 }
 /* Coins: one line per commit, folding every denomination that actually moved. */
 function logCoins(title,delta){
@@ -136,7 +159,7 @@ function invCheckPart(kind,u,named){
   /* records that stacked onto one row are summed: the row must still hold them all */
   if(kind==="add"){const need={};for(const p of u.items)need[p.id]=(need[p.id]||0)+num(p.qty);for(const p of u.items){const it=invRow(p.id);if(!it||itemQty(it)<need[p.id]){const nm=String(p.name||(it&&it.name)||"");return named&&nm?`The ${nm} you got has since been used, sold or removed.`:INV_WHY.add;}}return "";}
   if(kind==="give"){for(const p of u.items){if(!invRow(p.id)&&!p.snap){const nm=String(p.name||"");return nm?`The ${nm} you gave can't come back: this line kept no copy of it.`:INV_WHY.gone;}}return "";}
-  if(kind==="edit"){const it=invRow(u.after.id);return (it&&invSame(it,u.after))?"":INV_WHY.edit;}
+  if(kind==="edit"){const e=invEditU(u),it=invRow(e.id);return (it&&invHash(it)===e.hash)?"":INV_WHY.edit;}
   if(kind==="coins"){
     for(const k of Object.keys(u.delta)){const d=num(u.delta[k]);if(d>0&&num((character.coins||{})[k])<d){const c=COIN_ALL.find(x=>x[0]===k);return `Not enough ${c?c[1]:k.toUpperCase()} left to take back.`;}}
     return "";
@@ -162,7 +185,9 @@ function invUndoCheck(e){
 }
 function invApplyPart(kind,u){
   if(kind==="add")(u.items||[]).forEach(p=>{const it=character.inventory.find(x=>x.id===p.id);if(!it)return;if(p.created&&itemQty(it)<=num(p.qty))invRemoveQty(p.id,itemQty(it));else invRemoveQty(p.id,p.qty);});
-  else if(kind==="edit"){const i=character.inventory.findIndex(x=>x.id===u.after.id);if(i>=0){character.inventory[i]=invSnap(u.before);syncItemAttack(character.inventory[i]);}}
+  else if(kind==="edit"){const e=invEditU(u),i=character.inventory.findIndex(x=>x.id===e.id);if(i>=0){
+    const r=invSnap(character.inventory[i]);Object.keys(e.changed).forEach(k=>{const c=e.changed[k];if(Object.prototype.hasOwnProperty.call(c,"b"))r[k]=invSnap(c.b);else delete r[k];});
+    character.inventory[i]=r;syncItemAttack(r);}}
   else if(kind==="delete")invRestore(u.snap,u.atk,u.at,u.atkAt);
   else if(kind==="use"){
     /* the row still here: add back; gone: its copy, with the quantity used */
@@ -188,12 +213,14 @@ function invUndo(id){
 const INV_FILTERS={all:null,trades:["trade"],items:["add","edit","delete","use","grant"],coins:["coins"],ammo:["ammo"]};
 const INV_ICON={trade:"⇄",add:"+",edit:"✎",delete:"🗑",use:"✦",coins:"¤",grant:"⚑",ammo:"➶"};
 let _invLogFilter="all";
+/* a grant or "Removed with" line that moved gold also files under Coins */
+function invInFilter(e,filter){const kinds=INV_FILTERS[filter]||null;return !kinds||kinds.indexOf(e.kind)>=0||(filter==="coins"&&e.kind==="grant"&&!!(e.meta&&e.meta.gold));}
 function invDayLabel(at){
   const d=new Date(at),t=new Date();const day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
   const diff=(day(t)-day(d))/86400000;return diff===0?"Today":diff===1?"Yesterday":d.toLocaleDateString();
 }
 function invLogHTML(list,filter,size){
-  const kinds=INV_FILTERS[filter]||null,rows=(list||[]).filter(e=>!kinds||kinds.indexOf(e.kind)>=0);
+  const rows=(list||[]).filter(e=>invInFilter(e,filter));
   let day="",out=`<div class="il-filters">`+Object.keys(INV_FILTERS).map(f=>`<button type="button" class="il-f${f===filter?" on":""}" data-ilfilter="${esc(f)}" aria-pressed="${f===filter?"true":"false"}">${esc(f[0].toUpperCase()+f.slice(1))}</button>`).join("")+`</div>`;
   /* one scroller for the rows (final review C5), as the trade's .tr-sides is:
      the filters and the foot stay put above and below it */
@@ -255,10 +282,14 @@ function tradeEmpty(d){return !d.give.items.length&&!d.get.items.length&&!coinsT
 function tradeGetCp(g){return Math.round(fnum(g.cost)*100*Math.max(0,num(g.qty)));}
 function tradeBalance(d,ch){
   const inv=(ch&&ch.inventory)||[];
-  let giveCp=coinsToCp(d.give.coins),getCp=coinsToCp(d.get.coins);
+  let giveCp=coinsToCp(d.give.coins),getItemsCp=0;
   if(d.applyGive)d.give.items.forEach(g=>{const it=inv.find(x=>x.id===g.id);if(it)giveCp+=itemWorthCp(it,g.qty);});
-  if(d.applyGet)d.get.items.forEach(g=>{getCp+=tradeGetCp(g);});
-  return {giveCp,getCp,diff:giveCp-getCp};
+  if(d.applyGet)d.get.items.forEach(g=>{getItemsCp+=tradeGetCp(g);});
+  const getCp=getItemsCp+coinsToCp(d.get.coins);
+  /* Coins you receive never make it red (Mike, 2026-10-25): selling above an
+     item's worth is a good deal, not a shortfall. Short is only when the items
+     you get are worth more than everything you give. */
+  return {giveCp,getCp,diff:giveCp-getCp,short:getItemsCp>giveCp};
 }
 /* "n is the number of lines": each item, and each coin that moves */
 function tradeCount(side){return side.items.length+Object.keys(side.coins||{}).filter(k=>num(side.coins[k])>0).length;}
@@ -267,8 +298,8 @@ function tradeTabsInner(d){
 }
 function tradeBalHTML(d,ch){
   const b=tradeBalance(d,ch),n=cpToGpText(Math.abs(b.diff));
-  const net=b.diff<0?`${esc(n)} short`:b.diff>0?`${esc(n)} over`:"Even";
-  return `<div class="tr-bal${b.diff<0?" short":""}">You give <b>${esc(cpToGpText(b.giveCp))}</b> · you get <b>${esc(cpToGpText(b.getCp))}</b> · <span class="tr-net">${net}</span></div>`;
+  const net=b.short?`${esc(n)} short`:b.diff<0?`${esc(n)} in your favour`:b.diff>0?`${esc(n)} over`:"Even";
+  return `<div class="tr-bal${b.short?" short":""}">You give <b>${esc(cpToGpText(b.giveCp))}</b> · you get <b>${esc(cpToGpText(b.getCp))}</b> · <span class="tr-net">${net}</span></div>`;
 }
 function tradeCoinsHTML(side,coins,held){
   return `<div class="tr-coins">`+coinKeys().map(k=>{const c=COIN_ALL.find(x=>x[0]===k),lbl=c?c[1]:k.toUpperCase(),v=num((coins||{})[k]);
@@ -459,7 +490,7 @@ function openTrade(opts){
     if(t.closest("#trComplete")){
       if(tradeEmpty(d))return;
       const b=tradeBalance(d,character);
-      if(b.diff<0&&!confirm(`You're ${cpToGpText(-b.diff)} short. Complete the trade anyway?`))return;
+      if(b.short&&!confirm(`You're ${cpToGpText(-b.diff)} short. Complete the trade anyway?`))return;
       const done=completeTrade(d);_trade=null;closeModal();
       if(done)toast(done.title+". It's in the log.");
       return;

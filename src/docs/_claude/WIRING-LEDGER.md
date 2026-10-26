@@ -7397,3 +7397,30 @@ The re-review of the final fixes approved them and left two Minors, both fixed h
   Decisions line is gone.
 
 Pages: [inventory](../wiki/features/inventory.md), [decisions](../wiki/decisions.md).
+
+## #47 follow-ups: smaller edit lines, selling, the Coins filter, --on-accent (2026-10-25)
+
+Mike's rulings on the three questions #47's final review left open, built on `issue/47-followups`
+(no new issue: they finish #47's work).
+
+- **Edit lines keep only what changed.** `logItemSave()` writes `invEditUndo(before, after)`:
+  `{id, changed:{field:{b,a}}, hash}`, a side left out where the field was absent, and `invHash()`
+  (cyrb53, key order ignored) of the row as edited. "Changed again since" compares the hash, and
+  Undo sets the changed fields back, so it rebuilds the row exactly. A line saved with two whole
+  copies is converted by `cleanInvLog()` on load (`invEditU()`), so existing logs shrink too.
+  Measured: 500 edit lines of a long-described magic item fell from 2,346,581 characters to
+  116,562 (−95%). Use, give and delete lines still keep one whole copy each.
+- **Selling never reads red.** `tradeBalance()` returns `short` only when the items you get are worth
+  more than everything you give; coins you receive never count toward it. A balance in your favour
+  from coins received reads "N gp in your favour", plainly, and Complete skips the confirm.
+- **Grant lines that moved gold file under Coins too.** `addGrantGold()` and
+  `revertEquipmentGrants()` set `meta.gold`; `invInFilter()` adds those lines to the Coins filter.
+  They still file under Items.
+- **`--on-accent`**, a token for text on an `--accent` fill, one per theme and skin plus the rail.
+  Every rule that put text on the accent uses it, replacing `#20160a`, `#fff`, `--paper` and
+  `--panel`: the primary button, the update pill, filter pills, segmented buttons, Use, the spell
+  pin's tick, the level ring, the toast, the combat tab, the initiative chip, the log filter and the
+  level-up banners. Lowest contrast now 4.8:1 (humblewood light); classic light's red was 2.05:1.
+
+Pages: [inventory](../wiki/features/inventory.md), [theming & icons](../wiki/ui/theming-and-icons.md),
+[known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).
