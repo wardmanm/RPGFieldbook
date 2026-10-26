@@ -76,10 +76,13 @@ body.saving-failed .to-top{bottom:calc(130px + env(safe-area-inset-bottom))}
 .updpill{align-self:center;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--on-accent);background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
 .updpill:hover{filter:brightness(1.06)}
 /* a pill's ×: clears the notice until a newer version arrives (#102) */
-.updpill-x{position:relative;align-self:center;min-width:32px;min-height:32px;padding:0;border:0;border-radius:999px;background:none;color:var(--ink-soft);font-size:16px;line-height:1;cursor:pointer;margin-left:-8px}
+.updpill-x{position:relative;align-self:center;min-width:38px;min-height:32px;padding:0;border:0;border-radius:999px;background:none;color:var(--ink-soft);font-size:16px;line-height:1;cursor:pointer;margin-left:-8px}
 .updpill-x:hover{color:var(--accent)}
-/* a 32px glyph, a 44px target */
-.updpill-x::after{content:"";position:absolute;inset:-6px}
+/* a 44px target: 38 wide plus 6 to the right, 32 tall plus 6 above and below.
+   Never to the left, where the pill it clears sits 2px away (gap 10, margin
+   -8): reaching that way it covered the pill's edge and took its taps
+   (#102 Task 6 fix round 2) */
+.updpill-x::after{content:"";position:absolute;inset:-6px -6px -6px 0}
 .extpill{display:inline-flex;align-items:center;gap:10px;align-self:center}
 .extpill .updpill{animation:none}
 .extpill[hidden],.updpill-x[hidden]{display:none}

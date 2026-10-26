@@ -11,7 +11,10 @@ const modal=document.getElementById("modal");
    `then` is what a dismissed window hands on: the choice windows still queued
    behind it (#63). It belongs to THIS window, like the guard — every open and
    close clears both — so it can never fire after some later window, which is
-   how the old module-level equipment queue leaked. Done hands the queue on itself. */
+   how the old module-level equipment queue leaked. Done hands the queue on itself.
+   A guard that returns `true` refuses outright, with no prompt: the install
+   plan while its files download (#102), where there is nothing to confirm —
+   closing can't stop an install already under way. */
 let _dismissGuard=null,_dismissThen=null;
 function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
 /* `title` is plain TEXT, set as textContent: it holds class, spell, item and
@@ -89,7 +92,7 @@ function modalGiveBackFocus(){
   },0);
 }
 function dismissModal(){
-  if(_dismissGuard){const msg=_dismissGuard();if(msg&&!confirm(msg))return;}
+  if(_dismissGuard){const msg=_dismissGuard();if(msg===true)return;if(msg&&!confirm(msg))return;}
   const then=_dismissThen;closeModal();if(then)then();
 }
 document.getElementById("mClose").addEventListener("click",dismissModal);

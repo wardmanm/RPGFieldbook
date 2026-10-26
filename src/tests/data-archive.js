@@ -26,7 +26,7 @@ const {X, ctx, state, bootError} = loadApp([
   'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
   'extPlanHTML', 'renderExtPill', 'showUpdatePill', 'openInstallPlan', 'manualInstallFiles', 'readDropped',
   'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap',
-  'rulesStatusText', 'extWireDrop', 'extManualPlan', 'extPillFocusBack', 'EXT_DROP_MAX',
+  'rulesStatusText', 'extWireDrop', 'extManualPlan', 'extPillFocusBack', 'EXT_DROP_MAX', 'dismissModal',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 ctx.URL = URL;   // offerCandidate() resolves a pack's path against its source with it (#102)
@@ -1594,10 +1594,54 @@ section('#102 Task 6 fix round 1', async () => {
   }
   // 3 + 4: the ×'s hit area, and the notice row up to 560px
   const css = fs.readFileSync(path.join(ROOT, 'src/css/10-chrome.css'), 'utf8');
-  ck('#102 fix 3: the pill × has a 44px hit area', /\.updpill-x\{[^}]*position:relative/.test(css) && /\.updpill-x::after\{[^}]*inset:-6px/.test(css) && /\.updpill-x\{[^}]*min-width:32px[^}]*min-height:32px/.test(css));
+  // fix round 2: the hit area grows up, down and right, never left into the pill it clears (38 + 6 = 44 wide, 32 + 12 = 44 tall)
+  ck('#102 fix 3: the pill × has a 44px hit area that stays off its pill',
+    /\.updpill-x\{[^}]*position:relative/.test(css) && /\.updpill-x::after\{[^}]*inset:-6px -6px -6px 0[;}]/.test(css) &&
+    /\.updpill-x\{[^}]*min-width:38px[^}]*min-height:32px/.test(css) && /\.updpill-x\{[^}]*margin-left:-8px/.test(css), (/\.updpill-x(::after)?\{[^}]*\}/g.exec(css) || [])[0]);
   ck('#102 fix 4: the notices take their own row up to 560px', /@media \(max-width:560px\)\{\.extpill-long\{display:none\}#updatePill,#updatePillX,\.extpill\{order:5\}\}/.test(css));
   const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
   ck('#102 fix 9: both ×s hand focus back', (boot.match(/extPillFocusBack\(\)/g) || []).length === 2);
+  X.resetRules();
+});
+
+section('#102 Task 6 fix round 2: the plan cannot be dismissed while it installs', async () => {
+  const tick = () => new Promise(r => setImmediate(r));
+  const realGet = ctx.document.getElementById, realQSA = ctx.document.querySelectorAll, realRun = ctx.runInstall, realClose = ctx.closeModal, realToast = ctx.toast;
+  let closes = 0; ctx.closeModal = () => { closes++; realClose(); };
+  ctx.toast = () => {};
+  try {
+    X.resetRules();
+    const c = system => ({key: system + '|' + system + '.json', category: 'rules', system, file: system + '.json', title: system, version: '1.0.0',
+      minApp: '', sha256: '', size: 10, requires: [], origin: 'm1', manual: false, get: () => Promise.resolve(new Uint8Array())});
+    const lines = X.planInstall([c('P')]);
+    const go = fakeEl(), close = fakeEl(), status = fakeEl(), boxes = [fakeEl({checked: true, dataset: {planI: '0'}})];
+    ctx.document.getElementById = id => ({planGo: go, planClose: close, planStatus: status})[id] || realGet(id);
+    ctx.document.querySelectorAll = sel => sel === '[data-plan-i]' ? boxes : realQSA(sel);
+    let release; ctx.runInstall = () => new Promise(r => { release = r; });
+    X.openInstallPlan(lines, {});
+    X.dismissModal();
+    ck('#102 fix2 I1: before Install, × and Escape close the plan as usual', closes === 1, closes);
+    X.openInstallPlan(lines, {});
+    closes = 0; state.lastConfirm = null;
+    go.fire('click');
+    X.dismissModal(); X.dismissModal();
+    ck('#102 fix2 I1: while it installs, × and Escape leave the dialog open, with no prompt', closes === 0 && state.lastConfirm === null, [closes, state.lastConfirm]);
+    ck('#102 fix2 I1: ...and the status line says to wait', status.textContent === 'Installing… please wait.', status.textContent);
+    release({ok: false, installed: [], error: {file: 'p.json', why: 'boom'}, saveErr: '', skipped: {}});
+    await tick();
+    X.dismissModal();
+    ck('#102 fix2 I1: after a failure the guard is gone and × closes it', closes === 1 && /p\.json/.test(status.textContent), [closes, status.textContent]);
+    // after a success: back() closes, and no guard is left for the next dialog
+    X.openInstallPlan(lines, {});
+    go.fire('click');
+    release({ok: true, installed: ['P'], error: null, saveErr: '', skipped: {}});
+    await tick();
+    closes = 0;
+    X.dismissModal();
+    ck('#102 fix2 I1: after a success no guard is left behind for later dialogs', closes === 1, closes);
+  } finally {
+    ctx.document.getElementById = realGet; ctx.document.querySelectorAll = realQSA; ctx.runInstall = realRun; ctx.closeModal = realClose; ctx.toast = realToast;
+  }
   X.resetRules();
 });
 

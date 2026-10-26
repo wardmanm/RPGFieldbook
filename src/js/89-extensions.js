@@ -825,12 +825,19 @@ function openInstallPlan(lines,opts){
   /* while it runs, nothing in the plan can change and Install can't be
      pressed again: a tick re-counting Install used to re-enable it mid-
      download, and a second press ran a second install alongside the first
-     (#102 Task 6 fix round 1). × still closes; the install then finishes
-     and toasts. */
+     (#102 Task 6 fix round 1). Nor can the dialog be dismissed: × and
+     Escape do nothing and the status line says to wait (fix round 2). The
+     guard is this window's own — openModal()/closeModal() clear it — and
+     is cleared here only while this plan is still the open dialog, so it
+     never outlives the install or touches a later dialog's guard. */
   let busy=false;
   const boxes=Array.from(document.querySelectorAll("[data-plan-i]"));
   const count=()=>{const n=lines.filter(l=>l.ticked&&l.canTick).length;go.textContent="Install "+n;go.disabled=busy||!n;};
-  const setBusy=b=>{busy=b;boxes.forEach(cb=>{const l=lines[num(cb.dataset.planI)];cb.disabled=b||!(l&&l.canTick);});if(close)close.disabled=b;count();};
+  const setBusy=b=>{
+    busy=b;boxes.forEach(cb=>{const l=lines[num(cb.dataset.planI)];cb.disabled=b||!(l&&l.canTick);});if(close)close.disabled=b;count();
+    if(b)setDismissGuard(()=>{const s=document.getElementById("planStatus");if(s&&live()){s.className="status";s.textContent="Installing… please wait.";}return true;});
+    else if(live())setDismissGuard(null);
+  };
   boxes.forEach(cb=>cb.addEventListener("change",()=>{const l=lines[num(cb.dataset.planI)];if(!l)return;if(busy){cb.checked=!!l.ticked;return;}l.ticked=!!cb.checked;count();}));
   go.addEventListener("click",()=>{
     if(busy)return;
