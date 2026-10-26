@@ -51,10 +51,13 @@ function sha256Hex(bytes){
 /* ---- reading a manifest ---- */
 function extUrl(u){return typeof u==="string"&&/^https?:\/\//i.test(u)?u:"";}
 function extText(s,max){return typeof s==="string"?s.slice(0,max):"";}
-/* a path relative to the manifest: never absolute, never up, never a URL */
+/* a path relative to the manifest: never absolute, never up, never a URL, and
+   never percent-encoded — new URL() decodes %2e while it collapses ../ dot
+   segments, so an encoded ".." would resolve outside the manifest's folder
+   even though this check never sees a literal ".." (#102 fix round 1) */
 function extRelPath(p){
   const s=typeof p==="string"?p:"";
-  if(!s||s.startsWith("/")||s.includes("\\")||/^[a-z][a-z0-9+.-]*:/i.test(s))return "";
+  if(!s||s.includes("%")||s.startsWith("/")||s.includes("\\")||/^[a-z][a-z0-9+.-]*:/i.test(s))return "";
   return s.split("/").some(x=>x===""||x==="."||x==="..")?"":s;
 }
 function extKey(system,file){return String(system)+"|"+String(file);}
@@ -71,7 +74,7 @@ function extEntry(p,builtFor){
     sha256:/^[0-9a-f]{64}$/.test(String(p.sha256||""))?p.sha256:"",size:Math.max(0,num(p.size)),
     license:extText(p.license,64),attribution:extText(p.attribution,2000),
     requires:(Array.isArray(p.requires)?p.requires:[]).filter(r=>r&&typeof r==="object"&&typeof r.pack==="string"&&r.pack.trim())
-      .slice(0,50).map(r=>({pack:r.pack.trim(),file:typeof r.file==="string"?r.file:"",url:extUrl(r.url)}))};
+      .slice(0,50).map(r=>({pack:extText(r.pack.trim(),200),file:extText(typeof r.file==="string"?r.file:"",200),url:extUrl(r.url)}))};
 }
 function readManifest(obj,byteLength){
   if(num(byteLength)>EXT_MAN_MAX)throw new Error("the manifest is larger than 64 KB");
@@ -131,6 +134,9 @@ function extRowState(group,offer){
   if(offer&&EXT_CATS.indexOf(offer.entry.category)<0)return "unsupported";
   if(!group)return offer?(extTooNew(offer.entry)?"blocked":"install"):"none";
   if(!offer)return "none";
+  /* a loaded pack with no parseable dataVersion (unversioned data predates
+     versioning, #83) can never read as "current" against a versioned offer,
+     so it falls through to "update" rather than getting stuck unmatched */
   const have=group.dataVersion;
   if(parseDataVer(have)&&cmpDataVer(offer.entry.version,have)<=0)return "current";
   return extTooNew(offer.entry)?"blocked":"update";
@@ -154,7 +160,10 @@ function extUpdateRows(){return extPackRows().filter(r=>r.state==="update");}
 /* the pill's count: updates newer than the version the player cleared (spec decision 9) */
 function extPillCount(){
   const d=settings.dismissedUpdates||{};
-  return extUpdateRows().filter(r=>!d[r.key]||cmpDataVer(r.offer.entry.version,d[r.key])>0).length;
+  /* a dismissal that isn't a parseable version (corrupt settings, a stray {})
+     never suppresses the pill, rather than reading as "always newer, never
+     dismissed" via cmpDataVer's 0-on-invalid default (#102 fix round 1) */
+  return extUpdateRows().filter(r=>!d[r.key]||!parseDataVer(d[r.key])||cmpDataVer(r.offer.entry.version,d[r.key])>0).length;
 }
 function dismissUpdates(){
   if(!settings.dismissedUpdates||typeof settings.dismissedUpdates!=="object")settings.dismissedUpdates={};

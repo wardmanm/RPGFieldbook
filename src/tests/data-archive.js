@@ -755,7 +755,8 @@ section('#102 readManifest', () => {
   const m1 = X.readManifest({_type: 'fieldbook-data', format: 1, version: '1.8.1', builtFor: '1.8.1', packs: [{file: 'a_full.json', system: 'A', version: '1.8.0', sha256: 'b'.repeat(64)}]}, 200);
   ck('#102 a format-1 manifest (today\'s zip) reads with defaults', m1.packs[0].title === 'A' && m1.packs[0].minApp === '1.8.1' && m1.packs[0].summary === '');
   ck('#102 a homepage that isn\'t http(s) becomes ""', X.readManifest({_type: 'fieldbook-data', homepage: 'javascript:x', packs: []}, 50).homepage === '');
-  ['../x_full.json', '/abs_full.json', 'https://evil.org/x_full.json', 'a\\b_full.json', 'dir/../x_full.json', 'x.txt', '']
+  ['../x_full.json', '/abs_full.json', 'https://evil.org/x_full.json', 'a\\b_full.json', 'dir/../x_full.json', 'x.txt', '',
+   '%2e%2e/x_full.json', 'a/%2E%2E/x_full.json', './x_full.json', 'a//x_full.json']
     .forEach(f => ck('#102 an unsafe or non-json path is dropped: ' + JSON.stringify(f),
       X.readManifest({_type: 'fieldbook-data', packs: [pk({file: f})]}, 100).packs.length === 0));
   ck('#102 a path in a folder keeps its base name as the file',
@@ -821,6 +822,18 @@ section('#102 offers and rows', () => {
   ck('#102 dismissal: the same version never brings it back', X.extPillCount() === 0);
   X.settings.sources[0].manifest = man([e('SRD 5.2', 'srd52_full.json', '1.9.1')]);
   ck('#102 dismissal: a newer version brings it back', X.extPillCount() === 1);
+  // #102 fix round 1: unversioned loaded data (predates versioning, #83) reads as an update
+  // against a versioned offer, rather than never matching "current" and getting stuck
+  loadPack('Legacy', 'legacy_full.json', undefined);
+  X.settings.sources.push({id: 's4', kind: 'manifest', url: 'https://legacy.example/m.json', on: true, checked: 1, error: '',
+    base: 'https://legacy.example/m.json', manifest: man([e('Legacy', 'legacy_full.json', '1.0.0')])});
+  ck('#102 an unversioned loaded pack is an update against a versioned offer',
+    X.extPackRows().find(r => r.key === 'Legacy|legacy_full.json').state === 'update');
+  // #102 fix round 1: a dismissal that isn't a parseable version never suppresses the pill
+  // (cmpDataVer reads an unparseable side as equal, which would wrongly read as "not newer")
+  const beforeMalformed = X.extPillCount();
+  X.settings.dismissedUpdates['Legacy|legacy_full.json'] = {};
+  ck('#102 a malformed dismissal does not suppress the pill', X.extPillCount() === beforeMalformed);
   X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {}; X.settings.dismissedUpdates = {};
 });
 
