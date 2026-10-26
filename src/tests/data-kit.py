@@ -640,6 +640,28 @@ r = node(d, "scripts/data-release.js")
 ck("the PUBLIC registry still refuses a release from another app version", r.returncode == 1 and "doesn't belong" in r.stderr, r.stderr)
 shutil.rmtree(d)
 
+# ---------- #102 fix round 2: a failing bundle/release-files still cleans up its
+# scratch folder. fbdata()'s die() calls process.exit(1), which skips a surrounding
+# `finally` — only a cleanup registered on "exit" runs on that path. A pack with no
+# public licence is a realistic way to make release-files's --public check fail.
+def fb_data_release_tmp_entries():
+    return set(e for e in os.listdir(tempfile.gettempdir()) if e.startswith("fb-data-release-"))
+
+
+before = fb_data_release_tmp_entries()
+d = checkout()
+reg = read_json(d, "data/packs.json")
+reg["packs"][0]["license"] = "LicenseRef-WotC"   # not public-allowlisted (R13)
+write(d, "data/packs.json", reg)
+git(d, "commit", "-qam", "give Alpha an unlicensed licence")
+r = node(d, "scripts/data-release.js")
+ck("#102 a data release whose bundle fails release-files's --public check still fails",
+   r.returncode == 1, (r.returncode, r.stdout, r.stderr))
+after = fb_data_release_tmp_entries()
+ck("#102 ...and leaves no fb-data-release-* scratch folder behind (fix round 2)",
+   after == before, (before, after))
+shutil.rmtree(d)
+
 # ---------- the kit (#85, R12/R13): the example pack builds and passes --public,
 # and the kit zip (once built) works on its own, unzipped anywhere (Review Focus 3)
 EXAMPLE_PACK = os.path.join(ROOT, "tools", "data-kit", "example-pack")
@@ -963,8 +985,9 @@ dr = open(os.path.join(ROOT, "scripts", "data-release.js"), encoding="utf-8").re
 ck("#102 data-release.js bundles and writes releases/data for the public registry",
    '"release-files"' in dr and "releases/data" in dr and "if (!PRIVATE)" in dr)
 ck("#102 data-release.js tells you to commit releases/data", "git add data/packs.json releases/data" in dr)
-ck("#102 data-release.js cleans up its scratch bundle folder (fix round 1)",
-   re.search(r'finally\s*\{[^{}]*fs\.rmSync\(tmp', dr) is not None)
+ck("#102 data-release.js registers scratch-folder cleanup on exit, not just a finally "
+   "that process.exit() would skip (fix round 2)",
+   re.search(r'process\.on\(\s*"exit"[\s\S]{0,80}?fs\.rmSync\(tmp', dr) is not None)
 for wf in ("release.yml", "data-release.yml"):
     t = open(os.path.join(ROOT, ".github", "workflows", wf), encoding="utf-8").read()
     ck("#102 %s checks releases/data against the build" % wf,

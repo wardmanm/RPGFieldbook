@@ -195,11 +195,10 @@ It gives every pack whose content changed since its last release the next `<APP_
 sets the registry's `release` to it. For the public registry it also bundles and writes
 `releases/data/` (#102) — never `fieldbook.html`, `APP_VERSION`, `DATA_VERSIONS`, the changelog or
 the notebook, and never `releases/data/` for a private registry, which has no public raw URL. It
-refuses when `APP_VERSION`
-is older than 1.8.0 (the first release that can open the data zip at all), when `data/` has
-uncommitted changes (the digests must describe what gets tagged), when no pack changed, when the
-registry's `release` belongs to another app version, and when the tag already exists. Then it
-prints, and never runs:
+refuses when `APP_VERSION` is older than 1.8.0 (the first release that can open the data zip at
+all), when `data/` has uncommitted changes (the digests must describe what gets tagged), when no
+pack changed, when the registry's `release` belongs to another app version, and when the tag
+already exists. Then it prints, and never runs:
 
 ```bash
 git add data/packs.json releases/data

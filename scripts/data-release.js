@@ -128,12 +128,14 @@ fbdata(["versions", "--bump", next, ...fbArgs]);
 // raw URL, so it gets none.
 if (!PRIVATE) {
   const tmp = fs.mkdtempSync(path.join(require("os").tmpdir(), "fb-data-release-"));
-  try {
-    fbdata(["bundle", "-o", tmp]);
-    fbdata(["release-files", tmp, "-o", path.join(ROOT, "releases", "data")]);
-  } finally {
-    fs.rmSync(tmp, { recursive: true, force: true });
-  }
+  // fbdata() calls die() on a failure (e.g. release-files refusing a pack with
+  // no public licence, R13), and die() calls process.exit(1), which skips a
+  // surrounding `finally`. Register the cleanup on "exit" instead — it runs on
+  // every exit path, and fs.rmSync is synchronous, so it's safe inside the
+  // handler (#102 fix round 2).
+  process.on("exit", () => fs.rmSync(tmp, { recursive: true, force: true }));
+  fbdata(["bundle", "-o", tmp]);
+  fbdata(["release-files", tmp, "-o", path.join(ROOT, "releases", "data")]);
 }
 
 if (PRIVATE) {
