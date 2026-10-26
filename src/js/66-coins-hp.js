@@ -72,6 +72,7 @@ function openCoinAdjust(){
     const {out}=plan();
     character.coins=character.coins||{};
     Object.keys(out).forEach(k=>{character.coins[k]=out[k].next;});
+    logCoins("Coins adjusted",Object.fromEntries(Object.keys(out).map(k=>[k,out[k].delta])));
     /* coins have weight, so a purse change moves carried weight and can move
        speed — re-render the inventory totals and recompute, not just the boxes */
     closeModal();renderCoins();renderInventory();recompute();scheduleSave();
@@ -81,11 +82,14 @@ function openCoinAdjust(){
 function convertCoins(){
   // value of each coin in copper; electrum counts as input but isn't generated as output
   const VAL={cp:1,sp:10,ep:50,gp:100,pp:1000};
+  const was=Object.assign({},character.coins);
   let total=0;["cp","sp","ep","gp","pp"].forEach(k=>{total+=num((character.coins||{})[k])*VAL[k];});
   const out=(character.system==="dnd")?[["pp",1000],["gp",100],["sp",10],["cp",1]]:[["gp",100],["sp",10],["cp",1]];
   const res={cp:"",sp:"",ep:"",gp:"",pp:""};
   out.forEach(([k,v])=>{const n=Math.floor(total/v);total-=n*v;res[k]=n>0?n:"";});
-  character.coins=res;renderCoins();renderInventory();recompute();scheduleSave();
+  character.coins=res;
+  logCoins("Converted coins",Object.fromEntries(["pp","gp","ep","sp","cp"].map(k=>[k,num(res[k])-num(was[k])])));
+  renderCoins();renderInventory();recompute();scheduleSave();
 }
 const COIN_ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],
                 ["gp","GP","Gold"],["pp","PP","Platinum"]];
@@ -150,10 +154,12 @@ function renderCoins(){
 function applyCoinInput(inp){
   const k=inp.dataset.coin;if(!k)return true;
   character.coins=character.coins||{};
+  const was=num(character.coins[k]);
   const next=signedEntry(character.coins[k],inp.value);
   if(next===null){inp.value=(character.coins[k]!=null)?character.coins[k]:"";return false;}
   character.coins[k]=next;
   inp.value=next;
+  logCoins("Coins changed",{[k]:num(next)-was});
   renderInventory();recompute();
   scheduleSave();
   return true;

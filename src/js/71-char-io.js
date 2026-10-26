@@ -138,7 +138,7 @@ function migrate(s){
   /* AFTER both repairs: checklists and tasks become journal pages (#95). The
      new pages take fresh uid()s, which cannot collide with a repaired one. */
   migrateTrackerPages(base,Date.now());
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","editHide","journalCollapse","trackerCollapse","trackerTotals","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","editHide","journalCollapse","trackerCollapse","trackerTotals","ammoSpent","ammoFight"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */
@@ -157,6 +157,9 @@ function migrate(s){
   /* a marker only in Turns mode, and never on a dead row (final review m1) */
   base.combatTurn=base.initMode!=="turns"?"":base.combatants.some(r=>r.id===s.combatTurn&&!combatantDead(r))?String(s.combatTurn):initFirstAlive(base.combatants);
   base.initShowRolls=s.initShowRolls!==false;
+  /* #47: the inventory log */
+  base.invLogSize=INV_LOG_SIZES.indexOf(num(s.invLogSize))>=0?num(s.invLogSize):500;
+  base.invLog=cleanInvLog(s.invLog,base.invLogSize);
   migrateSheet103(base);
   return base;
 }

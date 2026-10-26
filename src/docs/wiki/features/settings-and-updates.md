@@ -44,7 +44,7 @@ and actions are buttons.
 | Page | Groups and settings |
 |---|---|
 | **Appearance** | *Look:* skin (changing it with a character open also sets its `system`), mode (system/light/dark), hand-drawn borders. *Interface:* icon tabs, "Tap outside to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)) |
-| **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card. *Ammunition* (#104): "Ammo recovery" — Half (rules as written) / All / Hits only / None, writing `character.ammoRecovery`. *Tabs* (#52): one switch per word tab, writing `character.hiddenTabs` |
+| **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card. *Ammunition* (#104): "Ammo recovery" — Half (rules as written) / All / Hits only / None, writing `character.ammoRecovery`. *Inventory* (#47): "Inventory log size" — 100 / 250 / 500 / 1,000 / 2,500 (`INV_LOG_SIZES`), through `setInvLogSize()`, which writes `character.invLogSize` and trims `character.invLog` at once: a smaller size that would drop lines first asks "Keep the newest 100? This removes 2,400 older lines.", and declined, the size and the select stay as they were (see [Inventory](inventory.md)). *Tabs* (#52): one switch per word tab, writing `character.hiddenTabs` |
 | **Carrying** | Only with a character open, titled "For *name*". *Size and weight:* size (a dropdown), encumbrance (segmented: Off, Standard, Variant), coins count as weight, and the live "carrying X of Y" line (`encSettingsHint()`) |
 | **Rules data** | *Sources:* the URL list and its Add box, Fetch all, Import files, Get templates, Clear all (set apart), the status line. *Loaded data:* the loaded-data list. *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against |
 | **Backup** | *Characters:* the character library. *Settings file:* Export and Import, and the status line that says what an import did (`#setImpStatus`) |
@@ -309,3 +309,5 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-19 — "Ammo recovery"'s first choice reads Half (rules as written), as built. → ledger L6147, #104
 - 2026-10-25 — Sheet display gains a Tabs group: one switch per word tab, writing `character.hiddenTabs` via `setTabHidden()`. → ledger L6989, #52
 - 2026-10-25 — Final review fixes: the Tabs group's help moved to a `<p class="hint">` above the switches, the Journal row gained its own help, and the `[data-tabsw]` handler is described as per-button, not delegated. → ledger L7064, #52
+- 2026-10-25 — Sheet display gains an Inventory group: "Inventory log size", writing `character.invLogSize` and trimming the log at once. → ledger L7291, #47
+- 2026-10-25 — Lowering the log size asks first when it would drop lines. → ledger L7339, #47

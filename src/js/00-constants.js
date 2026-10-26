@@ -74,6 +74,7 @@ function blankChar(){
        fight's rows (cleared by combatEnd()), whose turn it is, and the two
        display settings. */
     party:[], combatants:[], combatTurn:"", initMode:"turns", initShowRolls:true,
+    invLog:[], invLogSize:500,
     size:"", encumbrance:"none", coinWeight:true, hpColor:true, hdStyle:"full", statStyle:"classic",
     /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
@@ -98,8 +99,10 @@ function blankChar(){
        weapon id -> {n, hits, misses, kind, snap}. `ammoInit` is NOT defaulted:
        the one-time pass sets it. `ammoRecovery` is the character's rule for what
        comes back (#104): half, all, hits or none; half is the rules as written
-       and what every sheet did before. */
-    ammoSpent:{}, ammoRecovery:"half",
+       and what every sheet did before. `ammoFight` is what a row's Recover
+       gave back during the current fight, per kind: kind -> {fired, back}, so
+       End combat's log line counts it (#47); End combat clears it. */
+    ammoSpent:{}, ammoRecovery:"half", ammoFight:{},
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);

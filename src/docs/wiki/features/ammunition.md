@@ -7,7 +7,8 @@ is its count.
 
 **Code:** `ammoKindOf()`, `itemAmmo()`, `weaponAmmoKind()`, `ammoRepairDef()`, `ammoStacks()`, `loadedStack()`,
 `unpackAmmo()`, `ammoTable()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `ammoRecordShot()`,
-`fireAmmo()`, `undoFire()`, `ammoRecoverable()`, `recoverAmmo()`, `undoRecovery()`, `grantSidLive()`,
+`fireAmmo()`, `undoFire()`, `ammoRecoverable()`, `ammoFightSummary()`, `ammoFightTotals()`,
+`ammoFightKeep()`, `ammoLogTitle()`, `recoverAmmo()`, `undoRecovery()`, `grantSidLive()`,
 `attackAmmo()`, `forgetAmmo()`, `forgetGrantAmmo()`, `ammoLineHTML()`, `thrownLineHTML()`,
 `ammoChoiceHTML()`, `fireWeapon()`, `throwWeaponTap()`, `throwAmmo()`, `shotDone()`, `undoFireTap()`,
 `openAmmoPicker()`, `loadAmmo()`, `recoverWeaponAmmo()`, `applyAmmoRecovery()`, `undoRecoveryTap()`,
@@ -188,6 +189,18 @@ ones included; when nothing came back the counts clear quietly, with no recovery
 The row's Recover still names its own kind (a thrown weapon's, its own entry), leaving the rest on
 record. See [Combat view](combat-view.md).
 
+**The fight's line in the inventory log (#47).** Before recovery touches the counts, End combat
+writes one `ammo` line per kind fired to the [inventory log](inventory.md) — "Arrows: 5 fired, 2
+recovered", then "Fight of 3 rounds", with the rounds, kind and both numbers in its `meta` — from
+`ammoFightTotals(c)`. That is `ammoFightSummary(c)`, which tallies every outstanding entry by kind
+as `ammoRecoverable()` does but keeps the kinds that give nothing back, plus `c.ammoFight`: a row's
+**Recover N** clears the counts it recovers, so during a fight `recoverWeaponAmmo()` keeps what it
+fired and gave back per kind there (`ammoFightKeep()`; nothing is kept outside a fight, where there
+is no fight line to count it in). End combat and `combatStart()` empty it. The line has no Undo of
+its own; the toast's Undo recovery takes End combat's own recovery back off the line's "recovered"
+(`undoRecoveryTap()`, handed the lines and what was recovered). A shot, and a row's Recover, is
+never logged on its own.
+
 **Forgetting a stack's count.** Deleting a stack takes its `ammoSpent` entry with it
 (`forgetAmmo()`): there is nothing left to recover into. Removing the class or background that
 granted a stack does the same, by the entry's own `snap.grant` rather than by id
@@ -333,3 +346,5 @@ Settled with Mike on 2026-10-17 and 2026-10-18 (#104); the full discussion is in
 - 2026-10-16 — A pack older than ammunition is filled in at load (`ammoRepairDef()`), and the sheet pass runs once more (`AMMO_PASS` 2). → ledger L5780, #96
 - 2026-10-19 — A per-character recovery rule (half/all/hits/none), an item's own override and the app's defaults, Hit/Miss tallies, Thrown weapons that throw themselves, recovery's record and Undo, and End combat recovering on its own. → ledger L6081, #104
 - 2026-10-19 — Final review: End combat retires every outstanding count; a thrown weapon's row reads its own entry; the editor's field follows the form's current weapon; only pack data marks a weapon Thrown. → ledger L6147, #104
+- 2026-10-25 — End combat writes one inventory-log line per kind fired, from `ammoFightSummary()`. → ledger L7291, #47
+- 2026-10-25 — A row's Recover counts in the fight's line (`ammoFight`, `ammoFightTotals()`), which reads "Fight of N rounds"; Undo recovery takes End combat's recovery back off it. → ledger L7339, #47

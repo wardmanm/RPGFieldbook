@@ -13,7 +13,7 @@ comes from keeping that loop lossless: a sheet saved by any version must still o
 `markCharChecked()` in `73-char-update-ui.js`; read-time guards `featCol()`, `invCol()`, `atkCol()`
 in `20-lists.js`, `encMode()` in `25-origins-items.js`,
 `noteMap()` in `87-notes.js`, `combatSectionsOf()` in `87-combat.js`,
-`cleanParty()`, `cleanCombatants()` (#91, in `migrate()`'s own cleaning block) in `87-initiative.js`, `chipList()`,
+`cleanParty()`, `cleanCombatants()` (#91, in `migrate()`'s own cleaning block) in `87-initiative.js`, `cleanInvLog()`, `INV_LOG_SIZES` (#47) in `67-trade.js`, `chipList()`,
 `advancementOf()` in `41-chips.js`; the #103 pass `migrateSheet103()`, `mergeNoteInto()`,
 `liftLanguages()` in `71-char-io.js`, `ensureDefaultLanguages()` in `41-chips.js` · **Tests:** `char-update.js`
 (the stamp is preserved and never advanced; unknown fields survive), `tables.js` (the round trip is
@@ -31,11 +31,11 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 |---|---|
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
-| lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers`, `party` `[{id, name, ac, maxHp}]` (#91, the Bio-tab roster), `combatants` `[{id, kind, name, init, ac, track, band, hp, maxHp, dead, partyId}]` (#91, always `[]` out of combat) |
+| lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers`, `party` `[{id, name, ac, maxHp}]` (#91, the Bio-tab roster), `combatants` `[{id, kind, name, init, ac, track, band, hp, maxHp, dead, partyId}]` (#91, always `[]` out of combat), `invLog` `[{id, at, kind, title, lines, undo, undone, meta}]` (#47, the inventory log, newest first) |
 | chip lists (#103) | `resists` `[{id, name}]`, `immunes` `[{id, name}]`, `senses` `[{id, name, range}]` (`range` whole feet or `""`), `languages` `[{id, name, src}]` (`src` `""` the player's, `race:…` / `bg:…` a grant, `system` a ruleset default) — all `[]` in `blankChar()` |
-| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0) |
+| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0), `ammoFight` (ammunition kind → `{fired, back}`: what a row's Recover gave back during the current fight, for End combat's log line; `{}` default, emptied at the start and end of a fight, #47) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
-| per-character settings | `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `combatTurn` (the acting combatant's id, `""` default, #91), `initMode` (`"turns"` or `"rounds"`, `"turns"` default, #91), `initShowRolls` (boolean, `true` default, #91), `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103), `hiddenTabs` (word tabs this character has switched off, `[]` default, cleaned by `migrate()`, #52) |
+| per-character settings | `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `combatTurn` (the acting combatant's id, `""` default, #91), `initMode` (`"turns"` or `"rounds"`, `"turns"` default, #91), `initShowRolls` (boolean, `true` default, #91), `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103), `hiddenTabs` (word tabs this character has switched off, `[]` default, cleaned by `migrate()`, #52), `invLogSize` (how many log lines to keep: 100, 250, 500, 1000 or 2500, `500` default, #47) |
 | retired, kept for old sheets | `hdStyle` (the three hit-dice looks) and `statStyle` (the By ability layout), both gone with #103; `migrate()` still carries them so an old save round-trips, nothing reads them |
 | text | `alignment` (on Bio since #103), `xp` (a number or digits with commas; anything else shows as typed), `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
 
@@ -84,6 +84,12 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    blank foe "Unnamed" and a blank party row "Party member". Both give a missing or repeated id a
    fresh one (`initFreshId()`). `combatTurn` is `""` in Rounds mode; in Turns mode it keeps its id
    only if that row exists and is alive, else the first living row.
+   Then the inventory log (#47): `invLogSize` keeps one of `INV_LOG_SIZES` or becomes `500`, and
+   `invLog` goes through `cleanInvLog()`, which drops a line that is not an object, has an unknown
+   `kind` or no `at`, forces each field's type (`lines` to `{dir, text}` with `dir` `+`, `-` or
+   `""`; `undo` to `null` unless its shape fits its kind — `invUndoShape()` — and `meta` to an
+   object or `{}`; `undone` to `true` only when it was), and keeps the newest `invLogSize` lines. A save from before #47 arrives with `[]` and `500`: nothing earlier
+   is logged. See [Inventory](../features/inventory.md).
 10. `migrateSheet103()` (#103) runs last. Each step is a no-op on a sheet that does not need it, so
    it is safe on every load:
    - the four chip lists go through `chipClean()` (a non-array reads `[]`, an entry that is not an
@@ -228,3 +234,5 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-10-25 — `hiddenTabs` joins the per-character settings, `[]` in `blankChar()`, cleaned by `cleanHiddenTabs()` in `migrate()` right before `migrateSheet103()`: per character, so a new character shows every tab. → ledger L6989, #52
 - 2026-10-25 — `party`, `combatants`, `combatTurn`, `initMode` and `initShowRolls` join `blankChar()` for the initiative tracker; `migrate()` cleans the first two through `cleanParty()`/`cleanCombatants()` right before `migrateSheet103()`. → ledger L7097, #91
 - 2026-10-25 — Cleaning the fight dedupes ids, names blank rows, and sets `combatTurn` only in Turns mode and never to a dead row. → ledger L7212, #91
+- 2026-10-25 — `invLog` and `invLogSize` join `blankChar()` for the inventory log; `migrate()` cleans them through `cleanInvLog()` after the fight's fields. → ledger L7291, #47
+- 2026-10-25 — `ammoFight` joins `blankChar()` (`{}`, coerced to an object by `migrate()`); `cleanInvLog()` drops an `undo` whose shape doesn't fit its kind. → ledger L7339, #47

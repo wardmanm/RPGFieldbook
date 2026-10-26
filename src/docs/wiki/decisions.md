@@ -98,6 +98,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Removing the first class while another remains** — The new first class takes its saving throws, under its own sid
 - **Stripping extra grants from multiclass characters saved earlier** — No: `migrate()` is untouched
 - **How a species or background grants languages (#103)** — Chips stamped with the grant's sid, removed with it; a choice is the player's to add
+- **What the inventory log records for a grant (#47)** — One line per source, no Undo
+- **What the log records when a source is removed (#47)** — One "Removed with *source*" line listing what left, no Undo
 
 ### [Computed stats & effects](architecture/computed-stats-and-effects.md)
 
@@ -280,6 +282,19 @@ When a page gains a Decisions row, add its line here under that page.
 - **Auto-detecting charges ("7 charges")** — No
 - **Coins: inline entry and Adjust** — Both
 - **Reading `"1 2"` in a coin box** — Rejected
+- **What the inventory log records (#47)** — Every item and coin change, one line each; one ammunition line per kind per fight
+- **Where the log lives (#47)** — A Log button on the Equipment card, opening a dialog
+- **How long the log is (#47)** — Per character, `invLogSize` 100 · 250 · 500 · 1,000 · 2,500, default 500
+- **What can be undone (#47)** — Any line that can still be reversed cleanly, with the reason when not; not grants nor ammo
+- **How far Use is undoable (#47)** — Always, from a copy kept at every Use (and every trade's give); refused only when nothing can give it back (an old line with no copy, or a uses-only Use whose row is gone or lost its uses)
+- **A row's Recover in the log (#47)** — Counted in that fight's End combat line; no line of its own
+- **Item-use pips in the log (#47)** — Not logged: they change uses, not quantity
+- **Lowering the log size (#47)** — Trims at once, asking first when lines would go
+- **A trade's balance (#47)** — Coins, plus item worth or cost on each side whose Apply item value switch is on
+- **A shortfall (#47)** — Shown and confirmed, never blocked
+- **The trade's layout (#47)** — Side by side above 700px; tabs and a ✓ button at 700px and under
+- **Other parties (#47)** — Free text with chips from the Party card and earlier trades
+- **A custom item's origin in a trade (#47)** — Custom, "traded from *who*"; library items get Traded
 
 ### [Armor & AC](features/armor-and-ac.md)
 

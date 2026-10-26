@@ -38,6 +38,7 @@
     "src/js/62-ammo.js",
     "src/js/65-resources.js",
     "src/js/66-coins-hp.js",
+    "src/js/67-trade.js",
     "src/js/70-persistence.js",
     "src/js/71-char-io.js",
     "src/js/72-char-update.js",

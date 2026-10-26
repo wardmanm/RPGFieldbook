@@ -39,7 +39,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 - [Class resources](features/class-resources.md) — resource trackers, the class-resources overlay, Superiority Dice
 - [Features & traits](features/features-and-traits.md) — the features list, feat uses and cost, favourites, search
 - [Spells](features/spells.md) — list and browser, prepared, slots, casting and upcast, Active Spells and rounds
-- [Inventory](features/inventory.md) — items, sections, origin and cost, the finder, weight, item uses, coins
+- [Inventory](features/inventory.md) — items, sections, origin and cost, the finder, weight, item uses, coins, the trade window and the inventory log
 - [Armor & AC](features/armor-and-ac.md) — `itemArmor()`, `armorAC()`, armor kinds, shields
 - [Story & notes](features/story-and-notes.md) — the Bio tab (once Story): bio fields, languages and senses; section notes and the Section Notes card
 - [Journal](features/journal.md) — the Journal tab: pages (tags, search, timestamps, tickable checklists) and trackers (counters, grouped by tag, with an optional total)

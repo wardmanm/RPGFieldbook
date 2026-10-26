@@ -476,14 +476,21 @@ function openItemForm(existing){
   const iOrig=document.getElementById("iOrigin"),iOrigD=document.getElementById("iOrigDet");
   if(iOrig)iOrig.addEventListener("change",()=>{const d=originDef(iOrig.value);
     if(iOrigD){iOrigD.disabled=!iOrig.value;if(!iOrig.value)iOrigD.value="";iOrigD.placeholder=(d&&d.ph)||"place, who, etc.";}});
-  document.getElementById("iSave").addEventListener("click",()=>{
-    if(groupFieldBlocked("iCategory"))return;
+  /* The record Save writes, read from the form as it stands. ONE function
+     (#47, final review I1): the baseline taken as the form opens and the record
+     at Save are built the same way, so an unchanged Save writes no log line
+     however many fields the form fills in on its own — a potion's healing read
+     from its description, armour's AC, a missing used or qty. Nothing in it may
+     depend on the clock: an origin with no date takes the form's opening time.
+     Returns {rec}, or {err} with what to tell the player. */
+  const openedAt=Date.now();
+  const readRec=()=>{
     const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:(v=>v===""?1:Math.max(0,num(v)))(String(document.getElementById("iQty").value).trim()),description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
     const so=invSectionName(document.getElementById("iCategory").value);if(so)rec.sectionOverride=so;
     if(it.category)rec.category=it.category;if(it.type)rec.type=it.type;
     const cv=document.getElementById("iCost").value;if(cv!==""&&fnum(cv)>=0)rec.cost=fnum(cv);
     const wv=document.getElementById("iWeight").value;if(wv!==""&&fnum(wv)>0)rec.weight=fnum(wv);
-    const ok=document.getElementById("iOrigin").value;if(ok)rec.origin={kind:ok,detail:document.getElementById("iOrigDet").value.trim(),at:(it.origin&&it.origin.at)||Date.now()};
+    const ok=document.getElementById("iOrigin").value;if(ok)rec.origin={kind:ok,detail:document.getElementById("iOrigDet").value.trim(),at:(it.origin&&it.origin.at)||openedAt};
     if(it.grant)rec.grant=it.grant;
     if(it.attackId)rec.attackId=it.attackId;
     /* rec is rebuilt from the form, so anything the form doesn't ask about has to
@@ -510,12 +517,12 @@ function openItemForm(existing){
     if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(wFrom&&wFrom.notes)||""};if(wFrom&&wFrom.atkMisc!=null)rec.weapon.atkMisc=wFrom.atkMisc;if(wFrom&&wFrom.dmgMisc!=null)rec.weapon.dmgMisc=wFrom.dmgMisc;}
     if(isWeapon&&dice&&rec.weapon){
       const wk=kindOf("iWAmmo","iWAmmoOther");
-      if(wk===null){alert("Name the kind of ammunition this weapon fires, or choose None.");return;}
+      if(wk===null)return {err:"Name the kind of ammunition this weapon fires, or choose None."};
       if(wk)rec.weapon.ammo=wk;
     }
     if(isAmmo){
       const k=kindOf("iAmmoKind","iAmmoKindOther");
-      if(!k){alert("Name the kind of ammunition, or untick Ammunition.");return;}
+      if(!k)return {err:"Name the kind of ammunition, or untick Ammunition."};
       const b=num(document.getElementById("iAmmoBonus").value);
       rec.ammo=b?{kind:k,bonus:b}:{kind:k};
     }
@@ -532,7 +539,7 @@ function openItemForm(existing){
     const um=Math.max(0,num(document.getElementById("iUses").value));
     if(um>0)rec.uses={max:um,per:document.getElementById("iUsesPer").value,used:Math.min(num(it.uses&&it.uses.used),um)};
     const heal=document.getElementById("iHeal").value.trim(), stName=document.getElementById("iStatus").value.trim();
-    if(heal&&!parseDiceExpr(heal)){alert(`“${heal}” isn't dice this app can roll. Try 2d4+2, 1d8, or a plain number.`);return;}
+    if(heal&&!parseDiceExpr(heal))return {err:`“${heal}” isn't dice this app can roll. Try 2d4+2, 1d8, or a plain number.`};
     if(heal||stName||consume){
       rec.use={};
       if(heal)rec.use.heal=heal;
@@ -544,8 +551,17 @@ function openItemForm(existing){
          straight back and clearing it could never stick. */
       rec.use={off:true};
     }
+    return {rec};
+  };
+  const base=readRec();
+  document.getElementById("iSave").addEventListener("click",()=>{
+    if(groupFieldBlocked("iCategory"))return;
+    const r=readRec();if(r.err){alert(r.err);return;}
+    const rec=r.rec,unchanged=!!existing&&!!base.rec&&invSame(base.rec,rec);
+    const was=invSnap(character.inventory.find(x=>x.id===it.id)||null);
     const i=character.inventory.findIndex(x=>x.id===it.id);if(i>=0)character.inventory[i]=rec;else character.inventory.push(rec);
     syncItemAttack(rec);
+    if(!unchanged)logItemSave(was,invSnap(character.inventory.find(x=>x.id===rec.id)));
     closeModal();renderInventory();renderAttacks();recompute();scheduleSave();
   });
 }
@@ -601,6 +617,10 @@ function addStatusByName(name){
    the status lands on another tab, so a silent apply leaves the player hunting
    for the change. */
 function applyItemUse(it,u,heal,note){
+  /* #47: a copy of the item, its attack and where both stood, every time —
+     Undo brings the copy back if the row has gone since (final review K1) */
+  const a0=(character.attacks||[]).find(a=>a.itemId===it.id)||null;
+  const snap0=invSnap(it),atk0=invSnap(a0),at0=character.inventory.indexOf(it),atkAt0=a0?character.attacks.indexOf(a0):null;
   const lines=[];
   if(heal>0){
     adjustHP(heal);renderHP();
@@ -624,6 +644,15 @@ function applyItemUse(it,u,heal,note){
       character.attacks=(character.attacks||[]).filter(a=>a.itemId!==it.id);
       lines.push("That was the last one — removed from your inventory");
     }else{it.qty=left;lines.push(`${left} left`);}
+  }
+  /* one log line, saying what is left — and none when the inventory didn't
+     move: healing or a status alone is not an item change (final review M4) */
+  if(u.consume||mx>0){
+    const said=[];
+    if(u.consume)said.push(`−1 · ${Math.max(0,itemQty(snap0)-1)} left`);
+    if(mx>0)said.push(`1 use · ${mx-num(it.uses.used)} of ${mx} left`);
+    logInv({kind:"use",title:"Used "+(it.name||"item"),lines:[{dir:"-",text:said.join(" · ")}],
+      undo:{id:it.id,qty:u.consume?1:0,used:mx>0?1:0,snap:snap0,atk:atk0,at:at0,atkAt:atkAt0}});
   }
   renderInventory();renderStatuses();renderAttacks();recompute();scheduleSave();
   restSummary("Used "+(it.name||"item"),lines.length?lines:["Nothing to apply — this item has no effect set."],"");
