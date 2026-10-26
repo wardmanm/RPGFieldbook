@@ -7,6 +7,9 @@ Updated: 2026-10-25 · Branch: main
 `1.9.1`-labelled issues filed 2026-10-25 wait for 1.9.1; #110 is on the backlog with no milestone. No branch open.
 
 ## Recent changes
+- 2026-10-25: Merged #47's follow-ups, as Mike decided them: inventory-log edit lines keep only what changed
+  (500 magic-item edits: 2.35M characters → 117k); coins you receive never make a trade red; grant lines that
+  moved gold also file under Coins; `--on-accent`, a readable text colour on every accent fill (lowest 4.8:1).
 - 2026-10-25: Merged #47, the trade window and inventory log:
   - Trade, opened from the Equipment card: give and get side by side (tabs on a phone), items and coins,
     the balance with optional item values, and Complete Trade as one step.
@@ -35,15 +38,6 @@ Updated: 2026-10-25 · Branch: main
 - 2026-10-22: Merged #99 and #53: the Rules tab is a browser over every loaded category.
 
 ## Pending decisions
-- **The inventory log's storage** (raised 2026-10-25, at #47's final review). 500 lines take about
-  0.7–1 MB per character against a ~5 MB browser limit shared by all characters. Options: A edit lines
-  store only changed fields (−86–90%, Undo stays exact) / B A plus a 1,000-line cap / C leave it.
-  Blocks: nothing; it is on main.
-- **Selling above an item's worth reads red "N short"** in the trade window (raised 2026-10-25). The spec
-  says so; the mockup said selling never turns red. Options: keep / never red when selling.
-- **#47 small follow-ups** (raised 2026-10-25): an `--on-accent` colour token for text on accent buttons
-  (humblewood light log filter about 3.6:1; `.tbtn.primary` 2:1 in classic light); grant and "Removed
-  with" lines under the Coins filter when gold moved. Options: file / drop.
 - **End combat clears every outstanding ammunition count** (raised 2026-10-19, at #104's final
   review). Shots that give nothing back are spent at End combat, though Mike was earlier told they
   would stay on record. Options: keep / revert. Blocks: nothing; it is on main.
@@ -53,7 +47,7 @@ Updated: 2026-10-25 · Branch: main
   2026-10-19). Options: keep / restore it.
 
 ## Loose ends
-- 21 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
+- 22 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
 - Mike's device pass for #47, #91, #52, #101, #103, #97 and #99: touch, print, Safari and Firefox, and his own
   characters. Claude drove each at desktop and phone widths (`.claude/qa/`). Specific things to check:
   - #101: a long level card at phone width puts the HP step and Done below the fold;
