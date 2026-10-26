@@ -33,12 +33,7 @@ Updated: 2026-10-26 · Branch: main
 - 2026-10-25: Merged #52. Settings → Sheet display → Tabs hides Spells, Inventory, Bio, Journal or
   Rules per character. Sheet and the combat swords always show. A section note into a hidden tab
   brings it back with a toast.
-- 2026-10-24: Merged #101. Levelling up plays a rune-circle animation, then shows a card with what the
-  level gave and the HP roll on it (roll, type, or average). Paladin and Ranger slots round up (2024).
-  The multiclass note states the 13+ rule. A "don't stack" tag shows on Extra Attack and Unarmored
-  Defense (Claude's ruling: narrowed from every same-named feature).
-- 2026-10-24: Merged #103, the Sheet makeover: Foundry-style header, dark rail, chips, Story renamed Bio, Attacks
-  moved to Inventory, the ☰ menu retired (Mike), a back-to-top button.
+- 2026-10-24: Merged #101 (level-up animation and card) and #103 (the Sheet makeover).
 
 ## Pending decisions
 - **End combat clears every outstanding ammunition count** (raised 2026-10-19, at #104's final
