@@ -209,7 +209,7 @@ function keyOf(x,kind){if(!x||typeof x!=="object")return "";return kind==="subcl
 /* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules.
    Where it came from is stamped on every entry: `_file` for a file import, `_url`
    (the source URL from Settings, not an include under it) for a fetch. `_url` is
-   what lets the next Fetch all replace exactly what that source loaded before. */
+   what lets that source's next Fetch replace exactly what it loaded before. */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
 /* A pack's licence and credit (#83), kept per source LABEL like `requires`, for
    Settings → Credits & licences: null when it states neither. Plain strings,
@@ -293,8 +293,8 @@ function mergeRules(obj,fileName,url){
    Each run of consecutive entries that share their provenance is merged as one
    pack, with that provenance handed back in the fields mergeRules reads
    (`system`, `rulebook`, `dataVersion`, `excludeSystems`, `requires`, the file
-   name or URL). So the loaded-data list, the version badges and Fetch all's
-   `_url` replacement come back as they were, and so does the order within each
+   name or URL). So the loaded-data list, the version badges and a plain source's
+   Fetch `_url` replacement come back as they were, and so does the order within each
    category, which name lookups take the first match from.
 
    What survives is mergeRules' decision, not this function's: only a
@@ -437,7 +437,7 @@ function applyFetchedSource(url,packs){
   prunePackMeta();reindexRules();recomputeDups();
   return skipped;
 }
-/* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
+/* Settings → Extensions → a plain source's Fetch (Fetch all until #102). Fetching NEVER loses what is loaded (#65): this used to
    resetRules() first, which discarded every pack imported from a file, and when
    the fetch then failed it cached the empty pool over the good one.
 
@@ -608,8 +608,10 @@ function rulesImportStatus(msg,cls,opts){
   if(t&&!document.getElementById("rulesStatus")&&!(h&&h.offsetParent!==null))
     toast(typeof t==="string"?t:msg,null,{err:!!opts.err,long:!!opts.long});
 }
-/* Settings → Import files, the home screen's import and the Rules tab's two:
-   read every file as bytes, import, save the cache, and say what happened.
+/* The old Settings → Import files, kept for the suites: since #102 every
+   picker (Manual install, the home screen's import and the Rules tab's two)
+   goes through manualInstallFiles() and the install plan instead. It reads
+   every file as bytes, imports, saves the cache, and says what happened.
    A save that does not land is said on the same line (the storage rule).
    Resolves to {msg, cls} once the save has landed or failed, for the suites. */
 function importRulesFiles(files){

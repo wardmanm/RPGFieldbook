@@ -13,7 +13,7 @@ function updRowHTML(r,i){
 }
 function openUpdateReview(){
   const {rows,anyRules}=diffCharacter();
-  if(!anyRules){openModal("Check for updates",`<p class="hint">No rules packs are loaded, so there's nothing to compare against. Import a pack from Settings first.</p>`);return;}
+  if(!anyRules){openModal("Check for updates",`<p class="hint">No rules packs are loaded, so there's nothing to compare against. Install one from Settings → Extensions first.</p>`);return;}
   const actionable=rows.filter(r=>r.type==="changed"||r.type==="added");
   if(!rows.length){
     markCharChecked();
@@ -97,8 +97,8 @@ function commitUpdates(picked,offered){
   openModal("Save the backup as a file?",`
     <p>Nothing has been changed yet. A backup couldn't be kept in the app because ${esc(res.error)}.</p>
     <p>Fieldbook can download it as a file instead, then carry on with the update.</p>
-    <p class="hint">Your rules packs are what usually fills storage. Settings → Rules data → <b>Clear all</b>
-      frees the most space; your characters aren't affected and you can re-import the packs afterwards.</p>
+    <p class="hint">Your rules packs are what usually fills storage. Settings → Extensions → <b>Remove all</b>
+      frees the most space; your characters aren't affected and you can install the packs again afterwards.</p>
     <div class="m-actions" style="flex-wrap:wrap;gap:8px">
       <button class="tbtn" id="bakCancel" type="button">Cancel</button>
       <button class="tbtn primary" id="bakDl" type="button">Download backup and update</button>

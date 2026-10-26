@@ -249,7 +249,7 @@ X.saveRulesCache();
   const w=X.rulesCacheWarning();
   ck('a refused write is REPORTED, not swallowed', w!=='', w);
   ck('the warning says it will not survive a reload', /next time|reload/i.test(w), w);
-  ck('the warning says what to do about it', /unload|re-import/i.test(w), w);
+  ck('the warning says what to do about it', /remove a pack|install them again/i.test(w), w);
   ck('the warning quotes a size in bytes, not characters', /\d+\s*(KB|MB)/.test(w), w);
   ck('the warning reaches the loaded-data list in red', /status err/.test(X.rulesDataHTML()));
   // the pool itself is untouched — this is a save failure, not a load failure

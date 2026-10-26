@@ -1,7 +1,8 @@
 function classSummary(d){const bits=[];if(d.hitDie)bits.push("Hit die "+d.hitDie);if(d.spellcasting)bits.push("Spellcasting "+d.spellcasting.toUpperCase());if(d.savingThrows)bits.push("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/"));return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
-/* The Class card's pointer to Settings → Rules, which went with the card
-   (#103): + Class is now the way in for a sheet with no class. */
-const NO_RULES_HINT=`Load a rules pack with <b>races</b> and <b>classes</b> (Settings → Rules) to auto-apply traits and stats. Custom names work too, without auto data.`;
+/* The Class card's pointer to Settings → Extensions (Rules data until #102),
+   which went with the card (#103): + Class is now the way in for a sheet with
+   no class. */
+const NO_RULES_HINT=`Load a rules pack with <b>races</b> and <b>classes</b> (Settings → Extensions) to auto-apply traits and stats. Custom names work too, without auto data.`;
 function openAddClass(){
   const list=rules.classes||[];
   openModal("Add class",`

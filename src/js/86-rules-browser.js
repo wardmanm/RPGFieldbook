@@ -297,7 +297,7 @@ function rbPaintBody(it){
 function renderRulesBrowser(){
   const empty=document.getElementById("rbEmpty");
   if(empty)empty.innerHTML=RULE_CATS.some(c=>(rules[c]||[]).length)?"":
-    `<div class="empty" style="line-height:1.7">No rules pack loaded yet. <button class="linkbtn" id="rbImport">Import rules files</button> to add classes, spells, feats, items and more, or manage sources in Settings.</div>`;
+    `<div class="empty" style="line-height:1.7">No rules pack loaded yet. <button class="linkbtn" id="rbImport">Import rules files</button> to add classes, spells, feats, items and more, or install them from Settings → Extensions.</div>`;
   const card=document.getElementById("rbCard");if(card&&card.dataset)card.dataset.screen=rbUI.screen;
   const shown=rbShown(),k=rulesCatOf(settings,shown);
   rbPaintSide(shown,k);

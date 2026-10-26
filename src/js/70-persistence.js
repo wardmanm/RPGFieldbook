@@ -314,7 +314,7 @@ function saveRulesCache(){
          used to be invisible. */
       rulesCacheError="Your browser wouldn't save the "+cacheBytes(json.length)+
         " of rules data you have loaded, so it won't be there next time you open Fieldbook. "+
-        "Unload a pack you're not using under Loaded data, or re-import them after each reload.";
+        "Remove a pack you're not using in Settings → Extensions, or install them again after each reload.";
     }
     return rulesCacheError;
   };
