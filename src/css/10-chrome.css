@@ -76,15 +76,18 @@ body.saving-failed .to-top{bottom:calc(130px + env(safe-area-inset-bottom))}
 .updpill{align-self:center;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--on-accent);background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
 .updpill:hover{filter:brightness(1.06)}
 /* a pill's ×: clears the notice until a newer version arrives (#102) */
-.updpill-x{align-self:center;min-width:32px;min-height:32px;padding:0;border:0;border-radius:999px;background:none;color:var(--ink-soft);font-size:16px;line-height:1;cursor:pointer;margin-left:-8px}
+.updpill-x{position:relative;align-self:center;min-width:32px;min-height:32px;padding:0;border:0;border-radius:999px;background:none;color:var(--ink-soft);font-size:16px;line-height:1;cursor:pointer;margin-left:-8px}
 .updpill-x:hover{color:var(--accent)}
+/* a 32px glyph, a 44px target */
+.updpill-x::after{content:"";position:absolute;inset:-6px}
 .extpill{display:inline-flex;align-items:center;gap:10px;align-self:center}
 .extpill .updpill{animation:none}
 .extpill[hidden],.updpill-x[hidden]{display:none}
-/* A phone has no room for a notice and its × in the first row: the notices
-   take a row of their own under the buttons instead of pushing the save state
-   and Home onto a row apart from the buttons they sit beside */
-@media (max-width:480px){.extpill-long{display:none}#updatePill,#updatePillX,.extpill{order:5}}
+/* Up to 560px there's no room for a notice and its × in the first row: the
+   notices go after the buttons instead of pushing the save state and Home onto
+   a row apart from the buttons they sit beside (481–560px was still ragged at
+   480, #102 Task 6 fix round 1), and the Extensions pill reads "N updates" */
+@media (max-width:560px){.extpill-long{display:none}#updatePill,#updatePillX,.extpill{order:5}}
 @keyframes updpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}50%{box-shadow:0 0 0 4px transparent}}
 
 .tabbar{position:sticky;top:0;z-index:40;background:var(--paper-2);border-bottom:2px solid var(--line);

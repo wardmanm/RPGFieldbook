@@ -2320,8 +2320,8 @@ function block(html, needle, tag) {
   ck('Sheet display holds the card choices', on('secDisplay', ['swHpColor', 'swTrackers']));
   ck('#103 ...and the advancement choice and the familiars icon', on('secDisplay', ['segAdv', 'swFamiliars']));
   ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
-  ck('#102 Extensions is the extensions page, the file input and the sheet check',
-     /const secRules=extPageHTML\(\)\+/.test(sec('secRules')) && on('secRules', ['fileRules', 'btnCharUpdate']));
+  ck('#102 Extensions is the extensions page, its status line and the sheet check (no #fileRules)',
+     /const secRules=extPageHTML\(\)\+/.test(sec('secRules')) && on('secRules', ['rulesStatus', 'btnCharUpdate']) && !/fileRules/.test(src));
   ck('#102 the old source list, Fetch all, Get templates and Clear all are gone',
      !/srcList|newSrc|addSrc|btnFetchRules|btnImportRules|btnRulesTemplate|btnClearRules|id="rulesData"|renderSrcRows|downloadRulesTemplates/.test(src));
   ck('Backup holds the library and the settings file', on('secBackup', ['swHome', 'btnExportSettings', 'btnImportSettings', 'setImpStatus']));

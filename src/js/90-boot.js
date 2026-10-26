@@ -316,9 +316,9 @@ function wire(){
     if(!settings.dismissedUpdates||typeof settings.dismissedUpdates!=="object")settings.dismissedUpdates={};
     settings.dismissedUpdates.app=updateAvailable.ver;_pillSaved();
     const p=document.getElementById("updatePill");if(p)p.style.display="none";x.hidden=true;
-    const v=document.getElementById("btnVer");if(v)v.style.display="";});}
+    const v=document.getElementById("btnVer");if(v)v.style.display="";extPillFocusBack();});}
   {const g=document.getElementById("extPillGo");if(g)g.addEventListener("click",()=>{settings.setPage="extensions";openSettings();});}
-  {const x=document.getElementById("extPillX");if(x)x.addEventListener("click",()=>{dismissUpdates();_pillSaved();renderExtPill();});}
+  {const x=document.getElementById("extPillX");if(x)x.addEventListener("click",()=>{dismissUpdates();_pillSaved();renderExtPill();extPillFocusBack();});}
   renderExtPill();
   {const s=document.getElementById("sizeDisp");if(s){s.addEventListener("click",openSizePicker);
     s.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openSizePicker();}});}}

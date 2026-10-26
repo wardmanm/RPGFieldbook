@@ -26,6 +26,7 @@ const {X, ctx, state, bootError} = loadApp([
   'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
   'extPlanHTML', 'renderExtPill', 'showUpdatePill', 'openInstallPlan', 'manualInstallFiles', 'readDropped',
   'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap',
+  'rulesStatusText', 'extWireDrop', 'extManualPlan', 'extPillFocusBack', 'EXT_DROP_MAX',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 ctx.URL = URL;   // offerCandidate() resolves a pack's path against its source with it (#102)
@@ -369,7 +370,7 @@ section('Import files: the status lines', async () => {
 section('every rules picker takes a zip', () => {
   const src = ['src/fieldbook.template.html', 'src/html/40-rules.html', 'src/js/88-settings.js']
     .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
-  ['fileRules', 'homeRulesFiles', 'rbRulesFiles'].forEach(id => {
+  ['homeRulesFiles', 'rbRulesFiles'].forEach(id => {
     const m = new RegExp('id="' + id + '" accept="([^"]*)"').exec(src);
     const acc = m ? m[1].split(',') : [];
     ck('Review focus 4: ' + id + ' accepts .json, .zip, application/zip and application/x-zip-compressed',
@@ -1499,11 +1500,105 @@ section('#102 every rules file input goes through Manual install', () => {
   const tpl = fs.readFileSync(path.join(ROOT, 'src/fieldbook.template.html'), 'utf8');
   ['homeRulesFiles', 'rbRulesFiles'].forEach(id => ck('#102 ' + id + ' opens the plan through manualInstallFiles',
     new RegExp('getElementById\\("' + id + '"\\)\\.addEventListener\\("change",[^\\n]*manualInstallFiles\\(e\\.target\\.files\\)').test(boot)));
-  ck('#102 #fileRules opens the plan through manualInstallFiles, back to Settings', /getElementById\("fileRules"\)\.addEventListener\("change",[^\n]*manualInstallFiles\(e\.target\.files,\{back:"settings"\}\)/.test(setSrc));
+  ck('#102 fix 5: #fileRules is gone (Manual install has its own inputs)', !/fileRules/.test(setSrc));
   ck('#102 no file input imports straight past the plan', !/importRulesFiles\(e\.target\.files\)/.test(boot + setSrc));
   ck('#102 the top bar has the Extensions pill and both ×s',
     ['extPill', 'extPillGo', 'extPillX', 'updatePillX'].every(id => tpl.includes('id="' + id + '"')));
   ck('#102 the pills are wired', ['updatePillX', 'extPillGo', 'extPillX'].every(id => boot.includes('getElementById("' + id + '")')));
+});
+
+section('#102 Task 6 fix round 1', async () => {
+  const tick = () => new Promise(r => setImmediate(r));
+  const realGet = ctx.document.getElementById, realQSA = ctx.document.querySelectorAll;
+  const realRun = ctx.runInstall, realToast = ctx.toast, realPlan = ctx.openInstallPlan, realFR = ctx.FileReader, realSave = ctx.saveRulesCache;
+  const toasts = []; ctx.toast = (msg, a, o) => toasts.push(msg);
+  const cls = () => { const set = new Set(); return {add: c => set.add(c), remove: c => set.delete(c), contains: c => set.has(c)}; };
+  try {
+    // 1: no second install while one runs
+    X.resetRules();
+    const c = system => ({key: system + '|' + system + '.json', category: 'rules', system, file: system + '.json', title: system, version: '1.0.0',
+      minApp: '', sha256: '', size: 10, requires: [], origin: 'm1', manual: false, get: () => Promise.resolve(new Uint8Array())});
+    const lines = X.planInstall([c('P'), c('Q')]);
+    const go = fakeEl(), close = fakeEl(), status = fakeEl();
+    const boxes = lines.map((l, i) => fakeEl({checked: true, dataset: {planI: String(i)}}));
+    ctx.document.getElementById = id => ({planGo: go, planClose: close, planStatus: status})[id] || realGet(id);
+    ctx.document.querySelectorAll = sel => sel === '[data-plan-i]' ? boxes : realQSA(sel);
+    let release, runs = 0; ctx.runInstall = () => { runs++; return new Promise(r => { release = r; }); };
+    X.openInstallPlan(lines, {});
+    go.fire('click');
+    boxes[0].checked = false; boxes[0].fire('change');
+    ck('#102 fix 1: a checkbox change mid-install leaves Install disabled', go.disabled === true && lines[0].ticked === true && boxes[0].checked === true, [go.disabled, lines[0].ticked]);
+    ck('#102 fix 1: the ticks and Cancel are disabled while it runs', boxes.every(b => b.disabled === true) && close.disabled === true);
+    go.fire('click');
+    ck('#102 fix 1: a second press does not start a second install', runs === 1, runs);
+    release({ok: false, installed: [], error: {file: 'q.json', why: 'boom'}, saveErr: '', skipped: {}});
+    await tick();
+    ck('#102 fix 1: after a failure the ticks, Cancel and Install come back', go.disabled === false && close.disabled === false && boxes.every(b => b.disabled === false) && /q\.json/.test(status.textContent));
+    ctx.document.getElementById = realGet; ctx.document.querySelectorAll = realQSA; ctx.runInstall = realRun;
+    // 2: the home status line follows an install
+    const home = fakeEl({textContent: 'No rules loaded.'});
+    ctx.document.getElementById = id => id === 'homeRulesStatus' ? home : realGet(id);
+    ctx.saveRulesCache = () => Promise.resolve('');
+    const body = packJSON('Home', '1.0.0');
+    const r = await X.runInstall([{cand: {key: 'Home|home_full.json', category: 'rules', system: 'Home', file: 'home_full.json', title: 'Home', version: '1.0.0',
+      minApp: '', sha256: '', size: 1, requires: [], origin: 'manual', manual: true, get: () => Promise.resolve(new TextEncoder().encode(body))}, outcome: 'install', ticked: true, canTick: true}]);
+    ck('#102 fix 2: #homeRulesStatus says what is loaded after an install', r.ok && home.textContent === X.rulesStatusText() && /Home|1 spell/.test(home.textContent), home.textContent);
+    ctx.document.getElementById = realGet; ctx.saveRulesCache = realSave; X.resetRules(); X.settings.packOrigin = {};
+    // 6 + 7: the whole dialog takes a drop, wired once; a drop with nothing usable says so
+    const modal = fakeEl(), zone = fakeEl({classList: cls()});
+    ctx.document.getElementById = id => id === 'modal' ? modal : id === 'miDrop' ? zone : id === 'extPage' ? null : realGet(id);
+    X.extWireDrop(zone); X.extWireDrop(zone);
+    let prevented = 0; const ev = o => Object.assign({preventDefault: () => prevented++, target: {}}, o || {});
+    const n = modal.fire('dragover', ev()).length;
+    ck('#102 fix 6: the dialog catches a drag anywhere in it, wired once', n === 1 && prevented === 1 && zone.classList.contains('ext-dropping'), [n, prevented]);
+    toasts.length = 0;
+    modal.fire('drop', ev({dataTransfer: {items: [], files: [{name: 'photo.png', bytes: 'x'}]}}));
+    await tick(); await tick();
+    ck('#102 fix 6: a drop outside the box is still caught', prevented === 2 && !zone.classList.contains('ext-dropping'));
+    ck('#102 fix 7: a drop with no .json or .zip says so', toasts.includes('Nothing to install: drop rules packs (.json) or a data zip.'), toasts);
+    ctx.document.getElementById = id => id === 'modal' ? modal : (id === 'miDrop' || id === 'extPage') ? null : realGet(id);
+    prevented = 0; modal.fire('dragover', ev());
+    ck('#102 fix 6: with no drop zone open, a drag is left alone', prevented === 0);
+    ctx.document.getElementById = realGet;
+    // 7: a pick with nothing usable says so, and opens no plan
+    const planned = []; ctx.openInstallPlan = (l, o) => planned.push(l);
+    ctx.FileReader = class { readAsArrayBuffer(f) { const b = Buffer.from(f.bytes); this.result = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); this.onload(); } };
+    toasts.length = 0;
+    await X.manualInstallFiles([{name: 'photo.png', bytes: 'x'}, {name: 'notes.txt', bytes: 'y'}]);
+    ck('#102 fix 7: a pick with no .json or .zip says so', planned.length === 0 && toasts.includes('Nothing to install: drop rules packs (.json) or a data zip.'), toasts);
+    // 8: a folder read stops at 2,000 files, and the plan says what it skipped
+    const files = []; for (let i = 0; i < X.EXT_DROP_MAX + 3; i++) files.push({name: 'p' + i + '.json', bytes: '{'});
+    const fileEntry = f => ({isFile: true, isDirectory: false, name: f.name, file: cb => cb(f)});
+    const dir = {isFile: false, isDirectory: true, name: 'big', createReader: () => { let done = false; return {readEntries: cb => { const out = done ? [] : files.map(fileEntry).concat([fileEntry({name: 'a.png', bytes: 'x'})]); done = true; cb(out); }}; }};
+    const got = await X.readDropped({items: [{kind: 'file', webkitGetAsEntry: () => dir}], files: []});
+    ck('#102 fix 8: a folder read stops at 2,000 files', X.EXT_DROP_MAX === 2000 && got.length === 2000 && got.extra && got.extra.capped === 3 && got.extra.ignored === 1, [got.length, got.extra]);
+    const note = fakeEl();
+    ctx.document.getElementById = id => id === 'planStatus' ? note : realGet(id);
+    X.extManualPlan(got, {}, got.extra);
+    const said = note.inserted.join(' ');
+    ck('#102 fix 8: the plan says how many were skipped, not 2,000 sentences',
+      /Skipped big\/p0\.json: it isn(?:'|&#39;)t valid JSON\./.test(said) && /and 1,995 more couldn(?:'|&#39;)t be used/.test(said) &&
+      /1 file that isn(?:'|&#39;)t \.json or \.zip/.test(said) && /stopped at 2,000 files/i.test(said) && /3 more weren(?:'|&#39;)t read/.test(said), said);
+    ctx.document.getElementById = realGet;
+    // 9: focus after a pill's × goes to the version button, or Home
+    const ver = fakeEl({offsetParent: null}), homeBtn = fakeEl(); let focused = '';
+    ver.focus = () => { focused = 'ver'; }; homeBtn.focus = () => { focused = 'home'; };
+    ctx.document.getElementById = id => id === 'btnVer' ? ver : id === 'btnHome' ? homeBtn : realGet(id);
+    X.extPillFocusBack();
+    ck('#102 fix 9: with the version button hidden, focus goes Home', focused === 'home');
+    ver.offsetParent = {}; X.extPillFocusBack();
+    ck('#102 fix 9: with it showing, focus goes to the version button', focused === 'ver');
+  } finally {
+    ctx.document.getElementById = realGet; ctx.document.querySelectorAll = realQSA; ctx.runInstall = realRun; ctx.toast = realToast;
+    ctx.openInstallPlan = realPlan; ctx.FileReader = realFR; ctx.saveRulesCache = realSave;
+  }
+  // 3 + 4: the ×'s hit area, and the notice row up to 560px
+  const css = fs.readFileSync(path.join(ROOT, 'src/css/10-chrome.css'), 'utf8');
+  ck('#102 fix 3: the pill × has a 44px hit area', /\.updpill-x\{[^}]*position:relative/.test(css) && /\.updpill-x::after\{[^}]*inset:-6px/.test(css) && /\.updpill-x\{[^}]*min-width:32px[^}]*min-height:32px/.test(css));
+  ck('#102 fix 4: the notices take their own row up to 560px', /@media \(max-width:560px\)\{\.extpill-long\{display:none\}#updatePill,#updatePillX,\.extpill\{order:5\}\}/.test(css));
+  const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  ck('#102 fix 9: both ×s hand focus back', (boot.match(/extPillFocusBack\(\)/g) || []).length === 2);
+  X.resetRules();
 });
 
 // ---- add new sections above this line ----
