@@ -110,10 +110,13 @@ chip names the two spells and "Xanathar's Guide to Everything"; with every pack 
 | Where the verdict lives | Recomputed at render time from `rules`; only the declaration is stored | Computing it during merge: `mergeRules()` never runs at boot, so anything computed there would be lost on reload |
 | Where the pack's licence and credit live | `license` and `attribution` in `data/packs.json`, stamped into the bundle | The `_note`: never copied into the bundle, so no player ever saw it (L5082) |
 | Its `requires` once SRD 5.2 exists (#84, R7) | Left pointed at the 2024 pack for that release | Repointing it to the SRD pack right away: every name already resolved with either pack, so there was no behaviour to fix yet — #85 repoints it once the 2024 pack is about to go private (L5148, L5388) |
+| The "requires Xanathar's Guide to Everything" chip on the official manifest (#102, Mike 2026-10-26) | It stays. Homebrew depends on private content, so it is to move into the private repo, as separate work | Marking the group optional, or copying only class requirements into the manifest: either hides a real gap (L7513) |
 | Xanathar's group's `file` once it goes private (#85) | Dropped — the group names the book only | Keeping a `file` nothing public ever ships: `requiresStatusHTML()` already renders a `file`-less group as "— from `<pack>`", so pointing at a filename a player can never get would be the lie |
 
 ## Open
 
+- **Homebrew is to move into the private repo** (Mike, 2026-10-26), since it depends on Xanathar's
+  content. Separate work, not yet started.
 - **The Xanathar's spells cannot resolve publicly.** With only the public archive loaded, the chip
   names Cause Fear and Primal Savagery "from Xanathar's Guide to Everything", and no public file
   provides them; only the private suite can check that the names exist.
@@ -131,3 +134,4 @@ chip names the two spells and "Xanathar's Guide to Everything"; with every pack 
 - 2026-10-09 — `bundle()` moves to `tools/data-kit/fbdata.py` (Python), replacing the Node bundler. → ledger L5342, #85
 - 2026-10-09 — Its D&D group's `pack`/`file` repointed to `"SRD 5.2"`/`srd52_full.json`; Xanathar's group drops `file` and is named by the book alone. → ledger L5388, #85
 - 2026-10-09 — One of the two public packs; the Xanathar's names are checked in the private suite. → ledger L5426, #85
+- 2026-10-26 — The official manifest's "requires Xanathar's" chip stays; Homebrew is to move into the private repo as separate work. → ledger L7513, #102

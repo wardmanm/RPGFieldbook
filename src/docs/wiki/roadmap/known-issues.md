@@ -152,13 +152,9 @@ Known behaviour that is accepted for now.
   no `fetch` at all throws synchronously. Small simplifications (one shared newest-by-key helper, a
   size message keyed on the cap constant) wait for 2.0. → ledger L7428, and
   [Rules packs](../architecture/rules-packs.md)
-- **#102's release-tooling minors**: `release-files` has no `isfile` guard on its stale-file loop and
-  deletes before it writes; `./build.sh --release --no-zip` skips `releases/data/`;
-  `data-release.js`'s exit cleanup is unguarded; `data-kit.py`'s leak test reads the shared temp
-  folder. → ledger L7428, and [Data kit](../data/data-kit.md)
-- **The ≤560px notice row (#102), for Mike:** a third header row while a notice shows, or one
-  combined "↑ N" pill with a menu. The Task 6 reviewer recommends keeping the row. → ledger L7428,
-  and [Shell](../ui/shell.md)
+- **#102's release-tooling minors**: `release-files` deletes before it writes;
+  `./build.sh --release --no-zip` skips `releases/data/`; `data-kit.py`'s leak test reads the shared
+  temp folder. → ledger L7428, and [Data kit](../data/data-kit.md)
 Wanted, not yet done. Each needs work, not a source.
 
 - **Humblewood species have no size.** They all resolve to Medium (`charSize()`), but Jerbeen, Luma
@@ -527,3 +523,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-25 — #47's final review fixed the Log button's glyph and the potion's unchanged save; added the log's storage size, measured. → ledger L7339, #47
 - 2026-10-25 — Edit lines keep only what changed, so the log's storage entry narrows to one-copy lines; selling no longer reads short. → ledger L7401, #47
 - 2026-10-26 — Fixed and removed: a data update announced, never installed (#102 installs and updates packs from a manifest). Added: #102's deferred minors, its release-tooling minors and the ≤560px notice row. → ledger L7428, #102
+- 2026-10-26 — Removed: the ≤560px notice row (decided: it stays) and two release-tooling minors fixed in #102's final wave (`release-files`' `isfile` guard, `data-release.js`'s exit cleanup). → ledger L7513, #102

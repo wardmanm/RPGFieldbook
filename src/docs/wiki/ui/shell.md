@@ -348,6 +348,7 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 | Does `selectTab()` scroll? | No. The caller decides: the tab bar goes to the top, a note jump to its card | Scrolling inside it: a note jump would fight its own tab switch |
 | Where does the dismissal guard live? | `dismissModal()`, in front of the three user dismissals only | Inside `closeModal()`: every Done handler calls it and would have to answer its own prompt |
 | Which modals get a guard? | Only one that stands to lose something (the choice pickers) | A guard everywhere: for an ordinary form Escape is cancel and must stay instant |
+| Update notices on a phone (#102, Mike 2026-10-26) | At 560px and under, a showing notice takes its own header row after the buttons | One combined "↑ N" pill with a menu: one more tap to reach either notice, and a menu to build (L7513) |
 | Does a click outside close a dialog? (#106) | Only with Settings → Appearance → Tap outside to close dialogs, off by default, app-wide; and only a click pressed and let go on the backdrop | Always: a stray click, or a tap to put a phone's keyboard away, lost the form. Never: some players want it. Per character: it is how the app behaves, not the sheet |
 | Do × and Escape follow that setting? | No, they always close | Gating them: both are deliberate, and Escape is how a keyboard leaves a form |
 | Where a dismissed window's follow-up lives | With its guard, as `then`, cleared by every open and close | A module global: the old equipment queue outlived its window and fired after the next level-up (L3649) |
@@ -372,9 +373,7 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - **Two comments still describe the combat view's `inert`**, which went when the view became a tab
   (L3676): the focus comment above `modalTakeFocus()` and the one above `toast()`.
 - The tab bar is buttons with `aria-label`s, not an ARIA tablist.
-- **The phone notice row (#102), open for Mike:** a showing notice adds a third header row at
-  560px and under. The alternative is one combined "↑ N" pill with a menu; the Task 6 reviewer
-  recommends keeping the row. The app pill's × is 38×32 with a 44px target only to its right.
+- The app pill's × is 38×32 with a 44px target only to its right (#102).
 - More: [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -410,3 +409,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-25 — Final review fixes: `applyHiddenTabs()`'s redirect to the Sheet now scrolls to the top; corrected the Settings-flip repaint path and the hidden-tab guard's rationale. → ledger L7064, #52
 - 2026-10-25 — `openBrowse()` takes an `onClose`, run by Close only; the item finder's config is `itemBrowseCfg()`, shared with the trade window. → ledger L7291, #47
 - 2026-10-26 — The top bar gains the Extensions pill and a × on both pills, one auto margin on the save state, and a notice row after the buttons up to 560px; a dismissal guard returning `true` refuses outright; boot ends with the source check. → ledger L7428, #102
+- 2026-10-26 — The ≤560px notice row is decided (Mike): it stays; one combined pill was rejected. → ledger L7513, #102

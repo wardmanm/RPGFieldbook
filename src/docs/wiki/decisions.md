@@ -449,6 +449,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Does `selectTab()` scroll?** — No. The caller decides: the tab bar goes to the top, a note jump to its card
 - **Where does the dismissal guard live?** — `dismissModal()`, in front of the three user dismissals only
 - **Which modals get a guard?** — Only one that stands to lose something (the choice pickers)
+- **Update notices on a phone (#102, Mike 2026-10-26)** — At 560px and under, a showing notice takes its own header row after the buttons
 - **Does a click outside close a dialog? (#106)** — Only with Settings → Appearance → Tap outside to close dialogs, off by default; and only a click pressed and let go on the backdrop
 - **Do × and Escape follow that setting?** — No, they always close
 - **Where a dismissed window's follow-up lives** — With its guard, as `then`, cleared by every open and close
@@ -580,6 +581,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Matching a declared name** — Case-insensitive against everything loaded, whichever pack supplies it
 - **Where the verdict lives** — Recomputed at render time from `rules`; only the declaration is stored
 - **Where the pack's licence and credit live** — `license` and `attribution` in `data/packs.json`, stamped into the bundle
+- **The "requires Xanathar's Guide to Everything" chip on the official manifest (#102, Mike 2026-10-26)** — It stays. Homebrew depends on private content, so it is to move into the private repo, as separate work
 - **Its `requires` once SRD 5.2 exists (#84, R7)** — Left pointed at the 2024 pack for that release
 - **Xanathar's group's `file` once it goes private (#85)** — Dropped — the group names the book only
 

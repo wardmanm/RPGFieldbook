@@ -232,8 +232,10 @@ refused early when `Content-Length` is over the cap. The header is only a hint, 
 through its stream reader with a running byte count: past the cap (64 KB for a manifest, 32 MB
 for a pack file) the reader is cancelled, the request aborted and the fetch refused with the cap's
 message; the whole-body read (`arrayBuffer`) is used only where a response has no body stream, and its length is checked
-too. `addSource()` caps at 32 MB, since a plain source may be a whole pack; a manifest over 64 KB is
-still refused by `readManifest()`. A releases list that isn't a JSON list reads "GitHub's release
+too. `addSource()` caps at 32 MB, since a plain source may be a whole pack, and over it says "Its
+answer is larger than 32 MB."; a manifest over 64 KB is still refused by `readManifest()`. Every
+manifest string goes through `extText()`, which strips invisible format characters (`\p{Cf}`: bidi
+controls, zero-width characters, the BOM) before cutting it to its cap. A releases list that isn't a JSON list reads "GitHub's release
 list couldn't be read" on the official row. A source that fails keeps its last good
 manifest, and its row says "couldn't check: *reason*". At boot the check is quiet; a settings save it
 can't make is kept for the page to show (see [Storage](storage.md)).
@@ -510,3 +512,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-23 — A system pack may declare `defaultLanguages` and `advancement`, kept per label in null-prototype maps beside `requires` and `credits` and read per character's ruleset, with Common and the SRD table as fallbacks. → ledger L6633, #103
 - 2026-10-26 — Sources (official, manifest, plain) and one install pipeline: candidates, the plan, an all-or-nothing install checked by sha256; Manual install takes files, a folder or a zip; Fetch all becomes a plain source's own Fetch. → ledger L7428, #102
 - 2026-10-26 — `extFetchBytes()` counts the body stream and cancels past the cap, so the caps hold without `Content-Length`; `addSource()` is capped; a garbled GitHub release list gets a plain message. → ledger L7477, #102
+- 2026-10-26 — `extText()` strips invisible format characters from every manifest string; `addSource()`'s over-cap message no longer says the host couldn't be reached. → ledger L7513, #102

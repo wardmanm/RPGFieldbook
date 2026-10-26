@@ -482,6 +482,19 @@ above, the rulings made while building, what was deferred, and what is still ope
 18. **Folded into the fix wave:** the rules-schema limits (licence 64, `requires` 50), the
     `data-release.js` exit handler's cleanup in try/catch, a plain message for a garbled GitHub
     release list (M8), dotfiles ignored in `releases/data/` (M9), the `setCollapse` comment (M10).
+19. **`addSource()` caps its read at `EXT_FILE_MAX` (32 MB)**, amending Ruling 17: a plain source may be
+    a whole pack file (§4), far over 64 KB, while `readManifest()` still refuses a manifest over
+    64 KB. An over-cap answer reads "Its answer is larger than 32 MB.", not "couldn't be reached".
+20. **Invisible characters are stripped** (Mike, 2026-10-26). `extText()` removes every format
+    character (`\p{Cf}`: the bidi controls, zero-width characters, the BOM) before the cap, so every
+    manifest string — names, titles, summaries, descriptions, licences, attributions,
+    `requires[].pack` — is free of them. A name ending in U+202E had drawn "name (host)" with the host
+    reversed (`moc.buhtig.ws` as "sw.github.com"). `extSourceName()` and `extSourceHost()` strip
+    again at display time, for a name stored before the fix.
+21. **Homebrew's "requires Xanathar's Guide to Everything" chip stays** (Mike, 2026-10-26).
+    Homebrew depends on private content, so it is to move into the private repo, as separate work.
+22. **The ≤560px notice row stays** (Mike, 2026-10-26): a showing notice takes its own header row
+    on a phone, not one combined "↑ N" pill.
 
 ### Where the build differs from the text above
 
@@ -492,9 +505,9 @@ above, the rulings made while building, what was deferred, and what is still ope
   lists the releases itself (`extOfficialUrl()`), so a boot makes three GitHub API calls (M10).
 - **`dataUpdateHint()` stays** (§7), on the home screen's loaded-data list. On the Extensions page
   the "v*A* · v*B* out" chip shows only where no source offers the pack.
-- **`addSource()` caps its read at 32 MB, not 64 KB** (Ruling 17 said `EXT_MAN_MAX`). §4 lets a
+- **`addSource()` caps its read at 32 MB, not 64 KB** (Ruling 19, amending Ruling 17). §4 lets a
   plain source be a whole pack file, far over 64 KB; a manifest over 64 KB is still refused, by
-  `readManifest()`'s own byte check. Flagged for the controller.
+  `readManifest()`'s own byte check.
 - **A garbled release list** (not a JSON list) is "GitHub's release list couldn't be read" on the
   official row; a JSON object that isn't a list counts as garbled too.
 - **The top bar has one auto margin**, on the save state, so the version and both pills pack left.
@@ -533,7 +546,5 @@ above, the rulings made while building, what was deferred, and what is still ope
 
 ### Open for Mike
 
-- **The ≤560px update-notice row.** While a notice shows, a phone's header has a third row (the
-  pills after the buttons). The alternative is one combined "↑ N" pill with a menu. The Task 6
-  reviewer recommends keeping the row; see `.claude/qa/in-progress/102-extensions/`
-  (`102-t6-fix2-pills-390.png`, `102-after-pills-390-*.png`).
+Nothing. The ≤560px notice row and Homebrew's Xanathar's chip were decided on 2026-10-26 (Rulings
+21 and 22).

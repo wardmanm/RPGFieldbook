@@ -7509,3 +7509,36 @@ the exit handler under a preload whose `fs.rmSync` throws).
 
 Pages: [settings & updates](../wiki/features/settings-and-updates.md),
 [rules packs](../wiki/architecture/rules-packs.md), [data kit](../wiki/data/data-kit.md).
+
+## #102 bidi strip (2026-10-26)
+
+The re-review of the final fix wave found that a manifest name ending in U+202E (RIGHT-TO-LEFT
+OVERRIDE) made the browser draw "name (host)" with the host reversed: `moc.buhtig.ws` showed as
+"(sw.github.com)" on the row, the plan line and the Sources title (N1). Mike's call: strip invisible
+characters.
+
+- **`extText()` strips every format character, `\p{Cf}`, before the cap** (`extPlain()`,
+  `EXT_INVISIBLE`): the bidi controls U+200E/F, U+202A–202E, U+2066–2069 and U+061C, the zero-width
+  characters and the BOM. Every manifest string goes through it: name, titles (a title that falls
+  back to the system too), summaries, descriptions, licences, attributions, `requires[].pack`.
+  Letters, accents, emoji and right-to-left scripts are kept; an emoji joined by U+200D (ZWJ) splits
+  into its parts.
+- **`extSourceName()` and `extSourceHost()` strip again at display time**, so a manifest name saved
+  before this fix can't reverse the host either. `new URL().host` is already clean: an IDN comes back
+  as punycode, a zero-width character is dropped, and U+202E makes the URL invalid.
+- **N2:** `addSource()` over its cap says "Its answer is larger than 32 MB.", not "It couldn't be
+  reached: …" (the error carries `tooBig`).
+- **N3, the spec's As built:** Ruling 19 (`addSource()` at `EXT_FILE_MAX`) replaces "Flagged for the
+  controller"; Mike's three decisions are Rulings 20–22: strip invisible characters; Homebrew's
+  Xanathar's chip stays, and Homebrew moves into the private repo as separate work; the ≤560px notice
+  row stays. "Open for Mike" is empty. The wiki's open items for the notice row are closed, and
+  known issues drops the two release-tooling minors fixed in the last wave.
+
+Tests (data-archive): `extText()` strips U+200B, U+FEFF, U+2066 and U+202E, before the cap; accented,
+emoji, CJK and Hebrew text is kept; every manifest field is stripped; the reviewer's repro (name
+"Fieldbook public data ‮", URL `https://moc.buhtig.ws/m.json`) shows "(moc.buhtig.ws)" and no U+202E
+on the row, the plan line and Sources; a stored unstripped name; an IDN host is punycode; N2's wording.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md),
+[rules packs](../wiki/architecture/rules-packs.md), [shell](../wiki/ui/shell.md),
+[homebrew](../wiki/data/homebrew.md), [known issues](../wiki/roadmap/known-issues.md).

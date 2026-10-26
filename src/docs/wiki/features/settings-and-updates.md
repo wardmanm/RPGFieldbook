@@ -124,7 +124,10 @@ public data". `extSourceName()` gives every manifest source as "*name* (*host*)"
 its URL (`extSourceHost()`), wherever a source is named: the rows, the plan, the details' Source box,
 "Also from *source*" and Sources. Only the built-in official source reads the bare "Fieldbook public
 data". A plain source is named by its URL. Without signing, that host is the player's only sight of
-who is offering a file (#102 final review I2, Ruling 16).
+who is offering a file (#102 final review I2, Ruling 16). Invisible format characters are stripped
+from every manifest string (`extText()`) and again from the name and host at display time: a name
+ending in U+202E used to draw the host after it reversed, so `moc.buhtig.ws` read "sw.github.com"
+(#102 re-review N1, Mike's call).
 
 Every section folds from its header (`extSecHTML()`, `aria-expanded`), remembered in
 `settings.setCollapse` under `ext:<section>`. The status line, `#rulesStatus`, is a `role="status"`
@@ -380,9 +383,6 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
   and never "out" (see [Private data](../data/private-data.md)).
 - **Removing a source does not unload what it installed or fetched** (#102, by decision). Its packs
   stay until removed from their rows (see [Rules packs](../architecture/rules-packs.md)).
-- **The phone notice row is open for Mike** (#102): at 560px and under a showing notice adds a third
-  header row; the alternative is one combined "↑ N" pill with a menu. The Task 6 reviewer recommends
-  keeping the row.
 - The header comment of `30-version.js` still says to bump `APP_VERSION` and add a `CHANGELOG` entry on
   every change; the UPDATE_REPO comment still describes the badge linking to the release page.
 - The update check runs once per load.
@@ -425,3 +425,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-25 — Lowering the log size asks first when it would drop lines. → ledger L7339, #47
 - 2026-10-26 — Rules data becomes Extensions: sections per category and Sources, the details dialog, the install plan, Manual install, the Extensions pill and a × on both pills; Fetch all, Import files and Get templates go. → ledger L7428, #102
 - 2026-10-26 — Final review fixes: the Settings dot stays while any update is pending; a manifest source is named "*name* (*host*)" everywhere, and an update from a source that didn't install the pack says "update from" it. → ledger L7477, #102
+- 2026-10-26 — Invisible format characters are stripped from manifest text and from a source's name and host, so a bidi override can't reverse the host; the ≤560px notice row is decided, no longer open. → ledger L7513, #102
