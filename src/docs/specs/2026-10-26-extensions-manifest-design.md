@@ -1,7 +1,7 @@
 # Extensions and manifest installs: design
 
-**Status:** approved in conversation 2026-10-26, awaiting Mike's review of this written spec. It is in
-wave 3 of [1.9.0](../wiki/roadmap/1.9.0.md).
+**Status:** approved in conversation 2026-10-26, and built on `issue/102-extensions` the same day
+(see [As built](#as-built)). It is in wave 3 of [1.9.0](../wiki/roadmap/1.9.0.md).
 **Issue:** #102 (Data Pack Manifest Resolution). One branch, `issue/102-extensions`.
 **Mockups:** in `.superpowers/brainstorm/23506-1793015387/content/`:
 - `rules-data-layout.html`: the first comparison. It is superseded by the Extensions page;
@@ -423,3 +423,101 @@ Whatever it gets goes to the plan (§5). Dropping onto the Extensions page itsel
 - Installing a requirement without a confirm. The plan lists it; nothing installs unasked.
 - Signed manifests. The sha256 proves the file matches its manifest, not who wrote the manifest.
 - Automatic updates.
+
+## As built
+
+Built in seven tasks on `issue/102-extensions` (`3f1047d..`), each reviewed. The code is the truth;
+the wiki pages in §10 describe it. This section records where the build differs from the text
+above, the rulings made while building, what was deferred, and what is still open.
+
+### Rulings
+
+1. **`planInstall()`'s outcomes test** expects `same`, `older`, `blocked` and `unsupported`: the
+   plan's own test omitted the `older` line its input produced.
+2. **"requires Fieldbook *X*"** names `minApp` only when it is set and newer than this app; anything
+   else reads "requires a newer Fieldbook" (decision 20). One helper, `extTooNewWhy()`, serves the
+   row, the dialog and the plan.
+3. **`convertSources()` runs on every boot**, a first run with no stored settings included, so the
+   official source always exists (`foldLegacySettings()` in `boot()`).
+4. **Task 1's test scaffolding** was corrected (the registry path, direct subprocess calls for
+   `--registry`, the `minApp` assertion, a public licence on scratch packs). Test wording only.
+5. **A loaded pack with no readable `dataVersion`** reads as `update` against any versioned offer:
+   unversioned data predates #83, so the offer is the newer copy. Pinned by a test.
+6. **The old Rules-data source UI throwing mid-branch** after Task 3 was accepted: Task 5 deleted it,
+   and nothing shipped in between.
+7. **`runInstall()` is all or nothing through the merge too.** A per-key snapshot of `rules` (arrays
+   sliced, null-prototype maps copied into fresh null-prototype maps, never a JSON round trip) and of
+   `packOrigin` is restored when any `importPack()` throws.
+8. **The file timeout** is 30 s plus 1 s per 100 KB of the declared `size`. The whole fetch and body
+   are raced; `AbortController` aborts where it exists; a `Content-Length` over the cap is refused
+   early; a declared size over 32 MB is refused before fetching.
+9. **A settings save that fails at the boot check** is kept (`extSaveErrorText()`) and shown on the
+   Extensions page, quiet at boot but never lost.
+10. **Spec conformance fixes** in `89-extensions.js`: Replace anyway for an unversioned manual
+    candidate (§5), the newest offer wins a pull-in (§8), and the rest of Task 4's review minors,
+    except M10 (deferred, below).
+11. **Task 4 re-review follow-ups**, carried into Task 5: an unreadable folder manifest is reported;
+    the cross-origin hint only for a network `TypeError`, never a timeout or HTTP status; the save
+    error clears on any later successful save; an early `Content-Length` refusal aborts the download;
+    the page and plan show `runInstall()`'s `skipped`.
+12. **Task 5 review minors**: focus survives a repaint; the requirement button carries its file; the
+    unlisted-extension dialog has Close; chips get a row gap; `#rulesStatus` moves outside
+    `#extPage`. Minor 5, the player text still naming the removed UI, was fixed in Task 7
+    (`706e885`, and `docs/rules-schema.md`, `docs/README-converter.md`).
+13. **Task 6 review minors**: `#fileRules` removed (`importRulesFiles()` kept for the suites); drops
+    caught on the whole Manual install dialog; a toast when a drop holds no `.json` or `.zip`; a
+    folder read capped at 2,000 files, saying how many weren't read; focus to the version button or
+    Home after a pill's ×.
+14. **The plan can't be dismissed while it installs.** × and Escape do nothing and the status says
+    "Installing… please wait." (`setDismissGuard()` returning `true`): a dismissed install still
+    running and toasting later is more confusing than a wait bounded by the file timeout.
+
+### Where the build differs from the text above
+
+- **The plan has a `replace` outcome** (§5): a loaded pack with no readable version is replaced,
+  ticked; a candidate with no readable version is "Replace anyway", unticked.
+- **The plan's rows name their source** ("from QA Workshop", "from a file"), as §5 step 3 asks.
+- **`checkForDataUpdate()` does not hand its pick to the official source** (§7). The official source
+  lists the releases itself (`extOfficialUrl()`), so a boot makes three GitHub API calls (M10).
+- **`dataUpdateHint()` stays** (§7), on the home screen's loaded-data list. On the Extensions page
+  the "v*A* · v*B* out" chip shows only where no source offers the pack.
+- **The Settings dot follows the pill** (§6.2 says it shows while updates are pending): clearing the
+  pill also clears the dot, while the banner and rows still show the update.
+- **The top bar has one auto margin**, on the save state, so the version and both pills pack left.
+  **Up to 560px** the notices take a row after the buttons, and the Extensions pill reads "N
+  updates" there (§6.1 said 390px).
+- **Manual install** reads only `.json` and `.zip`, at most 2,000 files; its dialog has Close, and
+  the home screen's and Rules tab's pickers open the same plan. A dropped item with no entry is read
+  with `getAsFile()`.
+- **Requirement chips** follow §6.3 exactly in one helper: a button when offered, a link with a
+  `url`, else a dashed label. A row shows the "v… out"/stale chip only with no offer, and a pack no
+  manifest describes shows its contents ("1 spell · 3 classes").
+- **The status line** (`#rulesStatus`, a live region) sits outside `#extPage`; Add doesn't re-check
+  every source (it has already read the new manifest).
+- **The official source's switch repaints at once**, and switching it on checks it.
+
+### Deferred minors
+
+- **M10:** three unauthenticated GitHub API calls per boot, against a limit of 60 an hour; memoise
+  the release list.
+- **N5:** simplifications (a shared newest-by-key helper; a size message keyed on the cap constant; a
+  redundant `p&&`; an unneeded `_dups` copy); `extVerify()` doesn't compare the byte length with the
+  declared `size`; a page with no `fetch` throws synchronously.
+- **Task 3:** a plain source's URL is only checked to be non-empty (old relative sources by design;
+  it reaches only `fetch()`).
+- **Task 1:** `release-files`' stale-`*.json` loop has no `isfile` guard; it deletes then writes, not
+  atomically as `pack` does.
+- **Task 2:** `./build.sh --release --no-zip` skips `releases/data/` (the release skill always builds
+  the zips, and CI catches a missing folder); `data-release.js`'s exit handler's `fs.rmSync` is
+  unguarded, so a cleanup error after a successful release would exit 1; `data-kit.py`'s leak test
+  snapshots the shared temp folder, a narrow flake when two worktrees run the suite at once.
+- **Task 6, minor 10:** needs no fix.
+
+### Open for Mike
+
+- **The ≤560px update-notice row.** While a notice shows, a phone's header has a third row (the
+  pills after the buttons). The alternative is one combined "↑ N" pill with a menu. The Task 6
+  reviewer recommends keeping the row; see `.claude/qa/in-progress/102-extensions/`
+  (`102-t6-fix2-pills-390.png`, `102-after-pills-390-*.png`).
+- **The Settings dot after a ×** (above): keep it following the pill, or show it while any update is
+  pending, as §6.2 says.

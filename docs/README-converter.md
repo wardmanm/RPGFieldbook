@@ -76,9 +76,10 @@ python convert.py races      races.json                             -o races.jso
 - classes with no hit die (the TCE sidekicks) are skipped with a note instead of aborting the run.
 
 Output goes to the folder you name with `-o`, one file per category. `fbdata.py build` rolls such a
-folder into one pack inside a rules-data zip, which is the easy thing to import; you can also import
-any individual file via **Settings → Rules data → Import files**, or host them and add them as
-sources (a manifest with `include: [...]` also works). Keep what `all` writes to yourself: it is the
+folder into one pack inside a rules-data zip, which is the easy thing to import; you can also install
+any individual file, or the whole folder, via **Settings → Extensions → Manual install**, or host
+them and add them as sources (a manifest with `include: [...]` also works, and a `fieldbook-data.json`
+manifest gives you versions and updates: see rules-schema.md §8). Keep what `all` writes to yourself: it is the
 book's text.
 
 ## Supplements: one book at a time

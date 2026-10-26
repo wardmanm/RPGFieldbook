@@ -7424,3 +7424,52 @@ Mike's rulings on the three questions #47's final review left open, built on `is
 
 Pages: [inventory](../wiki/features/inventory.md), [theming & icons](../wiki/ui/theming-and-icons.md),
 [known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).
+
+## Extensions and manifest installs (#102, 2026-10-26)
+
+Fieldbook installs and updates packs from a **manifest**, and Settings → Rules data became
+**Extensions**. Built on `issue/102-extensions` in seven tasks. Spec
+`src/docs/specs/2026-10-26-extensions-manifest-design.md`, whose As built section lists every ruling
+and deferred minor.
+
+- **The manifest is format 2** of the data zip's `fieldbook-data.json`: per pack a `category`,
+  `title`, `summary` (≤140), `description` (≤4,000), `minApp`, `size`, `sha256` and `requires` (with
+  an optional http(s) `url`), at a path relative to the manifest; top-level `name` and `homepage`.
+  `fbdata.py pack` writes it; `validate` checks lengths, `minApp`, `size` and folders as well as
+  zips; the new `release-files` writes `releases/data/` (the manifest and the bundles, flat).
+  `data/packs.json` gains `name`, `homepage`, and per pack `summary` and `description`.
+- **The official source** is `releases/data/fieldbook-data.json` at the release tag on
+  raw.githubusercontent.com, which answers a `file://` page. `./build.sh --release` and
+  `data-release.js` (public registry only) write `releases/data/`; both workflows check it matches
+  the build and is public only.
+- **`89-extensions.js`**, the 38th JS fragment: `sha256Hex()` in JavaScript, `readManifest()` /
+  `extEntry()` (caps 64 KB, 1,000 packs, 32 MB a file; paths an allow-list of
+  `[A-Za-z0-9._-]` segments), `settings.sources` (official, manifest, plain) converted once from
+  `rulesSources`/`rulesUrl` by `convertSources()` on every boot, `checkSources()` at boot (quiet,
+  skipped offline) and on Check now, `availableFor()`, `planInstall()` and the all-or-nothing
+  `runInstall()` (fetch and verify everything first; a merge throw restores a snapshot), the
+  Extensions page, the details dialog, the plan dialog, Manual install (files, a folder, a drop) and
+  the pills.
+- **The pills.** "Extensions · N updates" (N updates at ≤560px) opens Settings → Extensions; each
+  pill's × writes `settings.dismissedUpdates` and hides it until a newer version arrives. The app
+  update pill gets the same ×, under `dismissedUpdates.app`.
+- **Gone:** the Sources URL list, Fetch all (a plain source has its own Fetch), Import files, Get
+  templates (`downloadRulesTemplates()`), the Settings Loaded data list, `renderSrcRows()` and
+  `#fileRules`. Every file picker (home, the Rules tab, Manual install) goes through
+  `manualInstallFiles()` and the plan. `importRulesFiles()` stays for the suites.
+- **Player text** that named the removed UI now names Settings → Extensions, Remove all and Manual
+  install (`706e885`), and `docs/rules-schema.md` gains "Publishing extensions".
+- CLAUDE.md constraint 2 names the manifest checks and pack downloads among the allowed network
+  calls. Closes known-issues' "A data update is announced, never installed".
+
+Open for Mike: at ≤560px a showing notice takes a third header row; the alternative is one combined
+"↑ N" pill with a menu (the reviewer recommends keeping the row).
+
+Pages: [data archive](../wiki/architecture/data-archive.md),
+[rules packs](../wiki/architecture/rules-packs.md),
+[settings & updates](../wiki/features/settings-and-updates.md),
+[storage](../wiki/architecture/storage.md), [shell](../wiki/ui/shell.md),
+[data kit](../wiki/data/data-kit.md), [known issues](../wiki/roadmap/known-issues.md),
+[overview](../wiki/overview.md), [1.9.0](../wiki/roadmap/1.9.0.md),
+[building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md); and
+[RELEASING](../RELEASING.md).

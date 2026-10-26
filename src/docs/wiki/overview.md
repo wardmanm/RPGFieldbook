@@ -22,8 +22,9 @@ Two layers, joined at runtime:
 - **The rules packs** — `data/<dir>/*.json`, registered in `data/packs.json` and bundled by
   `fbdata.py bundle` into one `dist/<dir>_full.json` per pack. They ship together as one
   zip, the rules-data archive, which Fieldbook opens itself; the private repo releases its own,
-  privately. A player imports it, or single packs, in Settings or on the home screen (or fetches
-  packs from configured URLs); they are cached in IndexedDB. → [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md),
+  privately. Settings → Extensions installs and updates them from the built-in source (the
+  release's `releases/data/`) or any manifest URL, and Manual install takes the zip, a folder or
+  single packs (#102); they are cached in IndexedDB. → [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md),
   [Storage](architecture/storage.md)
 
 A **character** is created in one of two **systems**, `"dnd"` or `"humblewood"`, which also picks
@@ -75,8 +76,11 @@ dist/
                           archive in its data/ (gitignored)
   fieldbook-data-kit-<ver>.zip   the data kit: fbdata.py, convert.py and their inputs, flat
                           (gitignored)
+releases/data/            the official extension source: the release's manifest and packs, written
+                          by the release scripts, served at the tag by raw.githubusercontent.com
 data/
-  packs.json              the registry: every public pack's dir, file, title, version, digest, credit
+  packs.json              the registry: every public pack's dir, file, title, version, digest, credit,
+                          summary and description
   srd52/  homebrew/       per-category rules data — bundled into the packs, does not ship as-is
   overlay.json            hand-authored convert.py inputs; ship in the data kit zip, not the
   class-resources.json      archive, because they are not loadable packs
@@ -153,10 +157,10 @@ name says where its first function came from, not everything it holds: `migrate(
 | `87-initiative.js` | the initiative tracker: party, combatants, turns, bands, the strip and dialogs | [Combat view](features/combat-view.md), [Story & notes](features/story-and-notes.md) |
 | `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
 | `87-trackers.js` | the Trackers card: counters, grouped-tag tiles, totals, the close rule, `migrateTrackerPages()` | [Journal](features/journal.md) |
-| `88-settings.js` | the Settings modal, rules status, `dataStatus()`, pack credits (`rulesCreditsHTML()`) | [Settings & updates](features/settings-and-updates.md), [Data archive](architecture/data-archive.md) |
+| `88-settings.js` | the Settings modal, rules status, `dataStatus()`, pack credits (`rulesCreditsHTML()`), the settings conversion (`foldLegacySettings()`) | [Settings & updates](features/settings-and-updates.md), [Data archive](architecture/data-archive.md) |
 | `89-zip.js` | the zip reader: `readDataArchive()`, `inflateRaw()`, `zipEntries()` — pure | [Data archive](architecture/data-archive.md) |
-| `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, fetch and import of packs and zips (`importRulesPayloads()`, `importPack()`) | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
-| `89-extensions.js` | Extensions (#102): manifests, sources, the install pipeline, the Extensions page | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
+| `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, a plain source's fetch (`fetchAllRules()`), import of packs and zips (`importRulesPayloads()`, `importPack()`) | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
+| `89-extensions.js` | Extensions (#102): `sha256Hex()`, manifests (`readManifest()`), sources (`convertSources()`, `checkSources()`), offers, the plan and the all-or-nothing install (`planInstall()`, `runInstall()`), the Extensions page, the details, plan and Manual install dialogs, and the pills | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md), [Settings & updates](features/settings-and-updates.md) |
 | `90-boot.js` | `wire()`, `boot()` — always last | [Shell](ui/shell.md), [Build & source split](architecture/build-and-source-split.md) |
 | `00-tokens.css` | theme tokens, both skins, light/dark | [Theming & icons](ui/theming-and-icons.md) |
 | `10-chrome.css` | top bar and tabs | [Shell](ui/shell.md) |
@@ -184,6 +188,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | **registry** | `data/packs.json`: every pack's `system`, `dir`, `file`, `title`, `version`, content `digest` and optional `license` and `attribution`, plus `release`, the last release's version. Written only by `release.js` and `data-release.js`, through `fbdata.py` |
 | **data version** | A pack's own version, `X.Y.Z` (the data shipped with app X.Y.Z) or `X.Y.Z-N` (the Nth data-only release after it). Not semver: `1.8.0 < 1.8.0-1 < 1.8.1`. Compared with `cmpDataVer()`, never `cmpVer()`. A pack's `dataVersion` |
 | **data release** | A release of rules data with no app: tag `data-vX.Y.Z-N`, the archive as its only asset, never GitHub's "latest". Cut by `data-release.js`, published by `data-release.yml` |
+| **extension / source / manifest** | An *extension* is an installable pack, in a `category` (only `rules` today). A *source* is where Fieldbook finds them: the built-in official source, a manifest URL, or an old-style plain URL (`settings.sources`). A *manifest* is a `fieldbook-data.json`, format 2, listing packs with versions, sha256s and `minApp`. → [Rules packs](architecture/rules-packs.md) |
 | **rules-data archive** | `fieldbook-data-standalone-<release>.zip`: every public pack (SRD 5.2 and homebrew), the manifest `fieldbook-data.json` and `NOTICE.md`. Attached to every release and carried in the app zip; Fieldbook opens it itself |
 | **private data** | The 2024, Xanathar's, Tasha's and Humblewood packs, which carry book text and no open licence: in `wardmanm/RPGFieldbookPrivate`, reached as `_private-data`, released privately as `fieldbook-data-private-<ver>.zip`. → [Private data](data/private-data.md) |
 | **data kit** | `tools/data-kit/fbdata.py` and the converter, attached to each app release as `fieldbook-data-kit-<ver>.zip`; `fbdata.py build` turns a 5e-tools export into an archive Fieldbook opens. → [Data kit](data/data-kit.md) |
@@ -223,3 +228,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-24 — The ☰ section flyout is retired: the template and `40-sheet.js` rows of the code map, and the glossary's "section", drop it. → ledger L6804, #103
 - 2026-10-25 — `87-initiative.js` joins the code map (JS fragment count 35→36): the initiative tracker's party, combatants, turns, bands, the strip and dialogs, placed right after `87-combat.js`. → ledger L7097, #91
 - 2026-10-25 — `67-trade.js` joins the code map (JS fragment count 36→37): the inventory log, its undo and dialog, and the trade window, placed right after `66-coins-hp.js`. → ledger L7291, #47
+- 2026-10-26 — `89-extensions.js` joins the code map (JS fragment count 37→38), after `89-rules-merge.js`; the layout gains `releases/data/`; the glossary gains extension, source and manifest. → ledger L7428, #102

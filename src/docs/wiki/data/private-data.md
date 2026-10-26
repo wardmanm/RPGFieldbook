@@ -302,7 +302,7 @@ imports the public archive and then the private one resolves a shared table name
 | The public registry (R3) | Drops the four packs in the removal commit | Keeping them: installed apps would announce updates that never resolve |
 | How private packs are released (R4) | Data-only releases, `X.Y.Z-N`, `fieldbook-data-private-<ver>.zip`, through `data-release.js --registry` | A second version scheme: no app release ever bumps a private pack, so the existing one fits |
 | A pack the build has no baseline for (R5) | A quiet `vX` chip, the `known` state | Nothing: a v1.7.2 player's old packs would lose their version |
-| Shipped book quotes (R7) | Invented examples in `downloadRulesTemplates()`, README-converter and rules-schema | Allowlisting them: they ship to every player |
+| Shipped book quotes (R7) | Invented examples in the templates Get templates downloaded (removed in #102), README-converter and rules-schema | Allowlisting them: they ship to every player |
 | `srd-corrections.json`'s `find` strings (R8) | Kept, allowlisted; for Mike to confirm | Rewording them: they must match the dump's text to correct it |
 | Where the leak scan lives (R9) | The private repo, in Mike's local run and the private CI (push and nightly) | The public repo: it needs the private text |
 | Public tests (R10) | Same logic, no book content: SRD entries or invented fixtures; pack assertions move private | Skipping when the data is absent: CI would test nothing of them |

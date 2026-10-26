@@ -3,9 +3,11 @@
 Rules data ships as one zip, `fieldbook-data-standalone-<version>.zip`, and Fieldbook opens it
 itself, offline. Each pack in it has its own version, recorded with a digest of its content in the
 registry `data/packs.json`, so data can be released without the app: a data-only release
-(`data-v1.8.0-1`) publishes a new archive, and a running copy says quietly that it is out. This page
-covers the archive, the registry and versions, opening a zip, re-importing, pack credits, the
-notice, and both release paths. What the app does with a pack once it is loaded is
+(`data-v1.8.0-1`) publishes a new archive, and a running copy says quietly that it is out. The
+archive's manifest, `fieldbook-data.json`, is also the **extension manifest** (#102): the release
+commit carries it and the packs in `releases/data/`, which is where the app's built-in source
+installs and updates from. This page covers the archive, the manifest format, the registry and
+versions, opening a zip, re-importing, pack credits, the notice, and both release paths. What the app does with a pack once it is loaded is
 [Rules packs](rules-packs.md).
 
 **Code:** `crc32()`, `inflateRaw()`, `isZipBytes()`, `zipEntries()`, `zipEntryBytes()`,
@@ -14,17 +16,22 @@ notice, and both release paths. What the app does with a pack once it is loaded 
 `parseDataVer()`, `cmpDataVer()`, `dataVerOfTag()`, `dataVerBase()`, `pickDataRelease()`,
 `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js`; `dataStatus()`, `dataUpdateFor()`,
 `prunePackMeta()`, `rulesCreditsHTML()`, `rulesBadge()` in `88-settings.js`; `pack_digest()`,
-`changed_packs()`, `cmd_pack()`, `validate_archive()`, `bundle()`, `load_registry()` in
-`tools/data-kit/fbdata.py` · **Data:** `data/packs.json` · **Tests:** `data-archive.js`, `data-kit.py`,
+`changed_packs()`, `build_manifest()`, `cmd_pack()`, `cmd_release_files()`, `validate_archive()`, `bundle()`,
+`load_registry()` in `tools/data-kit/fbdata.py`; `readManifest()`, `extEntry()` in `89-extensions.js` ·
+**Data:** `data/packs.json`, `releases/data/` · **Tests:** `data-archive.js`, `data-kit.py`,
 `rules-data.js`, `docs.js` · **See also:** [Rules packs](rules-packs.md),
 [Settings & updates](../features/settings-and-updates.md), [Building & CI](../process/building-and-ci.md),
-[RELEASING](../../RELEASING.md), [the spec](../../specs/2026-10-07-data-archive-design.md)
+[RELEASING](../../RELEASING.md), [the spec](../../specs/2026-10-07-data-archive-design.md),
+[the extensions spec](../../specs/2026-10-26-extensions-manifest-design.md)
 
 ## How it works
 
 **The registry.** `data/packs.json` lists every pack: its `system`, the `dir` under `data/` it is
 built from, the bundle's `file` and `title`, its `version`, a `digest`, and optionally a `license`
-(an SPDX id) and an `attribution`. `release` is the version of the last release, app or data, and
+(an SPDX id) and an `attribution`, and since #102 a `summary` (≤140 characters) and a `description`
+(≤4,000, paragraphs split by a blank line), both plain text and written by hand like `title`, and
+optionally a `category` and `minApp`. The registry's own `name` and `homepage` name the source.
+`release` is the version of the last release, app or data, and
 names the archive. `fbdata.py bundle` reads it (`load_registry()`), so a bundle's `name`, `dataVersion`,
 `license` and `attribution` all come from here. A new pack is registered with `version: null` and no
 `digest`; its first release gives it both.
@@ -51,6 +58,39 @@ registry in its own checkout instead: that is how the private repo's packs are r
 `fieldbook-data-private-<ver>.zip` on the private repo only (see
 [Private data](../data/private-data.md)).
 
+**The manifest (format 2, #102).** `build_manifest()` writes it for both `pack` and
+`release-files`:
+
+```json
+{"_type": "fieldbook-data", "format": 2, "name": "Fieldbook public data",
+ "homepage": "https://github.com/wardmanm/RPGFieldbook", "version": "1.9.0", "builtFor": "1.9.0",
+ "packs": [{"file": "srd52_full.json", "category": "rules", "system": "SRD 5.2", "title": "SRD 5.2",
+            "summary": "…", "description": "…", "version": "1.9.0", "minApp": "…", "size": 973157,
+            "sha256": "…", "license": "CC-BY-4.0", "attribution": "…",
+            "requires": [{"pack": "…", "file": "…", "url": "https://…"}]}]}
+```
+
+`category` defaults to `rules`; `minApp` is written only when the registry gives one, and the app
+reads a missing one as the manifest's `builtFor`; `size` is the file's bytes; `requires` is copied
+from the bundle's own declaration (`pack`, `file`, and an http(s) `url`), so authors write it once.
+The app reads it with `readManifest()`: `_type` must be `fieldbook-data` with a `packs` list, at most
+64 KB and 1,000 packs (refused whole), and `extEntry()` drops any pack whose `file` is not a path of
+`[A-Za-z0-9._-]` segments ending in a `.json` name, or which has no `system` or no readable
+`version`. Text is cut to its limit (title 200, summary 140, description 4,000, attribution 2,000),
+a `url` that isn't http(s) becomes "", a `sha256` that isn't 64 hex characters becomes "", and two
+entries for one `system|file` keep the newer. A format-1 manifest reads the same way with the
+defaults; older apps ignore the new fields, and a manifest given to one as a loose file still merges
+nothing. The player-facing description, for anyone hosting their own packs, is
+[rules-schema](../../../../docs/rules-schema.md) "Publishing extensions".
+
+**`releases/data/`** is the official source (#102): `fieldbook-data.json` and every bundle, flat,
+committed with each public release so `raw.githubusercontent.com/<repo>/<tag>/releases/data/`
+serves them. `fbdata.py release-files` writes it (deleting the stale `.json` first) and validates it
+`--public`; `./build.sh --release` runs it, never a `+dev` build, and so does `data-release.js` for
+the public registry (never `--registry`, which has no public raw URL). `release.yml` and
+`data-release.yml` validate the folder `--public`, `cmp` each pack with the build's, and check its
+`version` is the registry's `release`.
+
 **The archive.** `fbdata.py pack` writes `fieldbook-data.json` (the manifest), `NOTICE.md` and the
 bundles — sorted, dated 1980-01-01, deflated at level 9 — and `fbdata.py validate`
 (`validate_archive()`) checks it. A build names it `+dev` when a digest is unreleased. The app zip
@@ -70,7 +110,10 @@ and every entry is CRC-checked before anything merges. One read budget covers th
 every entry it reads, nested archives included, counts against the 128 MiB cap, and is reserved
 before anything inflates.
 
-**Importing.** `importRulesPayloads()` takes bytes; a zip's packs are imported under their own file
+**Importing.** Since #102 a zip chosen or dropped goes through Manual install's plan: each pack in
+it is a candidate carrying its manifest entry, so a zip's packs are checked against their sha256
+like a source's (see [Rules packs](rules-packs.md)). `importRulesPayloads()`, the older direct
+path the suites still drive, takes bytes; a zip's packs are imported under their own file
 names, so rows and chips stay per pack. `importPack()` replaces what that file name and system
 loaded before, dropping entries the new copy no longer has. In a loose zip, JSON with no rules
 category — the converter's inputs in an old app zip — is skipped. A pack whose `importPack()` call
@@ -92,8 +135,11 @@ and pruned like `requires`, carried by settings files, and listed in Settings �
 `pickDataRelease()` takes the newest with an archive built for this app or an older one, and it
 reads that tag's `data/packs.json` from `raw.githubusercontent.com`, which answers a `file://` page
 with `access-control-allow-origin: *`. A loaded pack with the same system and file name and an older
-version shows a muted `vA · vB out`, a hint line links the release, and the Settings sidebar's Rules data
-tab shows a dot. Any failure is silent.
+version shows a muted `vA · vB out` (on the Extensions page only when no source offers that pack,
+since an offer says the same with an Update button), the home screen's hint line links the release,
+and the Settings sidebar's Extensions tab shows a dot. Any failure is silent. The official extension
+source picks its release the same way (`pickDataRelease()`) but makes its own call to the releases
+list.
 
 ## Rules that must hold
 
@@ -110,6 +156,11 @@ tab shows a dot. Any failure is silent.
 - **An inner zip is an archive or nothing.** One that isn't a Fieldbook archive is skipped, never
   read as loose JSON.
 - **Re-importing replaces by file name and system,** never by file name alone.
+- **`releases/data/` is the build's, byte for byte, and public only.** Only a real release writes
+  it; CI refuses a tag whose folder differs from the build or names another release.
+- **A manifest path is relative and allow-listed.** Never absolute, never `..`, only
+  `[A-Za-z0-9._-]` per segment, on both sides: `fbdata.py validate` refuses unsafe paths and the app
+  drops them.
 - **Credits are text,** shown through `esc()`. A licence longer than 64 characters is dropped, and an
   attribution is cut to 2,000.
 - **A public release may only carry an allowlisted licence** (`CC-BY-4.0`, `CC-BY-SA-3.0`, `MIT` —
@@ -147,6 +198,10 @@ tab shows a dot. Any failure is silent.
 | What says a pack changed | A digest of its content (canonical JSON) | `git diff` since the last tag: formatting-only changes bumped packs |
 | How a running copy learns of new data | The releases list plus the tag's registry; a quiet notice | Baked into the app: only a new app could announce new data |
 | Where digests are computed | Only `fbdata.py` | In Node and Python both: two implementations that must agree |
+| How the official files are served (#102) | `releases/data/` in the release commit, read from raw.githubusercontent.com at the tag | A `data-release` branch CI overwrites: not per tag. Building packs in the app from the fragments: a second bundler and digest in JavaScript would drift (L7428) |
+| A pack built for a newer app (#102) | Every pack has a `minApp`, defaulting to `builtFor`; one newer than the app is listed, never installed | Installing anyway: a data change can need app code that isn't there (L7428) |
+| Kinds of extension (#102) | Every pack has a `category`; only `rules` installs today | No category: 2.0 would need a second format (L7428) |
+| Descriptions (#102) | A `summary` of 140 characters for the row, a `description` of 4,000 for the details | One description: too long for a row or too short for a dialog (L7428) |
 | How a bundler change reaches the versions | `BUNDLE_FORMAT` in the digest, pinned by a fingerprint test (#86) | An escape hatch (`--force SYSTEM`): a manual step to remember on every bundler change |
 
 ## Open
@@ -170,3 +225,4 @@ tab shows a dot. Any failure is silent.
 - 2026-10-09 — The archive holds SRD 5.2 and homebrew only; `data-release.js --registry` cuts the private repo's releases. → ledger L5426, #85
 - 2026-10-12 — The digest covers `BUNDLE_FORMAT`, pinned by a fingerprint of the bundler's output; the old releases' asset deletion is deferred. → ledger L5627, #86
 - 2026-10-12 — The import toast drops the counts; a failure is an error toast that stays until tapped. → ledger L5648, #87
+- 2026-10-26 — The manifest is format 2 and doubles as the extension manifest; `release-files` writes `releases/data/` for each public release, and CI checks it. → ledger L7428, #102

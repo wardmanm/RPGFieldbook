@@ -66,7 +66,10 @@ for the zips, `zip`/`unzip` too; no network.
 that zip is not that release's data. `fbdata.py pack dist -o <archive>` writes it from the bundles
 the registry lists, and `fbdata.py validate` checks it: the manifest, every pack's SHA-256, `system`
 and `dataVersion`, and nothing in the zip but the manifest's packs and `NOTICE.md`. **An archive that
-fails validation is deleted**, and the build exits 1. What is inside, and why, is
+fails validation is deleted**, and the build exits 1. On a `--release` build whose archive is not
+`+dev`, `fbdata.py release-files dist -o releases/data` then writes the official extension source
+(#102): the manifest and every pack, flat, validated `--public`, for the release commit. A plain or
+`--no-zip` build never touches `releases/data/`. What is inside, and why, is
 [Data archive](../architecture/data-archive.md).
 
 **`./build.sh --data`** builds only this: it validates `data/**/*.json`, bundles, and packs and
@@ -178,13 +181,17 @@ changelog section plus `data-release-notes.js <v> --app`: what to download, whic
 `fieldbook-data-standalone-<v>.zip` and `fieldbook-data-kit-<v>.zip`, and it checks all four exist
 before publishing. **"Public assets only"** (#85, R13) then runs `fbdata.py validate --public` on
 the rules-data archive — refusing a pack whose licence isn't `CC-BY-4.0`/`CC-BY-SA-3.0`/`MIT` — and
-checks no asset's name, and no entry inside the app zip, contains `private`.
+checks no asset's name, and no entry inside the app zip, contains `private`. **"releases/data
+matches this build"** (#102) validates `releases/data/` `--public`, requires at least one pack, `cmp`s
+each with the pack the build just made in `dist/`, and checks the folder's manifest `version` is the
+registry's `release`: the official extension source must be exactly this release's public data.
 
 **`data-release.yml`** runs on a `data-vX.Y.Z-N` tag. In order, it checks: the tag's form;
 `data/packs.json`'s `release` is the tag's version; the tag's base is `APP_VERSION` at that commit (a
 data release is for the current app); `fbdata.py versions --check` (the recorded digests are
-current); the tests; `./build.sh --data`; and (#85) `fbdata.py validate --public` on the archive plus
-the same `private`-name check, since a data release is published too. It writes the body with
+current); the tests; `./build.sh --data`; the same `releases/data/` check (#102); and (#85)
+`fbdata.py validate --public` on the archive plus the same `private`-name check, since a data release
+is published too. It writes the body with
 `data-release-notes.js <v> --data` and publishes the archive alone with `--latest=false`. Its last
 step reads `releases/latest`: if that is not a `v…` tag, it re-marks the newest app release as latest
 and fails, because a data release marked latest hides app updates from every installed copy. Both
@@ -362,3 +369,4 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 - 2026-10-13 — The converter menu writes the private packs through `scripts/sync-private.py --write`, which holds their commands. → ledger L5724, #90
 - 2026-10-19 — `/release` and `/status`: a release skill with two gates (the exact version, then "publish"), and the session status log written on main. → ledger L6203, #108, #109
 - 2026-10-19 — Releases wait for Mike: `verify` → `publish` jobs, `publish` in the `release` environment; Claude Code ask rules on the release commands. → ledger L6226, #109
+- 2026-10-26 — Both release workflows check `releases/data/` against the build; `./build.sh --release` writes it. → ledger L7428, #102

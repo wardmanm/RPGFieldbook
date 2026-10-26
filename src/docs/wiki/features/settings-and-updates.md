@@ -1,11 +1,11 @@
 # Settings & updates
 
-The Settings modal (the cog in the top bar) and the app's two ways of saying what version you are
-on: the version button, which opens the in-app changelog, and the **update pill** that takes its place
-when GitHub has a newer release. Settings holds the look of the app, the open character's own
-options, the rules data — where it comes from, what is loaded, whether a loaded pack is older than
-this build expects, and whether a newer copy of it is out — backup of settings and rules, and the
-credits that the icons and the loaded packs require.
+The Settings modal (the cog in the top bar) and the app's ways of saying something newer is out: the
+version button, which opens the in-app changelog, the **update pill** that takes its place when
+GitHub has a newer release, and the **Extensions pill** when a source offers newer packs (#102).
+Settings holds the look of the app, the open character's own options, **Extensions** — the rules
+packs that are loaded or offered, where they come from, which have updates, and installing them —
+backup of settings and rules, and the credits that the icons and the loaded packs require.
 
 **Code:** `SET_PAGES`, `setPageOf()`, `setNavHTML()`, `setPageHTML()`, `setRowHTML()`, `tabsGroupHTML()` (#52), `rulesNavBadgeHTML()`, `openSettings()`, `encSettingsHint()`,
 `rulesStatusText()`, `updateRulesStatus()`, `refreshRulesUI()`, `loadedRulesGroups()`,
@@ -15,14 +15,20 @@ credits that the icons and the loaded packs require.
 `finishSettingsImport()`, `settingsImportStatus()` in `88-settings.js` ·
 `renderRulesData()`, `rulesDataHTML()`, `dataUpdateHint()`, `fetchAllRules()`, `fetchRulesFrom()`,
 `applyFetchedSource()`, `importRulesFiles()`, `poolFromExport()`,
-`requiresStatusHTML()` in `89-rules-merge.js` · `extPageHTML()`, `extRowHTML()`, `extSourcesHTML()`,
-`extDetailsHTML()`, `openExtDetails()`, `renderExtUI()`, `wireExtPage()` in `89-extensions.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
+`requiresStatusHTML()` in `89-rules-merge.js` · `extPageHTML()`, `extSecHTML()`, `extRowHTML()`, `extChipsHTML()`,
+`extReqChip()`, `extReqTap()`, `extSourcesHTML()`, `extDetailsHTML()`, `openExtDetails()`, `renderExtUI()`,
+`extFocusTargets()`, `wireExtPage()`, `extUpdateFromRows()`, `extPlanHTML()`, `extPlanRow()`, `openInstallPlan()`,
+`extInstalledText()`, `openManualInstall()`, `extManualPlan()`, `extSkippedNote()`, `extWireDrop()`, `extDropZone()`,
+`renderExtPill()`, `extPillCount()`, `dismissUpdates()`, `extPillFocusBack()`, `extTooNewWhy()` in
+`89-extensions.js` · `rulesUpdatePending()` in `88-settings.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
 `cmpDataVer()`, `checkForUpdate()`, `showUpdatePill()`, `updBannerHTML()`, `openChangelog()`,
 `pickDataRelease()`, `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js` ·
 `boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js` in
 `scripts/`; `bundle()` in `tools/data-kit/fbdata.py` · **Data:** `data/packs.json`
-· **Tests:** `rules-data.js` (the modal's ids both ways, the pages and their fallbacks, `dataStatus()`, Fetch all,
-the sidebar's Rules data badge, and Import settings driven through its real handler), `data-archive.js` (the
+· **Tests:** `rules-data.js` (the modal's ids both ways, the pages and their fallbacks, `dataStatus()`, a
+plain source's fetch, the sidebar's Extensions badge, the Extensions page's hooks, and Import settings
+driven through its real handler), `data-archive.js` (the #102 page, dialog, plan, Manual install and
+pill sections against a fake DOM and a stubbed network, every manifest string escaped, the
 `update` state, the hint line, the badge's suffix, `pickDataRelease()`, `dataUpdateFrom()`,
 `checkForDataUpdate()` against a stubbed network, and the credits list escaping hostile text),
 `char-update.js` (`cmpVer()`, `updBannerHTML()`) · **See also:**
@@ -47,14 +53,16 @@ and actions are buttons.
 | **Appearance** | *Look:* skin (changing it with a character open also sets its `system`), mode (system/light/dark), hand-drawn borders. *Interface:* icon tabs, "Tap outside to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)) |
 | **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card. *Ammunition* (#104): "Ammo recovery" — Half (rules as written) / All / Hits only / None, writing `character.ammoRecovery`. *Inventory* (#47): "Inventory log size" — 100 / 250 / 500 / 1,000 / 2,500 (`INV_LOG_SIZES`), through `setInvLogSize()`, which writes `character.invLogSize` and trims `character.invLog` at once: a smaller size that would drop lines first asks "Keep the newest 100? This removes 2,400 older lines.", and declined, the size and the select stay as they were (see [Inventory](inventory.md)). *Tabs* (#52): one switch per word tab, writing `character.hiddenTabs` |
 | **Carrying** | Only with a character open, titled "For *name*". *Size and weight:* size (a dropdown), encumbrance (segmented: Off, Standard, Variant), coins count as weight, and the live "carrying X of Y" line (`encSettingsHint()`) |
-| **Extensions** (Rules data until #102; a stored `setPage:"rules"` opens it) | The updates banner, *Rules data* (one row per loaded or offered pack, its own Remove all), *Unsupported*, *Sources* (with Add a source URL, Check now, Manual install…), the status line. *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against. The Sources list, Loaded data, Fetch all, Get templates and Clear all described below were removed in #102; Task 7 of #102 rewrites this page |
+| **Extensions** (Rules data until #102; a stored `setPage:"rules"` opens it) | The updates banner, *Rules data*, *Unsupported* (only when something is in it) and *Sources*, each a folding section (below); then the status line, and *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against |
 | **Backup** | *Characters:* the character library. *Settings file:* Export and Import, and the status line that says what an import did (`#setImpStatus`) |
 | **Credits** | The game-icons.net attribution CC BY 3.0 requires, in the app because `fieldbook.html` travels as a lone file (see [Theming & icons](../ui/theming-and-icons.md)); then "Rules data you have loaded" (`rulesCreditsHTML()`): each loaded pack that states a licence or a credit, as its title, its attribution and its licence. `CC-BY-4.0`, `CC-BY-SA-3.0` and `MIT` link to their licence pages; any other id is plain text; everything is escaped. The list is left out when no loaded pack has a credit. The credits come from `rules.credits` (see [Data archive](../architecture/data-archive.md)) |
 
 The sidebar lists Sheet display and Carrying under a "This character" caption, set apart from the
-rest. Rules data carries its entry count, and a dot while a newer copy of a loaded pack is out
-(`rulesNavBadgeHTML()`, whose count's tooltip is `rulesBadge()`); `renderRulesData()` redraws it, so
-it follows imports, fetches, removals, Clear all and the data check whichever page is showing. When
+rest. Extensions carries the entry count, and a dot while an update is pending
+(`rulesNavBadgeHTML()`, whose count's tooltip is `rulesBadge()`): `rulesUpdatePending()`, a loaded
+pack the data check calls `update`, or a source's update the Extensions pill still counts — so the
+pill's × clears the dot too. `renderRulesData()` and `renderExtUI()` redraw it, so it follows
+installs, fetches, removals, Remove all and both checks whichever page is showing. When
 Icon tabs is on (`html[data-tabs="icons"]`) or the screen is 640px wide or less, the sidebar is a
 52px rail of icons, each named for a screen reader and given a tooltip; on a narrow screen a
 segmented control or dropdown drops below its name while a switch stays beside it. Every switch is
@@ -62,7 +70,7 @@ segmented control or dropdown drops below its name while a switch stays beside i
 
 **The Tabs group (#52).** Sheet display's last group, only with a character open: a
 `<p class="hint">` ("Hide the tabs this character doesn't use. Sheet always shows.") opens the
-group's body, the way the Sources and Loaded data groups do (`88-settings.js:144, :150`), above
+group's body, the way the old Sources and Loaded data groups did before #102, above
 one `setRowHTML` switch per `HIDEABLE_TABS` entry (`tabsGroupHTML()`), labelled with the tab's own
 word — Spells, Inventory, Bio, Journal, Rules — on meaning shown. The Journal row carries its own
 help, "Also holds the Section Notes card.", since hiding Journal also hides that card and Trackers
@@ -83,32 +91,87 @@ height, 680px or nine-tenths of the screen if that is less, so a short page neve
 moves the sidebar, and the sidebar and the page each scroll on its own inside it (`.m-body` does
 not), so on a landscape phone every tab stays reachable.
 
-**Rules sources.** `settings.rulesSources` is a list of URLs, edited in place. **Fetch all** runs
-`fetchAllRules()`, which never loses what is loaded. It fetches each URL in turn
-(`cache:"no-store"`), following a manifest's `include` list relative to its URL (`fetchRulesFrom()`,
-cycle-guarded), and merges nothing until a source has arrived whole. Each source that did replaces
-the packs it loaded last time (`applyFetchedSource()`). One that failed keeps its previous packs, and
-files imported by hand are never touched. The status line says which: "Fetched.", "Fetched 1 of 2
-sources. Couldn't fetch b.json: HTTP 404, so what it loaded before is kept.", or, when nothing
-arrived, "Couldn't fetch … so nothing changed", with the pool and the cache left exactly as they
-were. Offline or CORS is the likely cause, so a failure suggests importing files. A cache save that
-is refused is reported on the same line. Nothing fetches on its own — only this button, and the
-sources hint says it needs a connection. The mechanics are in
-[Rules packs](../architecture/rules-packs.md). **Import files** takes `.json` files and zips
-(`importRulesFiles()`): each JSON file, and each pack inside a zip, is imported under its own file
-name, replacing what that file loaded before. The status line says "Reading N files…" at once, then
-names each zip with its pack count and data version, and each file that failed with the reason
-("Couldn't import 83-locked.zip: it's password-protected."), on the home screen's status line too
-(see [Data archive](../architecture/data-archive.md)); **Get templates** used to download a manifest
-and one example file per category (removed in #102); **Clear all** confirms, says characters are unaffected, and empties the
-pool. A legacy `settings.rulesUrl` is folded into the list at boot.
+**The Extensions page (#102).** `extPageHTML()` draws it, and `renderExtUI()` repaints it in place
+after anything changes, keeping a URL being typed and keyboard focus (`extFocusTargets()`: the same
+control by id or `data-ext-*` key, else Sources' URL box or the section's toggle). `wireExtPage()`
+binds one delegated click listener to each fresh `#extPage`. From the top:
 
-**Loaded data.** `rulesDataHTML()` (also shown in the home screen's setup) groups what is loaded by
-file or source under Rulebook, one heading per category, then Mixed. Each row carries a remove button
-and two status marks: `dataStatusHTML()` and, from `requiresStatusHTML()`, an "! N missing" chip when
-the pack refers to content that is not loaded (see [Rules packs](../architecture/rules-packs.md)).
-A red line above the list (`rulesCacheWarning()`) says when the last cache save failed, so a reload
-cannot quietly undo an import (see [Storage](../architecture/storage.md)).
+- **Warnings**, in red: a rules cache save that failed (`rulesCacheWarning()`), and a sources save the
+  boot check couldn't make ("Couldn't save your sources at the last check: …").
+- **The updates banner**, while any row is an update: "**2 updates** · SRD 5.2, Homebrew" and
+  **Update all**, which plans every update at once. The pill's × never hides it.
+- **Rules data**, with a count: one row per loaded pack (`loadedRulesGroups()`), then one per pack an
+  enabled source offers that isn't loaded (`extPackRows()`). A row has the pack's **name**, a button
+  that opens its details; the "v*A* · v*B* out" or amber stale chip (only where no source offers the
+  pack) and the red "! N missing" chip; its manifest `summary`, or for a pack no manifest describes,
+  its contents ("1 spell · 3 classes"); where it is from ("from *source*" when that source installed
+  it, "imported from a file · *file*", "fetched from a source URL", or "from *source* · not
+  installed"); its chips (below); its version, or "*have* → **new**"; **Update** or **Install**; and
+  a delete button for a loaded pack, which confirms with the entry count. The header's **Remove
+  all** is the old Clear all (`clearAllRules()`), shown while anything is loaded.
+- **Unsupported**, only when a source offers a pack of a category this app doesn't install: listed,
+  never installable.
+- **Sources**, with a count: Fieldbook public data, "built in · checked *time*", with its switch
+  (switching it on checks it); each manifest source by its manifest `name` or URL, "*host/path* ·
+  checked *time*" or, in red, "couldn't check: *reason*", with **Remove**; each plain source with
+  **Fetch** and **Remove**. Below: the URL box and **+ Add a source URL**, then **Check now** and
+  **Manual install…**. The header's **Remove all** removes every added source and switches the
+  official one off, after a confirm; installed packs stay.
+
+Every section folds from its header (`extSecHTML()`, `aria-expanded`), remembered in
+`settings.setCollapse` under `ext:<section>`. The status line, `#rulesStatus`, is a `role="status"`
+live region that sits outside `#extPage`, so a repaint never recreates it. It says what Add
+("Source added.", or why not), Check now ("Checking your sources…", then "Checked." or "Checked. 1
+source couldn't be checked; the row says why.", or offline "You're offline, so nothing was
+checked."), Remove and a failed save did.
+
+**Chips.** A blocked or unsupported pack shows "**requires Fieldbook *X***" when its `minApp` is newer
+than this app, else "requires a newer Fieldbook" (`extTooNewWhy()`, Ruling 2). A requirement that
+isn't loaded is a "**requires *X***" chip (`extReqChip()`): a button that opens *X*'s details when a
+source offers it (it carries the requirement's file, so a tap opens that file's offer), a link
+opening its `url` in a new tab when the requirement has one, or a dashed plain label. A tappable chip
+is small to see and 44px to tap.
+
+**The details dialog** (`openExtDetails()`, from a pack's name): "Rules data · *version* ·
+installed / not installed", the full `description` as escaped paragraphs (or the summary, or the
+contents line), the chips, a **Source** box (name, manifest, homepage as a link, last checked,
+licence and attribution; or "Imported from a file: *file*"), and **Also from this source**, each a
+button to its own details, a blocked one with its "requires Fieldbook" note. The foot has **Close**,
+back to Settings → Extensions, and **Update** or **Install** when that applies. A pack no longer
+listed says so, with Close.
+
+**The plan dialog** (`openInstallPlan()`). Every Update, Install and Update all, and Manual install,
+opens it over Settings: one row per line of `planInstall()` (see
+[Rules packs](../architecture/rules-packs.md)), each with a checkbox, the title, the versions
+("1.0.0 → 1.1.0"), the size, and "New / Update / Replace / Same version / Older than yours", any
+"needed by *X*" or "Replace anyway", and where it comes from ("from QA Workshop", "from a file"), or
+a blocked line's "requires Fieldbook" chip. Only install and update lines start ticked; **Install
+N** counts the ticks. With nothing installable it says so and offers only Close. While the install
+runs, the ticks, Cancel and Install are disabled and the dialog can't be dismissed: × and Escape do
+nothing, and the status says "Installing… please wait." (`setDismissGuard()` returning `true`,
+Ruling 14). A failure keeps the dialog, says "Nothing was installed: *file* — *reason*.", and
+re-enables it. Success toasts "Installed 2 packs" (with what was skipped, and a save error, which
+makes it an error toast that stays) and returns to Settings → Extensions.
+
+**Manual install** (`openManualInstall()`): one sentence of help, **Choose files** (json and zip,
+several), **Choose a folder** (`webkitdirectory`), a drop zone, and Close. Files, a zip or whole
+folders dropped on the dialog, or on the Extensions page while it shows (`extWireDrop()`, one
+listener on `#modal`, active only while a drop zone is on show), go the same way; the zone is
+outlined while something is dragged over. Only `.json` and `.zip` files are read, at most 2,000; the
+plan then notes, in red, the first five files it couldn't use and why, how many more, and how many
+weren't read. A drop holding none toasts "Nothing to install: drop rules packs (.json) or a data
+zip." The home screen's import button and the Rules tab's import links open the same plan.
+
+**The Extensions pill (#102).** `#extPill` in the top bar reads "**Extensions · N updates**" ("**N
+updates**" at 560px and under), N being `extPillCount()`: the update rows whose offered version is
+newer than the one the player cleared. It opens Settings → Extensions. Its **×**
+(`dismissUpdates()`) writes each update's offered version to `settings.dismissedUpdates` under
+`system|file` and hides it until a newer version arrives; a cleared value that isn't a readable
+version never hides anything. The page's rows, banner and Update all are unaffected.
+`renderExtPill()` runs at wire time, from the manifests saved at the last check, and after every
+repaint. Up to 560px, the notices move after the top bar's buttons, onto a row of their own (see
+[Shell](../ui/shell.md)). After either ×, focus goes to the version button if it shows, else Home
+(`extPillFocusBack()`), and a save that doesn't land toasts the error.
 
 **Pack badges.** `dataStatus(g)` compares the pack's `_dataVersion` (its `dataVersion`, stamped at
 merge by `mergeRules()`) with `cmpDataVer()`, first against `DATA_VERSIONS[source]` and then against
@@ -117,9 +180,10 @@ the newer-data check's copy of the same system and file name (`dataUpdateFor()`)
 - **stale** — older than `DATA_VERSIONS`: an amber "update available · v*X*" chip whose tooltip says
   to re-import from the latest release.
 - **update** — not stale, but a data release has a newer copy: a muted "v*A* · v*B* out", its
-  tooltip naming the data release. One hint line above the list, "Newer rules data is out: SRD 5.2
-  v1.8.0-1. Download it from the release page." (`dataUpdateHint()`), links the release, in
-  Settings and on the home screen, since both draw `rulesDataHTML()`.
+  tooltip naming the data release and saying to install it with Manual install. On the home screen
+  one hint line above the list, "Newer rules data is out: SRD 5.2 v1.8.0-1. Download it from the
+  release page." (`dataUpdateHint()`), links the release. On the Extensions page the chip shows only
+  where no source offers the pack, since an offer says the same with an Update button.
 - **current** — a quiet "v*X*".
 - **known** — a readable version, but no `DATA_VERSIONS` baseline for its system and no data-release
   copy to compare against: a private pack, or an old pack (XPHB, Humblewood, XGE, TCE) a build after
@@ -157,11 +221,12 @@ came. Then:
   `cmpDataVer()`, so `1.8.0-1` is older than `1.8.0-2`). It says
   characters are not affected either way.
 
-`finishSettingsImport()` applies the answer. It runs `foldLegacySettings()` (the first builds'
-`rulesUrl` joins `rulesSources`, as at boot), saves, and redraws what boot redraws after loading the
+`finishSettingsImport()` applies the answer. It runs `foldLegacySettings()` (`convertSources()`, as
+at boot: an old file's `rulesSources` and `rulesUrl` join the current sources as plain sources,
+while a newer file's `sources` replace them), saves, and redraws what boot redraws after loading the
 cache: `refreshRulesUI()`, `renderAll()` and `renderHome()`. Then it reopens Settings, which brings a
-fresh rules status line, Rules data badge and loaded-data list. What happened is written on the
-status line beside the Import button, because the rules status line sits on the Rules data page,
+fresh rules status line, Extensions badge and Extensions page. What happened is written on the
+status line beside the Import button, because the rules status line sits on the Extensions page,
 which is usually not the one showing. A refused settings write ("Settings imported for this session only:
 …") and a refused cache write both land on that line.
 
@@ -178,7 +243,13 @@ and `showUpdatePill()` hides `#btnVer` and shows `#updatePill` — "↑ v*X*", w
 on in its tooltip. The pill is a `<button>` that opens the same changelog, which then leads with
 `updBannerHTML()`: the new version and a Download link to the release page. The link is the
 response's `html_url` only when that is a `https://github.com/` page, and the repo's releases page
-otherwise, because it becomes an `<a href>`.
+otherwise, because it becomes an `<a href>`. The pill has a **×** (`#updatePillX`, #102): it stores
+the version in `settings.dismissedUpdates.app`, hides the pill and brings the version button back,
+and `showUpdatePill()` stays quiet for that version or an older one until a newer release arrives.
+
+**The source check** (#102), `checkSources({boot:true})`, is the last call in `boot()`: it reads
+every enabled source's manifest, quietly, and repaints the page and pill (see
+[Rules packs](../architecture/rules-packs.md)).
 
 **The newer-data check.** Right after it, `boot()` calls `checkForDataUpdate()`, which skips under
 the same two conditions. A data-only release is never GitHub's "latest", so `checkForUpdate()` never
@@ -196,7 +267,8 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - **Every page is built when the dialog opens; switching only shows one.** A control on a hidden
   page keeps its id and handler, and `renderRulesData()` refreshes the list and the badge behind any
   page. `settings.setPage` is read through `setPageOf()`, never trusted: a stored key that is not a
-  shown page opens Appearance. `settings.setCollapse`, the old fold state, is no longer read.
+  shown page opens Appearance, and a stored `rules` opens Extensions. Of `settings.setCollapse`,
+  only the Extensions page's `ext:` keys are read.
 - **The wide dialog keeps one height, and its two panes scroll apart.** A shorter page otherwise
   shrinks it, it re-centres, and the sidebar moves under the pointer between clicks; a sidebar that
   shares one scroller with the page was cut off on a landscape phone until the page reached its end.
@@ -217,8 +289,14 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - **Never hand-edit `APP_VERSION`, `DATA_VERSIONS`, `CHANGELOG`, or the versions, digests and
   `release` in `data/packs.json`**; `release.js` owns the first three, `release.js` and
   `data-release.js` the registry's, and `APP_VERSION` must only ever rise or the update check breaks.
-- **Fetch all never loses what is loaded**, and a run where nothing arrives says "nothing changed"
-  and writes neither the pool nor the cache. It is offline-first: failing is the expected case.
+- **A plain source's Fetch never loses what is loaded**, and a run where nothing arrives says
+  "nothing changed" and writes neither the pool nor the cache. It is offline-first: failing is the
+  expected case.
+- **Every manifest string is escaped where it is drawn,** and only an http(s) URL becomes a link
+  (`rules-data.js` and `data-archive.js` feed hostile text through the page and the dialog).
+- **A notice's × hides the notice, never the update.** The banner, the row's Update and Update all
+  stay; the notice comes back only for a newer version than the one cleared.
+- **The plan can't be dismissed while it installs,** and nothing in it can change.
 - **Import settings never replaces loaded rules unasked**, and the rules a settings file carries go
   through `mergeRules()` like every other load. A file with no readable rules never asks and never
   touches the pool or the cache. Dismissing the question changes nothing.
@@ -239,6 +317,12 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - **Import settings emptied the pool without a word** (#70). It ran `rules=p.rules`, so every pack
   imported or fetched since the export went, and a keyword with `name` for `term` went in raw and
   broke every render after. → L4134
+- **The phone header ran ragged** (#102). With the pills in the first row, a × pushed the save state
+  and Home onto a row apart from their buttons at 481–560px; up to 560px the notices now take a row
+  after the buttons. One auto margin, on the save state, keeps the version and pills packed left;
+  one per pill floated the Extensions pill mid-bar.
+- **A × that reached left took its pill's taps.** The 44px hit area extends right, up and down only,
+  since the pill it clears sits 2px to its left.
 - **The badge first needs a release newer than the app**, and an unauthenticated call to a private
   repo 404s, and the `r.ok` guard turns that into a silent no-op. → L527
 
@@ -264,6 +348,19 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 | A settings file with an empty pool | Treated as carrying no rules | Replacing with it: that silently unloads everything, which is Clear all's job and it confirms (L4134) |
 | Where an import's outcome is shown | A status line beside the Import button; from the Rules tab, where neither line shows, a toast without the counts, and an error toast that stays until tapped (#87) | The rules status line: it sits in the Rules data section, usually folded shut. A toast that hides on its own: a failed save must not vanish (L4134) |
 | How a newer data release is shown | Muted text on the row, one hint line above the list, a dot on the Settings sidebar's Rules data tab | The amber "update available" chip: that says the pack is behind the app it is loaded in, and a data release is optional (L5082) |
+| Where the update notice shows (#102) | A pill in the top bar, "Extensions · N updates", that opens Settings → Extensions | Settings only: easy to miss. A toast: gone after one look (L7428) |
+| Clearing a notice (#102) | Its × clears it until a newer version arrives; the row still offers Update; the app pill gets the same × | A notice that can't be cleared: it nags a player who has chosen to stay on a version (L7428) |
+| How updates happen (#102) | Always by hand: Update all, or Update on a row | Automatic updates: the player loses control of their rules mid-campaign (L7428) |
+| When sources are checked (#102) | At boot, quietly, for every enabled source, skipped offline; and on Check now | A button only: a third-party update goes unseen. Boot for the official source only: two behaviours to explain (L7428) |
+| Manual installs (#102) | A Manual install dialog: Choose files, Choose a folder, and a drop zone, all through the plan | A remembered folder (Chrome and Edge only): uneven across browsers, and still not checkable unprompted (L7428) |
+| The official source (#102) | Built in and on by default; it can be switched off, not removed | Off by default: a new player has to find it. A plain URL: once deleted, it has to be retyped (L7428) |
+| How the Extensions page is organised (#102) | One section per category, then Sources; the source is a line on each row | One card per source: doesn't scale past one category (L7428) |
+| Sections on the Extensions page (#102) | Every section folds, and each has its own Remove all | A "More" section holding Clear all (L7428) |
+| The details dialog (#102) | Opened from a pack's name: full description, requirements, the source, and the other packs from it | — |
+| A missing requirement (#102) | A tappable "requires *X*" chip: *X*'s details when offered, else its link | A "Get it" link beside it: more words (L7428) |
+| Wording (#102) | "requires Fieldbook 1.10.0", falling back to "requires a newer Fieldbook" with no `minApp`; "requires SRD 5.2"; "Unsupported"; "Manual install" | "Not supported yet", "Install by hand", "Get it" (L7428) |
+| Get templates (#102) | Removed | — |
+| The plan while it installs (#102, Ruling 14) | Can't be dismissed; × and Escape say to wait | Dismissed but still running, toasting later: more confusing than a wait bounded by the file timeout (L7428) |
 | Where a player hides a tab (#52) | Settings → Sheet display gets a Tabs group, one switch per word tab | A long-press on the tab itself to unhide it: invisible, and clashes with the phone's own long-press gesture |
 
 ## Open
@@ -271,16 +368,22 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - **Private packs get no newer-data notice.** The data check reads the public registry, which lists
   only SRD 5.2 and Homebrew since #85, so a private pack's row shows its version quietly (`known`)
   and never "out" (see [Private data](../data/private-data.md)).
-- **Removing a source URL does not unload what it fetched.** Its packs stay until removed under
-  Loaded data (see [Rules packs](../architecture/rules-packs.md)).
+- **Removing a source does not unload what it installed or fetched** (#102, by decision). Its packs
+  stay until removed from their rows (see [Rules packs](../architecture/rules-packs.md)).
+- **The phone notice row is open for Mike** (#102): at 560px and under a showing notice adds a third
+  header row; the alternative is one combined "↑ N" pill with a menu. The Task 6 reviewer recommends
+  keeping the row.
+- **The Settings dot follows the pill**, so clearing the pill also clears the dot while the page
+  still shows the update. The spec says the dot shows while updates are pending.
 - The header comment of `30-version.js` still says to bump `APP_VERSION` and add a `CHANGELOG` entry on
   every change; the UPDATE_REPO comment still describes the badge linking to the release page.
 - The update check runs once per load.
 - **Import settings offers keep or replace, not merge.** Adding the file's packs to what is loaded
   was not built; the player can import the files themselves instead.
-- **Import settings replaces `settings.rulesSources` with the file's list**, like every other
-  setting in it. Sources added since the export are dropped from the list; what they fetched stays
-  loaded unless the player chooses Replace my rules.
+- **Import settings replaces `settings.sources` with the file's list** when the file has one, like
+  every other setting in it. Sources added since the export are dropped; what they installed stays
+  loaded unless the player chooses Replace my rules. An older file's `rulesSources` join the list
+  instead.
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -312,3 +415,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-25 — Final review fixes: the Tabs group's help moved to a `<p class="hint">` above the switches, the Journal row gained its own help, and the `[data-tabsw]` handler is described as per-button, not delegated. → ledger L7064, #52
 - 2026-10-25 — Sheet display gains an Inventory group: "Inventory log size", writing `character.invLogSize` and trimming the log at once. → ledger L7291, #47
 - 2026-10-25 — Lowering the log size asks first when it would drop lines. → ledger L7339, #47
+- 2026-10-26 — Rules data becomes Extensions: sections per category and Sources, the details dialog, the install plan, Manual install, the Extensions pill and a × on both pills; Fetch all, Import files and Get templates go. → ledger L7428, #102

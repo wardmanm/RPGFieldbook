@@ -17,7 +17,10 @@ covers what the app does with packs.
 `creditOf()`, `fetchAllRules()`,
 `fetchRulesFrom()`, `applyFetchedSource()`, `poolFromExport()`, `missingRequirements()`, `requiresStatusHTML()`,
 `missingSummary()`, `rulesDataHTML()`, `renderRulesData()` in `89-rules-merge.js`; `glossRepair()` in `00-constants.js`;
-`readManifest()`, `extEntry()`, `convertSources()`, `extOffers()`, `availableFor()` in `89-extensions.js`;
+`readManifest()`, `extEntry()`, `extRelPath()`, `convertSources()`, `checkSources()`, `checkSource()`, `extOfficialUrl()`,
+`extFetchBytes()`, `addSource()`, `extOffers()`, `availableFor()`, `extRowState()`, `extPackRows()`, `offerCandidate()`,
+`manualCandidates()`, `planInstall()`, `extVerify()`, `extSnapshotRules()`, `runInstall()`, `sha256Hex()`,
+`manualInstallFiles()`, `readDropped()` in `89-extensions.js`;
 `loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `prunePackMeta()`, `clearAllRules()`,
 `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
 `findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpDataVer()` in
@@ -26,12 +29,14 @@ covers what the app does with packs.
 `dist/<file>` · **Tests:**
 `rules-data.js` (bundle ≡ individual files, the data states, every bundle agrees with
 `data/packs.json` on its system, title, `dataVersion`, licence and credit, missing requirements,
-Fetch all keeping what is loaded, a settings file's pool
+a fetch keeping what is loaded, a settings file's pool
 rebuilt and round-tripped, entries with no name skipped and reported), `data-archive.js` (importing
 bytes and zips, `importPack()` replacing, credits, the `update` state), `sheet.js` (a wholesale pool
 full of junk, tidied and rendered), `tables.js`, `docs.js` (`data/packs.json` parses, every pack's
 `dir` exists, and every `DATA_VERSIONS` system has a pack at or after it, bar the four that left
-for the private repo until the next release), the private repo's `private-data.js` (the private
+for the private repo until the next release), `data-archive.js`'s #102 sections (`sha256Hex()`
+against Node's `crypto`, `readManifest()`, the settings conversion, `availableFor()`, `planInstall()`,
+`runInstall()` all or nothing, `manualCandidates()`, a stubbed network), the private repo's `private-data.js` (the private
 packs, and the table-name rule across every pack) · **See also:**
 [Data archive](data-archive.md), [Converter](../data/converter.md),
 [Supplements](../data/supplements.md), [Homebrew](../data/homebrew.md),
@@ -59,16 +64,22 @@ and through a pack's `excludeSystems`, which beats that name-based guess. The SR
 doesn't know the label. Classes, subclasses, spells, feats, items and backgrounds are offered
 to every character.
 
-**Getting packs in.** `importRulesFiles()` handles the file picker, reached from Settings, the home
-screen, and the import links on the Rules tab. It reads each chosen file as bytes and hands them to
-`importRulesPayloads()`: a zip, known by its first bytes, is opened and each pack inside is imported
-under its own file name; anything else is one JSON pack (see [Data archive](data-archive.md)). Every
-pack goes through `importPack()`, which **replaces what that file name and system loaded before**:
-entries the new copy no longer has are removed, not left beside it. Packs with the same file name
-and a different system are untouched. `fetchAllRules()` handles the player's own source
-URLs from Settings → **Fetch all**. That is the only rules fetch the app makes; it runs on the button
-and never at boot. (The newer-data check at boot reads a registry of versions, never rules; see
-[Settings & updates](../features/settings-and-updates.md).) **Fetching never loses what is loaded:**
+**Getting packs in.** Since #102 every way in ends in one **install plan** (see "Sources and
+installing" below): a source's Update or Install, Update all, and **Manual install**, which takes
+files, a folder or a zip, picked or dropped (`manualInstallFiles()`, `readDropped()`). The home
+screen's import and the Rules tab's import links go through it too. A planned pack is installed by
+`importPack()`, which **replaces what that file name and system loaded before**: entries the new
+copy no longer has are removed, not left beside it. Packs with the same file name and a different
+system are untouched. A zip, known by its first bytes, is opened and each pack inside becomes its
+own candidate under its own file name (see [Data archive](data-archive.md)).
+`importRulesFiles()` and `importRulesPayloads()`, the pre-#102 straight-to-the-pool import, stay
+for the suites; no control calls them.
+
+**A plain source** is an old-style URL: one pack, or an `include` list. It has no versions, so it is
+never checked at boot and never planned: its row's **Fetch** runs `fetchAllRules([url])`, exactly as
+Fetch all did for every URL before #102. That and the install pipeline's file downloads are the only
+rules fetches the app makes, and both run only when the player presses a button. **Fetching never
+loses what is loaded:**
 
 1. Each source URL is fetched in order with `cache:"no-store"`. `fetchRulesFrom()` follows any
    `include` array relative to the URL (so a manifest pulls in its files) and **collects** the packs
@@ -144,7 +155,7 @@ in a `finally`.
 - Then `reindexRules()` gives every entry a positional `_id` (`r0`, `r1`, …), and
   `recomputeDups()` rebuilds the duplicate sets.
 
-The importer writes "Reading N files…" to both status lines, Settings' and the home screen's, before
+`importRulesFiles()` writes "Reading N files…" to both status lines, Settings' and the home screen's, before
 any work. After the last file it saves the cache, calls `refreshRulesUI()` and `renderRulesData()`,
 and writes one line to both: each zip with its pack count and data version, each file that failed
 and why (`importSummary()`), the counts, then `missingSummary()` when something is missing and
@@ -183,13 +194,94 @@ pair fails too, and the converter suffixes a supplement's colliding name (see
 `character.classes[].subclass` stores. When a *different* pack brings a same-named subclass, it is
 added beside the existing one as "Gloom Stalker (XGE)", and the existing key is left alone.
 
-**The loaded-data list** (Settings and the home screen). `loadedRulesGroups()` groups entries by
+**The loaded-data list** (the home screen; in Settings, the Extensions page's rows, see
+[Settings & updates](../features/settings-and-updates.md)). `loadedRulesGroups()` groups entries by
 `_file` (file imports) or `_source` (fetched), and `rulesBucket()` files each group under Rulebook,
 its single category, or Mixed. Each row carries the pack's version badge (`dataStatusHTML()`), its
 missing-content chip (`requiresStatusHTML()`) and a delete button (`removeRulesGroup()`). After a
 removal, `prunePackMeta()` drops a source's `requires` and credits once none of its entries remain;
 the fetch uses it too. Fetched entries group by label, whatever URL they came from. `clearAllRules()` confirms with
 counts and says plainly that characters are not affected: `resetRules()` touches only the pool.
+
+**Sources and installing (#102).** `settings.sources` lists where manifests come from (the manifest
+format is in [Data archive](data-archive.md)). Each is `{id, kind, url, on, checked, error,
+manifest, base}`:
+
+- **`official`**, exactly one, built in and on by default: Fieldbook public data. It can be
+  switched off but not removed. `extOfficialUrl()` lists the GitHub releases, `pickDataRelease()`
+  takes the newest this app can run, and the manifest is
+  `raw.githubusercontent.com/<UPDATE_REPO>/<tag>/releases/data/fieldbook-data.json`, which answers a
+  `file://` page where a release asset would not. A 404 there is a release from before #102: no
+  offers and no error.
+- **`manifest`**, a URL the player added that answered with a `fieldbook-data` object.
+- **`plain`**, a URL that answered with a pack or an `include` list (above).
+
+`convertSources()` runs on every boot (through `foldLegacySettings()`) and on Import settings: it
+drops malformed entries, guarantees the one official source, first, turns `rulesSources` and the
+first builds' `rulesUrl` into plain sources (once each, by URL), deletes those two fields, and
+defaults `packOrigin` and `dismissedUpdates` to `{}`. **+ Add a source URL** (`addSource()`) fetches
+the URL once and sorts it, refusing a non-http(s) address, a duplicate (compared as `new URL().href`,
+so case and default ports don't count), a non-JSON answer, an unusable manifest or anything that is
+neither; a network failure (a `TypeError`) adds a hint that the host must allow cross-origin reads.
+
+`checkSources()` reads every enabled official and manifest source's manifest, never a pack file:
+once at boot, after the app and data checks and skipped when `navigator.onLine===false`, and on
+**Check now**. Each fetch is `extFetchBytes()`: `cache:"no-store"`, the **whole** response raced
+against a timer (10 s for a manifest), aborted through `AbortController` where it exists, and
+refused early when `Content-Length` is over the cap. A source that fails keeps its last good
+manifest, and its row says "couldn't check: *reason*". At boot the check is quiet; a settings save it
+can't make is kept for the page to show (see [Storage](storage.md)).
+
+**What is offered.** `extOffers()` is every entry of every enabled source's manifest.
+`availableFor(system, file)` picks one per pack: the source in `settings.packOrigin` (which source
+installed it) while it still offers it, else the newest version, and on a tie the official source.
+`extRowState()` then reads it against the loaded pack: `install` (not loaded), `update` (newer),
+`current`, `blocked` (its `minApp` is newer than `APP_VERSION`, "requires Fieldbook *X*"), or
+`unsupported` (a category other than `rules`, the only one in `EXT_CATS`). A loaded pack with no
+readable `dataVersion` reads as `update` against any versioned offer, since unversioned data predates
+#83. An older version is never offered.
+
+**The plan** (`planInstall(candidates)`). A candidate is `{key, category, system, file, title,
+version, minApp, sha256, size, requires, origin, manual, get()}`, from a source's offer
+(`offerCandidate()`, `get()` downloads it) or from Manual install (`manualCandidates()`, `get()`
+returns the bytes already read). Candidates sharing a `system|file` keep the newest. Each line's
+outcome:
+
+| Outcome | When | Ticked |
+|---|---|---|
+| install | not loaded | yes |
+| update | newer than the loaded copy | yes |
+| replace | the loaded copy has no readable version | yes |
+| replace ("Replace anyway") | the candidate has no readable version | no, but tickable |
+| same / older | equal or older | no; tickable ("Replace anyway") only from Manual install |
+| blocked | `minApp` newer than this app | can't tick |
+| unsupported | not a `rules` pack | can't tick |
+
+A ticked line whose `requires` names a pack that isn't loaded and isn't in the plan pulls in that
+pack's best offer (newest, a tie to the official source, installable here) as its own ticked install
+line, "needed by *title*", for up to ten rounds. With no offer the pack installs anyway and its chip
+shows afterwards.
+
+**The install** (`runInstall(lines)`), **all or nothing**. Every ticked line is fetched (30 s plus a
+second per 100 KB the manifest declares) or read, then checked by `extVerify()`: at most 32 MB, its
+`sha256Hex()` equal to the manifest's when there is one, valid JSON, a rules pack, its `system` the
+candidate's, and its `dataVersion` the candidate's when the candidate has a version. The first
+failure stops everything and names the file and the reason; nothing has been merged. Only then is
+each pack passed to `importPack()`, with `settings.packOrigin` recording its source (`"manual"` for
+Manual install). A merge that throws restores the pool from `extSnapshotRules()` (arrays sliced,
+null-prototype maps copied into fresh null-prototype maps, never a JSON round trip) and the
+previous `packOrigin`. Settings and the rules cache are then saved once, the UI is redrawn
+(`refreshRulesUI()`, `renderRulesData()`, the home screen's status line), and the result carries
+what `importPack()` skipped and any save error. `sha256Hex()` is JavaScript, not `crypto.subtle`,
+because whether `file://` is a secure context differs by browser.
+
+**Manual install's candidates** (`manualCandidates()`). A zip goes through `readDataArchive()` and
+keeps its manifest's entry for each pack, sha256 included. A `fieldbook-data.json` in a picked or
+dropped folder is that folder's manifest, matched by its own directory plus each entry's path. A
+loose `.json` pack has no sha256; its version is its own `dataVersion`. A file that isn't JSON or a
+rules pack, or a manifest that can't be read, is listed as skipped with why; a loose zip's
+non-pack JSON (an app zip's `overlay.json`) is skipped silently. Only `.json` and `.zip` files are
+read, at most 2,000 from one folder or drop.
 
 **Missing dependencies.** `missingRequirements(src)` is a pure function of `rules`, called at
 render time, and it combines two detectors:
@@ -254,6 +346,15 @@ files).
   change in `bundle()` in `fbdata.py` (a keyword with no term keys by its `name` in both), and
   `RULE_CATS` (`88-settings.js`), `mergeRules()`'s category map
   and the bundler's `CATS` must stay in step.
+- **An install is all or nothing.** Every file is fetched and verified before any is merged, and a
+  merge that throws restores the snapshot. One failure leaves the pool, `packOrigin` and the cache as
+  they were.
+- **Nothing installs unasked.** Boot and Check now read manifests only; every install goes through
+  the plan and its Install button. An older version is never offered, and a pack this app is too old
+  for (`minApp`) or of a category it doesn't know is never installed.
+- **A manifest is untrusted.** Its paths are an allow-list (every `/` segment only
+  `[A-Za-z0-9._-]`, never `.` or `..`), its URLs are http(s) or nothing, its text is cut to length
+  and escaped wherever it is drawn, and a manifest over 64 KB or 1,000 packs is refused whole.
 - **Fetching never loses what is loaded.** A source replaces only the entries stamped with its own
   `_url`, and only once all of it has arrived. A run where nothing arrives writes neither the pool
   nor the cache. Never reset the pool ahead of a network call.
@@ -314,6 +415,13 @@ files).
 - **`requires` cannot name a subclass.** `ruleById()` matches `keyOf()`, which is `class|name` for
   subclasses, so a plain subclass name in `requires` always reports missing. No shipped pack
   declares one. Found by reading the code.
+- **A blacklist of path characters let `..` back in** (#102). `new URL()` decodes `%2e` and strips
+  every tab and newline before it collapses dot segments, so `%2e%2e/` and `.<TAB>./` both resolved
+  above the manifest. `extRelPath()` became an allow-list of segment characters.
+- **`.then(ok, err)` never catches `ok`'s own throw.** `runInstall()` verified the bytes inside the
+  fetch's success handler, so a bad sha256 escaped the error branch; verifying is its own `.then`.
+- **The timeout covered only the headers.** `Promise.race` around the `fetch` call alone let a host answer
+  promptly and stall the body forever; the whole response is raced now.
 - **A pack labelled `__proto__` or `constructor`.** `rules.requires`/`rules.credits` were plain
   objects keyed by the pack's own label: `__proto__` set the object's prototype instead of a key
   (the declaration silently vanished), and `constructor` with no `requires` declared read back the
@@ -333,21 +441,33 @@ files).
 | A pack with no `dataVersion` | `unknown`, no badge | Flagging it stale: a false alarm on someone's own content (L1323) |
 | Duplicates inside a folder | Mirror `mergeRules()`, and report them | Silent dedupe: `Net` is a real duplicate that someone should see (L625) |
 | Where `overlay.json` and `class-resources.json` live | The `data/` root | Inside a system folder: the bundler globs those, and they are converter inputs, not packs (L625) |
-| What Fetch all does to what is loaded | Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes | Reset first (the old way): discarded file imports, and cached an empty pool when offline. Confirming before the reset: still loses everything when the fetch fails. Replacing by label: a file import sharing the label would go (L3797) |
+| What a fetch (Fetch all until #102) does to what is loaded | Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes | Reset first (the old way): discarded file imports, and cached an empty pool when offline. Confirming before the reset: still loses everything when the fetch fails. Replacing by label: a file import sharing the label would go (L3797) |
 | How a settings file's pool is loaded | Rebuilt through `mergeRules()`, one run of same-provenance entries at a time (`poolFromExport()`) | Assigning it as it came: nothing validated it (#70). Merging it as one pack: every entry would be relabelled with one source and file, losing groups, versions and `_url`. Grouping by provenance rather than runs: reorders categories, and name lookups take the first match (L4134) |
 | An entry a pack has with no name | Skip it, count it, and say so on the status line | Dropping it silently (the old way): the author never learns why it is missing. A chip on its loaded-data row, as missing dependencies get: skipped entries are not in the pool to compute from, so it would need a stored count per source with its own pruning (L4206) |
 | Where a wholesale pool is made safe | `tidyRules()`, run by `reindexRules()` | In the Settings import handler: misses both cache restores. In every reader: hundreds of sites, and the next one written would not know (L4206) |
 | A keyword written `{name, description}` | Read as its term and text | Skipping it: every other category is written that way, and it is plainly a term (L4206) |
 | How the SRD pack's species reach D&D characters (#84, R6) | `systemOf()` reads a label starting `srd` as D&D, and the pack also carries `excludeSystems: ["humblewood"]` | `excludeSystems` alone: it says only who the pack is not for, and SRD 5.2 is a D&D system whose species belong to D&D characters (spec R6). `systemOf()` alone: an older app, which doesn't know the label, would offer SRD species to Humblewood characters (L5148) |
 | The Artificer and Mystic in the core pack | Leave them, labelled `XPHB` | Dropping them: moves the 2024 pack, bumps XPHB for everyone, and strands Artificer players without Tasha's (L1816) |
+| How packs are installed from a source (#102) | Each file a manifest names, fetched one by one and checked against its sha256 | The release zip: a `file://` page can't download a GitHub release asset, which redirects to storage with no CORS header (L7428) |
+| How many install paths (#102) | One: every route builds candidates, then one plan, one confirm, one all-or-nothing install | A path per route: three copies of "is it newer", "can this app run it" and "replace the pack" (L7428) |
+| Pack identity (#102) | System plus file name, as `importPack()` already does; the installing source offers its updates, a hand-imported pack is matched to any enabled source | File name alone: two systems can share a file name (L7428) |
+| Older versions (#102) | Never offered as an update | Offering a downgrade: confusing next to Update; Manual install's unticked Replace anyway is the way back (L7428) |
+| Removing a source (#102) | Its packs stay installed | Taking its packs with it: deletion behind the player's back (L7428) |
+| A pack another pack needs (#102) | Pulled into the plan as its own ticked line when a source offers it | Installing it without a confirm: nothing installs unasked (L7428) |
+| How SHA-256 is computed (#102) | `sha256Hex()` in JavaScript, checked against Node's `crypto` | `crypto.subtle`: whether `file://` is a secure context differs by browser (L7428) |
 | Which of two same-named SRD and 2024 entries a lookup finds, now in two archives (#85) | The one imported first; re-importing keeps its place | Ordering them in the registry, as #84's RF5 did: no registry holds both packs any more (L5426) |
 
 ## Open
 
-- **Removing a source URL does not unload its packs.** They stay until removed under Loaded data.
-  The reset used to clear them at the next Fetch all.
+- **Removing a source does not unload its packs** (#102, decision 13). They stay until removed from
+  their row on the Extensions page.
 - **Entries fetched before `_url` existed** carry no mark of their URL. A re-fetch replaces them by
-  name, but one the source has since dropped lingers until removed under Loaded data.
+  name, but one the source has since dropped lingers until removed from its row.
+- **Signed manifests and private packs through a manifest** are out of scope (#102 §11): the sha256
+  proves a file matches its manifest, not who wrote the manifest, and raw.githubusercontent.com
+  can't serve a private repo, so private packs stay a Manual install.
+- **Three unauthenticated GitHub API calls per boot** (the app check, the data check, the official
+  source), against a limit of 60 an hour; memoising the release list is deferred (#102 M10).
 - A fetched pack with the same `system` and entry names as a file-imported one replaces those
   entries, as re-importing the file would. That is the source + name keying, not a fetch rule.
 - `requires` entries under `subclasses` can never match (see Traps).
@@ -379,3 +499,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-23 — `rules.requires`/`rules.credits` become null-prototype maps (`packMap()`), so a pack
   labelled `__proto__` or `constructor` is handled like any other label. → ledger L6519, #88
 - 2026-10-23 — A system pack may declare `defaultLanguages` and `advancement`, kept per label in null-prototype maps beside `requires` and `credits` and read per character's ruleset, with Common and the SRD table as fallbacks. → ledger L6633, #103
+- 2026-10-26 — Sources (official, manifest, plain) and one install pipeline: candidates, the plan, an all-or-nothing install checked by sha256; Manual install takes files, a folder or a zip; Fetch all becomes a plain source's own Fetch. → ledger L7428, #102
