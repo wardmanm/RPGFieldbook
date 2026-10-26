@@ -94,7 +94,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'addCombatant', 'openCombatant', 'openAddCombatant',
   'renderInitStrip', 'initChipScroll', 'irStart', 'renderCombatHeader',
   'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
-  'cleanInvLog', 'logInv', 'logGrant', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
+  'cleanInvLog', 'logInv', 'logGrant', 'logItemSave', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
   'INV_FILTERS', 'invDayLabel', 'invLogHTML', 'openInvLog',
   'newTradeDraft', 'tradeBalance', 'tradeHTML', 'completeTrade',
@@ -6897,6 +6897,96 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   } finally {
     STUB.forEach(n => { ctx[n] = keep[n]; });
     X.character = keep.ch; X.rules = keep.rules; state.confirm = keep.conf; ctx.document.getElementById = keep.gid;
+  }
+}
+
+// ---------- #47 follow-ups (Mike, 2026-10-25): edit lines keep only what changed;
+// selling never reads red; grant lines that moved gold file under Coins; --on-accent
+{
+  const fs = require('fs'), path = require('path');
+  const cssAll = fs.readdirSync(path.join(__dirname, '..', 'css')).map(n => fs.readFileSync(path.join(__dirname, '..', 'css', n), 'utf8')).join('\n');
+  const STUB = ['scheduleSave', 'renderInventory', 'renderAttacks', 'renderCoins', 'recompute', 'toast'];
+  const keep = {ch: X.character, rules: X.rules, conf: state.confirm, now: ctx.Date.now};
+  STUB.forEach(n => { keep[n] = ctx[n]; ctx[n] = () => null; });
+  const fresh = () => { X.character = X.blankChar(); X.character.system = 'dnd'; X.character.inventory = []; X.character.attacks = []; X.character.coins = {gp: 40, sp: 0, cp: 0}; return X.character; };
+  const top = () => X.character.invLog[0];
+  try {
+    /* ---- edit lines: only the changed fields, and a fingerprint ---- */
+    fresh();
+    const long = 'A long magic-item description. '.repeat(60), stamp = {pack: 'srd52', v: '1.2.0', fp: 'x'.repeat(280)};
+    const before = {id: 'w', name: 'Wand of Wonder', qty: 1, description: long, src: stamp, notes: 'old'};
+    const after = {id: 'w', name: 'Wand of Wonder', qty: 2, description: long, src: stamp, fav: true};
+    X.character.inventory = [JSON.parse(JSON.stringify(after))];
+    X.logItemSave(before, after);
+    const ed = top(), chg = ed.undo.changed || {};
+    ck('#47 follow-up: an edit line keeps only the fields that changed',
+       ed.kind === 'edit' && Object.keys(chg).sort().join() === 'fav,notes,qty' && ed.undo.id === 'w' && typeof ed.undo.hash === 'string' &&
+       !('before' in ed.undo) && !('after' in ed.undo) && JSON.stringify(ed.undo).length < 120, ed.undo);
+    ck('#47 ...a field the edit added has no "before", one it removed no "after"',
+       !!chg.fav && !('b' in chg.fav) && chg.fav.a === true && !!chg.notes && chg.notes.b === 'old' && !('a' in chg.notes));
+    X.character.inventory[0] = {fav: true, src: stamp, description: long, qty: 2, name: 'Wand of Wonder', id: 'w'};
+    ck('#47 ...the fingerprint ignores key order', X.invUndoCheck(ed).ok === true);
+    X.character.inventory[0].description = long + '!';
+    ck('#47 ...and any later change refuses the undo', X.invUndoCheck(ed).why === 'It has been changed again since.');
+    X.character.inventory[0].description = long;
+    ck('#47 ...Undo rebuilds the row exactly as it was',
+       X.invUndo(ed.id) === '' && X.invSame(X.character.inventory[0], before) && !('fav' in X.character.inventory[0]), X.character.inventory[0]);
+
+    /* a line saved with two whole copies still undoes, and shrinks when the character loads */
+    fresh(); X.character.inventory = [JSON.parse(JSON.stringify(after))];
+    X.logInv({kind: 'edit', title: 'Edited Wand of Wonder', lines: [], undo: {before, after}});
+    const cleaned = X.cleanInvLog(JSON.parse(JSON.stringify(X.character.invLog)), 500);
+    ck('#47 follow-up: an old two-copy edit line is converted on load',
+       Object.keys(cleaned[0].undo.changed || {}).sort().join() === 'fav,notes,qty' && !('before' in cleaned[0].undo), cleaned[0].undo);
+    ck('#47 ...and an unconverted one still undoes', X.invUndo(top().id) === '' && X.invSame(X.character.inventory[0], before));
+    ck('#47 ...a malformed edit undo is dropped, its line kept',
+       X.cleanInvLog([{kind: 'edit', at: 9, title: 'e', undo: {id: 'w', changed: 'x', hash: 'h'}}], 500)[0].undo === null);
+
+    /* the size this was for: 500 edits of a magic item */
+    fresh(); X.character.invLogSize = 500;
+    let row = JSON.parse(JSON.stringify(after));
+    for (let i = 0; i < 500; i++) { const b = row; row = Object.assign({}, b, {qty: b.qty + 1}); X.logItemSave(b, row); }
+    const size = JSON.stringify(X.character.invLog).length;
+    ck('#47 follow-up: 500 edit lines of a long-described magic item stay under 150,000 characters', X.character.invLog.length === 500 && size < 150000, size);
+
+    /* ---- selling: coins you receive never make it red ---- */
+    fresh(); X.character.inventory = [{id: 'dg', name: 'Dagger', qty: 1, cost: 2}];
+    let d = X.newTradeDraft({with: 'Olvin'}); d.give.items = [{id: 'dg', qty: 1}]; d.get.coins = {gp: 5};
+    let b = X.tradeBalance(d, X.character), h = X.tradeHTML(d, X.character);
+    ck('#47 follow-up: selling a 2 gp Dagger for 5 gp is not short, and not red',
+       b.diff === -300 && b.short === false && !/tr-bal short/.test(h) && /3 gp in your favour/.test(h), h.match(/<div class="tr-bal[^]*?<\/div>/));
+    d.get.items = [{key: 'k', name: 'Torch', qty: 1, cost: 1, def: {name: 'Torch', cost: '1 gp'}, custom: false}];
+    b = X.tradeBalance(d, X.character);
+    ck('#47 ...nor when the items you get are worth no more than what you give', b.short === false && b.diff === -400);
+    d.get.coins = {}; d.get.items[0].cost = 5; b = X.tradeBalance(d, X.character); h = X.tradeHTML(d, X.character);
+    ck('#47 ...buying for more than you give is still short, in red', b.short === true && /tr-bal short/.test(h) && /3 gp short/.test(h));
+    d.applyGet = false;
+    ck('#47 ...and the get switch off is never short', X.tradeBalance(d, X.character).short === false);
+    ck('#47 ...Complete asks only when short', /if\(b\.short&&!confirm\(/.test(fs.readFileSync(path.join(__dirname, '..', 'js', '67-trade.js'), 'utf8')));
+
+    /* ---- grant and "Removed with" lines that moved gold file under Coins ---- */
+    fresh(); X.rules = Object.assign({}, X.rules, {items: [{name: 'Shield', cost: '10 gp'}]});
+    let t = 1000; ctx.Date.now = () => t;
+    X.grantItemByName('Shield', 1, 'class:Fighter'); ctx.addGrantGold(10, 'class:Fighter');
+    t += 9000; X.grantItemByName('Shield', 1, 'bg:Soldier');
+    t += 9000; X.revertEquipmentGrants('class:Fighter');
+    t += 9000; X.revertEquipmentGrants('bg:Soldier');
+    const coinsView = X.invLogHTML(X.character.invLog, 'coins', 500), itemsView = X.invLogHTML(X.character.invLog, 'items', 500);
+    ck('#47 follow-up: a grant that gave gold, and its removal, also file under Coins',
+       /Granted by Fighter/.test(coinsView) && /Removed with Fighter/.test(coinsView), coinsView);
+    ck('#47 ...a grant and a removal with no gold stay out of Coins', !/Soldier/.test(coinsView));
+    ck('#47 ...all four still file under Items', /Granted by Fighter/.test(itemsView) && /Granted by Soldier/.test(itemsView) && /Removed with Fighter/.test(itemsView) && /Removed with Soldier/.test(itemsView));
+
+    /* ---- text on an accent fill reads in every skin ---- */
+    ck('#47 follow-up: no hard-coded text colour on the accent remains', !/#20160a/i.test(cssAll));
+    ck('#47 ...--on-accent is set for both themes, both classic themes, and the rail',
+       (cssAll.match(/--on-accent:#/g) || []).length === 5 && /--accent:var\(--rail-accent\);--on-accent:#181410;/.test(cssAll));
+    ck('#47 ...the log filter, the primary button, the toast and the initiative chip use it',
+       /\.il-f\.on\{[^}]*color:var\(--on-accent\)/.test(cssAll) && /\.tbtn\.primary\{[^}]*color:var\(--on-accent\)/.test(cssAll) &&
+       /\.toast\{[^}]*color:var\(--on-accent\)/.test(cssAll) && /\.ini-chip\.now\{[^}]*color:var\(--on-accent\)/.test(cssAll));
+  } finally {
+    STUB.forEach(n => { ctx[n] = keep[n]; });
+    X.character = keep.ch; X.rules = keep.rules; state.confirm = keep.conf; ctx.Date.now = keep.now;
   }
 }
 

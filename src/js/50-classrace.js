@@ -98,7 +98,7 @@ function addGrantGold(amt,sid){
   const k=goldKey();character.coins[k]=num(character.coins[k])+amt;
   if(!character.grantGold)character.grantGold={};
   character.grantGold[sid]=num(character.grantGold[sid])+amt;
-  logGrant(sid,{dir:"+",text:`${amt} ${goldKey().toUpperCase()}`});
+  const e=logGrant(sid,{dir:"+",text:`${amt} ${goldKey().toUpperCase()}`});if(e)e.meta.gold=true;
 }
 function applyEquipOption(o,sid){
   if(!o)return;
@@ -130,10 +130,11 @@ function revertEquipmentGrants(sid){
   forgetGrantAmmo(character,sid);
   character.inventory=character.inventory.filter(i=>i.grant!==sid);
   if(rmIds.length)character.attacks=(character.attacks||[]).filter(a=>!rmIds.includes(a.itemId));
+  let gold=false;
   if(character.grantGold&&character.grantGold[sid]){const k=goldKey();character.coins=character.coins||{};
     const was=num(character.coins[k]);character.coins[k]=Math.max(0,was-num(character.grantGold[sid]));delete character.grantGold[sid];
-    if(was-character.coins[k]>0)gone.push({dir:"-",text:`${was-character.coins[k]} ${k.toUpperCase()}`});}
-  if(gone.length)logInv({kind:"grant",title:"Removed with "+grantSourceName(sid),lines:gone,undo:null,meta:{sid,revert:true}});
+    if(was-character.coins[k]>0){gone.push({dir:"-",text:`${was-character.coins[k]} ${k.toUpperCase()}`});gold=true;}}
+  if(gone.length)logInv({kind:"grant",title:"Removed with "+grantSourceName(sid),lines:gone,undo:null,meta:gold?{sid,revert:true,gold:true}:{sid,revert:true}});
 }
 function grantFeatDef(featName,origin,pending){
   const fd=findFeatDef(featName)||{name:featName,description:"",effects:[]};
