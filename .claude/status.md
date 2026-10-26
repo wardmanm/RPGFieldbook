@@ -17,13 +17,8 @@ Updated: 2026-10-25 · Branch: main
     with no Undo; Recover counts in the fight's ammo line; lowering the size asks first.
 - 2026-10-25: Mike set 1.9.0's remaining scope: #118 in, #110 to the backlog (no milestone), #111–#117 and
   #119–#124 (labelled 1.9.1) deferred. QA screenshots now filed by issue in `.claude/qa/in-progress/` and `complete/`.
-- 2026-10-25: Merged #91, an initiative tracker in the combat view:
-  - Start combat rolls initiative: yours with the HP step's controls and Advantage, typed totals for
-    everyone else.
-  - A strip of chips with health bars, Turns (Next moves a marker) or Rounds.
-  - A dialog per combatant: bands, Exact HP or Estimate, Dead, Act earlier/later for ties.
-  - A Party card on Bio, whose members join every fight.
-  - Claude's ruling: ties break in the dialog, not by drag.
+- 2026-10-25: Merged #91, an initiative tracker in the combat view: rolled initiative, a strip of chips with health
+  bars, Turns or Rounds, a dialog per combatant, a Party card on Bio. Claude's ruling: ties break in the dialog.
 - 2026-10-25: Merged #52. Settings → Sheet display → Tabs hides Spells, Inventory, Bio, Journal or
   Rules per character. Sheet and the combat swords always show. A section note into a hidden tab
   brings it back with a toast.
@@ -35,17 +30,9 @@ Updated: 2026-10-25 · Branch: main
   level gave and the HP roll on it (roll, type, or average). Paladin and Ranger slots round up (2024).
   The multiclass note states the 13+ rule. A "don't stack" tag shows on Extra Attack and Unarmored
   Defense (Claude's ruling: narrowed from every same-named feature).
-- 2026-10-24: Merged #103, the Sheet makeover:
-  - a Foundry-style header and a dark rail;
-  - chips for defences, languages and senses;
-  - a hit-dice spend box;
-  - Story renamed Bio, and Attacks moved to Inventory;
-  - the ☰ menu retired (Mike), and a back-to-top button.
-- 2026-10-23: Merged #88: a pack's `requires` and credits are kept in prototype-free maps.
+- 2026-10-24: Merged #103, the Sheet makeover: Foundry-style header, dark rail, chips, Story renamed Bio, Attacks
+  moved to Inventory, the ☰ menu retired (Mike), a back-to-top button.
 - 2026-10-22: Merged #99 and #53: the Rules tab is a browser over every loaded category.
-- 2026-10-21: Merged #97: a pencil in each list card's header hides its edit buttons.
-- 2026-10-19: Releases wait for Mike's approval in GitHub (#109); `/status` and `/release` skills (#108).
-- 2026-10-19: Merged #104: ammunition recovery rules, Throw, End combat recovery with Undo.
 
 ## Pending decisions
 - **The inventory log's storage** (raised 2026-10-25, at #47's final review). 500 lines take about
