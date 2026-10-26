@@ -1,6 +1,8 @@
 {
   "_comment": "The rules-pack registry (spec src/docs/specs/2026-10-07-data-archive-design.md §4). version, digest and release are written only by scripts/release.js and scripts/data-release.js through tools/data-kit/fbdata.py — never by hand.",
   "release": "1.8.1",
+  "name": "Fieldbook public data",
+  "homepage": "https://github.com/wardmanm/RPGFieldbook",
   "packs": [
     {
       "system": "Homebrew",
@@ -10,7 +12,9 @@
       "version": "1.8.0",
       "digest": "sha256:4bbe06154fa412eabd7d6da5240471ca3633188faea66461c14caac7e71c65a9",
       "license": "CC-BY-SA-3.0",
-      "attribution": "The Predator, a Warlock subclass by D&D Wiki contributors (https://www.dandwiki.com/wiki/The_Predator_(5e_Subclass)), used under CC BY-SA 3.0. Changed: converted to Fieldbook's rules format."
+      "attribution": "The Predator, a Warlock subclass by D&D Wiki contributors (https://www.dandwiki.com/wiki/The_Predator_(5e_Subclass)), used under CC BY-SA 3.0. Changed: converted to Fieldbook's rules format.",
+      "summary": "Hand-picked extra options, starting with The Predator, a warlock subclass.",
+      "description": "Options from outside the official books, picked and converted by hand.\n\nIt starts with The Predator, a Warlock subclass from D&D Wiki, used under CC BY-SA 3.0. It needs SRD 5.2 for the Warlock class and the spells it refers to."
     },
     {
       "system": "SRD 5.2",
@@ -20,7 +24,9 @@
       "version": "1.8.0",
       "digest": "sha256:d548fcd07a352c58e4bacb94ea1ebbab0366a8a8558406052702c6a091af7998",
       "license": "CC-BY-4.0",
-      "attribution": "This work includes material from the System Reference Document 5.2.1 (\"SRD 5.2.1\") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode. Changed: converted to Fieldbook's rules format, with renamed entries' references updated."
+      "attribution": "This work includes material from the System Reference Document 5.2.1 (\"SRD 5.2.1\") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode. Changed: converted to Fieldbook's rules format, with renamed entries' references updated.",
+      "summary": "The free D&D rules: classes, species, backgrounds, feats, spells, items and more.",
+      "description": "The System Reference Document 5.2.1 is the part of the 2024 D&D rules that Wizards of the Coast publishes for free, under Creative Commons.\n\nIt has every class with one subclass each, the core species and backgrounds, origin and general feats, hundreds of spells, and the equipment and magic items to go with them. Fieldbook's character building, spells and inventory all work from it."
     }
   ]
 }

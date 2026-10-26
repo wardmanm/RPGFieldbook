@@ -4,6 +4,7 @@ archive — and the release scripts that drive it. Every case runs on a scratch
 copy under a temp dir, never on data/. Prints PASS/FAIL lines and ends with
 "ALL PASSED (n)" or "FAILURES: ...", which is what run.sh reads.
 Spec: src/docs/specs/2026-10-07-data-archive-design.md"""
+import hashlib
 import json
 import os
 import shutil
@@ -264,7 +265,7 @@ ck("entries are sorted by name",
 ck("every entry is deflated and dated 1980-01-01",
    all(i.compress_type == zipfile.ZIP_DEFLATED and i.date_time == (1980, 1, 1, 0, 0, 0) for i in infos))
 ck("the manifest names the release and the app",
-   man["_type"] == "fieldbook-data" and man["format"] == 1 and man["version"] == "1.8.0" and man["builtFor"] == "1.8.0", man)
+   man["_type"] == "fieldbook-data" and man["format"] == 2 and man["version"] == "1.8.0" and man["builtFor"] == "1.8.0", man)
 ck("each manifest pack has file, system, version and sha256",
    [(m["file"], m["system"], m.get("version")) for m in man["packs"]] == [("alpha_full.json", "Alpha", "1.8.0"), ("beta_full.json", "Beta", "1.7.0")]
    and all(len(m["sha256"]) == 64 for m in man["packs"]), man["packs"])
@@ -866,6 +867,88 @@ ck("#90 dev.sh writes the private packs through sync-private.py --write",
    "scripts/sync-private.py --write" in DEVSH, None)
 ck("#90 ...and no longer runs convert.py all or supplement itself",
    "convert.py all" not in DEVSH and "convert.py supplement" not in DEVSH, None)
+
+# ---------- #102: the format-2 manifest and release-files
+# (the registry here is d/data/packs.json, as scratch() lays it out; kit()
+# appends its own --registry after any args, so an explicit override on a
+# kit() call is silently discarded — these use subprocess.run directly instead)
+d = scratch()
+registry_path = os.path.join(d, "data", "packs.json")
+reg = read_json(d, "data/packs.json")
+reg["name"] = "Test data"
+reg["homepage"] = "https://example.com/data"
+reg["packs"][0]["summary"] = "A short line."
+reg["packs"][0]["description"] = "Para one.\n\nPara two."
+reg["packs"][0]["minApp"] = "1.9.0"
+# release-files validates --public, which refuses a pack with no licence (R13)
+reg["packs"][0]["license"] = "CC-BY-4.0"
+reg["packs"][1]["license"] = "MIT"
+write(d, "data/packs.json", reg)
+r = kit(d, "bundle", "-o", os.path.join(d, "dist"))
+ck("#102 bundle still works with the new registry fields", r.returncode == 0, r.stderr)
+z = os.path.join(d, "out.zip")
+r = subprocess.run([sys.executable, FBDATA, "pack", os.path.join(d, "dist"), "-o", z,
+                    "--registry", registry_path, "--built-for", "1.9.0"],
+                   capture_output=True, text=True)
+ck("#102 pack writes the archive", r.returncode == 0, r.stderr)
+with zipfile.ZipFile(z) as zf:
+    man = json.loads(zf.read("fieldbook-data.json").decode("utf-8"))
+    raw0 = zf.read(man["packs"][0]["file"])
+p0 = man["packs"][0]
+ck("#102 the manifest is format 2 with name and homepage",
+   man["format"] == 2 and man["name"] == "Test data" and man["homepage"] == "https://example.com/data", man)
+ck("#102 each pack carries category, title, summary, description, minApp and size",
+   p0["category"] == "rules" and p0["summary"] == "A short line." and p0["description"].startswith("Para one")
+   and p0["minApp"] == "1.9.0" and p0["size"] == len(raw0) and isinstance(p0["title"], str), p0)
+ck("#102 keys are written in a fixed order",
+   list(p0.keys())[:6] == ["file", "category", "system", "title", "summary", "description"], list(p0.keys()))
+ck("#102 a pack with no minApp in the registry carries none (the reader defaults it to builtFor)",
+   all(("minApp" in p) == (p is p0) for p in man["packs"]), [sorted(p.keys()) for p in man["packs"]])
+ck("#102 a format-2 archive validates", subprocess.run([sys.executable, FBDATA, "validate", z],
+   capture_output=True, text=True).returncode == 0)
+
+# requires is copied from the bundle, names and url only
+bundle_path = os.path.join(d, "dist", p0["file"])
+b = json.load(open(bundle_path, encoding="utf-8"))
+b["requires"] = [{"pack": "Other", "file": "other_full.json", "url": "https://example.com/other", "spells": ["Haste"]}]
+open(bundle_path, "w", encoding="utf-8").write(json.dumps(b))
+man2, _ = fbdata.build_manifest(fbdata.load_registry(registry_path), os.path.join(d, "dist"), "1.9.0", False)
+ck("#102 requires carries pack, file and url, never the entry lists",
+   man2["packs"][0]["requires"] == [{"pack": "Other", "file": "other_full.json", "url": "https://example.com/other"}],
+   man2["packs"][0].get("requires"))
+
+# the registry refuses bad new fields
+for field, bad, why in [("summary", "x" * 141, "141 characters"), ("description", "x" * 4001, "4,001 characters"),
+                        ("minApp", "1.9", "not X.Y.Z"), ("category", "", "empty")]:
+    reg_bad = json.loads(json.dumps(reg)); reg_bad["packs"][0][field] = bad
+    bad_path = os.path.join(d, "bad.json")
+    write(d, "bad.json", reg_bad)
+    r = subprocess.run([sys.executable, FBDATA, "digest", "--registry", bad_path,
+                        "--data-root", os.path.join(d, "data")], capture_output=True, text=True)
+    ck("#102 the registry refuses a %s that is %s" % (field, why), r.returncode == 2, r.stdout + r.stderr)
+reg_bad = json.loads(json.dumps(reg)); reg_bad["homepage"] = "javascript:alert(1)"
+write(d, "bad.json", reg_bad)
+r = subprocess.run([sys.executable, FBDATA, "digest", "--registry", os.path.join(d, "bad.json"),
+                    "--data-root", os.path.join(d, "data")], capture_output=True, text=True)
+ck("#102 the registry refuses a homepage that isn't http(s)", r.returncode == 2, r.stdout + r.stderr)
+
+# release-files: a flat folder that raw.githubusercontent.com can serve
+out = os.path.join(d, "releases", "data")
+os.makedirs(out); open(os.path.join(out, "stale_full.json"), "w").write("{}")
+r = subprocess.run([sys.executable, FBDATA, "release-files", os.path.join(d, "dist"), "-o", out,
+                    "--registry", registry_path, "--built-for", "1.9.0"], capture_output=True, text=True)
+ck("#102 release-files succeeds", r.returncode == 0, r.stderr)
+names = sorted(os.listdir(out))
+ck("#102 release-files writes the manifest and every bundle, and removes stale files",
+   "fieldbook-data.json" in names and "stale_full.json" not in names and all(p["file"] in names for p in man["packs"]), names)
+fm = json.load(open(os.path.join(out, "fieldbook-data.json"), encoding="utf-8"))
+ck("#102 the folder's sha256 values match its files",
+   all(hashlib.sha256(open(os.path.join(out, p["file"]), "rb").read()).hexdigest() == p["sha256"] for p in fm["packs"]))
+ck("#102 validate reads a folder", subprocess.run([sys.executable, FBDATA, "validate", out],
+   capture_output=True, text=True).returncode == 0)
+open(os.path.join(out, fm["packs"][0]["file"]), "a").write(" ")
+r = subprocess.run([sys.executable, FBDATA, "validate", out], capture_output=True, text=True)
+ck("#102 validate names a folder file whose sha256 no longer matches", r.returncode == 1 and "sha256" in r.stderr, r.stderr)
 
 # ---- add new cases above this line ----
 print("")
