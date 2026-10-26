@@ -137,7 +137,7 @@ body{
 .tbtn:disabled:hover{background:var(--field)}
 .tbtn.primary:disabled:hover{background:var(--accent)}
 .tbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
-.savestate{font-family:var(--head);font-size:11px;letter-spacing:.06em;color:var(--ink-soft);min-width:70px;text-align:right}
+.savestate{margin-left:auto;font-family:var(--head);font-size:11px;letter-spacing:.06em;color:var(--ink-soft);min-width:70px;text-align:right}
 .savestate.on{color:var(--accent)}
 .savestate.bad{color:var(--brick);font-weight:700}
 /* A write the browser refused (#81). Fixed to the foot of the window so it shows
@@ -178,12 +178,31 @@ body.saving-failed .to-top{bottom:calc(130px + env(safe-area-inset-bottom))}
   body.saving-failed:has(#toast.show) .to-top{bottom:calc(130px + var(--toast-h,48px) + 12px)}
 }
 @media print{.to-top{display:none!important}}
-.verbtn{align-self:center;margin-right:auto;font-family:var(--head);font-size:10px;letter-spacing:.06em;color:var(--ink-soft);background:none;border:1px solid var(--hair);border-radius:20px;padding:2px 9px;cursor:pointer}
+.verbtn{align-self:center;font-family:var(--head);font-size:10px;letter-spacing:.06em;color:var(--ink-soft);background:none;border:1px solid var(--hair);border-radius:20px;padding:2px 9px;cursor:pointer}
 .verbtn:hover{color:var(--accent);border-color:var(--accent)}
-/* Takes over the version button's slot — same margin-right:auto, so it sits
-   where the version did instead of being pushed to the far end of the bar. */
-.updpill{align-self:center;margin-right:auto;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--on-accent);background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
+/* Takes over the version button's slot, so it sits where the version did
+   instead of being pushed to the far end of the bar. The version, the pills
+   and their ×s pack left as one group; the save state's margin-left:auto
+   takes the free space (#102: one auto margin, not one per pill, or the
+   Extensions pill floated off into the middle of the bar). */
+.updpill{align-self:center;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--on-accent);background:var(--accent);border:1px solid var(--ink);border-radius:20px;padding:3px 11px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:updpulse 2.4s ease-in-out infinite}
 .updpill:hover{filter:brightness(1.06)}
+/* a pill's ×: clears the notice until a newer version arrives (#102) */
+.updpill-x{position:relative;align-self:center;min-width:38px;min-height:32px;padding:0;border:0;border-radius:999px;background:none;color:var(--ink-soft);font-size:16px;line-height:1;cursor:pointer;margin-left:-8px}
+.updpill-x:hover{color:var(--accent)}
+/* a 44px target: 38 wide plus 6 to the right, 32 tall plus 6 above and below.
+   Never to the left, where the pill it clears sits 2px away (gap 10, margin
+   -8): reaching that way it covered the pill's edge and took its taps
+   (#102 Task 6 fix round 2) */
+.updpill-x::after{content:"";position:absolute;inset:-6px -6px -6px 0}
+.extpill{display:inline-flex;align-items:center;gap:10px;align-self:center}
+.extpill .updpill{animation:none}
+.extpill[hidden],.updpill-x[hidden]{display:none}
+/* Up to 560px there's no room for a notice and its × in the first row: the
+   notices go after the buttons instead of pushing the save state and Home onto
+   a row apart from the buttons they sit beside (481–560px was still ragged at
+   480, #102 Task 6 fix round 1), and the Extensions pill reads "N updates" */
+@media (max-width:560px){.extpill-long{display:none}#updatePill,#updatePillX,.extpill{order:5}}
 @keyframes updpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}50%{box-shadow:0 0 0 4px transparent}}
 
 .tabbar{position:sticky;top:0;z-index:40;background:var(--paper-2);border-bottom:2px solid var(--line);
@@ -1461,9 +1480,6 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .set-row-ctl .seg{min-width:250px}
 .set-row-ctl select{width:250px}
 .set-btns{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-.set-addsrc{display:flex;gap:7px;margin:4px 0}
-.set-actions{justify-content:flex-start;margin-top:8px;flex-wrap:wrap}
-.set-actions #btnClearRules{margin-left:auto}
 .m-body p.set-note{margin:8px 0 0}
 /* the icon rail: Icon tabs on (applyTheme() sets html[data-tabs]), or a narrow screen */
 html[data-tabs="icons"] .set-wrap{grid-template-columns:52px minmax(0,1fr);gap:0 14px}
@@ -1481,6 +1497,62 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
   .set-row-ctl .seg,.set-row-ctl select{min-width:0;width:100%}
   .set-btns{justify-content:flex-start}
 }
+/* #102 the Extensions page (Settings → Extensions) and its details dialog.
+   Every button is a 44px target, except a section's Remove all (32px, a
+   deliberate secondary target) */
+.ext-sec{margin:0 0 14px}
+.ext-sec-h{display:flex;align-items:center;gap:8px;border-bottom:1.5px solid var(--line);margin-bottom:8px}
+.ext-fold{flex:1;min-width:0;display:flex;align-items:center;gap:8px;min-height:44px;background:none;border:0;padding:0;font-family:var(--head);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);text-align:left;cursor:pointer}
+.ext-fold:focus-visible{outline:2px solid var(--accent-2);outline-offset:1px}
+.ext-car{width:12px;font-size:10px}
+.ext-n{letter-spacing:0;text-transform:none;font-family:var(--body);font-size:12px}
+.ext-secbtn{min-height:32px;padding:4px 10px;flex:none}
+.ext-banner{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;margin:0 0 12px;border:1.5px solid var(--warn);border-radius:8px;background:var(--panel)}
+.ext-grow{flex:1 1 160px;min-width:0;overflow-wrap:anywhere}
+.ext-list{border:1px solid var(--hair);border-radius:8px;background:var(--panel)}
+.ext-row,.ext-src{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-top:1px dotted var(--hair)}
+.ext-row:first-child,.ext-src:first-child{border-top:0}
+.ext-main{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+.ext-name{display:inline-flex;align-items:center;max-width:100%;background:none;border:0;padding:0;min-height:44px;font-family:var(--head);font-size:14px;font-weight:700;color:var(--ink);text-align:left;cursor:pointer;text-decoration:underline dotted var(--line);text-underline-offset:3px;overflow-wrap:anywhere}
+.ext-main>.chip,.ext-main>.rd-src{white-space:nowrap;display:inline-block;margin-left:4px}
+.ext-sum{font-size:13px;color:var(--ink-soft)}
+.ext-from{font-size:12px;color:var(--ink-soft);opacity:.85}
+.ext-from.ext-err{color:var(--brick);opacity:1}
+/* rows 12px apart: a 22px chip's 44px hit area then stops short of the chip above */
+.ext-chips{display:flex;gap:6px;row-gap:12px;flex-wrap:wrap;margin-top:4px}
+.chip.ext-req{border:1px solid var(--brick);color:var(--brick);background:none;font-family:var(--head);text-decoration:none;text-transform:none}
+/* a requirement chip that does something is small to look at, and 44px to tap */
+button.chip.ext-req,a.chip.ext-req{position:relative;cursor:pointer}
+button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
+/* nothing to tap: a source doesn't offer it and it gave no link */
+.chip.ext-req.ext-plain{border-style:dashed;opacity:.85}
+.chip.ext-app{border:1px solid var(--warn);color:var(--warn);background:none;text-transform:none}
+/* the version, the action and the delete wrap as one unit, never one by one */
+.ext-side{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+.ext-src .ext-main{flex-basis:150px}
+.ext-ver{font-family:ui-monospace,monospace;font-size:12px;color:var(--ink-soft);white-space:nowrap}
+.ext-up{color:var(--accent-2)}
+.ext-act{min-height:44px}
+/* the app's switch is 28px tall; its ::after is the knob, so ::before widens the tap */
+.ext-src .switch::before{content:"";position:absolute;left:-4px;right:-4px;top:-10px;bottom:-10px}
+.ext-del{width:44px;height:44px;flex:none}
+.ext-add{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ext-add input{flex:1 1 220px;min-width:0;min-height:44px}
+.ext-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+/* Manual install's drop zone, and the Extensions page while something is dragged over it (#102) */
+.ext-drop{margin-top:10px;padding:22px;border:1.5px dashed var(--hair);border-radius:8px;text-align:center;color:var(--ink-soft)}
+.ext-drop.ext-dropping,#extPage.ext-dropping{outline:2px dashed var(--accent);outline-offset:4px}
+/* the install plan: a tickable row; the checkbox is the row's label, so the whole row toggles */
+.ext-row.ext-plan{cursor:pointer;min-height:44px}
+.ext-row.ext-plan input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--accent)}
+.ext-row.ext-plan input:disabled{cursor:default}
+.m-body .ext-dlg p{margin:0 0 8px}
+.ext-meta{font-size:12px;color:var(--ink-soft);margin:0 0 8px}
+.ext-box{border:1px solid var(--hair);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:13px;background:var(--panel);overflow-wrap:anywhere}
+.ext-box div{padding:2px 0}
+.ext-k{display:inline-block;width:84px;color:var(--ink-soft)}
+.ext-box a{color:var(--accent-2);text-decoration:underline;text-underline-offset:2px}
+.ext-dlg .m-actions .tbtn{min-height:44px}
 /* the download offer at the top of the changelog while an update is pending —
    the pill replaced the version button, so this is the only route to the release */
 .updbanner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;
@@ -1741,6 +1813,8 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
   <div class="wordmark"><span id="wmMain">Humblewood</span><small id="wmSub">The Fieldbook</small></div>
   <button class="verbtn" id="btnVer" title="Version & changelog">v—</button>
   <button class="updpill" id="updatePill" style="display:none"></button>
+  <button class="updpill-x" id="updatePillX" hidden aria-label="Clear the app update notice" title="Clear until a newer version">×</button>
+  <span class="extpill" id="extPill" hidden><button class="updpill" id="extPillGo"></button><button class="updpill-x" id="extPillX" aria-label="Clear the extension update notice" title="Clear until a newer version">×</button></span>
   <span id="savestate" class="savestate"></span>
   <button class="tbtn" id="btnHome" title="Characters / home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9"/></svg></button>
   <button class="tbtn" id="btnTheme" title="Toggle light / dark">
@@ -2250,10 +2324,11 @@ function blankChar(){
   return c;
 }
 let character=blankChar();
-/* setPage: the Settings page last viewed (#107). setCollapse is the fold state
-   of the sections that page replaced; it is no longer read, and stays only
-   because old settings files carry it. */
-let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,rulesSources:[],setCollapse:{},tabIcons:false,backdropClose:false,setPage:"appearance"};
+/* setPage: the Settings page last viewed (#107). setCollapse is fold state:
+   the Extensions page's sections under "ext:<section>" keys (#102); the keys
+   of the sections the Settings pages replaced (#107) are no longer read and
+   stay only because old settings files carry them. */
+let settings={skin:"humblewood",theme:"light",autoload:true,rough:true,sources:[],packOrigin:{},dismissedUpdates:{},setCollapse:{},tabIcons:false,backdropClose:false,setPage:"appearance"};
 let rules={name:"",version:0,keywords:[],items:[],features:[],spells:[],races:[],classes:[],feats:[],tables:[]};
 
 function seedGlossary(){return [];}
@@ -3248,11 +3323,15 @@ function checkForUpdate(){
    tooltip and stays in the changelog's title, so it is never lost. */
 function showUpdatePill(){
   if(!updateAvailable)return;
+  /* cleared with its × until a newer version arrives (#102, spec decision 9) */
+  const cleared=(settings.dismissedUpdates||{}).app;
+  if(cleared&&cmpVer(updateAvailable.ver,cleared)<=0)return;
   const el=document.getElementById("updatePill");if(!el)return;
   const ver=document.getElementById("btnVer");if(ver)ver.style.display="none";
   el.textContent="↑ v"+updateAvailable.ver;
   el.title=`Update to version ${updateAvailable.ver} available — you're on ${APP_VERSION}. Tap for what's new and the download.`;
   el.style.display="inline-flex";
+  const x=document.getElementById("updatePillX");if(x)x.hidden=false;
 }
 /* Newer rules DATA than what is loaded (#83). Data can be released without the
    app, as data-vX.Y.Z-N, and those releases are never GitHub's "latest", so
@@ -4773,9 +4852,10 @@ function openBackgroundInfo(name,opts){
   openModal(d.name,b,iconSVG("backgrounds",d.name,"lg"));
 }
 function classSummary(d){const bits=[];if(d.hitDie)bits.push("Hit die "+d.hitDie);if(d.spellcasting)bits.push("Spellcasting "+d.spellcasting.toUpperCase());if(d.savingThrows)bits.push("Saves "+d.savingThrows.map(x=>x.toUpperCase()).join("/"));return bits.length?`<p class="hint"><b>${esc(bits.join(" · "))}</b></p>`:"";}
-/* The Class card's pointer to Settings → Rules, which went with the card
-   (#103): + Class is now the way in for a sheet with no class. */
-const NO_RULES_HINT=`Load a rules pack with <b>races</b> and <b>classes</b> (Settings → Rules) to auto-apply traits and stats. Custom names work too, without auto data.`;
+/* The Class card's pointer to Settings → Extensions (Rules data until #102),
+   which went with the card (#103): + Class is now the way in for a sheet with
+   no class. */
+const NO_RULES_HINT=`Load a rules pack with <b>races</b> and <b>classes</b> (Settings → Extensions) to auto-apply traits and stats. Custom names work too, without auto data.`;
 function openAddClass(){
   const list=rules.classes||[];
   openModal("Add class",`
@@ -8511,7 +8591,7 @@ function saveRulesCache(){
          used to be invisible. */
       rulesCacheError="Your browser wouldn't save the "+cacheBytes(json.length)+
         " of rules data you have loaded, so it won't be there next time you open Fieldbook. "+
-        "Unload a pack you're not using under Loaded data, or re-import them after each reload.";
+        "Remove a pack you're not using in Settings → Extensions, or install them again after each reload.";
     }
     return rulesCacheError;
   };
@@ -9196,7 +9276,7 @@ function updRowHTML(r,i){
 }
 function openUpdateReview(){
   const {rows,anyRules}=diffCharacter();
-  if(!anyRules){openModal("Check for updates",`<p class="hint">No rules packs are loaded, so there's nothing to compare against. Import a pack from Settings first.</p>`);return;}
+  if(!anyRules){openModal("Check for updates",`<p class="hint">No rules packs are loaded, so there's nothing to compare against. Install one from Settings → Extensions first.</p>`);return;}
   const actionable=rows.filter(r=>r.type==="changed"||r.type==="added");
   if(!rows.length){
     markCharChecked();
@@ -9280,8 +9360,8 @@ function commitUpdates(picked,offered){
   openModal("Save the backup as a file?",`
     <p>Nothing has been changed yet. A backup couldn't be kept in the app because ${esc(res.error)}.</p>
     <p>Fieldbook can download it as a file instead, then carry on with the update.</p>
-    <p class="hint">Your rules packs are what usually fills storage. Settings → Rules data → <b>Clear all</b>
-      frees the most space; your characters aren't affected and you can re-import the packs afterwards.</p>
+    <p class="hint">Your rules packs are what usually fills storage. Settings → Extensions → <b>Remove all</b>
+      frees the most space; your characters aren't affected and you can install the packs again afterwards.</p>
     <div class="m-actions" style="flex-wrap:wrap;gap:8px">
       <button class="tbtn" id="bakCancel" type="button">Cancel</button>
       <button class="tbtn primary" id="bakDl" type="button">Download backup and update</button>
@@ -9478,7 +9558,10 @@ const modal=document.getElementById("modal");
    `then` is what a dismissed window hands on: the choice windows still queued
    behind it (#63). It belongs to THIS window, like the guard — every open and
    close clears both — so it can never fire after some later window, which is
-   how the old module-level equipment queue leaked. Done hands the queue on itself. */
+   how the old module-level equipment queue leaked. Done hands the queue on itself.
+   A guard that returns `true` refuses outright, with no prompt: the install
+   plan while its files download (#102), where there is nothing to confirm —
+   closing can't stop an install already under way. */
 let _dismissGuard=null,_dismissThen=null;
 function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
 /* `title` is plain TEXT, set as textContent: it holds class, spell, item and
@@ -9556,7 +9639,7 @@ function modalGiveBackFocus(){
   },0);
 }
 function dismissModal(){
-  if(_dismissGuard){const msg=_dismissGuard();if(msg&&!confirm(msg))return;}
+  if(_dismissGuard){const msg=_dismissGuard();if(msg===true)return;if(msg&&!confirm(msg))return;}
   const then=_dismissThen;closeModal();if(then)then();
 }
 document.getElementById("mClose").addEventListener("click",dismissModal);
@@ -11093,7 +11176,7 @@ function rbPaintBody(it){
 function renderRulesBrowser(){
   const empty=document.getElementById("rbEmpty");
   if(empty)empty.innerHTML=RULE_CATS.some(c=>(rules[c]||[]).length)?"":
-    `<div class="empty" style="line-height:1.7">No rules pack loaded yet. <button class="linkbtn" id="rbImport">Import rules files</button> to add classes, spells, feats, items and more, or manage sources in Settings.</div>`;
+    `<div class="empty" style="line-height:1.7">No rules pack loaded yet. <button class="linkbtn" id="rbImport">Import rules files</button> to add classes, spells, feats, items and more, or install them from Settings → Extensions.</div>`;
   const card=document.getElementById("rbCard");if(card&&card.dataset)card.dataset.screen=rbUI.screen;
   const shown=rbShown(),k=rulesCatOf(settings,shown);
   rbPaintSide(shown,k);
@@ -13146,7 +13229,7 @@ const SET_PAGES=[
    icon:`<path d="M2.5 12s3.6-6.5 9.5-6.5S21.5 12 21.5 12s-3.6 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>`},
   {k:"carrying",  title:"Carrying",     scope:"char",
    icon:`<path d="M12 4v16M7.5 20h9M5 7.5h14"/><path d="M5 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/><path d="M19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>`},
-  {k:"rules",     title:"Rules data",   scope:"app",
+  {k:"extensions",title:"Extensions",   scope:"app",
    icon:`<ellipse cx="12" cy="6" rx="7" ry="2.8"/><path d="M5 6v12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V6"/><path d="M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8"/>`},
   {k:"backup",    title:"Backup",       scope:"app",
    icon:`<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/>`},
@@ -13157,7 +13240,8 @@ function setPageDef(k){return SET_PAGES.find(p=>p.k===k)||null;}
 function setPagesFor(hasChar){return SET_PAGES.filter(p=>hasChar||p.scope!=="char");}
 /* the page to open: the remembered one while it is shown, else Appearance — so a
    character page remembered from a sheet never opens with no character */
-function setPageOf(stored,hasChar){const p=setPagesFor(hasChar).find(x=>x.k===stored);return p?p.k:"appearance";}
+/* #102: the Rules data page became Extensions; a stored "rules" opens it */
+function setPageOf(stored,hasChar){const s=stored==="rules"?"extensions":stored;const p=setPagesFor(hasChar).find(x=>x.k===s);return p?p.k:"appearance";}
 /* ↑/↓ wrap, Home/End jump; `keys` are the SHOWN pages, so a hidden character
    page is never stepped onto */
 function setPageStep(keys,cur,key){
@@ -13194,7 +13278,7 @@ function setRowHTML(name,help,control,inline){
 }
 /* #52: one switch per word tab; on means shown. Sheet is never listed. Final
    review (I1): the group's own help opens the body as a <p class="hint">, the
-   way Sources and Loaded data do (:144, :150), so it isn't read as Spells'
+   way Sources and Loaded data did before #102, so it isn't read as Spells'
    own row help. The Journal row gets its own note (M7): that tab is also
    where the Section Notes card lives (src/html/60-journal.html:20). */
 function tabsGroupHTML(c){
@@ -13205,20 +13289,24 @@ function tabsGroupHTML(c){
       `<button type="button" class="switch ${shown?"on":""}" id="swTab-${esc(t)}" data-tabsw="${esc(t)}" role="switch" aria-checked="${shown?"true":"false"}" aria-label="${esc("Show the "+TAB_LABELS[t]+" tab")}"></button>`,true);
   }).join(""));
 }
-/* the Rules data tab's count, and a dot while a newer copy of a loaded pack is
-   out; renderRulesData() keeps it current. The tab's aria-label replaces its
+/* the Extensions tab's count, and a dot while a newer copy of a loaded pack is
+   out: the boot data check's, or any update a source offers (extUpdateRows(),
+   #102) — spec §6.2's "shows while updates are pending", so clearing the
+   top-bar pill leaves the dot (Ruling 15); renderRulesData() and renderExtUI()
+   keep it current. The tab's aria-label replaces its
    contents, so the same facts are its description (setNavHTML() points
    aria-describedby here), the way the old section header read them aloud. */
 function rulesNavBadgeHTML(){
-  const n=rulesEntryCount(),up=loadedRulesGroups().some(g=>dataStatus(g).state==="update");
+  const n=rulesEntryCount(),up=rulesUpdatePending();
   return (n?`<span class="set-cnt" title="${esc(rulesBadge())}">${n}</span>`:"")+(up?`<span class="set-dot" title="Newer rules data is out"></span>`:"")+
-    `<span id="setBadgeDesc-rules" hidden>${esc(rulesBadge())}</span>`;
+    `<span id="setBadgeDesc-extensions" hidden>${esc(rulesBadge())}</span>`;
 }
+function rulesUpdatePending(){return loadedRulesGroups().some(g=>dataStatus(g).state==="update")||extUpdateRows().length>0;}
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
-/* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
+/* the Extensions tab's description; renderRulesData() keeps it current after the modal opens */
 function rulesBadge(){
   const n=rulesEntryCount();
-  const up=loadedRulesGroups().some(g=>dataStatus(g).state==="update");
+  const up=rulesUpdatePending();
   return (n?n+" entries":"none loaded")+(up?" · update":"");
 }
 /* Settings → Credits & licences: each loaded pack's own terms (#83). A pack
@@ -13276,15 +13364,11 @@ function openSettings(){
       setRowHTML("Coins count as weight","50 coins to the pound, the way the rules have it.",
         `<button type="button" class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight" role="switch" aria-checked="${character.coinWeight!==false?"true":"false"}" aria-label="Coins count as weight"></button>`,true)+
       `<p class="hint set-note" id="encHint">${esc(encSettingsHint())}</p>`):"";
-  const secRules=setGroupHTML("Sources",
-      `<p class="hint">Import the rules data zip or JSON files, or add a URL and Fetch all (needs a connection). What is loaded stays saved for offline use.</p>`+
-      `<div id="srcList"></div>`+
-      `<div class="set-addsrc"><input id="newSrc" placeholder="https://…/spells.json" aria-label="Rules source URL" title="A URL can point to one file, or to a manifest that includes others. All sources merge; later ones win on name clashes."><button type="button" class="tbtn" id="addSrc">Add</button></div>`+
-      `<div class="m-actions set-actions"><button type="button" class="tbtn" id="btnFetchRules" title="Each source it reaches replaces what it loaded last time; one it can't reach keeps what it had. Files you imported are never touched.">Fetch all</button><button type="button" class="tbtn" id="btnImportRules" title="The rules data zip, or JSON files split by category.">Import files</button><button type="button" class="tbtn" id="btnRulesTemplate">Get templates</button><button type="button" class="tbtn danger" id="btnClearRules">Clear all</button></div>`+
-      `<div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${esc(rulesStatusText())}</div>`+
-      `<input type="file" id="fileRules" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">`)+
-    setGroupHTML("Loaded data",
-      `<p class="hint">Everything in your rules pool, by file or source. Remove what you no longer want.</p><div id="rulesData"></div>`)+
+  /* #102: the page itself is 89-extensions.js's, repainted in place by
+     renderExtUI(); the status line (a live region) sits outside it, so a
+     repaint never recreates it. Manual install has its own file inputs. */
+  const secRules=extPageHTML()+
+    `<div class="status" id="rulesStatus" role="status">${esc(rulesStatusText())}</div>`+
     (hasChar?setGroupHTML("This sheet",
       setRowHTML("Rules updates",`Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compares this sheet with your loaded rules; a backup is saved first.`,
         `<button type="button" class="tbtn" id="btnCharUpdate">Check for rules updates</button>`)):"");
@@ -13311,10 +13395,10 @@ function openSettings(){
     <div class="field"><label class="f">Rules content</label>
       <p class="hint">Rules data comes separately from the app, as the rules data zip or files you supply. Each pack keeps its own terms; the ones you have loaded are listed above.</p></div>`;
   const pages=setPagesFor(hasChar),active=setPageOf(settings.setPage,hasChar);
-  const body={appearance:secAppearance,display:secDisplay,carrying:secCarrying,rules:secRules,backup:secBackup,credits:secCredits};
+  const body={appearance:secAppearance,display:secDisplay,carrying:secCarrying,extensions:secRules,backup:secBackup,credits:secCredits};
   const sub={display:"For "+who,carrying:"For "+who};
   openModal("Settings",`<div class="set-wrap" id="setSections">`+
-    setNavHTML(pages,active,{rules:rulesNavBadgeHTML()})+
+    setNavHTML(pages,active,{extensions:rulesNavBadgeHTML()})+
     `<div class="set-pages">`+pages.map(p=>setPageHTML(p.k,body[p.k],{active:p.k===active,sub:sub[p.k]})).join("")+`</div></div>`,"",{wide:true});
   /* Delegated from a wrapper INSIDE the modal body, not from #mBody itself:
      #mBody survives every open, so a listener bound to it would stack up one
@@ -13347,13 +13431,7 @@ function openSettings(){
   document.getElementById("swTabIcons").addEventListener("click",e=>{settings.tabIcons=!settings.tabIcons;e.currentTarget.classList.toggle("on",settings.tabIcons);applyTheme();saveSettings();});
   /* #106: app-wide, off by default — read by the backdrop listener in 80-modal-forms.js */
   document.getElementById("swBackdrop").addEventListener("click",e=>{settings.backdropClose=settings.backdropClose!==true;const on=settings.backdropClose;e.currentTarget.classList.toggle("on",on);e.currentTarget.setAttribute("aria-checked",on?"true":"false");saveSettings();});
-  renderSrcRows();renderRulesData();
-  document.getElementById("rulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`))removeRulesGroup(d.dataset.rdDel);});
-  document.getElementById("srcList").addEventListener("input",e=>{const inp=e.target.closest("[data-src-i]");if(!inp)return;settings.rulesSources[num(inp.dataset.srcI)]=inp.value.trim();saveSettings();});
-  document.getElementById("srcList").addEventListener("click",e=>{const d=e.target.closest("[data-src-del]");if(!d)return;settings.rulesSources.splice(num(d.dataset.srcDel),1);saveSettings();renderSrcRows();});
-  document.getElementById("addSrc").addEventListener("click",()=>{const i=document.getElementById("newSrc");const v=i.value.trim();if(!v)return;settings.rulesSources.push(v);i.value="";saveSettings();renderSrcRows();});
-  document.getElementById("btnFetchRules").addEventListener("click",fetchAllRules);
-  document.getElementById("btnClearRules").addEventListener("click",clearAllRules);
+  {const ep=document.getElementById("extPage");if(ep)wireExtPage(ep);}
   /* the size / encumbrance / coin-weight block only exists when a character is
      open, so every one of these is guarded */
   {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
@@ -13372,9 +13450,6 @@ function openSettings(){
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
   {const s=document.getElementById("setInvLogSize");if(s)s.addEventListener("change",()=>{if(!setInvLogSize(num(s.value)))s.value=String(character.invLogSize);});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
-  document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
-  document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());
-  document.getElementById("fileRules").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("btnExportSettings").addEventListener("click",()=>dl(new Blob([JSON.stringify({_type:"fieldbook-settings",settings,rules},null,2)],{type:"application/json"}),"fieldbook-settings.json"));
   document.getElementById("btnImportSettings").addEventListener("click",()=>document.getElementById("fileSettings").click());
   document.getElementById("fileSettings").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{let p=null;try{p=JSON.parse(r.result);}catch(err){}importSettings(p);};r.readAsText(f);e.target.value="";});
@@ -13408,17 +13483,12 @@ function encSettingsChanged(){
    cannot say "import the settings but keep my rules" without making Cancel
    import something. Nothing is lost, so nothing is asked, when the file brings
    no rules or none are loaded yet. */
-const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCat","tabIcons","backdropClose","setPage"];
+const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","sources","packOrigin","dismissedUpdates","setCollapse","rulesCat","tabIcons","backdropClose","setPage"];
 /* What boot does to settings from an older build, shared with Import settings
-   so an old file arrives in the same shape: the first builds' single `rulesUrl`
-   joins the sources list. True when that changed something worth saving. */
-function foldLegacySettings(){
-  if(!Array.isArray(settings.rulesSources))settings.rulesSources=[];
-  if(!settings.rulesUrl)return false;
-  if(!settings.rulesSources.includes(settings.rulesUrl))settings.rulesSources.push(settings.rulesUrl);
-  delete settings.rulesUrl;
-  return true;
-}
+   so an old file arrives in the same shape: `rulesSources` and the first
+   builds' single `rulesUrl` convert into `settings.sources` (#102), via
+   convertSources(). True when that changed something worth saving. */
+function foldLegacySettings(){return convertSources(settings);}
 /* The parsed file -> {settings, pool, used, skipped}, or null when it is not a
    settings file at all. A bare object must carry some setting, or a rules pack
    or character picked by mistake would be written into settings key by key. */
@@ -13605,7 +13675,7 @@ function dataStatusHTML(g){
   if(st.state==="stale")
     return ` <span class="chip warn" title="This pack is from v${esc(st.have)}; this version of Fieldbook ships v${esc(st.want)}. Re-import it from the latest release.">update available · v${esc(st.have)}</span>`;
   if(st.state==="update")
-    return ` <span class="rd-src" title="${esc("Rules data "+st.release+" has a newer copy of this pack, v"+st.want+". Download it from the release page and import it.")}">v${esc(st.have)} · v${esc(st.want)} out</span>`;
+    return ` <span class="rd-src" title="${esc("Rules data "+st.release+" has a newer copy of this pack, v"+st.want+". Download it from the release page and install it with Settings → Extensions → Manual install.")}">v${esc(st.have)} · v${esc(st.want)} out</span>`;
   if(st.state==="known")return ` <span class="rd-src" title="This pack's version.">v${esc(st.have)}</span>`;
   if(st.state==="current")return ` <span class="rd-src" title="Up to date with this version of Fieldbook.">v${esc(st.have)}</span>`;
   return "";
@@ -13834,10 +13904,11 @@ function readDataArchive(bytes,zipName,budget){
       const f=p&&typeof p.file==="string"?p.file:"";
       const en=f?all.find(x=>x.name===dir+f):null;
       if(!en)throw zipError("damaged","it lists "+(f||"a pack")+" but doesn't hold it");
-      return {name:base(f),en};
+      return {name:base(f),en,meta:p};
     });
     reserve(resolved.map(r=>r.en));
-    const packs=resolved.map(r=>({name:r.name,bytes:zipEntryBytes(bytes,r.en)}));
+    const builtFor=typeof m.builtFor==="string"?m.builtFor:"";
+    const packs=resolved.map(r=>({name:r.name,bytes:zipEntryBytes(bytes,r.en),meta:r.meta,builtFor}));
     return {kind:"data",version:typeof m.version==="string"?m.version:"",packs};
   }
   if(nested)return null;
@@ -13944,7 +14015,7 @@ function missingSummary(){
   const bad=loadedRulesGroups().filter(g=>missingRequirements(g.source).length);
   if(!bad.length)return "";
   const names=[...new Set(bad.map(g=>g.source||g.label))];
-  return " "+names.join(", ")+(names.length===1?" refers":" refer")+" to content that isn't loaded — see Loaded data below.";
+  return " "+names.join(", ")+(names.length===1?" refers":" refer")+" to content that isn't loaded — see its row under Rules data.";
 }
 /* One line above the loaded-data list when a data release has newer copies of
    packs the player has loaded (#83). Quiet on purpose (R7): a data release is
@@ -13980,17 +14051,14 @@ function rulesDataHTML(){
 function renderRulesData(){
   const html=rulesDataHTML();
   ["rulesData","homeRulesData"].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
-  /* The Settings sidebar's Rules data tab counts the pool (#107). It is drawn once by
+  /* The Settings sidebar's Extensions tab (Rules data until #102) counts the pool (#107). It is drawn once by
      openSettings(), so without this it kept the count from when the modal
      opened, whatever an import, fetch, remove or clear did afterwards. Every
      path that changes the pool ends here, which is why the refresh lives here. */
-  const badge=document.querySelector('[data-setbadge="rules"]');
+  const badge=document.querySelector('[data-setbadge="extensions"]');
   if(badge)badge.innerHTML=rulesNavBadgeHTML();
-}
-function renderSrcRows(){
-  const host=document.getElementById("srcList");if(!host)return;
-  const srcs=settings.rulesSources||[];
-  host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${esc(i)}"><button class="icon danger" data-src-del="${esc(i)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
+  /* the Extensions page's rows are the loaded list now (#102) */
+  if(typeof renderExtUI==="function")renderExtUI();
 }
 /* `rules.requires` and `rules.credits` are keyed by a pack's own LABEL
    (srcLabel()), which a pack author writes freely — nothing stops it being
@@ -14076,7 +14144,7 @@ function keyOf(x,kind){if(!x||typeof x!=="object")return "";return kind==="subcl
 /* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules.
    Where it came from is stamped on every entry: `_file` for a file import, `_url`
    (the source URL from Settings, not an include under it) for a fetch. `_url` is
-   what lets the next Fetch all replace exactly what that source loaded before. */
+   what lets that source's next Fetch replace exactly what it loaded before. */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
 /* A pack's licence and credit (#83), kept per source LABEL like `requires`, for
    Settings → Credits & licences: null when it states neither. Plain strings,
@@ -14160,8 +14228,8 @@ function mergeRules(obj,fileName,url){
    Each run of consecutive entries that share their provenance is merged as one
    pack, with that provenance handed back in the fields mergeRules reads
    (`system`, `rulebook`, `dataVersion`, `excludeSystems`, `requires`, the file
-   name or URL). So the loaded-data list, the version badges and Fetch all's
-   `_url` replacement come back as they were, and so does the order within each
+   name or URL). So the loaded-data list, the version badges and a plain source's
+   Fetch `_url` replacement come back as they were, and so does the order within each
    category, which name lookups take the first match from.
 
    What survives is mergeRules' decision, not this function's: only a
@@ -14304,7 +14372,7 @@ function applyFetchedSource(url,packs){
   prunePackMeta();reindexRules();recomputeDups();
   return skipped;
 }
-/* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
+/* Settings → Extensions → a plain source's Fetch (Fetch all until #102). Fetching NEVER loses what is loaded (#65): this used to
    resetRules() first, which discarded every pack imported from a file, and when
    the fetch then failed it cached the empty pool over the good one.
 
@@ -14313,9 +14381,12 @@ function applyFetchedSource(url,packs){
    part keeps them; a run where nothing arrives changes neither the pool nor the
    cache, and says so. Offline is the expected case, not an edge. Returns a
    promise for the tests; the button ignores it. */
-function fetchAllRules(){
-  const srcs=[...new Set((settings.rulesSources||[]).map(s=>String(s||"").trim()).filter(Boolean))];
-  if(!srcs.length){updateRulesStatus("Add at least one source URL first.","err");return Promise.resolve();}
+function fetchAllRules(urls){
+  /* the plain sources (#102): old-style pack and include URLs, which have no
+     versions; a manifest source installs through the plan instead */
+  const from=Array.isArray(urls)?urls:(settings.sources||[]).filter(s=>s.kind==="plain"&&s.on).map(s=>s.url);
+  const srcs=[...new Set(from.map(s=>String(s||"").trim()).filter(Boolean))];
+  if(!srcs.length){updateRulesStatus("There's no plain source to fetch.","err");return Promise.resolve();}
   updateRulesStatus(`Fetching ${srcs.length} source${srcs.length>1?"s":""}…`,"");
   const memo=new Map(),results=[];
   /* a 200 with no rules in it ({} or an error object) is a failure, not "this
@@ -14472,8 +14543,10 @@ function rulesImportStatus(msg,cls,opts){
   if(t&&!document.getElementById("rulesStatus")&&!(h&&h.offsetParent!==null))
     toast(typeof t==="string"?t:msg,null,{err:!!opts.err,long:!!opts.long});
 }
-/* Settings → Import files, the home screen's import and the Rules tab's two:
-   read every file as bytes, import, save the cache, and say what happened.
+/* The old Settings → Import files, kept for the suites: since #102 every
+   picker (Manual install, the home screen's import and the Rules tab's two)
+   goes through manualInstallFiles() and the install plan instead. It reads
+   every file as bytes, imports, saves the cache, and says what happened.
    A save that does not land is said on the same line (the storage rule).
    Resolves to {msg, cls} once the save has landed or failed, for the suites. */
 function importRulesFiles(files){
@@ -14514,63 +14587,1067 @@ function importRulesFiles(files){
     return {msg,cls:"err"};
   });
 }
-/* download a split example set: a manifest plus one file per category */
-function downloadRulesTemplates(){
-  const files=[
-    ["humblewood.rules.json",{name:"Humblewood Rules",version:1,include:["conditions.json","races.json","classes.json","traits.json","items.json","spells.json","feats.json"]}],
-    ["conditions.json",{keywords:[
-      {term:"Frightened",type:"text",text:"Disadvantage on ability checks and attack rolls while the source of fear is in line of sight; can't willingly move closer to it."},
-      {term:"Poisoned",type:"text",text:"Disadvantage on attack rolls and ability checks."}]}],
-    ["races.json",{races:[
-      {name:"Strig",description:"Owlfolk of the Humblewood — patient nocturnal hunters.",abilityScores:{wis:2,dex:1},speed:25,skills:["Perception"],languages:"Birdfolk, Common",
-       traits:[{name:"Silent Feathers",description:"You have proficiency in the Stealth skill.",skills:["Stealth"]},{name:"Nocturnal",description:"You can see in dim light within 60 feet as if it were bright light."}]}]}],
-    ["classes.json",{classes:[
-      {name:"Bard",description:"A performer who channels story and song into magic.",hitDie:"d8",spellcasting:"cha",savingThrows:["dex","cha"],
-       levels:{
-         "1":{traits:[{name:"Bardic Inspiration",description:"Bonus action: give an ally a d6 inspiration die."}],choices:[{type:"skill",choose:3,from:["Acrobatics","Deception","History","Insight","Performance","Persuasion","Stealth"]}],spells:{known:4,note:"You know 4 cantrips/spells to start."}},
-         "2":{traits:[{name:"Jack of All Trades",description:"Add half proficiency to checks that lack it."}]},
-         "3":{traits:[{name:"Expertise",description:"Double proficiency for two chosen skills."}],choices:[{type:"subclass",label:"Choose a Bard College"}]},
-         "4":{choices:[{type:"asi"}]}
-       },
-       subclasses:{
-         "College of Lore":{description:"Bards who collect knowledge and secrets from every source.",levels:{
-            "3":{traits:[{name:"Cutting Words",description:"Reaction + inspiration die to subtract from a foe's roll."}],choices:[{type:"skill",choose:3,from:["Arcana","History","Investigation","Nature","Religion","Medicine"]}]}}},
-         "College of Valor":{description:"Skalds whose tales embolden warriors in battle.",levels:{
-            "3":{traits:[{name:"Bonus Proficiencies",description:"Medium armor, shields, and martial weapons."}]}}}
-       }},
-      {name:"Fighter",description:"A master of martial combat.",hitDie:"d10",savingThrows:["str","con"],
-       levels:{
-         "1":{traits:[{name:"Second Wind",description:"Bonus action: regain 1d10 + level HP, once per rest."}],choices:[
-            {type:"option",label:"Choose a Fighting Style",choose:1,from:[
-               {name:"Archery",description:"+2 to ranged weapon attack rolls.",effects:[{target:"attack.ranged",value:2}]},
-               {name:"Defense",description:"+1 AC while wearing armor.",effects:[{target:"ac",value:1}]},
-               {name:"Great Weapon Fighting",description:"Treat 1s and 2s on two-handed melee damage dice as 3s."},
-               {name:"Two-Weapon Fighting",description:"Add your ability modifier to the off-hand attack's damage."}]},
-            {type:"skill",choose:2,from:["Acrobatics","Athletics","History","Insight","Intimidation","Perception","Survival"]}]},
-         "3":{choices:[{type:"subclass",label:"Choose a Martial Archetype"}]},
-         "4":{choices:[{type:"asi"}]}
-       },
-       subclasses:{
-         "Champion":{description:"Hones raw physical prowess to perfection.",levels:{"3":{traits:[{name:"Improved Critical",description:"Crit on a 19 or 20."}]}}},
-         "Arcane Archer":{description:"Weaves magic into bow attacks.",spellcasting:"int",levels:{
-            "3":{traits:[{name:"Arcane Shot",description:"Unleash magical effects through your bow."}],choices:[{type:"skill",choose:1,from:["Arcana","Nature"]}],spells:{note:"Learn two Arcane Shot options."}}}}
-       }}]}],
-    ["traits.json",{traits:[
-      {name:"Keen Senses",source:"Ancestry",description:"You have proficiency in the Perception skill.",skills:["Perception"]}]}],
-    ["items.json",{items:[
-      {name:"Cloak of Protection",description:"+1 AC and saving throws while worn.",effects:[{target:"ac",value:1},{target:"save.str",value:1},{target:"save.dex",value:1},{target:"save.con",value:1},{target:"save.int",value:1},{target:"save.wis",value:1},{target:"save.cha",value:1}]},
-      {name:"Gauntlets of Might",description:"Example item using the attack effect targets: +1 to melee attack and damage rolls while equipped.",effects:[{target:"attack.melee",value:1},{target:"damage.melee",value:1}]}]}],
-    ["spells.json",{spells:[
-      {name:"Cure Wounds",level:1,class:["Ranger","Cleric","Druid"],meta:"1 action · Touch · V,S",text:"A creature you touch regains hit points equal to 1d8 + your spellcasting modifier."},
-      {name:"Hunter's Mark",level:1,class:"Ranger",meta:"1 bonus action · 90 ft · V · Concentration",text:"Mark a creature; deal extra 1d6 damage to it with weapon attacks and gain tracking benefits."},
-      {name:"Guidance",level:0,class:["Cleric","Druid"],meta:"1 action · Touch · V,S · Concentration",text:"The target can add 1d4 to one ability check of its choice before the spell ends."}]}],
-    ["feats.json",{feats:[
-      {name:"Alert",description:"+5 to initiative; you can't be surprised while conscious.",effects:[{target:"init",value:5}]},
-      {name:"Tough",description:"Your hit point maximum increases by twice your level.",effects:[]}]}]
-  ];
-  files.forEach(([n,o],i)=>setTimeout(()=>dl(new Blob([JSON.stringify(o,null,2)],{type:"application/json"}),n),i*300));
-}
 
+/* ================= extensions: manifests, sources, the install pipeline (#102) =================
+   A manifest is the data zip's own fieldbook-data.json, extended (format 2):
+   packs with a version, sha256, category, minimum app and descriptions, at
+   paths relative to the manifest. Sources are where manifests come from: the
+   built-in official source (the release tag on raw.githubusercontent.com),
+   manifest URLs, and old-style plain URLs (fetchAllRules()). Every way of
+   installing builds candidates, then one plan, one confirm, one all-or-nothing
+   install. Spec: src/docs/specs/2026-10-26-extensions-manifest-design.md */
+const EXT_CATS=["rules"];
+const EXT_SUMMARY_MAX=140,EXT_DESC_MAX=4000,EXT_MAN_MAX=65536,EXT_PACKS_MAX=1000,EXT_FILE_MAX=33554432;
+const EXT_CHECK_MS=10000,EXT_FILE_MS=30000;
+/* ---- SHA-256, in JavaScript: whether a file:// page may use crypto.subtle
+   differs by browser, and the suites check this against Node's crypto ---- */
+const SHA256_K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function sha256Hex(bytes){
+  /* ArrayBuffer.isView, not instanceof Uint8Array: the harness (and any other
+     cross-realm caller) hands in a typed array made by a different realm's
+     Uint8Array constructor, which instanceof would reject (#102) */
+  const view=ArrayBuffer.isView(bytes)?bytes:null;
+  const src=view?new Uint8Array(view.buffer,view.byteOffset,view.byteLength):new Uint8Array(0),len=src.length;
+  const total=((len+9+63)>>6)<<6,m=new Uint8Array(total);
+  m.set(src);m[len]=0x80;
+  const dv=new DataView(m.buffer);
+  dv.setUint32(total-8,Math.floor(len/0x20000000));dv.setUint32(total-4,(len*8)>>>0);
+  const H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const W=new Uint32Array(64),rot=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let off=0;off<total;off+=64){
+    for(let i=0;i<16;i++)W[i]=dv.getUint32(off+i*4);
+    for(let i=16;i<64;i++){
+      const s0=rot(W[i-15],7)^rot(W[i-15],18)^(W[i-15]>>>3),s1=rot(W[i-2],17)^rot(W[i-2],19)^(W[i-2]>>>10);
+      W[i]=(W[i-16]+s0+W[i-7]+s1)>>>0;
+    }
+    let a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+    for(let i=0;i<64;i++){
+      const t1=(h+(rot(e,6)^rot(e,11)^rot(e,25))+((e&f)^(~e&g))+SHA256_K[i]+W[i])>>>0;
+      const t2=((rot(a,2)^rot(a,13)^rot(a,22))+((a&b)^(a&c)^(b&c)))>>>0;
+      h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+    }
+    H[0]=(H[0]+a)>>>0;H[1]=(H[1]+b)>>>0;H[2]=(H[2]+c)>>>0;H[3]=(H[3]+d)>>>0;
+    H[4]=(H[4]+e)>>>0;H[5]=(H[5]+f)>>>0;H[6]=(H[6]+g)>>>0;H[7]=(H[7]+h)>>>0;
+  }
+  return H.map(x=>x.toString(16).padStart(8,"0")).join("");
+}
+/* ---- reading a manifest ---- */
+function extUrl(u){return typeof u==="string"&&/^https?:\/\//i.test(u)?u:"";}
+/* Manifest text, cut to its cap. Every invisible format character (\p{Cf}:
+   the bidi controls U+200E/F, U+202A-202E, U+2066-2069 and U+061C, the
+   zero-width characters and the BOM) goes first: a name ending in U+202E
+   made the browser draw "name (host)" with the host reversed, so
+   "moc.buhtig.ws" read "(sw.github.com)" (#102 re-review N1, Mike's call:
+   strip them). Stripped before the cut, so they never use up the length. */
+const EXT_INVISIBLE=/\p{Cf}/gu;
+function extPlain(s){return typeof s==="string"?s.replace(EXT_INVISIBLE,""):"";}
+function extText(s,max){return typeof s==="string"?extPlain(s).slice(0,max):"";}
+/* a path relative to the manifest: an ALLOW-list, not a blacklist of
+   "dangerous" characters. new URL() rewrites its whole input before it
+   collapses ../ dot-segments — it decodes %2e, and it strips every ASCII tab
+   and newline (WHATWG URL spec) wherever they fall, not just at the ends — so
+   a blacklist chases one bypass at a time (round 1 caught "%2e%2e" but not
+   "."+TAB+"." reassembling into ".." post-parse). Every "/"-separated segment
+   must instead be ONLY letters, digits, "." "_" "-", and not "." or ".." on
+   its own; nothing in that class survives URL rewriting into something new,
+   and nothing outside it (no "%", "\", ":", control character, space, "?",
+   "#", empty segment) is ever a legitimate pack path (#102 fix round 2) */
+function extRelPath(p){
+  const s=typeof p==="string"?p:"";
+  if(!s)return "";
+  const segs=s.split("/");
+  return segs.every(x=>/^[A-Za-z0-9._-]+$/.test(x)&&x!=="."&&x!=="..")?s:"";
+}
+function extKey(system,file){return String(system)+"|"+String(file);}
+/* one pack of a manifest, normalised, or null when it can't be installed from */
+function extEntry(p,builtFor){
+  if(!p||typeof p!=="object")return null;
+  const path=extRelPath(p.file),file=path.split("/").pop(),system=typeof p.system==="string"?p.system.trim():"";
+  if(!path||!system||!/^[A-Za-z0-9._-]+\.json$/.test(file)||!parseDataVer(p.version))return null;
+  const app=v=>typeof v==="string"&&/^\d+\.\d+\.\d+$/.test(v)?v:"";
+  return {path,file,system,
+    category:typeof p.category==="string"&&p.category.trim()?p.category.trim():"rules",
+    title:extText(p.title,200)||extText(system,200),summary:extText(p.summary,EXT_SUMMARY_MAX),description:extText(p.description,EXT_DESC_MAX),
+    version:p.version,minApp:app(p.minApp)||app(builtFor),
+    sha256:/^[0-9a-f]{64}$/.test(String(p.sha256||""))?p.sha256:"",size:Math.max(0,num(p.size)),
+    license:extText(p.license,64),attribution:extText(p.attribution,2000),
+    requires:(Array.isArray(p.requires)?p.requires:[]).filter(r=>r&&typeof r==="object"&&typeof r.pack==="string"&&r.pack.trim())
+      .slice(0,50).map(r=>({pack:extText(r.pack.trim(),200),file:extText(typeof r.file==="string"?r.file:"",200),url:extUrl(r.url)}))};
+}
+function readManifest(obj,byteLength){
+  if(num(byteLength)>EXT_MAN_MAX)throw new Error("the manifest is larger than 64 KB");
+  if(!obj||typeof obj!=="object"||Array.isArray(obj)||obj._type!=="fieldbook-data"||!Array.isArray(obj.packs))
+    throw new Error("it isn't a Fieldbook manifest");
+  if(obj.packs.length>EXT_PACKS_MAX)throw new Error("it lists more than 1,000 packs");
+  const builtFor=typeof obj.builtFor==="string"?obj.builtFor:"",byKey=new Map();
+  obj.packs.forEach(p=>{
+    const e=extEntry(p,builtFor);if(!e)return;
+    const k=extKey(e.system,e.file),ex=byKey.get(k);
+    if(!ex||cmpDataVer(e.version,ex.version)>0)byKey.set(k,e);
+  });
+  return {name:extText(obj.name,120),homepage:extUrl(obj.homepage),version:typeof obj.version==="string"?obj.version:"",builtFor,packs:[...byKey.values()]};
+}
+/* a pack this app is too old for (spec decision 3) */
+function extTooNew(e){return !!(e&&e.minApp)&&cmpDataVer(e.minApp,APP_VERSION)>0;}
+/* ---- sources (spec §4) ---- */
+function extOfficial(){return {id:"official",kind:"official",url:"",on:true,checked:0,error:"",manifest:null,base:""};}
+/* settings.rulesSources and the legacy rulesUrl -> settings.sources, once; the
+   official source exactly once. True when anything changed. */
+function convertSources(s){
+  const before=JSON.stringify([s.sources,s.packOrigin,s.dismissedUpdates,s.rulesSources,s.rulesUrl]);
+  const isObj=o=>!!o&&typeof o==="object"&&!Array.isArray(o);
+  let list=(Array.isArray(s.sources)?s.sources:[]).filter(x=>isObj(x)&&(
+    x.kind==="official"||(x.kind==="manifest"&&extUrl(x.url))||(x.kind==="plain"&&typeof x.url==="string"&&x.url.trim())));
+  let off=list.find(x=>x.kind==="official");
+  list=list.filter(x=>x.kind!=="official");
+  off=Object.assign(extOfficial(),off||{},{id:"official",kind:"official",url:""});
+  const old=[].concat(Array.isArray(s.rulesSources)?s.rulesSources:[],s.rulesUrl?[s.rulesUrl]:[])
+    .map(u=>String(u||"").trim()).filter(Boolean);
+  old.forEach(u=>{if(!list.some(x=>x.url===u))list.push({id:uid(),kind:"plain",url:u,on:true,checked:0,error:"",manifest:null,base:""});});
+  s.sources=[off].concat(list);
+  delete s.rulesSources;delete s.rulesUrl;
+  if(!isObj(s.packOrigin))s.packOrigin={};
+  if(!isObj(s.dismissedUpdates))s.dismissedUpdates={};
+  return JSON.stringify([s.sources,s.packOrigin,s.dismissedUpdates,s.rulesSources,s.rulesUrl])!==before;
+}
+/* ---- offers and rows ---- */
+function extOffers(){
+  const out=[];
+  (settings.sources||[]).forEach(src=>{
+    if(!src.on||!src.manifest||!Array.isArray(src.manifest.packs))return;
+    src.manifest.packs.forEach(entry=>out.push({entry,source:src}));
+  });
+  return out;
+}
+/* the offer for one pack: the source that installed it, if it still offers it;
+   otherwise the newest; on a tie, the official source */
+function availableFor(system,file){
+  const all=extOffers().filter(o=>o.entry.system===system&&o.entry.file===file);
+  if(!all.length)return null;
+  const origin=(settings.packOrigin||{})[extKey(system,file)];
+  const own=all.find(o=>o.source.id===origin);if(own)return own;
+  return all.slice().sort((a,b)=>cmpDataVer(b.entry.version,a.entry.version)||((b.source.kind==="official")-(a.source.kind==="official")))[0];
+}
+function extRowState(group,offer){
+  if(offer&&EXT_CATS.indexOf(offer.entry.category)<0)return "unsupported";
+  if(!group)return offer?(extTooNew(offer.entry)?"blocked":"install"):"none";
+  if(!offer)return "none";
+  /* a loaded pack with no parseable dataVersion (unversioned data predates
+     versioning, #83) can never read as "current" against a versioned offer,
+     so it falls through to "update" rather than getting stuck unmatched */
+  const have=group.dataVersion;
+  if(parseDataVer(have)&&cmpDataVer(offer.entry.version,have)<=0)return "current";
+  return extTooNew(offer.entry)?"blocked":"update";
+}
+/* one row per loaded pack, then one per offered pack that isn't loaded */
+function extPackRows(){
+  const rows=[],seen=new Set();
+  loadedRulesGroups().forEach(g=>{
+    const key=g.isFile?extKey(g.source,g.label):g.key;seen.add(key);
+    const offer=g.isFile?availableFor(g.source,g.label):null;
+    rows.push({key,group:g,offer,state:extRowState(g,offer)});
+  });
+  extOffers().forEach(o=>{
+    const key=extKey(o.entry.system,o.entry.file);if(seen.has(key))return;seen.add(key);
+    const offer=availableFor(o.entry.system,o.entry.file);
+    rows.push({key,group:null,offer,state:extRowState(null,offer)});
+  });
+  return rows;
+}
+function extUpdateRows(){return extPackRows().filter(r=>r.state==="update");}
+/* the pill's count: updates newer than the version the player cleared (spec decision 9) */
+function extPillCount(){
+  const d=settings.dismissedUpdates||{};
+  /* a dismissal that isn't a parseable version (corrupt settings, a stray {})
+     never suppresses the pill, rather than reading as "always newer, never
+     dismissed" via cmpDataVer's 0-on-invalid default (#102 fix round 1) */
+  return extUpdateRows().filter(r=>!d[r.key]||!parseDataVer(d[r.key])||cmpDataVer(r.offer.entry.version,d[r.key])>0).length;
+}
+function dismissUpdates(){
+  if(!settings.dismissedUpdates||typeof settings.dismissedUpdates!=="object")settings.dismissedUpdates={};
+  extUpdateRows().forEach(r=>{settings.dismissedUpdates[r.key]=r.offer.entry.version;});
+}
+/* ---- the network: every call has a timeout (constraint 2) ---- */
+/* The WHOLE response is raced against the timer, not just the wait for
+   headers: a host that answers promptly and then stalls the body must still
+   time out (#102 fix round 1, Important 2 — Promise.race used to cover only
+   fetch(), leaving r.arrayBuffer() free to hang forever). AbortController,
+   where it exists, actually stops the download on a timeout instead of
+   leaving it running in the background. `cap`, when given, refuses a
+   Content-Length above it before the body is ever read — EXT_MAN_MAX for a
+   manifest check, EXT_FILE_MAX for a pack file — so a hostile or mistaken
+   host can't make the tab buffer a huge response just to have it thrown
+   away afterwards.
+
+   The header is only a hint: a chunked answer has none. So the body is read
+   through its stream with a running byte count, and the read is cancelled
+   and the request aborted the moment the count passes `cap` (#102 final
+   review I3, Ruling 17: an 80 MB chunked answer to a manifest check used to
+   be buffered whole). arrayBuffer() is the fallback only where a response
+   has no body stream, and the cap is still checked on what it returns. */
+function extFetchBytes(url,ms,cap){
+  const ac=typeof AbortController==="function"?new AbortController():null;
+  const tooBig=()=>{const e=new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");e.tooBig=true;return e;};
+  let timer,reader=null;
+  /* stop everything: the request where AbortController exists, the stream's
+     reader always (it may be all there is to stop) */
+  const stop=()=>{if(ac)ac.abort();if(reader){try{const p=reader.cancel();if(p&&typeof p.catch==="function")p.catch(()=>{});}catch(e){/* already closed or errored: nothing left to stop */}}};
+  const timeout=new Promise((_,rej)=>{timer=setTimeout(()=>{stop();rej(new Error("it took too long to answer"));},ms);});
+  const opts=ac?{cache:"no-store",signal:ac.signal}:{cache:"no-store"};
+  const run=fetch(url,opts).then(r=>{
+    if(!r||!r.ok){const e=new Error("HTTP "+(r?r.status:"error"));e.status=r?r.status:0;throw e;}
+    if(cap){
+      const len=r.headers&&typeof r.headers.get==="function"?num(r.headers.get("content-length")):0;
+      /* abort first, so the refusal really stops the download rather than
+         leaving the body streaming in behind it (#102 Task 4 follow-up N4) */
+      if(len>cap){stop();throw tooBig();}
+    }
+    if(!r.body||typeof r.body.getReader!=="function")
+      return r.arrayBuffer().then(b=>{const u=new Uint8Array(b);if(cap&&u.length>cap)throw tooBig();return u;});
+    reader=r.body.getReader();
+    const parts=[];let total=0;
+    const pump=()=>reader.read().then(c=>{
+      if(!c||c.done){
+        const out=new Uint8Array(total);let at=0;
+        parts.forEach(p=>{out.set(p,at);at+=p.length;});
+        return out;
+      }
+      /* isView, not instanceof: a chunk can come from another realm (see sha256Hex) */
+      const v=ArrayBuffer.isView(c.value)?new Uint8Array(c.value.buffer,c.value.byteOffset,c.value.byteLength):new Uint8Array(c.value||0);
+      total+=v.length;
+      if(cap&&total>cap){stop();throw tooBig();}
+      parts.push(v);
+      return pump();
+    });
+    return pump();
+  });
+  return Promise.race([run,timeout]).then(b=>b instanceof Uint8Array?b:new Uint8Array(b)).finally(()=>clearTimeout(timer));
+}
+/* the official source's manifest URL: the newest release this app can run
+   (pickDataRelease(), as the boot data check), at its tag, on raw — which
+   answers a file:// page. "" when there is no such release. */
+function extOfficialUrl(){
+  if(!UPDATE_REPO)return Promise.resolve("");
+  return extFetchBytes(`https://api.github.com/repos/${UPDATE_REPO}/releases?per_page=100`,EXT_CHECK_MS).then(b=>{
+    /* an answer that isn't a JSON list (a proxy's HTML page, a JSON error
+       object) is said in words on the row, never as a raw parser message
+       (#102 final review M8, Ruling 18) */
+    let list;try{list=JSON.parse(utf8Text(b));}catch(e){list=null;}
+    if(!Array.isArray(list))throw new Error("GitHub's release list couldn't be read");
+    const pick=pickDataRelease(list,APP_VERSION);
+    return pick?`https://raw.githubusercontent.com/${UPDATE_REPO}/${encodeURIComponent(pick.tag)}/releases/data/fieldbook-data.json`:"";
+  });
+}
+/* One source's manifest. A failure keeps the last good manifest and says why
+   on the source's row; the official source on a release from before #102 (no
+   releases/data/, a 404) is simply nothing to offer, not an error. */
+function checkSource(src){
+  const at=Date.now();
+  return (src.kind==="official"?extOfficialUrl():Promise.resolve(src.url)).then(url=>{
+    if(!url){src.manifest=null;src.base="";return;}
+    return extFetchBytes(url,EXT_CHECK_MS,EXT_MAN_MAX).then(bytes=>{
+      let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){throw new Error("it isn't valid JSON");}
+      src.manifest=readManifest(obj,bytes.length);src.base=url;
+    },e=>{
+      /* only a 404 on THIS fetch — the manifest at the release
+         extOfficialUrl() picked — means "a release from before #102,
+         nothing to offer"; a 404 from extOfficialUrl()'s OWN fetch (the
+         releases list, e.g. a renamed repo) is a real error and must never
+         take this branch (#102 fix round 1, Minor 9) */
+      if(src.kind==="official"&&e&&e.status===404)e.officialOld=true;
+      throw e;
+    });
+  }).then(()=>{src.checked=at;src.error="";},e=>{
+    src.checked=at;
+    if(e&&e.officialOld){src.manifest=null;src.base="";src.error="";return;}
+    src.error=String((e&&e.message)||e||"it couldn't be reached");
+  });
+}
+/* The last "couldn't save your sources" error from a checkSources() save —
+   boot stays quiet (spec §4), but a storage failure still has to be reported
+   somewhere (constraint 2), not swallowed; the Extensions page shows it as
+   "at the last check". Set by checkSources(); cleared by any successful
+   settings save in this fragment — checkSources(), addSource() and
+   runInstall() — since each one writes the same sources (#102 fix round 1,
+   Important 3; Task 4 follow-up N3). */
+let extSaveError="";
+function extSaveErrorText(){return extSaveError;}
+function extSaveOk(err){if(!err)extSaveError="";return err;}
+/* Every enabled manifest source, and the official one: at boot (quiet, never
+   offline) and on Check now. Reads manifests only, never pack files. */
+function checkSources(opts){
+  const o=opts||{};
+  if(navigator.onLine===false)return Promise.resolve(false);
+  const list=(settings.sources||[]).filter(s=>s.on&&(s.kind==="official"||s.kind==="manifest"));
+  return Promise.all(list.map(checkSource)).then(()=>{
+    const err=saveSettings();
+    extSaveError=err||"";
+    if(err&&!o.boot&&typeof updateRulesStatus==="function")updateRulesStatus("Couldn't save your sources: "+err,"err");
+    if(typeof renderExtUI==="function")renderExtUI();
+    return true;
+  });
+}
+/* + Add a source URL: fetched once and sorted (spec §4) */
+function addSource(url){
+  const u=String(url||"").trim();
+  if(!extUrl(u))return Promise.resolve({ok:false,why:"That isn't a web address (it must start with http:// or https://)."});
+  /* de-duplicate on the NORMALISED url: "HTTPS://Host/m.json" and
+     "https://host/m.json" are the same source, differing only in case or a
+     default port (#102 fix round 1, Minor 2) */
+  let norm=extPlain(u);try{norm=new URL(u).href;}catch(e){/* keep norm; extUrl() already refused anything new URL() can't parse at all */}
+  const dup=(settings.sources||[]).some(s=>{let sn=s.url;try{sn=new URL(s.url).href;}catch(e){}return sn===norm;});
+  if(dup)return Promise.resolve({ok:false,why:"That source is already in the list."});
+  /* capped like a pack file, not like a manifest: a plain source may be a
+     whole pack (spec §4), well over 64 KB; a manifest over 64 KB is still
+     refused, by readManifest()'s own check below (#102 final review I3) */
+  /* the normalised URL is what is fetched and stored: new URL() percent-
+     encodes a raw U+202E in the path, which drawn as text reversed the rest
+     of the Sources line (#102 re-review 2, Ruling 20) */
+  return extFetchBytes(norm,EXT_CHECK_MS,EXT_FILE_MAX).then(bytes=>{
+    let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){return {ok:false,why:"It didn't answer with JSON."};}
+    const src={id:uid(),kind:"plain",url:norm,on:true,checked:Date.now(),error:"",manifest:null,base:""};
+    let empty=false;
+    if(obj&&obj._type==="fieldbook-data"){
+      try{src.manifest=readManifest(obj,bytes.length);}catch(e){return {ok:false,why:"Its manifest can't be used: "+e.message+"."};}
+      src.kind="manifest";src.base=norm;empty=!src.manifest.packs.length;
+    }else if(!(obj&&typeof obj==="object"&&(isRulesPack(obj)||Array.isArray(obj.include)))){
+      return {ok:false,why:"It isn't a Fieldbook manifest or rules file."};
+    }
+    /* settings.sources is foldLegacySettings()'s job to create — addSource()
+       must not assume it ran first (#102 fix round 1, Minor 1: this used to
+       throw inside the SAME .then() whose sibling onRejected could never
+       catch it, the exact trap the implementer had already fixed in
+       runInstall) */
+    if(!Array.isArray(settings.sources))settings.sources=[];
+    settings.sources.push(src);
+    const err=extSaveOk(saveSettings());
+    return {ok:true,why:err?"Added, but your settings couldn't be saved: "+err
+      :(empty?"Added, but it offers nothing this Fieldbook can install.":"")};
+  },e=>{
+    /* the host answered, just with too much: say so, not "couldn't be
+       reached" (#102 re-review N2). addSource() caps at EXT_FILE_MAX. */
+    if(e&&e.tooBig)return {ok:false,why:"Its answer is larger than 32 MB."};
+    const base="It couldn't be reached: "+((e&&e.message)||e)+".";
+    /* fetch() rejects with a TypeError ("Failed to fetch") for a network
+       failure, which is also what a host with no CORS header produces — hint
+       at that, but only then: never on our own timeout or an HTTP status
+       (#102 fix round 1, Minor 2; Task 4 follow-up N2). By name, not
+       instanceof: the error can come from another realm. */
+    return {ok:false,why:(e&&e.name==="TypeError")?base+" It may also be blocking requests from other sites — it must allow cross-origin reads.":base};
+  });
+}
+/* ---- candidates (spec §5 step 1) ---- */
+function offerCandidate(o){
+  const e=o.entry,url=new URL(e.path,o.source.base||o.source.url).href;
+  /* a declared size scales the file timeout — EXT_FILE_MS plus a second per
+     100 KB claimed — and an entry over the hard cap is refused outright, no
+     fetch at all, since it could never pass extVerify's own size check
+     anyway (#102 fix round 1, Important 2) */
+  const ms=EXT_FILE_MS+Math.ceil((e.size||0)/102400)*1000;
+  return {key:extKey(e.system,e.file),category:e.category,system:e.system,file:e.file,title:e.title,version:e.version,
+    minApp:e.minApp,sha256:e.sha256,size:e.size,requires:e.requires,origin:o.source.id,manual:false,
+    get:()=>e.size>EXT_FILE_MAX?Promise.reject(new Error("it's larger than 32 MB")):extFetchBytes(url,ms,EXT_FILE_MAX)};
+}
+/* Files, a folder or a dropped set, as {name, bytes, path?}. A zip goes
+   through readDataArchive() and keeps its manifest's entries; a loose pack is
+   named by its own system and dataVersion.
+
+   Every fieldbook-data.json in the drop is its own folder's manifest, read
+   for the directory it sits in — resolved the way readDataArchive() resolves
+   a zip's manifest, dir+entry.path, not by matching a bare file name across
+   folders (#102 fix round 1, Minor 3: "root/one/x_full.json" and
+   "root/two/x_full.json" used to both match the first manifest found,
+   anywhere in the drop, because only their shared BASE name was compared).
+   One that can't be read is reported in `failed` with why (its packs then
+   install without a sha256 check, and the player should know); a readable
+   one is never reported, and never as "it isn't a rules pack" (#102 Task 4
+   follow-up N1). */
+function manualCandidates(payloads){
+  const cands=[],failed=[],list=Array.isArray(payloads)?payloads:[];
+  const fromBytes=(name,bytes,entry,kind)=>{
+    let obj;
+    try{obj=JSON.parse(utf8Text(bytes));}catch(e){failed.push({name,why:"it isn't valid JSON"});return;}
+    if(!obj||typeof obj!=="object"||Array.isArray(obj)){failed.push({name,why:"it isn't a rules pack"});return;}
+    if(!isRulesPack(obj)){
+      /* a loose zip's non-pack JSON (an app zip's overlay.json or
+         class-resources.json) is skipped silently, as importRulesPayloads
+         already does for exactly the same files — never a reported failure
+         (#102 fix round 1, Minor 4) */
+      if(kind!=="loose")failed.push({name,why:"it isn't a rules pack"});
+      return;
+    }
+    const file=String(name).split("/").pop(),system=srcLabel(obj);
+    const e=entry&&entry.system===system?entry:null;
+    cands.push({key:extKey(system,file),category:e?e.category:"rules",system,file,title:e?e.title:system,
+      version:e?e.version:(typeof obj.dataVersion==="string"?obj.dataVersion:""),minApp:e?e.minApp:"",
+      sha256:e?e.sha256:"",size:bytes.length,requires:e?e.requires:[],origin:"manual",manual:true,
+      get:()=>Promise.resolve(bytes)});
+  };
+  const manFiles=new Set(),metaByPath=new Map();
+  list.forEach(p=>{
+    if(!p)return;
+    const path=String((p&&(p.path||p.name))||"");
+    if(path.split("/").pop()!=="fieldbook-data.json")return;
+    manFiles.add(p);
+    if(!p.bytes||!ArrayBuffer.isView(p.bytes)){failed.push({name:path,why:"its manifest couldn't be read"});return;}
+    let obj;try{obj=JSON.parse(utf8Text(p.bytes));}catch(e){failed.push({name:path,why:"its manifest isn't valid JSON"});return;}
+    let man;try{man=readManifest(obj,p.bytes.length);}catch(e){failed.push({name:path,why:"its manifest can't be used: "+((e&&e.message)||e)});return;}
+    const dir=path.slice(0,path.length-"fieldbook-data.json".length);
+    man.packs.forEach(entry=>{metaByPath.set(dir+entry.path,entry);});
+  });
+  list.forEach(p=>{
+    if(!p||manFiles.has(p))return;
+    const path=String((p&&(p.path||p.name))||"file"),bytes=p.bytes;
+    if(!bytes||!ArrayBuffer.isView(bytes)){failed.push({name:path,why:"it couldn't be read"});return;}
+    if(isZipBytes(bytes)){
+      let arc;
+      try{arc=readDataArchive(bytes,path);}catch(e){failed.push({name:path,why:ZIP_WHY[e&&e.code]||"it couldn't be read"});return;}
+      arc.packs.forEach(pk=>fromBytes(pk.name,pk.bytes,pk.meta?extEntry(pk.meta,pk.builtFor):null,arc.kind));
+      return;
+    }
+    if(!/\.json$/i.test(path))return;
+    fromBytes(path,bytes,metaByPath.get(path)||null);
+  });
+  return {cands,failed};
+}
+/* ---- the plan (spec §5 step 2) ---- */
+function extLoadedGroup(system,file){return loadedRulesGroups().find(g=>g.isFile&&g.label===file&&g.source===system)||null;}
+/* why a candidate can't be installed because of the app's own version: the
+   exact minimum only when it's what blocked it (spec decision 3 + rulebook
+   fix #2 — "requires Fieldbook newer" is not a version a player can act on) */
+function extTooNewWhy(c){return (c.minApp&&extTooNew(c))?"requires Fieldbook "+c.minApp:"requires a newer Fieldbook";}
+function planInstall(cands){
+  const byKey=new Map();
+  (cands||[]).forEach(c=>{const ex=byKey.get(c.key);if(!ex||cmpDataVer(c.version,ex.version)>0)byKey.set(c.key,c);});
+  const line=c=>{
+    if(EXT_CATS.indexOf(c.category)<0)return {cand:c,outcome:"unsupported",have:"",ticked:false,canTick:false,why:extTooNewWhy(c)};
+    if(extTooNew(c))return {cand:c,outcome:"blocked",have:"",ticked:false,canTick:false,why:extTooNewWhy(c)};
+    const g=extLoadedGroup(c.system,c.file),have=g?g.dataVersion:"";
+    if(!g)return {cand:c,outcome:"install",have,ticked:true,canTick:true,why:""};
+    /* spec §5 has the final say on an unparseable version on either side
+       (#102 fix round 1, Minor 5): the CANDIDATE having no version is the
+       risky direction — it could be a downgrade — so it is an unticked
+       "Replace anyway"; only the LOADED side having no version (unversioned
+       data predating #83) is safe to tick by default */
+    if(!parseDataVer(c.version))return {cand:c,outcome:"replace",have,ticked:false,canTick:true,why:"Replace anyway"};
+    if(!parseDataVer(have))return {cand:c,outcome:"replace",have,ticked:true,canTick:true,why:""};
+    const d=cmpDataVer(c.version,have);
+    if(d>0)return {cand:c,outcome:"update",have,ticked:true,canTick:true,why:""};
+    return {cand:c,outcome:d===0?"same":"older",have,ticked:false,canTick:!!c.manual,why:c.manual?"Replace anyway":""};
+  };
+  const lines=[...byKey.values()].map(line);
+  /* a ticked pack's missing requirement, offered by an enabled source, joins
+     the plan as its own install line (spec §8) — bounded, never a loop */
+  for(let pass=0;pass<10;pass++){
+    let added=false;
+    lines.filter(l=>l.ticked).forEach(l=>(l.cand.requires||[]).forEach(r=>{
+      if(loadedRulesGroups().some(g=>g.source===r.pack))return;
+      if(lines.some(x=>x.cand.system===r.pack))return;
+      /* the BEST offer, not the first source in settings order (#102 fix
+         round 1, Minor 6): the official source sorts first in settings.sources
+         (convertSources()), so .find() always returned it even when a
+         third-party source offered a newer copy — sorted the same way
+         availableFor() picks: newest version wins, a tie goes official */
+      const matches=extOffers().filter(x=>x.entry.system===r.pack&&(!r.file||x.entry.file===r.file)&&EXT_CATS.indexOf(x.entry.category)>=0&&!extTooNew(x.entry));
+      const o=matches.sort((a,b)=>cmpDataVer(b.entry.version,a.entry.version)||((b.source.kind==="official")-(a.source.kind==="official")))[0];
+      if(!o)return;
+      lines.push({cand:offerCandidate(o),outcome:"install",have:"",ticked:true,canTick:true,why:"needed by "+l.cand.title});added=true;
+    }));
+    if(!added)break;
+  }
+  return lines;
+}
+/* ---- the install (spec §5 steps 4 and 5): everything fetched and verified
+   first; one failure changes nothing ---- */
+function extVerify(c,bytes){
+  if(bytes.length>EXT_FILE_MAX)throw new Error("it's larger than 32 MB");
+  if(c.sha256&&sha256Hex(bytes)!==c.sha256)throw new Error("its sha256 doesn't match the manifest");
+  let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){throw new Error("it isn't valid JSON");}
+  if(!obj||typeof obj!=="object"||Array.isArray(obj)||!isRulesPack(obj))throw new Error("it isn't a rules pack");
+  if(srcLabel(obj)!==c.system)throw new Error(`it says it is ${srcLabel(obj)}, not ${c.system}`);
+  if(c.version&&obj.dataVersion!==c.version)throw new Error(`it is version ${obj.dataVersion||"(none)"}, the manifest says ${c.version}`);
+  return obj;
+}
+/* Copy `rules` key by key: every array sliced, every non-array object copied
+   into a fresh one with the SAME prototype (never a JSON round trip — that
+   would turn `requires`/`credits`/`defaultLanguages`/`advancement`'s
+   null-prototype maps, packMap()'s whole reason to exist, back into plain
+   objects a hostile label like "__proto__" could poison again). Primitives
+   copy as themselves. Restoring is just `rules=snapshot` — `rules` is a
+   plain reassignable top-level `let`, the same thing resetRules() does. */
+function extSnapshotRules(){
+  const snap={};
+  Object.keys(rules).forEach(k=>{
+    const v=rules[k];
+    if(Array.isArray(v)){snap[k]=v.slice();return;}
+    if(v&&typeof v==="object"){
+      const copy=Object.create(Object.getPrototypeOf(v));
+      Object.assign(copy,v);
+      snap[k]=copy;return;
+    }
+    snap[k]=v;
+  });
+  return snap;
+}
+function runInstall(lines){
+  /* de-duplicate by key, keeping the newest (#102 fix round 1, Minor 7):
+     planInstall() already guarantees unique keys for every route today, but
+     runInstall() must not trust a caller that skips it */
+  const byKey=new Map();
+  (lines||[]).filter(l=>l.ticked&&l.canTick!==false).forEach(l=>{
+    const ex=byKey.get(l.cand.key);
+    if(!ex||cmpDataVer(l.cand.version,ex.cand.version)>0)byKey.set(l.cand.key,l);
+  });
+  const todo=[...byKey.values()];
+  const got=[];
+  const step=i=>{
+    if(i>=todo.length)return Promise.resolve(null);
+    const c=todo[i].cand;
+    /* extVerify() in its OWN .then: a throw from the fetch and a throw from
+       verifying the bytes it returned both need to land on the error branch
+       below, and a throw inside an onFulfilled handler is never caught by an
+       onRejected passed to that SAME .then() call — only a rejection of the
+       promise .then() was called on is */
+    return Promise.resolve().then(()=>c.get()).then(bytes=>extVerify(c,bytes))
+      .then(obj=>{got.push({c,obj});return step(i+1);},
+        e=>({file:c.file,why:String((e&&e.message)||e)}));
+  };
+  return step(0).then(error=>{
+    if(error)return {ok:false,installed:[],error,saveErr:"",skipped:{}};
+    if(!got.length)return {ok:true,installed:[],error:null,saveErr:"",skipped:{}};
+    if(!settings.packOrigin||typeof settings.packOrigin!=="object")settings.packOrigin={};
+    /* all or nothing covers IMPORTING too, not only fetching and verifying
+       (#102 fix round 1, Important 1): a pack that passes extVerify (valid
+       JSON, right system, right sha256) can still fail inside mergeRules()
+       on malformed CONTENT — a bad `requires`, a feature with the wrong
+       shape — exactly what importRulesPayloads() already catches per file
+       for. One install run must not leave some packs merged and others not,
+       so a throw here restores the snapshot taken before any of them ran. */
+    const rulesSnap=extSnapshotRules(),originSnap=Object.assign({},settings.packOrigin);
+    const installed=[],skipped={};
+    let failFile=null;
+    try{
+      got.forEach(({c,obj})=>{
+        failFile=c.file;
+        addSkipped(skipped,importPack(obj,c.file));
+        settings.packOrigin[c.key]=c.origin;
+        installed.push(c.title);
+      });
+    }catch(e){
+      rules=rulesSnap;settings.packOrigin=originSnap;
+      reindexRules();recomputeDups();
+      return {ok:false,installed:[],error:{file:failFile,why:"it couldn't be merged: "+String((e&&e.message)||e)},saveErr:"",skipped:{}};
+    }
+    const setErr=extSaveOk(saveSettings());
+    /* a saveRulesCache() rejection (it never does today — every failure it
+       hits is caught and falls back to localStorage — but must not be
+       trusted to stay that way) becomes `saveErr` too, instead of leaving
+       runInstall's own promise rejected after the pool has already changed
+       and skipping the UI refresh below (#102 fix round 1, Important 1) */
+    return saveRulesCache().catch(e=>String((e&&e.message)||e)).then(cacheErr=>{
+      if(typeof refreshRulesUI==="function")refreshRulesUI();
+      renderRulesData();
+      /* the home screen's status line, which importRulesFiles() used to
+         write: an install from home must not leave it saying what was
+         loaded before (#102 Task 6 fix round 1) */
+      const home=document.getElementById("homeRulesStatus");if(home)home.textContent=rulesStatusText();
+      return {ok:true,installed,error:null,saveErr:[cacheErr,setErr].filter(Boolean).join(" "),skipped};
+    });
+  });
+}
+/* ---- the Extensions page (spec §6.2) ----
+   Settings → Extensions: one section per category (only rules today), then
+   Unsupported, then Sources. Every string a manifest supplies is escaped here;
+   only http(s) URLs ever become links (extUrl() in readManifest/extEntry). */
+function extParas(t){return String(t||"").split(/\n\s*\n/).map(s=>s.trim()).filter(Boolean).map(s=>`<p>${esc(s)}</p>`).join("");}
+/* "checked 9:02 pm" (today) or "checked 24/10/2026 9:02 pm"; `bare` drops the
+   word, for the dialog's "Checked" line */
+function extAgo(t,bare){
+  if(!t)return bare?"not yet":"not checked yet";
+  const d=new Date(t);
+  return (bare?"":"checked ")+(new Date().toDateString()===d.toDateString()?"today, ":d.toLocaleDateString()+" ")+d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+}
+/* A source as the player sees it named. A manifest names itself, so its name
+   alone proves nothing: anyone can publish one called "Fieldbook public data".
+   Every manifest source is "name (host)" wherever it is named — rows, the
+   plan, the details and Sources — and only the built-in official source reads
+   the bare "Fieldbook public data" (#102 final review I2, Ruling 16). */
+/* The host as new URL() gives it is already clean (an IDN is punycode, and
+   the URL parser drops or refuses format characters), and the name has been
+   through extText(); both are stripped again here all the same, so a name
+   saved before that fix can't reverse the host either (#102 re-review N1). */
+function extSourceHost(src){try{return extPlain(new URL(String(src&&src.url||"")).host);}catch(e){return "";}}
+function extSourceName(src){
+  if(src.kind==="official")return "Fieldbook public data";
+  const name=extPlain(src.manifest&&src.manifest.name).trim(),host=extSourceHost(src);
+  if(name&&host)return name===host?host:name+" ("+host+")";
+  return name||extPlain(String(src.url||"")).replace(/^https?:\/\//i,"");
+}
+/* a loaded pack's contents, "12 spells · 3 classes": what the old Loaded data
+   list showed, kept for a pack no manifest describes */
+function extCatsLine(g){return g?Object.entries(g.cats).map(([c,n])=>`${n} ${n===1?(CAT_ONE[c]||c):catName(c).toLowerCase()}`).join(" · "):"";}
+/* A requirement chip (spec decision 14): a button that opens the pack's details
+   when a source offers it; otherwise a link when the requirement carries an
+   http(s) url; otherwise a plain label. One helper for rows and the dialog. */
+function extReqOffer(r){return extOffers().find(o=>o.entry.system===r.pack&&(!r.file||o.entry.file===r.file))||null;}
+function extReqChip(r){
+  const lbl=`requires ${esc(r.pack)}`,u=extUrl(r.url);
+  /* the button carries the requirement's FILE too, so a tap opens the same
+     offer this check found, not another file of the same pack (#102 Task 5
+     review, minor 2) */
+  if(extReqOffer(r))return `<button type="button" class="chip ext-req" data-ext-req="${esc(r.pack)}" data-ext-req-file="${esc(r.file||"")}">${lbl}</button>`;
+  if(u)return `<a class="chip ext-req" data-ext-req="${esc(r.pack)}" href="${esc(u)}" target="_blank" rel="noopener">${lbl}</a>`;
+  return `<span class="chip ext-req ext-plain" data-ext-req="${esc(r.pack)}">${lbl}</span>`;
+}
+function extMissingReqs(entry){
+  return (entry&&entry.requires||[]).filter(r=>!loadedRulesGroups().some(g=>g.source===r.pack));
+}
+/* the "requires Fieldbook …" chips of an entry: Ruling 2's wording, from
+   extTooNewWhy(), the same helper the install plan uses */
+function extChipsHTML(r){
+  const e=r.offer&&r.offer.entry,chips=[];
+  if(e&&(r.state==="blocked"||r.state==="unsupported"))chips.push(`<span class="chip ext-app">${esc(extTooNewWhy(e))}</span>`);
+  if(e)extMissingReqs(e).forEach(rq=>chips.push(extReqChip(rq)));
+  return chips.length?`<div class="ext-chips">${chips.join("")}</div>`:"";
+}
+function extSecHTML(key,title,count,body,action){
+  const shut=!!(settings.setCollapse||{})["ext:"+key];
+  return `<section class="ext-sec">`+
+    `<div class="ext-sec-h"><button type="button" class="ext-fold" data-ext-sec="${esc(key)}" aria-expanded="${shut?"false":"true"}"><span class="ext-car" aria-hidden="true">${shut?"▸":"▾"}</span>${esc(title)}${count!=null?` <span class="ext-n">${esc(String(count))}</span>`:""}</button>${action||""}</div>`+
+    `<div class="ext-sec-b"${shut?" hidden":""}>${body}</div></section>`;
+}
+function extRowTitle(r){
+  const g=r.group,o=r.offer;
+  return o?o.entry.title:(g?(g.isFile&&g.source?g.source:g.label):r.key);
+}
+function extRowHTML(r){
+  const g=r.group,o=r.offer,e=o&&o.entry,title=extRowTitle(r);
+  /* decision 11 lets any enabled source update a pack another source (or a
+     file) installed; without signing, saying WHO offers that update is the
+     player's only defence, so the row names it (Ruling 16) */
+  const own=!!o&&(settings.packOrigin||{})[r.key]===o.source.id;
+  const from=g
+    ?(own?"from "+extSourceName(o.source)
+      :(g.isFile?"imported from a file · "+g.label:"fetched from a source URL")+(o&&r.state==="update"?" · update from "+extSourceName(o.source):""))
+    :(o?"from "+extSourceName(o.source)+" · not installed":"");
+  const have=g&&parseDataVer(g.dataVersion)?g.dataVersion:"";
+  let ver="",act="";
+  if(r.state==="update"){ver=`${esc(have||"—")} → <b class="ext-up">${esc(e.version)}</b>`;act=`<button type="button" class="tbtn ext-act" data-ext-update="${esc(r.key)}">Update</button>`;}
+  else if(r.state==="install"){ver=`<b>${esc(e.version)}</b>`;act=`<button type="button" class="tbtn ext-act" data-ext-install="${esc(r.key)}">Install</button>`;}
+  else if(have)ver=esc(have);
+  else if(e)ver=esc(e.version);
+  /* the boot check's "update available" chips only where no source offers the
+     pack (an offer says the same with an Update button); the plain version
+     chip never, since the version column shows it */
+  const st=g&&!o?dataStatus(g).state:"";
+  const status=g?((st==="stale"||st==="update")?dataStatusHTML(g):"")+requiresStatusHTML(g):"";
+  const sum=(e&&e.summary)||extCatsLine(g);
+  const del=g?`<button type="button" class="icon danger ext-del" data-rd-del="${esc(g.key)}" aria-label="${esc("Remove "+title)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`:"";
+  return `<div class="ext-row"><div class="ext-main"><button type="button" class="ext-name" data-ext-open="${esc(r.key)}">${esc(title)}</button>${status}`+
+    (sum?`<div class="ext-sum">${esc(sum)}</div>`:"")+
+    (from?`<div class="ext-from">${esc(from)}</div>`:"")+
+    extChipsHTML(r)+
+    `</div>${ver||act||del?`<div class="ext-side">${ver?`<span class="ext-ver">${ver}</span>`:""}${act}${del}</div>`:""}</div>`;
+}
+function extSourcesHTML(){
+  const rows=(settings.sources||[]).map(s=>{
+    const name=extSourceName(s),note=s.kind==="plain"?"plain file":(s.error?"couldn't check: "+s.error:extAgo(s.checked));
+    const sub=s.kind==="official"?"built in · "+note:(s.kind==="manifest"?extPlain(String(s.url)).replace(/^https?:\/\//i,"")+" · "+note:note);
+    const ctl=s.kind==="official"
+      ?`<button type="button" class="switch ${s.on?"on":""}" data-ext-src-on="${esc(s.id)}" role="switch" aria-checked="${s.on?"true":"false"}" aria-label="Use Fieldbook public data"></button>`
+      :(s.kind==="plain"?`<button type="button" class="tbtn ext-act" data-ext-src-fetch="${esc(s.id)}">Fetch</button>`:"")+`<button type="button" class="tbtn ext-act" data-ext-src-del="${esc(s.id)}">Remove</button>`;
+    return `<div class="ext-src"><div class="ext-main"><b>${esc(name)}</b><div class="ext-from${s.error?" ext-err":""}">${esc(sub)}</div></div>${ctl}</div>`;
+  }).join("");
+  return (rows?`<div class="ext-list">${rows}</div>`:"")+
+    `<div class="ext-add"><input id="extAddUrl" type="url" inputmode="url" placeholder="https://…/fieldbook-data.json" aria-label="Source URL"><button type="button" class="tbtn ext-act" id="extAddGo">+ Add a source URL</button></div>`+
+    `<div class="ext-acts"><button type="button" class="tbtn ext-act" id="extCheckNow">Check now</button><button type="button" class="tbtn ext-act" id="extManual">Manual install…</button></div>`;
+}
+function extPageHTML(){
+  const rows=extPackRows(),rules=rows.filter(r=>r.state!=="unsupported"),uns=rows.filter(r=>r.state==="unsupported");
+  const ups=rows.filter(r=>r.state==="update");
+  const warn=rulesCacheWarning()?`<p class="status err">${esc(rulesCacheWarning())}</p>`:"";
+  /* a settings save that failed at the last source check (boot is quiet, so
+     this is where it is said: constraint 2) */
+  const saveErr=extSaveErrorText()?`<p class="status err" id="extSaveErr">${esc("Couldn't save your sources at the last check: "+extSaveErrorText())}</p>`:"";
+  const banner=ups.length?`<div class="ext-banner"><span class="ext-grow"><b>${ups.length} update${ups.length===1?"":"s"}</b> · ${esc(ups.map(r=>r.offer.entry.title).join(", "))}</span><button type="button" class="tbtn primary ext-act" id="extUpdateAll">Update all</button></div>`:"";
+  const rulesBody=rules.length?`<div class="ext-list">${rules.map(extRowHTML).join("")}</div>`:`<p class="hint">No rules data yet. Install it from a source below, or use Manual install.</p>`;
+  return `<div id="extPage">`+warn+saveErr+banner+
+    extSecHTML("rules","Rules data",rules.length,rulesBody,rules.some(r=>r.group)?`<button type="button" class="tbtn danger ext-secbtn" id="extRemoveRules">Remove all</button>`:"")+
+    (uns.length?extSecHTML("unsupported","Unsupported",uns.length,`<div class="ext-list">${uns.map(extRowHTML).join("")}</div>`,""):"")+
+    extSecHTML("sources","Sources",(settings.sources||[]).length,extSourcesHTML(),
+      (settings.sources||[]).some(s=>s.kind!=="official")?`<button type="button" class="tbtn danger ext-secbtn" id="extRemoveSources">Remove all</button>`:"")+
+    `</div>`;
+}
+/* ---- the details dialog (spec §6.3) ---- */
+function extRowFor(key){return extPackRows().find(r=>r.key===key)||null;}
+function extDetailsHTML(key){
+  const foot=act=>`<div class="m-actions"><button type="button" class="tbtn" id="extDlgClose">Close</button>${act||""}</div>`;
+  const r=extRowFor(key);if(!r)return `<div class="ext-dlg"><p class="hint">That extension isn't listed any more.</p>${foot()}</div>`;
+  const e=r.offer&&r.offer.entry,src=r.offer&&r.offer.source,g=r.group;
+  const cat=e?(e.category==="rules"?"Rules data":e.category):"Rules data";
+  const ver=(g&&parseDataVer(g.dataVersion)?g.dataVersion:"")||(e?e.version:"");
+  const others=src?extPackRows().filter(x=>x.key!==key&&x.offer&&x.offer.source.id===src.id):[];
+  const kv=(k,v)=>v?`<div><span class="ext-k">${esc(k)}</span>${v}</div>`:"";
+  /* the homepage normalised (a raw U+202E percent-encoded) for the link,
+     and stripped for its text (#102 re-review 2, Ruling 20) */
+  const home=(u=>{if(!u)return "";try{return new URL(u).href;}catch(e){return extPlain(u);}})(src&&src.manifest&&extUrl(src.manifest.homepage));
+  const box=src?`<div class="ext-box"><b>Source</b>`+
+    kv("Name",esc(extSourceName(src)))+
+    kv("Manifest",esc(src.kind==="official"?"the Fieldbook release":extPlain(String(src.base||src.url)).replace(/^https?:\/\//i,"")))+
+    kv("Homepage",home?`<a href="${esc(home)}" target="_blank" rel="noopener">${esc(extPlain(home).replace(/^https?:\/\//i,""))}</a>`:"")+
+    kv("Checked",esc(extAgo(src.checked,true)))+
+    kv("Licence",esc([e&&e.license,e&&e.attribution].filter(Boolean).join(" · ")))+`</div>`:
+    `<div class="ext-box"><b>Source</b><div>${esc(g&&g.isFile?"Imported from a file: "+g.label:"Fetched from a source URL")}</div></div>`;
+  const alsoBox=others.length?`<div class="ext-box"><b>Also from ${esc(extSourceName(src))}</b>${others.map(x=>`<div><button type="button" class="ext-name" data-ext-open="${esc(x.key)}">${esc(x.offer.entry.title)}</button>${x.state==="blocked"||x.state==="unsupported"?` · ${esc(extTooNewWhy(x.offer.entry))}`:""}</div>`).join("")}</div>`:"";
+  const act=r.state==="update"?`<button type="button" class="tbtn primary" data-ext-update="${esc(key)}">Update</button>`
+    :(r.state==="install"?`<button type="button" class="tbtn primary" data-ext-install="${esc(key)}">Install</button>`:"");
+  const desc=e&&e.description?extParas(e.description):(e&&e.summary?extParas(e.summary):"");
+  return `<div class="ext-dlg"><div class="ext-meta">${esc(cat)}${ver?" · "+esc(ver):""} · ${g?"installed":"not installed"}</div>`+
+    (desc||(g?`<p class="hint">${esc(extCatsLine(g))}</p>`:`<p class="hint">No description.</p>`))+
+    extChipsHTML(r)+box+alsoBox+
+    foot(act)+`</div>`;
+}
+function openExtDetails(key){
+  const r=extRowFor(key);
+  openModal(r?extRowTitle(r):"Extension",extDetailsHTML(key),"",{});
+  const body=document.getElementById("mBody");
+  const close=document.getElementById("extDlgClose");
+  if(close)close.addEventListener("click",()=>{closeModal();settings.setPage="extensions";openSettings();});
+  body.querySelectorAll("[data-ext-open]").forEach(b=>b.addEventListener("click",()=>openExtDetails(b.dataset.extOpen)));
+  body.querySelectorAll("[data-ext-update],[data-ext-install]").forEach(b=>b.addEventListener("click",()=>extUpdateFromRows([extRowFor(b.dataset.extUpdate||b.dataset.extInstall)])));
+  body.querySelectorAll("button[data-ext-req]").forEach(b=>b.addEventListener("click",()=>extReqTap(b)));
+}
+/* a requirement button: only drawn when a source offers the pack */
+function extReqTap(b){
+  const o=extReqOffer({pack:b.dataset.extReq,file:b.dataset.extReqFile||""});
+  if(o)openExtDetails(extKey(o.entry.system,o.entry.file));
+}
+function extUpdateFromRows(rows){
+  const cands=(rows||[]).filter(r=>r&&r.offer&&(r.state==="update"||r.state==="install")).map(r=>offerCandidate(r.offer));
+  if(!cands.length)return;
+  /* the plan dialog is Task 6's (#102); until it exists this does nothing */
+  if(typeof openInstallPlan==="function")openInstallPlan(planInstall(cands),{back:"settings"});
+}
+/* A selector that finds the same control again after a repaint: its id, or
+   its data-ext-* (or data-rd-*) key; then, for a control whose row the repaint
+   removed, Sources' URL box or the toggle of the section it was in (#102 Task 5
+   review, minor 1). Values go through CSS.escape where it exists. */
+function extCssEsc(v){return typeof CSS!=="undefined"&&CSS&&typeof CSS.escape==="function"?CSS.escape(String(v)):String(v).replace(/["\\]/g,"\\$&");}
+function extFocusTargets(a){
+  if(!a)return [];
+  const out=[];
+  if(a.id)out.push("#"+extCssEsc(a.id));
+  else{
+    const ds=a.dataset||{},k=Object.keys(ds).find(x=>/^(ext|rd)[A-Z]/.test(x));
+    if(k)out.push(`[data-${k.replace(/[A-Z]/g,c=>"-"+c.toLowerCase())}="${extCssEsc(ds[k])}"]`);
+  }
+  const sec=typeof a.closest==="function"?a.closest(".ext-sec"):null;
+  const tog=sec&&sec.querySelector("[data-ext-sec]"),key=tog&&tog.dataset?tog.dataset.extSec:"";
+  if(key==="sources")out.push("#extAddUrl");
+  else if(key)out.push(`[data-ext-sec="${extCssEsc(key)}"]`);
+  return out.filter((x,i)=>out.indexOf(x)===i);
+}
+/* Repaint the page in place. What the player is in the middle of survives it:
+   a URL being typed, and keyboard focus (extFocusTargets()). The status line,
+   #rulesStatus, sits outside the page, so a repaint never touches it. */
+function renderExtUI(){
+  const host=document.getElementById("extPage");
+  if(host){
+    const inp=host.querySelector("#extAddUrl"),url=inp?inp.value:"";
+    const a=document.activeElement;
+    const focus=a&&typeof host.contains==="function"&&host.contains(a)?extFocusTargets(a):[];
+    host.outerHTML=extPageHTML();
+    const fresh=document.getElementById("extPage");
+    if(fresh){
+      const inp2=fresh.querySelector("#extAddUrl");
+      if(inp2&&url)inp2.value=url;
+      for(const sel of focus){
+        let f=null;try{f=fresh.querySelector(sel);}catch(e){/* a selector this browser can't parse: try the next one */}
+        if(f&&typeof f.focus==="function"){f.focus();break;}
+      }
+      wireExtPage(fresh);
+    }
+  }
+  if(typeof renderExtPill==="function")renderExtPill();
+  const badge=document.querySelector('[data-setbadge="extensions"]');if(badge)badge.innerHTML=rulesNavBadgeHTML();
+}
+/* a settings save from the page: said on the status line when it fails
+   (constraint 2), and clearing the recorded check error when it lands */
+function extSaveSources(what){const err=extSaveOk(saveSettings());if(err)updateRulesStatus("Couldn't save "+(what||"your sources")+": "+err,"err");return err;}
+/* bound to the fresh #extPage each time it is drawn, so listeners never stack */
+function wireExtPage(root){
+  root.addEventListener("click",e=>{
+    const t=e.target;let b;
+    if(!t||typeof t.closest!=="function")return;
+    if((b=t.closest("[data-ext-sec]"))){
+      const k="ext:"+b.dataset.extSec;
+      if(!settings.setCollapse||typeof settings.setCollapse!=="object")settings.setCollapse={};
+      settings.setCollapse[k]=!settings.setCollapse[k];extSaveSources("which sections are folded");return renderExtUI();}
+    if((b=t.closest("[data-ext-open]")))return openExtDetails(b.dataset.extOpen);
+    if((b=t.closest("[data-ext-update],[data-ext-install]")))return extUpdateFromRows([extRowFor(b.dataset.extUpdate||b.dataset.extInstall)]);
+    if(t.closest("#extUpdateAll"))return extUpdateFromRows(extUpdateRows());
+    if((b=t.closest("button[data-ext-req]")))return extReqTap(b);
+    if((b=t.closest("[data-rd-del]"))){const g=loadedRulesGroups().find(x=>x.key===b.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`))removeRulesGroup(b.dataset.rdDel);return;}
+    if(t.closest("#extRemoveRules"))return clearAllRules();
+    if(t.closest("#extRemoveSources")){
+      if(!confirm("Remove every source you added, and switch off Fieldbook public data?\n\nPacks you've installed stay installed."))return;
+      settings.sources=(settings.sources||[]).filter(s=>s.kind==="official");settings.sources.forEach(s=>{s.on=false;});
+      const err=extSaveSources();renderExtUI();if(!err)updateRulesStatus("Sources removed. Your installed packs stay.","ok");return;}
+    if((b=t.closest("[data-ext-src-on]"))){
+      const s=(settings.sources||[]).find(x=>x.id===b.dataset.extSrcOn);if(!s)return;
+      s.on=!s.on;extSaveSources();renderExtUI();
+      if(s.on)checkSources({});
+      return;}
+    if((b=t.closest("[data-ext-src-del]"))){
+      settings.sources=(settings.sources||[]).filter(x=>x.id!==b.dataset.extSrcDel);
+      const err=extSaveSources();renderExtUI();if(!err)updateRulesStatus("Source removed. Its packs stay installed.","ok");return;}
+    if((b=t.closest("[data-ext-src-fetch]"))){const s=(settings.sources||[]).find(x=>x.id===b.dataset.extSrcFetch);if(s)fetchAllRules([s.url]);return;}
+    if(t.closest("#extCheckNow")){
+      if(navigator.onLine===false)return updateRulesStatus("You're offline, so nothing was checked.","err");
+      updateRulesStatus("Checking your sources…","");
+      return checkSources({}).then(()=>{
+        if(extSaveErrorText())return;   /* checkSources() already said so */
+        const bad=(settings.sources||[]).filter(s=>s.on&&s.kind!=="plain"&&s.error).length;
+        updateRulesStatus(bad?`Checked. ${bad} source${bad===1?"":"s"} couldn't be checked; the row says why.`:"Checked.",bad?"err":"ok");
+      });}
+    if(t.closest("#extAddGo")){
+      const i=document.getElementById("extAddUrl");const v=i?i.value:"";
+      updateRulesStatus("Reading that source…","");
+      return addSource(v).then(r=>{
+        if(!r.ok)return updateRulesStatus(r.why,"err");
+        const s=(settings.sources||[])[(settings.sources||[]).length-1];
+        const okMsg=s&&s.kind==="plain"?"Source added. Press Fetch on its row to load its rules.":"Source added.";
+        const inp=document.getElementById("extAddUrl");if(inp)inp.value="";
+        renderExtUI();
+        updateRulesStatus(r.why||okMsg,r.why?"err":"ok");
+      });}
+    /* Task 6 (#102) defines the Manual install dialog */
+    if(t.closest("#extManual")&&typeof openManualInstall==="function")return openManualInstall();
+  });
+  /* a drop onto the page is a Manual install (spec §6.4; Task 6 defines it) */
+  if(typeof extWireDrop==="function")extWireDrop();
+}
+/* ---- the plan dialog (spec §5 step 3): each pack's outcome, versions, size
+   and source; only install and update lines start ticked; nothing happens
+   until Install N ---- */
+function extSize(n){n=num(n);return n>=1048576?(Math.round(n/104857.6)/10)+" MB":Math.max(1,Math.round(n/1024))+" KB";}
+const EXT_OUTCOME={install:"New",update:"Update",replace:"Replace",same:"Same version",older:"Older than yours",blocked:"",unsupported:""};
+/* where a plan line comes from: a file the player chose, or a source's name —
+   "update from" it when it would update a loaded pack that some other source,
+   or a file, installed (Ruling 16) */
+function extPlanFrom(c,l){
+  if(c.manual)return "from a file";
+  const src=(settings.sources||[]).find(s=>s.id===c.origin);
+  if(!src)return "";
+  const stranger=!!l&&(l.outcome==="update"||l.outcome==="replace")&&(settings.packOrigin||{})[c.key]!==c.origin;
+  return (stranger?"update from ":"from ")+extSourceName(src);
+}
+function extPlanHTML(lines){
+  const ticked=lines.filter(l=>l.ticked&&l.canTick).length;
+  if(!lines.some(l=>l.canTick))return `<p class="hint">Nothing to install: ${lines.length?"you already have these, or they need a newer Fieldbook.":"no rules packs found."}</p>`+
+    (lines.length?`<div class="ext-list">${lines.map((l,i)=>extPlanRow(l,i)).join("")}</div>`:"")+
+    `<div class="m-actions"><button type="button" class="tbtn" id="planClose">Close</button></div>`;
+  return `<p class="hint">Nothing changes until you press Install. Every file is checked before any is installed.</p>`+
+    `<div class="ext-list">${lines.map((l,i)=>extPlanRow(l,i)).join("")}</div>`+
+    `<div class="status" id="planStatus" role="status"></div>`+
+    `<div class="m-actions"><button type="button" class="tbtn" id="planClose">Cancel</button><button type="button" class="tbtn primary" id="planGo"${ticked?"":" disabled"}>Install ${ticked}</button></div>`;
+}
+function extPlanRow(l,i){
+  const c=l.cand;
+  const ver=l.have&&(l.outcome==="update"||l.outcome==="replace"||l.outcome==="same"||l.outcome==="older")?`${esc(l.have)} → ${esc(c.version||"?")}`:esc(c.version||"");
+  const from=extPlanFrom(c,l);
+  /* "Update · update from X" says it twice: an update from a stranger reads "Update from X" */
+  const said=l.outcome==="update"&&/^update from /.test(from)?["Update"+from.slice(6),l.why]:[EXT_OUTCOME[l.outcome]||"",l.why,from];
+  const tag=l.outcome==="blocked"||l.outcome==="unsupported"?`<span class="chip ext-app">${esc(l.why)}</span>`
+    :`<span class="ext-from">${esc(said.filter(Boolean).join(" · "))}</span>`;
+  return `<label class="ext-row ext-plan"><input type="checkbox" data-plan-i="${esc(String(i))}"${l.ticked&&l.canTick?" checked":""}${l.canTick?"":" disabled"}>`+
+    `<span class="ext-main"><b>${esc(c.title)}</b><span class="ext-ver"> ${ver}</span><br>${tag}</span><span class="ext-ver">${c.size?esc(extSize(c.size)):""}</span></label>`;
+}
+/* the toast after an install: the count, then what importPack() skipped (as
+   a file import says it, skippedSummary()), then a save that didn't land —
+   which makes it an error that stays (constraint 2) */
+function extInstalledText(r){
+  const n=(r.installed||[]).length,sk=skippedSummary(r.skipped||{}),err=r.saveErr||"";
+  const text=`Installed ${n} pack${n===1?"":"s"}`+(sk||err?"."+sk+(err?" "+err:""):"");
+  return {text,opts:{err:!!err,long:!!sk}};
+}
+function openInstallPlan(lines,opts){
+  const o=opts||{};
+  openModal("Install",extPlanHTML(lines),"",{});
+  const back=()=>{closeModal();if(o.back==="settings"){settings.setPage="extensions";openSettings();}};
+  const close=document.getElementById("planClose");if(close)close.addEventListener("click",back);
+  const go=document.getElementById("planGo");if(!go)return;
+  /* the dialog may have been closed, or replaced, while the files downloaded */
+  const live=()=>document.getElementById("planGo")===go;
+  /* while it runs, nothing in the plan can change and Install can't be
+     pressed again: a tick re-counting Install used to re-enable it mid-
+     download, and a second press ran a second install alongside the first
+     (#102 Task 6 fix round 1). Nor can the dialog be dismissed: × and
+     Escape do nothing and the status line says to wait (fix round 2). The
+     guard is this window's own — openModal()/closeModal() clear it — and
+     is cleared here only while this plan is still the open dialog, so it
+     never outlives the install or touches a later dialog's guard. */
+  let busy=false;
+  const boxes=Array.from(document.querySelectorAll("[data-plan-i]"));
+  const count=()=>{const n=lines.filter(l=>l.ticked&&l.canTick).length;go.textContent="Install "+n;go.disabled=busy||!n;};
+  const setBusy=b=>{
+    busy=b;boxes.forEach(cb=>{const l=lines[num(cb.dataset.planI)];cb.disabled=b||!(l&&l.canTick);});if(close)close.disabled=b;count();
+    if(b)setDismissGuard(()=>{const s=document.getElementById("planStatus");if(s&&live()){s.className="status";s.textContent="Installing… please wait.";}return true;});
+    else if(live())setDismissGuard(null);
+  };
+  boxes.forEach(cb=>cb.addEventListener("change",()=>{const l=lines[num(cb.dataset.planI)];if(!l)return;if(busy){cb.checked=!!l.ticked;return;}l.ticked=!!cb.checked;count();}));
+  go.addEventListener("click",()=>{
+    if(busy)return;
+    setBusy(true);
+    const st=document.getElementById("planStatus");if(st){st.className="status";st.textContent="Downloading and checking…";}
+    return runInstall(lines).then(r=>{
+      if(!r.ok){
+        const msg=`Nothing was installed: ${r.error.file} — ${r.error.why}.`;
+        setBusy(false);
+        if(live()&&st){st.className="status err";st.textContent=msg;}
+        else toast(msg,null,{err:true});
+        return;
+      }
+      const t=extInstalledText(r);
+      toast(t.text,null,t.opts);
+      if(live())back();
+    });
+  });
+}
+/* ---- Manual install (spec §6.4): files, a folder or a drop, all to the plan ---- */
+function extReadFile(f){
+  return new Promise(res=>{const r=new FileReader();
+    r.onload=()=>res({name:f.webkitRelativePath||f.name,bytes:new Uint8Array(r.result)});
+    r.onerror=()=>res({name:f.webkitRelativePath||f.name,bytes:null});r.readAsArrayBuffer(f);});
+}
+/* only .json and .zip are ever read: a chosen or dropped folder can hold
+   anything, and an image would be read into memory just to be ignored */
+const extWanted=f=>/\.(json|zip)$/i.test(String((f&&(f.webkitRelativePath||f.name))||""));
+/* a folder is read up to this many .json/.zip files, and no further */
+const EXT_DROP_MAX=2000;
+const EXT_NOTHING="Nothing to install: drop rules packs (.json) or a data zip.";
+function manualInstallFiles(files,opts){
+  const all=Array.from(files||[]),wanted=all.filter(extWanted),list=wanted.slice(0,EXT_DROP_MAX);
+  if(!list.length){toast(EXT_NOTHING,null,{long:true});return Promise.resolve();}
+  const extra={ignored:all.length-wanted.length,capped:wanted.length-list.length};
+  return Promise.all(list.map(extReadFile)).then(payloads=>extManualPlan(payloads,opts,extra));
+}
+/* the plan's skipped note: the first few files by name, then a count, so a
+   broken folder of 2,000 files is one line, not 2,000 sentences; then what
+   was never read (`extra`: not .json/.zip, or past EXT_DROP_MAX) */
+function extSkippedNote(failed,extra){
+  const x=extra||{},s=[],SHOW=5,n=v=>v.toLocaleString("en");
+  failed.slice(0,SHOW).forEach(f=>s.push(`Skipped ${f.name}: ${f.why}.`));
+  if(failed.length>SHOW)s.push(`…and ${n(failed.length-SHOW)} more couldn't be used.`);
+  if(x.ignored)s.push(`Skipped ${n(x.ignored)} file${x.ignored===1?"":"s"} that ${x.ignored===1?"isn't":"aren't"} .json or .zip.`);
+  if(x.capped)s.push(`Stopped at ${n(EXT_DROP_MAX)} files; ${n(x.capped)} more weren't read.`);
+  return s.join(" ");
+}
+function extManualPlan(payloads,opts,extra){
+  const {cands,failed}=manualCandidates(payloads);
+  openInstallPlan(planInstall(cands),opts||{});
+  const note=extSkippedNote(failed,extra);
+  if(note){
+    const st=document.getElementById("planStatus")||document.querySelector("#mBody .hint");
+    if(st)st.insertAdjacentHTML("afterend",`<p class="status err">${esc(note)}</p>`);
+  }
+}
+/* a drop: files, a zip, or whole folders (webkitGetAsEntry), read recursively */
+function readDropped(dt){
+  /* out.extra counts what was never read: not .json/.zip (ignored), or past
+     EXT_DROP_MAX (capped). A file or folder the browser couldn't read joins
+     `out` with no bytes, so manualCandidates() names it as unreadable. */
+  const out=[],extra={ignored:0,capped:0};out.extra=extra;
+  let taken=0;
+  const take=()=>{if(taken>=EXT_DROP_MAX){extra.capped++;return false;}taken++;return true;};
+  const walk=(entry,prefix)=>new Promise(res=>{
+    if(!entry)return res();
+    if(entry.isFile){
+      if(!extWanted(entry)){extra.ignored++;return res();}
+      if(!take())return res();
+      return entry.file(f=>extReadFile(f).then(p=>{p.name=prefix+entry.name;out.push(p);res();}),
+        ()=>{out.push({name:prefix+entry.name,bytes:null});res();});
+    }
+    if(entry.isDirectory){
+      /* readEntries() hands a directory over in batches, until an empty one */
+      const rd=entry.createReader(),all=[];
+      const more=()=>rd.readEntries(es=>{
+        if(!es.length)return Promise.all(all.map(x=>walk(x,prefix+entry.name+"/"))).then(()=>res());
+        all.push(...es);more();
+      },()=>{out.push({name:prefix+entry.name+"/",bytes:null});res();});
+      return more();
+    }
+    res();
+  });
+  const items=dt&&dt.items?Array.from(dt.items).filter(it=>it&&it.kind==="file"):[];
+  const readFile=f=>{
+    if(!f)return Promise.resolve();
+    if(!extWanted(f)){extra.ignored++;return Promise.resolve();}
+    return take()?extReadFile(f).then(p=>{out.push(p);}):Promise.resolve();
+  };
+  /* an item with no entry (a browser without the entries API for it) is
+     still a file: read it as one */
+  const jobs=items.length&&typeof items[0].webkitGetAsEntry==="function"
+    ?items.map(it=>{const en=it.webkitGetAsEntry();return en?walk(en,""):readFile(typeof it.getAsFile==="function"?it.getAsFile():null);})
+    :Array.from((dt&&dt.files)||[]).map(readFile);
+  return Promise.all(jobs).then(()=>out);
+}
+function openManualInstall(){
+  openModal("Manual install",
+    `<p class="hint">Downloaded a data zip or pack files? Choose them or drop them here. You'll see what changes before anything installs.</p>`+
+    `<div class="ext-acts"><button type="button" class="tbtn" id="miFiles">Choose files</button><button type="button" class="tbtn" id="miFolder">Choose a folder</button></div>`+
+    `<div class="ext-drop" id="miDrop">Drop files, a zip or a folder here</div>`+
+    `<input type="file" id="miFileIn" multiple accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" class="hidefile">`+
+    `<input type="file" id="miDirIn" webkitdirectory multiple class="hidefile">`+
+    `<div class="m-actions"><button type="button" class="tbtn" id="miClose">Close</button></div>`,"",{});
+  const fi=document.getElementById("miFileIn"),di=document.getElementById("miDirIn");
+  document.getElementById("miFiles").addEventListener("click",()=>fi.click());
+  document.getElementById("miFolder").addEventListener("click",()=>di.click());
+  document.getElementById("miClose").addEventListener("click",()=>{closeModal();settings.setPage="extensions";openSettings();});
+  [fi,di].forEach(inp=>inp.addEventListener("change",()=>{if(inp.files.length)manualInstallFiles(inp.files,{back:"settings"});inp.value="";}));
+  extWireDrop();
+}
+/* Files, a zip or a folder dropped on Manual install or the Extensions page.
+   Caught on the whole dialog (#modal, which holds #mBody and the backdrop),
+   not just the box: a file dropped beside the box used to be opened by the
+   browser, navigating away from Fieldbook (#102 Task 6 fix round 1). Wired
+   once, on first use — #modal outlives every dialog — and active only while
+   a drop zone (#miDrop, else #extPage) is on show, which is also what lights
+   up — not the Extensions page while Settings shows another page. */
+function extDropZone(){
+  const z=document.getElementById("miDrop")||document.getElementById("extPage");
+  return z&&z.offsetParent!==null?z:null;
+}
+function extWireDrop(){
+  const m=document.getElementById("modal");if(!m||m._extDrop)return;
+  m._extDrop=true;
+  m.addEventListener("dragover",e=>{const z=extDropZone();if(!z)return;e.preventDefault();z.classList.add("ext-dropping");});
+  /* leaving for a child element is not leaving the dialog */
+  m.addEventListener("dragleave",e=>{const z=extDropZone();if(z&&(!e.relatedTarget||!m.contains(e.relatedTarget)))z.classList.remove("ext-dropping");});
+  m.addEventListener("drop",e=>{const z=extDropZone();if(!z)return;e.preventDefault();z.classList.remove("ext-dropping");
+    readDropped(e.dataTransfer).then(p=>{if(p.length||p.extra&&p.extra.capped)extManualPlan(p,{back:"settings"},p.extra);else toast(EXT_NOTHING,null,{long:true});});});
+}
+/* ---- the pills (spec §6.1): "Extensions · N updates", "N updates" at 390px ---- */
+function renderExtPill(){
+  const wrap=document.getElementById("extPill"),go=document.getElementById("extPillGo");if(!wrap||!go)return;
+  const n=extPillCount();
+  wrap.hidden=!n;
+  if(n){go.innerHTML=`<span class="extpill-long">Extensions · </span>${esc(String(n))} update${n===1?"":"s"}`;
+    go.title=`${n} extension update${n===1?"":"s"}: open Settings → Extensions`;}
+}
+/* after a pill's ×, focus goes to the version button if it shows, else Home:
+   the × hides itself and would otherwise leave focus on <body> */
+function extPillFocusBack(){
+  const v=document.getElementById("btnVer"),h=document.getElementById("btnHome");
+  const t=v&&v.offsetParent!==null?v:h;if(t&&typeof t.focus==="function")t.focus();
+}
 /* ================= wiring ================= */
 function wire(){
   // tabs
@@ -14881,6 +15958,18 @@ function wire(){
   /* same target as the version button it replaces — the changelog, which carries
      the download link while an update is pending */
   const _up=document.getElementById("updatePill");if(_up)_up.addEventListener("click",openChangelog);
+  /* #102: each pill's × clears its notice until a newer version arrives
+     (spec decision 9). A save that doesn't land says so (constraint 2). */
+  const _pillSaved=()=>{const err=saveSettings();if(err)toast("Couldn't save that you cleared the notice: "+err,null,{err:true});};
+  {const x=document.getElementById("updatePillX");if(x)x.addEventListener("click",()=>{
+    if(!updateAvailable)return;
+    if(!settings.dismissedUpdates||typeof settings.dismissedUpdates!=="object")settings.dismissedUpdates={};
+    settings.dismissedUpdates.app=updateAvailable.ver;_pillSaved();
+    const p=document.getElementById("updatePill");if(p)p.style.display="none";x.hidden=true;
+    const v=document.getElementById("btnVer");if(v)v.style.display="";extPillFocusBack();});}
+  {const g=document.getElementById("extPillGo");if(g)g.addEventListener("click",()=>{settings.setPage="extensions";openSettings();});}
+  {const x=document.getElementById("extPillX");if(x)x.addEventListener("click",()=>{dismissUpdates();_pillSaved();renderExtPill();extPillFocusBack();});}
+  renderExtPill();
   {const s=document.getElementById("sizeDisp");if(s){s.addEventListener("click",openSizePicker);
     s.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openSizePicker();}});}}
   document.getElementById("btnHome").addEventListener("click",showHome);
@@ -14925,8 +16014,8 @@ function wire(){
   document.getElementById("homeMode").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeRough").addEventListener("click",()=>{settings.rough=!settings.rough;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeImportBtn").addEventListener("click",()=>document.getElementById("homeRulesFiles").click());
-  document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
-  document.getElementById("rbRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
+  document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)manualInstallFiles(e.target.files);e.target.value="";});
+  document.getElementById("rbRulesFiles").addEventListener("change",e=>{if(e.target.files.length)manualInstallFiles(e.target.files);e.target.value="";});
   document.getElementById("homeRulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`)){removeRulesGroup(d.dataset.rdDel);const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeClearRules").addEventListener("click",()=>{if(clearAllRules()){const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeChars").addEventListener("click",e=>{
@@ -14971,7 +16060,7 @@ function boot(){
      and reading it is async. Everything above already drew with whatever
      localStorage had (usually nothing, once migrated), and this replaces it. */
   loadRulesCacheAsync();
-  checkForUpdate();checkForDataUpdate();
+  checkForUpdate();checkForDataUpdate();checkSources({boot:true}).catch(()=>false);
 }
 boot();
 </script>
