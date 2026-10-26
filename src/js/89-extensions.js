@@ -51,14 +51,21 @@ function sha256Hex(bytes){
 /* ---- reading a manifest ---- */
 function extUrl(u){return typeof u==="string"&&/^https?:\/\//i.test(u)?u:"";}
 function extText(s,max){return typeof s==="string"?s.slice(0,max):"";}
-/* a path relative to the manifest: never absolute, never up, never a URL, and
-   never percent-encoded — new URL() decodes %2e while it collapses ../ dot
-   segments, so an encoded ".." would resolve outside the manifest's folder
-   even though this check never sees a literal ".." (#102 fix round 1) */
+/* a path relative to the manifest: an ALLOW-list, not a blacklist of
+   "dangerous" characters. new URL() rewrites its whole input before it
+   collapses ../ dot-segments — it decodes %2e, and it strips every ASCII tab
+   and newline (WHATWG URL spec) wherever they fall, not just at the ends — so
+   a blacklist chases one bypass at a time (round 1 caught "%2e%2e" but not
+   "."+TAB+"." reassembling into ".." post-parse). Every "/"-separated segment
+   must instead be ONLY letters, digits, "." "_" "-", and not "." or ".." on
+   its own; nothing in that class survives URL rewriting into something new,
+   and nothing outside it (no "%", "\", ":", control character, space, "?",
+   "#", empty segment) is ever a legitimate pack path (#102 fix round 2) */
 function extRelPath(p){
   const s=typeof p==="string"?p:"";
-  if(!s||s.includes("%")||s.startsWith("/")||s.includes("\\")||/^[a-z][a-z0-9+.-]*:/i.test(s))return "";
-  return s.split("/").some(x=>x===""||x==="."||x==="..")?"":s;
+  if(!s)return "";
+  const segs=s.split("/");
+  return segs.every(x=>/^[A-Za-z0-9._-]+$/.test(x)&&x!=="."&&x!=="..")?s:"";
 }
 function extKey(system,file){return String(system)+"|"+String(file);}
 /* one pack of a manifest, normalised, or null when it can't be installed from */

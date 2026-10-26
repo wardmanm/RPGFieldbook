@@ -756,7 +756,8 @@ section('#102 readManifest', () => {
   ck('#102 a format-1 manifest (today\'s zip) reads with defaults', m1.packs[0].title === 'A' && m1.packs[0].minApp === '1.8.1' && m1.packs[0].summary === '');
   ck('#102 a homepage that isn\'t http(s) becomes ""', X.readManifest({_type: 'fieldbook-data', homepage: 'javascript:x', packs: []}, 50).homepage === '');
   ['../x_full.json', '/abs_full.json', 'https://evil.org/x_full.json', 'a\\b_full.json', 'dir/../x_full.json', 'x.txt', '',
-   '%2e%2e/x_full.json', 'a/%2E%2E/x_full.json', './x_full.json', 'a//x_full.json']
+   '%2e%2e/x_full.json', 'a/%2E%2E/x_full.json', './x_full.json', 'a//x_full.json',
+   'a/.\t./x_full.json', '.\n./x_full.json', 'a/.\r./x_full.json', 'a b/x_full.json', 'a/x_full.json?q=1', 'a/x_full.json#f']
     .forEach(f => ck('#102 an unsafe or non-json path is dropped: ' + JSON.stringify(f),
       X.readManifest({_type: 'fieldbook-data', packs: [pk({file: f})]}, 100).packs.length === 0));
   ck('#102 a path in a folder keeps its base name as the file',
