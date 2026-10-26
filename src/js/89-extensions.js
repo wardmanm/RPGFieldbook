@@ -177,13 +177,30 @@ function dismissUpdates(){
   extUpdateRows().forEach(r=>{settings.dismissedUpdates[r.key]=r.offer.entry.version;});
 }
 /* ---- the network: every call has a timeout (constraint 2) ---- */
-function extFetchBytes(url,ms){
+/* The WHOLE response is raced against the timer, not just the wait for
+   headers: a host that answers promptly and then stalls the body must still
+   time out (#102 fix round 1, Important 2 — Promise.race used to cover only
+   fetch(), leaving r.arrayBuffer() free to hang forever). AbortController,
+   where it exists, actually stops the download on a timeout instead of
+   leaving it running in the background. `cap`, when given, refuses a
+   Content-Length above it before the body is ever read — EXT_MAN_MAX for a
+   manifest check, EXT_FILE_MAX for a pack file — so a hostile or mistaken
+   host can't make the tab buffer a huge response just to have it thrown
+   away afterwards. */
+function extFetchBytes(url,ms,cap){
+  const ac=typeof AbortController==="function"?new AbortController():null;
   let timer;
-  const timeout=new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error("it took too long to answer")),ms);});
-  return Promise.race([fetch(url,{cache:"no-store"}),timeout]).then(r=>{
+  const timeout=new Promise((_,rej)=>{timer=setTimeout(()=>{if(ac)ac.abort();rej(new Error("it took too long to answer"));},ms);});
+  const opts=ac?{cache:"no-store",signal:ac.signal}:{cache:"no-store"};
+  const run=fetch(url,opts).then(r=>{
     if(!r||!r.ok){const e=new Error("HTTP "+(r?r.status:"error"));e.status=r?r.status:0;throw e;}
+    if(cap){
+      const len=r.headers&&typeof r.headers.get==="function"?num(r.headers.get("content-length")):0;
+      if(len>cap)throw new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");
+    }
     return r.arrayBuffer();
-  }).then(b=>new Uint8Array(b)).finally(()=>clearTimeout(timer));
+  });
+  return Promise.race([run,timeout]).then(b=>new Uint8Array(b)).finally(()=>clearTimeout(timer));
 }
 /* the official source's manifest URL: the newest release this app can run
    (pickDataRelease(), as the boot data check), at its tag, on raw — which
@@ -202,16 +219,31 @@ function checkSource(src){
   const at=Date.now();
   return (src.kind==="official"?extOfficialUrl():Promise.resolve(src.url)).then(url=>{
     if(!url){src.manifest=null;src.base="";return;}
-    return extFetchBytes(url,EXT_CHECK_MS).then(bytes=>{
+    return extFetchBytes(url,EXT_CHECK_MS,EXT_MAN_MAX).then(bytes=>{
       let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){throw new Error("it isn't valid JSON");}
       src.manifest=readManifest(obj,bytes.length);src.base=url;
+    },e=>{
+      /* only a 404 on THIS fetch — the manifest at the release
+         extOfficialUrl() picked — means "a release from before #102,
+         nothing to offer"; a 404 from extOfficialUrl()'s OWN fetch (the
+         releases list, e.g. a renamed repo) is a real error and must never
+         take this branch (#102 fix round 1, Minor 9) */
+      if(src.kind==="official"&&e&&e.status===404)e.officialOld=true;
+      throw e;
     });
   }).then(()=>{src.checked=at;src.error="";},e=>{
     src.checked=at;
-    if(src.kind==="official"&&e&&e.status===404){src.manifest=null;src.base="";src.error="";return;}
+    if(e&&e.officialOld){src.manifest=null;src.base="";src.error="";return;}
     src.error=String((e&&e.message)||e||"it couldn't be reached");
   });
 }
+/* The last "couldn't save your sources" error from a boot-time checkSources()
+   — boot stays quiet (spec §4), but a storage failure still has to be
+   reported somewhere (constraint 2), not swallowed; Task 5's Extensions page
+   reads this to show it. Cleared the next time any save lands, boot or not
+   (#102 fix round 1, Important 3). */
+let extSaveError="";
+function extSaveErrorText(){return extSaveError;}
 /* Every enabled manifest source, and the official one: at boot (quiet, never
    offline) and on Check now. Reads manifests only, never pack files. */
 function checkSources(opts){
@@ -220,6 +252,7 @@ function checkSources(opts){
   const list=(settings.sources||[]).filter(s=>s.on&&(s.kind==="official"||s.kind==="manifest"));
   return Promise.all(list.map(checkSource)).then(()=>{
     const err=saveSettings();
+    extSaveError=err||"";
     if(err&&!o.boot&&typeof updateRulesStatus==="function")updateRulesStatus("Couldn't save your sources: "+err,"err");
     if(typeof renderExtUI==="function")renderExtUI();
     return true;
@@ -229,38 +262,77 @@ function checkSources(opts){
 function addSource(url){
   const u=String(url||"").trim();
   if(!extUrl(u))return Promise.resolve({ok:false,why:"That isn't a web address (it must start with http:// or https://)."});
-  if((settings.sources||[]).some(s=>s.url===u))return Promise.resolve({ok:false,why:"That source is already in the list."});
+  /* de-duplicate on the NORMALISED url: "HTTPS://Host/m.json" and
+     "https://host/m.json" are the same source, differing only in case or a
+     default port (#102 fix round 1, Minor 2) */
+  let norm=u;try{norm=new URL(u).href;}catch(e){/* keep norm=u; extUrl() already refused anything new URL() can't parse at all */}
+  const dup=(settings.sources||[]).some(s=>{let sn=s.url;try{sn=new URL(s.url).href;}catch(e){}return sn===norm;});
+  if(dup)return Promise.resolve({ok:false,why:"That source is already in the list."});
   return extFetchBytes(u,EXT_CHECK_MS).then(bytes=>{
     let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){return {ok:false,why:"It didn't answer with JSON."};}
     const src={id:uid(),kind:"plain",url:u,on:true,checked:Date.now(),error:"",manifest:null,base:""};
+    let empty=false;
     if(obj&&obj._type==="fieldbook-data"){
       try{src.manifest=readManifest(obj,bytes.length);}catch(e){return {ok:false,why:"Its manifest can't be used: "+e.message+"."};}
-      src.kind="manifest";src.base=u;
+      src.kind="manifest";src.base=u;empty=!src.manifest.packs.length;
     }else if(!(obj&&typeof obj==="object"&&(isRulesPack(obj)||Array.isArray(obj.include)))){
       return {ok:false,why:"It isn't a Fieldbook manifest or rules file."};
     }
+    /* settings.sources is foldLegacySettings()'s job to create — addSource()
+       must not assume it ran first (#102 fix round 1, Minor 1: this used to
+       throw inside the SAME .then() whose sibling onRejected could never
+       catch it, the exact trap the implementer had already fixed in
+       runInstall) */
+    if(!Array.isArray(settings.sources))settings.sources=[];
     settings.sources.push(src);
     const err=saveSettings();
-    return {ok:true,why:err?"Added, but your settings couldn't be saved: "+err:""};
-  },e=>({ok:false,why:"It couldn't be reached: "+((e&&e.message)||e)+"."}));
+    return {ok:true,why:err?"Added, but your settings couldn't be saved: "+err
+      :(empty?"Added, but it offers nothing this Fieldbook can install.":"")};
+  },e=>{
+    const base="It couldn't be reached: "+((e&&e.message)||e)+".";
+    /* "Failed to fetch" (no e.status) is also what a host with no CORS
+       header produces — hint at that too (#102 fix round 1, Minor 2) */
+    return {ok:false,why:(e&&e.status)?base:base+" It may also be blocking requests from other sites — it must allow cross-origin reads."};
+  });
 }
 /* ---- candidates (spec §5 step 1) ---- */
 function offerCandidate(o){
   const e=o.entry,url=new URL(e.path,o.source.base||o.source.url).href;
+  /* a declared size scales the file timeout — EXT_FILE_MS plus a second per
+     100 KB claimed — and an entry over the hard cap is refused outright, no
+     fetch at all, since it could never pass extVerify's own size check
+     anyway (#102 fix round 1, Important 2) */
+  const ms=EXT_FILE_MS+Math.ceil((e.size||0)/102400)*1000;
   return {key:extKey(e.system,e.file),category:e.category,system:e.system,file:e.file,title:e.title,version:e.version,
     minApp:e.minApp,sha256:e.sha256,size:e.size,requires:e.requires,origin:o.source.id,manual:false,
-    get:()=>extFetchBytes(url,EXT_FILE_MS)};
+    get:()=>e.size>EXT_FILE_MAX?Promise.reject(new Error("it's larger than 32 MB")):extFetchBytes(url,ms,EXT_FILE_MAX)};
 }
 /* Files, a folder or a dropped set, as {name, bytes, path?}. A zip goes
-   through readDataArchive() and keeps its manifest's entries; a folder's
-   fieldbook-data.json does the same for the files beside it; a loose pack is
-   named by its own system and dataVersion. */
+   through readDataArchive() and keeps its manifest's entries; a loose pack is
+   named by its own system and dataVersion.
+
+   Every fieldbook-data.json in the drop is its own folder's manifest, read
+   for the directory it sits in — resolved the way readDataArchive() resolves
+   a zip's manifest, dir+entry.path, not by matching a bare file name across
+   folders (#102 fix round 1, Minor 3: "root/one/x_full.json" and
+   "root/two/x_full.json" used to both match the first manifest found,
+   anywhere in the drop, because only their shared BASE name was compared).
+   One that can't be read is skipped quietly: it is a manifest file, never a
+   rules pack, so it is never reported as "it isn't a rules pack". */
 function manualCandidates(payloads){
   const cands=[],failed=[],list=Array.isArray(payloads)?payloads:[];
-  const fromBytes=(name,bytes,entry)=>{
+  const fromBytes=(name,bytes,entry,kind)=>{
     let obj;
     try{obj=JSON.parse(utf8Text(bytes));}catch(e){failed.push({name,why:"it isn't valid JSON"});return;}
-    if(!obj||typeof obj!=="object"||Array.isArray(obj)||!isRulesPack(obj)){failed.push({name,why:"it isn't a rules pack"});return;}
+    if(!obj||typeof obj!=="object"||Array.isArray(obj)){failed.push({name,why:"it isn't a rules pack"});return;}
+    if(!isRulesPack(obj)){
+      /* a loose zip's non-pack JSON (an app zip's overlay.json or
+         class-resources.json) is skipped silently, as importRulesPayloads
+         already does for exactly the same files — never a reported failure
+         (#102 fix round 1, Minor 4) */
+      if(kind!=="loose")failed.push({name,why:"it isn't a rules pack"});
+      return;
+    }
     const file=String(name).split("/").pop(),system=srcLabel(obj);
     const e=entry&&entry.system===system?entry:null;
     cands.push({key:extKey(system,file),category:e?e.category:"rules",system,file,title:e?e.title:system,
@@ -268,23 +340,29 @@ function manualCandidates(payloads){
       sha256:e?e.sha256:"",size:bytes.length,requires:e?e.requires:[],origin:"manual",manual:true,
       get:()=>Promise.resolve(bytes)});
   };
-  /* a folder's (or a drop's) own manifest, read first */
-  let folderMan=null;
-  const manFile=list.find(p=>p&&String(p.name).split("/").pop()==="fieldbook-data.json");
-  if(manFile){try{folderMan=readManifest(JSON.parse(utf8Text(manFile.bytes)),manFile.bytes.length);}catch(e){failed.push({name:"fieldbook-data.json",why:e.message});}}
-  const metaFor=file=>folderMan?folderMan.packs.find(p=>p.file===file)||null:null;
+  const manFiles=new Set(),metaByPath=new Map();
   list.forEach(p=>{
-    if(!p||p===manFile)return;
-    const name=String(p.name||"file"),bytes=p.bytes;
-    if(!bytes||!ArrayBuffer.isView(bytes)){failed.push({name,why:"it couldn't be read"});return;}
+    if(!p)return;
+    const path=String((p&&(p.path||p.name))||"");
+    if(path.split("/").pop()!=="fieldbook-data.json")return;
+    manFiles.add(p);
+    if(!p.bytes||!ArrayBuffer.isView(p.bytes))return;
+    let man;try{man=readManifest(JSON.parse(utf8Text(p.bytes)),p.bytes.length);}catch(e){return;}
+    const dir=path.slice(0,path.length-"fieldbook-data.json".length);
+    man.packs.forEach(entry=>{metaByPath.set(dir+entry.path,entry);});
+  });
+  list.forEach(p=>{
+    if(!p||manFiles.has(p))return;
+    const path=String((p&&(p.path||p.name))||"file"),bytes=p.bytes;
+    if(!bytes||!ArrayBuffer.isView(bytes)){failed.push({name:path,why:"it couldn't be read"});return;}
     if(isZipBytes(bytes)){
       let arc;
-      try{arc=readDataArchive(bytes,name);}catch(e){failed.push({name,why:ZIP_WHY[e&&e.code]||"it couldn't be read"});return;}
-      arc.packs.forEach(pk=>fromBytes(pk.name,pk.bytes,pk.meta?extEntry(pk.meta,pk.builtFor):null));
+      try{arc=readDataArchive(bytes,path);}catch(e){failed.push({name:path,why:ZIP_WHY[e&&e.code]||"it couldn't be read"});return;}
+      arc.packs.forEach(pk=>fromBytes(pk.name,pk.bytes,pk.meta?extEntry(pk.meta,pk.builtFor):null,arc.kind));
       return;
     }
-    if(!/\.json$/i.test(name))return;
-    fromBytes(name,bytes,metaFor(name.split("/").pop()));
+    if(!/\.json$/i.test(path))return;
+    fromBytes(path,bytes,metaByPath.get(path)||null);
   });
   return {cands,failed};
 }
@@ -302,7 +380,13 @@ function planInstall(cands){
     if(extTooNew(c))return {cand:c,outcome:"blocked",have:"",ticked:false,canTick:false,why:extTooNewWhy(c)};
     const g=extLoadedGroup(c.system,c.file),have=g?g.dataVersion:"";
     if(!g)return {cand:c,outcome:"install",have,ticked:true,canTick:true,why:""};
-    if(!parseDataVer(have)||!parseDataVer(c.version))return {cand:c,outcome:"replace",have,ticked:true,canTick:true,why:""};
+    /* spec §5 has the final say on an unparseable version on either side
+       (#102 fix round 1, Minor 5): the CANDIDATE having no version is the
+       risky direction — it could be a downgrade — so it is an unticked
+       "Replace anyway"; only the LOADED side having no version (unversioned
+       data predating #83) is safe to tick by default */
+    if(!parseDataVer(c.version))return {cand:c,outcome:"replace",have,ticked:false,canTick:true,why:"Replace anyway"};
+    if(!parseDataVer(have))return {cand:c,outcome:"replace",have,ticked:true,canTick:true,why:""};
     const d=cmpDataVer(c.version,have);
     if(d>0)return {cand:c,outcome:"update",have,ticked:true,canTick:true,why:""};
     return {cand:c,outcome:d===0?"same":"older",have,ticked:false,canTick:!!c.manual,why:c.manual?"Replace anyway":""};
@@ -315,7 +399,13 @@ function planInstall(cands){
     lines.filter(l=>l.ticked).forEach(l=>(l.cand.requires||[]).forEach(r=>{
       if(loadedRulesGroups().some(g=>g.source===r.pack))return;
       if(lines.some(x=>x.cand.system===r.pack))return;
-      const o=extOffers().find(x=>x.entry.system===r.pack&&(!r.file||x.entry.file===r.file)&&EXT_CATS.indexOf(x.entry.category)>=0&&!extTooNew(x.entry));
+      /* the BEST offer, not the first source in settings order (#102 fix
+         round 1, Minor 6): the official source sorts first in settings.sources
+         (convertSources()), so .find() always returned it even when a
+         third-party source offered a newer copy — sorted the same way
+         availableFor() picks: newest version wins, a tie goes official */
+      const matches=extOffers().filter(x=>x.entry.system===r.pack&&(!r.file||x.entry.file===r.file)&&EXT_CATS.indexOf(x.entry.category)>=0&&!extTooNew(x.entry));
+      const o=matches.sort((a,b)=>cmpDataVer(b.entry.version,a.entry.version)||((b.source.kind==="official")-(a.source.kind==="official")))[0];
       if(!o)return;
       lines.push({cand:offerCandidate(o),outcome:"install",have:"",ticked:true,canTick:true,why:"needed by "+l.cand.title});added=true;
     }));
@@ -334,8 +424,37 @@ function extVerify(c,bytes){
   if(c.version&&obj.dataVersion!==c.version)throw new Error(`it is version ${obj.dataVersion||"(none)"}, the manifest says ${c.version}`);
   return obj;
 }
+/* Copy `rules` key by key: every array sliced, every non-array object copied
+   into a fresh one with the SAME prototype (never a JSON round trip — that
+   would turn `requires`/`credits`/`defaultLanguages`/`advancement`'s
+   null-prototype maps, packMap()'s whole reason to exist, back into plain
+   objects a hostile label like "__proto__" could poison again). Primitives
+   copy as themselves. Restoring is just `rules=snapshot` — `rules` is a
+   plain reassignable top-level `let`, the same thing resetRules() does. */
+function extSnapshotRules(){
+  const snap={};
+  Object.keys(rules).forEach(k=>{
+    const v=rules[k];
+    if(Array.isArray(v)){snap[k]=v.slice();return;}
+    if(v&&typeof v==="object"){
+      const copy=Object.create(Object.getPrototypeOf(v));
+      Object.assign(copy,v);
+      snap[k]=copy;return;
+    }
+    snap[k]=v;
+  });
+  return snap;
+}
 function runInstall(lines){
-  const todo=(lines||[]).filter(l=>l.ticked&&l.canTick!==false);
+  /* de-duplicate by key, keeping the newest (#102 fix round 1, Minor 7):
+     planInstall() already guarantees unique keys for every route today, but
+     runInstall() must not trust a caller that skips it */
+  const byKey=new Map();
+  (lines||[]).filter(l=>l.ticked&&l.canTick!==false).forEach(l=>{
+    const ex=byKey.get(l.cand.key);
+    if(!ex||cmpDataVer(l.cand.version,ex.cand.version)>0)byKey.set(l.cand.key,l);
+  });
+  const todo=[...byKey.values()];
   const got=[];
   const step=i=>{
     if(i>=todo.length)return Promise.resolve(null);
@@ -350,16 +469,41 @@ function runInstall(lines){
         e=>({file:c.file,why:String((e&&e.message)||e)}));
   };
   return step(0).then(error=>{
-    if(error)return {ok:false,installed:[],error,saveErr:""};
-    if(!got.length)return {ok:true,installed:[],error:null,saveErr:""};
+    if(error)return {ok:false,installed:[],error,saveErr:"",skipped:{}};
+    if(!got.length)return {ok:true,installed:[],error:null,saveErr:"",skipped:{}};
     if(!settings.packOrigin||typeof settings.packOrigin!=="object")settings.packOrigin={};
-    const installed=[];
-    got.forEach(({c,obj})=>{importPack(obj,c.file);settings.packOrigin[c.key]=c.origin;installed.push(c.title);});
+    /* all or nothing covers IMPORTING too, not only fetching and verifying
+       (#102 fix round 1, Important 1): a pack that passes extVerify (valid
+       JSON, right system, right sha256) can still fail inside mergeRules()
+       on malformed CONTENT — a bad `requires`, a feature with the wrong
+       shape — exactly what importRulesPayloads() already catches per file
+       for. One install run must not leave some packs merged and others not,
+       so a throw here restores the snapshot taken before any of them ran. */
+    const rulesSnap=extSnapshotRules(),originSnap=Object.assign({},settings.packOrigin);
+    const installed=[],skipped={};
+    let failFile=null;
+    try{
+      got.forEach(({c,obj})=>{
+        failFile=c.file;
+        addSkipped(skipped,importPack(obj,c.file));
+        settings.packOrigin[c.key]=c.origin;
+        installed.push(c.title);
+      });
+    }catch(e){
+      rules=rulesSnap;settings.packOrigin=originSnap;
+      reindexRules();recomputeDups();
+      return {ok:false,installed:[],error:{file:failFile,why:"it couldn't be merged: "+String((e&&e.message)||e)},saveErr:"",skipped:{}};
+    }
     const setErr=saveSettings();
-    return saveRulesCache().then(cacheErr=>{
+    /* a saveRulesCache() rejection (it never does today — every failure it
+       hits is caught and falls back to localStorage — but must not be
+       trusted to stay that way) becomes `saveErr` too, instead of leaving
+       runInstall's own promise rejected after the pool has already changed
+       and skipping the UI refresh below (#102 fix round 1, Important 1) */
+    return saveRulesCache().catch(e=>String((e&&e.message)||e)).then(cacheErr=>{
       if(typeof refreshRulesUI==="function")refreshRulesUI();
       renderRulesData();
-      return {ok:true,installed,error:null,saveErr:[cacheErr,setErr].filter(Boolean).join(" ")};
+      return {ok:true,installed,error:null,saveErr:[cacheErr,setErr].filter(Boolean).join(" "),skipped};
     });
   });
 }

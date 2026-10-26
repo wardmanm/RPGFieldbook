@@ -3217,6 +3217,23 @@ function block(html, needle, tag) {
      /skipped/i.test(status.textContent) && /1 glossary entry/.test(status.textContent) && /1 spell/.test(status.textContent),
      status.textContent);
 
+  // ---- #102 fix round 1 (Minor 11): fetchAllRules(urls) takes an explicit
+  // list, bypassing settings.sources entirely — even with no plain source
+  // configured at all
+  seedFilePack();
+  X.settings.sources = [];
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
+  calls = [];
+  await X.fetchAllRules([HB]);
+  await new Promise(r => setImmediate(r));
+  ck('#102 fetchAllRules(urls): an explicit list is fetched with no plain source configured',
+     names(null, 'spells', 'Homebrew').join() === 'Zap' && calls.length === 1, [names(null, 'spells'), calls]);
+  routes = {}; calls = [];
+  await X.fetchAllRules();
+  await new Promise(r => setImmediate(r));
+  ck('#102 fetchAllRules(): with no argument and no plain source, there is nothing to fetch',
+     /no plain source/i.test(status.textContent) && calls.length === 0, status.textContent);
+
   // ---- the Rules data badge follows every change to the pool, not only Fetch all
   chip.innerHTML = 'STALE';
   state.confirm = true;

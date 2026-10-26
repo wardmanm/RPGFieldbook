@@ -21,6 +21,7 @@ const {X, ctx, state, bootError} = loadApp([
   'settings', 'EXT_CATS', 'foldLegacySettings',
   'extFetchBytes', 'checkSource', 'checkSources', 'addSource', 'offerCandidate', 'manualCandidates',
   'planInstall', 'runInstall', 'importPack', 'loadedRulesGroups',
+  'extSaveErrorText', 'EXT_FILE_MAX', 'EXT_MAN_MAX',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 ctx.URL = URL;   // offerCandidate() resolves a pack's path against its source with it (#102)
@@ -963,6 +964,201 @@ section('#102 planInstall outcomes and manual candidates', () => {
     {name: 'a_full.json', bytes: enc(packJSON('A', '1.2.0'))}]);
   ck('#102 a folder with its manifest: the manifest\'s sha256 and minApp apply', folder.cands.length === 1 && folder.cands[0].sha256 === 'a'.repeat(64) && folder.cands[0].minApp === '9.9.9');
   X.resetRules(); X.settings.sources = [];
+});
+
+// ---------- #102 fix round 1: opus review (task-4-review.md)
+section('#102 fix round 1: a throw mid-import reverts everything, not just the pool', async () => {
+  X.resetRules(); X.settings.packOrigin = {};
+  const savedMerge = ctx.mergeRules;
+  ctx.mergeRules = function (obj, fileName, url) { if (fileName === 'b_full.json') throw new Error('boom'); return savedMerge(obj, fileName, url); };
+  let saves = 0; const realSave = ctx.saveRulesCache; ctx.saveRulesCache = () => { saves++; return Promise.resolve(''); };
+  const mk = (sys, file) => ({cand: {key: sys + '|' + file, category: 'rules', system: sys, file, title: sys, version: '1.0.0', minApp: '', sha256: '', size: 0, requires: [], origin: 'm1', manual: false,
+    get: () => Promise.resolve(new TextEncoder().encode(packJSON(sys, '1.0.0')))}, outcome: 'install', ticked: true, canTick: true});
+  const before = JSON.stringify(X.loadedRulesGroups()), beforeOrigin = JSON.stringify(X.settings.packOrigin);
+  const r = await X.runInstall([mk('A', 'a_full.json'), mk('B', 'b_full.json')]);
+  ck('#102 fix round 1: a throw mid-import is {ok:false}, not a rejection', r.ok === false && r.error.file === 'b_full.json' && /boom/.test(r.error.why), r);
+  ck('#102 fix round 1: nothing is left half-installed: the pool, packOrigin and the cache are all untouched',
+    JSON.stringify(X.loadedRulesGroups()) === before && JSON.stringify(X.settings.packOrigin) === beforeOrigin && saves === 0,
+    [X.loadedRulesGroups(), X.settings.packOrigin, saves]);
+  ctx.mergeRules = savedMerge; ctx.saveRulesCache = realSave; X.resetRules(); X.settings.packOrigin = {};
+});
+
+section('#102 fix round 1: the timeout covers the whole response, not just the headers', async () => {
+  // the harness stubs setTimeout as a no-op (nothing else here needs a real
+  // timer firing) — this test is the one exception, so it borrows Node's own
+  // setTimeout/clearTimeout for just this check
+  const realFetch = ctx.fetch, realST = ctx.setTimeout, realCT = ctx.clearTimeout;
+  ctx.setTimeout = setTimeout; ctx.clearTimeout = clearTimeout;
+  ctx.fetch = () => Promise.resolve({ok: true, status: 200, arrayBuffer: () => new Promise(() => {})});
+  const t0 = Date.now();
+  let msg = '', threw = false;
+  try { await X.extFetchBytes('https://x/y', 50); } catch (e) { threw = true; msg = e.message; }
+  ck('#102 fix round 1: a response whose body never arrives still times out',
+    threw && /took too long/.test(msg) && Date.now() - t0 < 2000, msg);
+  ctx.fetch = realFetch; ctx.setTimeout = realST; ctx.clearTimeout = realCT;
+});
+
+section('#102 fix round 1: a declared Content-Length over the cap is refused before the body is read', async () => {
+  const realFetch = ctx.fetch;
+  let readBody = false;
+  ctx.fetch = () => Promise.resolve({ok: true, status: 200,
+    headers: {get: k => k === 'content-length' ? String(X.EXT_FILE_MAX + 1) : null},
+    arrayBuffer: () => { readBody = true; return Promise.resolve(new ArrayBuffer(0)); }});
+  let msg = '';
+  try { await X.extFetchBytes('https://x/y', 1000, X.EXT_FILE_MAX); } catch (e) { msg = e.message; }
+  ck('#102 fix round 1: an over-cap Content-Length is refused, and the body is never read',
+    msg !== '' && !readBody, [msg, readBody]);
+  ctx.fetch = realFetch;
+});
+
+section('#102 fix round 1: offerCandidate refuses an oversized declared size without ever fetching', async () => {
+  const realFetch = ctx.fetch;
+  let fetched = 0;
+  ctx.fetch = (u) => { fetched++; return extFetch(u); };
+  const entry = {path: 'big_full.json', system: 'Big', file: 'big_full.json', title: 'Big', version: '1.0.0', minApp: '', sha256: '', size: X.EXT_FILE_MAX + 1, requires: []};
+  const cand = X.offerCandidate({entry, source: {id: 'm1', base: 'https://m.example/m.json', url: 'https://m.example/m.json'}});
+  let msg = '';
+  try { await cand.get(); } catch (e) { msg = e.message; }
+  ck('#102 fix round 1: a declared size over 32 MB is refused with no fetch at all',
+    /32 MB/.test(msg) && fetched === 0, [msg, fetched]);
+  ctx.fetch = realFetch;
+});
+
+section('#102 fix round 1: a failed save at boot is recorded, not swallowed', async () => {
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  const realOnline = ctx.navigator.onLine; ctx.navigator.onLine = true;
+  X.settings.sources = [];
+  const realSave = ctx.saveSettings; ctx.saveSettings = () => 'disk full';
+  const r = await X.checkSources({boot: true});
+  ck('#102 fix round 1: checkSources still resolves true at boot even when the save fails', r === true);
+  ck('#102 fix round 1: the save error is recorded for later, not shown now', X.extSaveErrorText() === 'disk full');
+  ctx.saveSettings = () => '';
+  await X.checkSources({boot: false});
+  ck('#102 fix round 1: a later successful save clears it', X.extSaveErrorText() === '');
+  ctx.saveSettings = realSave; ctx.navigator.onLine = realOnline;
+});
+
+section('#102 fix round 1: a 404 from the releases list itself is a real error, not "an old release"', async () => {
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  extRoutes['https://api.github.com/repos/wardmanm/RPGFieldbook/releases?per_page=100'] = 404;
+  const off = {id: 'official', kind: 'official', url: '', on: true, checked: 0, error: '', manifest: null, base: ''};
+  await X.checkSource(off);
+  ck('#102 fix round 1: a 404 on the releases list is reported, not swallowed as "no releases yet"',
+    off.error !== '' && /404/.test(off.error), off);
+});
+
+section('#102 fix round 1: addSource', async () => {
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  X.settings.sources = [];
+  const r0 = await X.addSource('ftp://x/y.json');
+  ck('#102 fix round 1: a non-http URL is refused before any fetch', r0.ok === false, r0);
+  const manifestURL = 'https://add.example/m.json';
+  extRoutes[manifestURL] = {_type: 'fieldbook-data', builtFor: '1.0.0', packs: [{file: 'a_full.json', system: 'A', version: '1.0.0', sha256: 'a'.repeat(64)}]};
+  const r1 = await X.addSource(manifestURL);
+  ck('#102 fix round 1: a manifest URL is added as kind "manifest"',
+    r1.ok === true && X.settings.sources.some(s => s.url === manifestURL && s.kind === 'manifest'), [r1, X.settings.sources]);
+  const r1dup = await X.addSource(manifestURL);
+  ck('#102 fix round 1: an exact duplicate is refused', r1dup.ok === false && /already/.test(r1dup.why), r1dup);
+  const r1dupCase = await X.addSource('HTTPS://add.example/m.json');
+  ck('#102 fix round 1: a duplicate differing only in scheme case is caught too', r1dupCase.ok === false && /already/.test(r1dupCase.why), r1dupCase);
+  const plainURL = 'https://add.example/p.json';
+  extRoutes[plainURL] = {system: 'Plain', dataVersion: '1.0.0', spells: [{name: 'P'}]};
+  const r2 = await X.addSource(plainURL);
+  ck('#102 fix round 1: a plain rules file is added as kind "plain"',
+    r2.ok === true && X.settings.sources.some(s => s.url === plainURL && s.kind === 'plain'), r2);
+  const badURL = 'https://add.example/bad.json';
+  extRoutes[badURL] = 'not json{';
+  const r3 = await X.addSource(badURL);
+  ck('#102 fix round 1: a non-JSON response is refused', r3.ok === false && /JSON/.test(r3.why), r3);
+  const emptyURL = 'https://add.example/empty.json';
+  extRoutes[emptyURL] = {_type: 'fieldbook-data', builtFor: '1.0.0', packs: []};
+  const r4 = await X.addSource(emptyURL);
+  ck('#102 fix round 1: an empty manifest is added but says it offers nothing',
+    r4.ok === true && r4.why === 'Added, but it offers nothing this Fieldbook can install.', r4);
+  delete X.settings.sources;
+  const freshURL = 'https://add.example/fresh.json';
+  extRoutes[freshURL] = {system: 'Fresh', dataVersion: '1.0.0', spells: [{name: 'F'}]};
+  const r5 = await X.addSource(freshURL);
+  ck('#102 fix round 1: addSource never throws when settings.sources is missing', r5.ok === true && Array.isArray(X.settings.sources), r5);
+  X.settings.sources = [];
+});
+
+section('#102 fix round 1: a folder manifest only covers its own directory', () => {
+  const enc = s => new TextEncoder().encode(s);
+  const man = {_type: 'fieldbook-data', builtFor: '1.0.0', packs: [{file: 'one/x_full.json', system: 'A', version: '1.0.0', sha256: 'a'.repeat(64)}]};
+  const mc = X.manualCandidates([
+    {name: 'root/fieldbook-data.json', bytes: enc(JSON.stringify(man))},
+    {name: 'root/one/x_full.json', bytes: enc(packJSON('A', '1.0.0'))},
+    {name: 'root/two/x_full.json', bytes: enc(packJSON('A', '1.0.0', 'Other'))},
+    {name: 'root/two/fieldbook-data.json', bytes: enc(JSON.stringify(man))},
+    {name: 'root/readme.txt', bytes: enc('hi')},
+  ]);
+  ck('#102 fix round 1: a manifest matches only a payload resolved under its own directory',
+    mc.cands.length === 2 && mc.cands[0].sha256 === 'a'.repeat(64) && mc.cands[1].sha256 === '',
+    mc.cands.map(c => c.key + ':' + c.sha256));
+  ck('#102 fix round 1: a second manifest elsewhere, and a non-JSON file, are never reported as failures',
+    mc.failed.length === 0, mc.failed);
+});
+
+section("#102 fix round 1: a loose zip's non-pack JSON is skipped silently, like importRulesPayloads", () => {
+  const zip = makeZip([{name: 'a_full.json', data: PACK('A', ['Ok'])}, {name: 'overlay.json', data: JSON.stringify({notes: 'not a pack'})}]);
+  const mc = X.manualCandidates([{name: 'drop.zip', bytes: zip}]);
+  ck('#102 fix round 1: the pack inside the zip becomes a candidate', mc.cands.length === 1 && mc.cands[0].system === 'A', mc.cands);
+  ck('#102 fix round 1: the non-pack JSON beside it is not reported as failed', mc.failed.length === 0, mc.failed);
+});
+
+section('#102 fix round 1: replace outcomes depend on which side has no version (spec §5)', () => {
+  const cand = (system, file, version, o) => Object.assign({key: system + '|' + file, category: 'rules', system, file, title: system, version,
+    minApp: '', sha256: '', size: 0, requires: [], origin: 'm1', manual: false, get: () => Promise.resolve(new Uint8Array())}, o || {});
+  X.resetRules();
+  X.importPack({system: 'A', dataVersion: '2.0.0', spells: [{name: 'New'}]}, 'a_full.json');
+  const noVer = X.planInstall([cand('A', 'a_full.json', '')])[0];
+  ck('#102 fix round 1: an unversioned candidate over a versioned pack is an unticked Replace anyway',
+    noVer.outcome === 'replace' && noVer.ticked === false && noVer.canTick === true && noVer.why === 'Replace anyway', noVer);
+  X.resetRules();
+  X.importPack({system: 'A', spells: [{name: 'Old'}]}, 'a_full.json');
+  const haveNoVer = X.planInstall([cand('A', 'a_full.json', '1.0.0')])[0];
+  ck('#102 fix round 1: a versioned candidate over unversioned loaded data is a ticked replace',
+    haveNoVer.outcome === 'replace' && haveNoVer.ticked === true, haveNoVer);
+  X.resetRules();
+});
+
+section('#102 fix round 1: the pull-in picks the best offer, not the first source in settings order', () => {
+  X.resetRules();
+  X.settings.sources = [
+    {id: 'official', kind: 'official', url: '', on: true, checked: 1, error: '', base: 'https://o.example/m.json',
+     manifest: X.readManifest({_type: 'fieldbook-data', builtFor: '1.0.0', packs: [{file: 'srd_full.json', system: 'SRD', version: '1.0.0', sha256: 'c'.repeat(64)}]}, 100)},
+    {id: 'm2', kind: 'manifest', url: 'https://t.example/m.json', on: true, checked: 1, error: '', base: 'https://t.example/m.json',
+     manifest: X.readManifest({_type: 'fieldbook-data', builtFor: '1.0.0', packs: [{file: 'srd_full.json', system: 'SRD', version: '2.0.0', sha256: 'd'.repeat(64)}]}, 100)}];
+  const cand = {key: 'H|h_full.json', category: 'rules', system: 'H', file: 'h_full.json', title: 'H', version: '1.0.0', minApp: '', sha256: '', size: 0,
+    requires: [{pack: 'SRD', file: '', url: ''}], origin: 'manual', manual: true, get: () => Promise.resolve(new Uint8Array())};
+  const pl = X.planInstall([cand]);
+  ck('#102 fix round 1: the newest offer wins the pull-in, not the first source in settings order',
+    pl.length === 2 && pl[1].cand.version === '2.0.0' && pl[1].cand.origin === 'm2', pl.map(l => l.cand.version + ' from ' + l.cand.origin));
+  X.resetRules(); X.settings.sources = [];
+});
+
+section('#102 fix round 1: runInstall de-duplicates its lines by key, keeping the newest', async () => {
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  X.resetRules(); X.settings.packOrigin = {};
+  const mk = ver => ({cand: {key: 'A|a_full.json', category: 'rules', system: 'A', file: 'a_full.json', title: 'A', version: ver, minApp: '', sha256: '', size: 0, requires: [], origin: 'm1', manual: false,
+    get: () => Promise.resolve(new TextEncoder().encode(packJSON('A', ver)))}, outcome: 'install', ticked: true, canTick: true});
+  const r = await X.runInstall([mk('2.0.0'), mk('1.0.0')]);
+  ck('#102 fix round 1: only one copy of a duplicated key installs', r.ok === true && r.installed.length === 1, r);
+  ck('#102 fix round 1: ...and it is the newest one', X.loadedRulesGroups().find(g => g.label === 'a_full.json').dataVersion === '2.0.0',
+    X.loadedRulesGroups());
+  X.resetRules(); X.settings.packOrigin = {};
+});
+
+section('#102 fix round 1: runInstall reports what importPack skipped, like fetchAllRules', async () => {
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  X.resetRules(); X.settings.packOrigin = {};
+  const body = JSON.stringify({system: 'A', dataVersion: '1.0.0', spells: [{name: 'Ok'}, {text: 'no name'}]});
+  const cand = {key: 'A|a_full.json', category: 'rules', system: 'A', file: 'a_full.json', title: 'A', version: '1.0.0', minApp: '', sha256: '', size: 0, requires: [], origin: 'm1', manual: false,
+    get: () => Promise.resolve(new TextEncoder().encode(body))};
+  const r = await X.runInstall([{cand, outcome: 'install', ticked: true, canTick: true}]);
+  ck('#102 fix round 1: runInstall returns a skipped summary', r.ok === true && r.skipped && r.skipped.spells === 1, r);
+  X.resetRules(); X.settings.packOrigin = {};
 });
 
 // ---- add new sections above this line ----
