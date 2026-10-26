@@ -19,8 +19,11 @@ const {X, ctx, state, bootError} = loadApp([
   'sha256Hex', 'extUrl', 'extRelPath', 'extEntry', 'readManifest', 'extKey', 'extTooNew', 'convertSources',
   'extOffers', 'availableFor', 'extPackRows', 'extUpdateRows', 'extPillCount', 'dismissUpdates',
   'settings', 'EXT_CATS', 'foldLegacySettings',
+  'extFetchBytes', 'checkSource', 'checkSources', 'addSource', 'offerCandidate', 'manualCandidates',
+  'planInstall', 'runInstall', 'importPack', 'loadedRulesGroups',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
+ctx.URL = URL;   // offerCandidate() resolves a pack's path against its source with it (#102)
 
 const SECTIONS = [];
 const section = (name, fn) => SECTIONS.push([name, fn]);
@@ -836,6 +839,130 @@ section('#102 offers and rows', () => {
   X.settings.dismissedUpdates['Legacy|legacy_full.json'] = {};
   ck('#102 a malformed dismissal does not suppress the pill', X.extPillCount() === beforeMalformed);
   X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {}; X.settings.dismissedUpdates = {};
+});
+
+// ---------- #102: the network and the pipeline (fetch stubbed)
+const extRoutes = {};
+const extFetch = (url) => {
+  if (!(url in extRoutes)) return Promise.reject(new TypeError('Failed to fetch'));
+  const r = extRoutes[url];
+  if (r === 'hang') return new Promise(() => {});
+  const body = typeof r === 'number' ? '' : (typeof r === 'string' ? r : JSON.stringify(r));
+  const bytes = new TextEncoder().encode(body);
+  return Promise.resolve({ok: typeof r !== 'number', status: typeof r === 'number' ? r : 200,
+    arrayBuffer: () => Promise.resolve(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))});
+};
+const packJSON = (system, ver, name) => JSON.stringify({system, dataVersion: ver, spells: [{name: name || (system + ' Spell'), level: 1}]});
+const shaOf = s => require('crypto').createHash('sha256').update(Buffer.from(s, 'utf8')).digest('hex');
+section('#102 checkSources failures', async () => {
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  const good = {_type: 'fieldbook-data', format: 2, builtFor: '1.0.0', packs: [{file: 'a_full.json', system: 'A', version: '1.0.0', sha256: 'd'.repeat(64)}]};
+  extRoutes['https://m.example/ok.json'] = good;
+  const src = {id: 'm1', kind: 'manifest', url: 'https://m.example/ok.json', on: true, checked: 0, error: '', manifest: null, base: ''};
+  await X.checkSource(src);
+  ck('#102 a good manifest is stored with its base URL', src.manifest && src.manifest.packs.length === 1 && src.base === 'https://m.example/ok.json' && src.error === '', src);
+  extRoutes['https://m.example/ok.json'] = 'not json{';
+  await X.checkSource(src);
+  ck('#102 garbage keeps the last good manifest and says why', src.manifest.packs.length === 1 && /JSON/.test(src.error), src.error);
+  extRoutes['https://m.example/ok.json'] = 500;
+  await X.checkSource(src);
+  ck('#102 an HTTP error keeps the last good manifest', src.manifest.packs.length === 1 && /500/.test(src.error));
+  delete extRoutes['https://m.example/ok.json'];
+  await X.checkSource(src);
+  ck('#102 a network failure keeps the last good manifest', src.manifest.packs.length === 1 && src.error !== '');
+  // the official source on a release from before #102: a 404 is no error
+  extRoutes['https://api.github.com/repos/wardmanm/RPGFieldbook/releases?per_page=100'] =
+    [{tag_name: 'v1.0.0', draft: false, prerelease: false, html_url: 'https://github.com/x', assets: [{name: 'fieldbook-data-standalone-1.0.0.zip'}]}];
+  extRoutes['https://raw.githubusercontent.com/wardmanm/RPGFieldbook/v1.0.0/releases/data/fieldbook-data.json'] = 404;
+  const off = {id: 'official', kind: 'official', url: '', on: true, checked: 0, error: '', manifest: null, base: ''};
+  await X.checkSource(off);
+  ck('#102 official on an old release: no manifest and no error', off.manifest === null && off.error === '', off);
+  extRoutes['https://raw.githubusercontent.com/wardmanm/RPGFieldbook/v1.0.0/releases/data/fieldbook-data.json'] = good;
+  await X.checkSource(off);
+  ck('#102 official reads the manifest at the picked tag', off.manifest && off.base.endsWith('/v1.0.0/releases/data/fieldbook-data.json'));
+  const realOnline = ctx.navigator.onLine; ctx.navigator.onLine = false;
+  let fetched = 0; ctx.fetch = u => { fetched++; return extFetch(u); };
+  const r = await X.checkSources({boot: true});
+  ck('#102 offline at boot: nothing is fetched', r === false && fetched === 0);
+  ctx.navigator.onLine = realOnline; ctx.fetch = extFetch;
+});
+
+section('#102 runInstall all or nothing', async () => {
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  X.resetRules();
+  X.importPack(JSON.parse(packJSON('A', '1.0.0')), 'a_full.json');
+  const a2 = packJSON('A', '1.1.0', 'A New'), b1 = packJSON('B', '1.0.0');
+  extRoutes['https://m.example/a_full.json'] = a2;
+  extRoutes['https://m.example/b_full.json'] = b1;
+  const src = {id: 'm1', kind: 'manifest', url: 'https://m.example/m.json', on: true, checked: 1, error: '', base: 'https://m.example/m.json',
+    manifest: X.readManifest({_type: 'fieldbook-data', builtFor: '1.0.0', packs: [
+      {file: 'a_full.json', system: 'A', version: '1.1.0', sha256: shaOf(a2)},
+      {file: 'b_full.json', system: 'B', version: '1.0.0', sha256: 'e'.repeat(64)}]}, 100)};
+  X.settings.sources = [src];
+  let saves = 0; const realSave = ctx.saveRulesCache; ctx.saveRulesCache = () => { saves++; return Promise.resolve(''); };
+  const lines = X.planInstall(src.manifest.packs.map(entry => X.offerCandidate({entry, source: src})));
+  ck('#102 the plan: A is an update, B an install, both ticked',
+    lines.map(l => l.outcome + ':' + l.ticked).join() === 'update:true,install:true', lines.map(l => l.outcome));
+  const before = JSON.stringify(X.loadedRulesGroups());
+  const r1 = await X.runInstall(lines);
+  ck('#102 one wrong sha256: nothing installs and the file is named',
+    r1.ok === false && r1.error.file === 'b_full.json' && /sha256/.test(r1.error.why) && JSON.stringify(X.loadedRulesGroups()) === before && saves === 0, r1);
+  src.manifest = X.readManifest({_type: 'fieldbook-data', builtFor: '1.0.0', packs: [
+    {file: 'a_full.json', system: 'A', version: '1.1.0', sha256: shaOf(a2)}, {file: 'b_full.json', system: 'B', version: '1.0.0', sha256: shaOf(b1)}]}, 100);
+  extRoutes['https://m.example/b_full.json'] = 404;
+  const r2 = await X.runInstall(X.planInstall(src.manifest.packs.map(entry => X.offerCandidate({entry, source: src}))));
+  ck('#102 a 404: nothing installs', r2.ok === false && r2.error.file === 'b_full.json' && saves === 0, r2);
+  extRoutes['https://m.example/b_full.json'] = packJSON('Imposter', '1.0.0');
+  src.manifest.packs[1].sha256 = shaOf(extRoutes['https://m.example/b_full.json']);
+  const r3 = await X.runInstall(X.planInstall(src.manifest.packs.map(entry => X.offerCandidate({entry, source: src}))));
+  ck('#102 the wrong system: nothing installs', r3.ok === false && /Imposter/.test(r3.error.why), r3.error);
+  extRoutes['https://m.example/b_full.json'] = b1; src.manifest.packs[1].sha256 = shaOf(b1);
+  const r4 = await X.runInstall(X.planInstall(src.manifest.packs.map(entry => X.offerCandidate({entry, source: src}))));
+  const g = X.loadedRulesGroups();
+  ck('#102 all verified: both install, the cache saves once, origins are recorded',
+    r4.ok === true && saves === 1 && g.find(x => x.label === 'a_full.json').dataVersion === '1.1.0' && g.some(x => x.label === 'b_full.json') &&
+    X.settings.packOrigin['A|a_full.json'] === 'm1', r4);
+  ctx.saveRulesCache = realSave; X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {};
+});
+
+section('#102 planInstall outcomes and manual candidates', () => {
+  X.resetRules();
+  X.importPack(JSON.parse(packJSON('A', '1.1.0')), 'a_full.json');
+  const cand = (system, file, version, o) => Object.assign({key: system + '|' + file, category: 'rules', system, file, title: system, version,
+    minApp: '', sha256: '', size: 0, requires: [], origin: 'm1', manual: false, get: () => Promise.resolve(new Uint8Array())}, o || {});
+  const lines1 = X.planInstall([cand('A', 'a_full.json', '1.1.0'), cand('A', 'a_full.json', '1.0.0', {key: 'x'}), cand('N', 'n_full.json', '1.0.0', {minApp: '99.0.0'}),
+    cand('U', 'u.json', '1.0.0', {category: 'ui'})]);
+  const out = lines1.map(l => l.outcome + ':' + l.ticked + ':' + l.canTick);
+  // the loaded pack's own key offers "same"; a second candidate under a
+  // DIFFERENT key for the same system+file is matched by system/file (not by
+  // key) against that loaded pack too, and reads "older" — the brief this
+  // test comes from only exercised three outcomes and omitted the "older"
+  // line its own input produces
+  ck('#102 same, older, too new and unsupported are never ticked or tickable from a source',
+    out.join() === 'same:false:false,older:false:false,blocked:false:false,unsupported:false:false', out);
+  // an unsupported candidate (wrong category) with no minApp is not "too new"
+  // for any particular version, so it says it needs a newer Fieldbook in
+  // general rather than naming a version that was never checked
+  ck('#102 an unsupported candidate with no minApp says it needs a newer Fieldbook',
+    lines1[3].outcome === 'unsupported' && lines1[3].why === 'requires a newer Fieldbook', lines1[3]);
+  const man = X.planInstall([cand('A', 'a_full.json', '1.0.0', {manual: true})])[0];
+  ck('#102 a manual older copy offers Replace anyway, unticked', man.outcome === 'older' && man.ticked === false && man.canTick === true);
+  // a requirement pulled in from a source
+  X.settings.sources = [{id: 'official', kind: 'official', url: '', on: true, checked: 1, error: '', base: 'https://r.example/m.json',
+    manifest: X.readManifest({_type: 'fieldbook-data', builtFor: '1.0.0', packs: [{file: 'srd_full.json', system: 'SRD 5.2', version: '1.0.0', sha256: 'f'.repeat(64)}]}, 100)}];
+  const req = X.planInstall([cand('H', 'h_full.json', '1.0.0', {requires: [{pack: 'SRD 5.2', file: 'srd_full.json', url: ''}]})]);
+  ck('#102 a missing requirement a source offers joins the plan, ticked',
+    req.length === 2 && req[1].cand.system === 'SRD 5.2' && req[1].outcome === 'install' && req[1].ticked === true && /H/.test(req[1].why), req.map(l => l.cand.system));
+  // manual candidates: a loose pack, a non-pack, and a zip carrying its manifest
+  const enc = s => new TextEncoder().encode(s);
+  const mc = X.manualCandidates([{name: 'a_full.json', bytes: enc(packJSON('A', '1.2.0'))}, {name: 'notes.json', bytes: enc('{"hello":1}')}]);
+  ck('#102 a loose pack is a candidate named by srcLabel and file', mc.cands.length === 1 && mc.cands[0].system === 'A' && mc.cands[0].version === '1.2.0' && mc.cands[0].manual === true);
+  ck('#102 a file that isn\'t a rules pack is named and skipped', mc.failed.length === 1 && mc.failed[0].name === 'notes.json', mc.failed);
+  const folder = X.manualCandidates([
+    {name: 'fieldbook-data.json', bytes: enc(JSON.stringify({_type: 'fieldbook-data', builtFor: '9.9.9', packs: [{file: 'a_full.json', system: 'A', version: '1.2.0', sha256: 'a'.repeat(64)}]}))},
+    {name: 'a_full.json', bytes: enc(packJSON('A', '1.2.0'))}]);
+  ck('#102 a folder with its manifest: the manifest\'s sha256 and minApp apply', folder.cands.length === 1 && folder.cands[0].sha256 === 'a'.repeat(64) && folder.cands[0].minApp === '9.9.9');
+  X.resetRules(); X.settings.sources = [];
 });
 
 // ---- add new sections above this line ----

@@ -449,9 +449,12 @@ function applyFetchedSource(url,packs){
    part keeps them; a run where nothing arrives changes neither the pool nor the
    cache, and says so. Offline is the expected case, not an edge. Returns a
    promise for the tests; the button ignores it. */
-function fetchAllRules(){
-  const srcs=[...new Set((settings.rulesSources||[]).map(s=>String(s||"").trim()).filter(Boolean))];
-  if(!srcs.length){updateRulesStatus("Add at least one source URL first.","err");return Promise.resolve();}
+function fetchAllRules(urls){
+  /* the plain sources (#102): old-style pack and include URLs, which have no
+     versions; a manifest source installs through the plan instead */
+  const from=Array.isArray(urls)?urls:(settings.sources||[]).filter(s=>s.kind==="plain"&&s.on).map(s=>s.url);
+  const srcs=[...new Set(from.map(s=>String(s||"").trim()).filter(Boolean))];
+  if(!srcs.length){updateRulesStatus("There's no plain source to fetch.","err");return Promise.resolve();}
   updateRulesStatus(`Fetching ${srcs.length} source${srcs.length>1?"s":""}…`,"");
   const memo=new Map(),results=[];
   /* a 200 with no rules in it ({} or an error object) is a failure, not "this

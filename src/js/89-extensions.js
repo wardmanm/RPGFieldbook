@@ -176,3 +176,190 @@ function dismissUpdates(){
   if(!settings.dismissedUpdates||typeof settings.dismissedUpdates!=="object")settings.dismissedUpdates={};
   extUpdateRows().forEach(r=>{settings.dismissedUpdates[r.key]=r.offer.entry.version;});
 }
+/* ---- the network: every call has a timeout (constraint 2) ---- */
+function extFetchBytes(url,ms){
+  let timer;
+  const timeout=new Promise((_,rej)=>{timer=setTimeout(()=>rej(new Error("it took too long to answer")),ms);});
+  return Promise.race([fetch(url,{cache:"no-store"}),timeout]).then(r=>{
+    if(!r||!r.ok){const e=new Error("HTTP "+(r?r.status:"error"));e.status=r?r.status:0;throw e;}
+    return r.arrayBuffer();
+  }).then(b=>new Uint8Array(b)).finally(()=>clearTimeout(timer));
+}
+/* the official source's manifest URL: the newest release this app can run
+   (pickDataRelease(), as the boot data check), at its tag, on raw — which
+   answers a file:// page. "" when there is no such release. */
+function extOfficialUrl(){
+  if(!UPDATE_REPO)return Promise.resolve("");
+  return extFetchBytes(`https://api.github.com/repos/${UPDATE_REPO}/releases?per_page=100`,EXT_CHECK_MS).then(b=>{
+    const pick=pickDataRelease(JSON.parse(utf8Text(b)),APP_VERSION);
+    return pick?`https://raw.githubusercontent.com/${UPDATE_REPO}/${encodeURIComponent(pick.tag)}/releases/data/fieldbook-data.json`:"";
+  });
+}
+/* One source's manifest. A failure keeps the last good manifest and says why
+   on the source's row; the official source on a release from before #102 (no
+   releases/data/, a 404) is simply nothing to offer, not an error. */
+function checkSource(src){
+  const at=Date.now();
+  return (src.kind==="official"?extOfficialUrl():Promise.resolve(src.url)).then(url=>{
+    if(!url){src.manifest=null;src.base="";return;}
+    return extFetchBytes(url,EXT_CHECK_MS).then(bytes=>{
+      let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){throw new Error("it isn't valid JSON");}
+      src.manifest=readManifest(obj,bytes.length);src.base=url;
+    });
+  }).then(()=>{src.checked=at;src.error="";},e=>{
+    src.checked=at;
+    if(src.kind==="official"&&e&&e.status===404){src.manifest=null;src.base="";src.error="";return;}
+    src.error=String((e&&e.message)||e||"it couldn't be reached");
+  });
+}
+/* Every enabled manifest source, and the official one: at boot (quiet, never
+   offline) and on Check now. Reads manifests only, never pack files. */
+function checkSources(opts){
+  const o=opts||{};
+  if(navigator.onLine===false)return Promise.resolve(false);
+  const list=(settings.sources||[]).filter(s=>s.on&&(s.kind==="official"||s.kind==="manifest"));
+  return Promise.all(list.map(checkSource)).then(()=>{
+    const err=saveSettings();
+    if(err&&!o.boot&&typeof updateRulesStatus==="function")updateRulesStatus("Couldn't save your sources: "+err,"err");
+    if(typeof renderExtUI==="function")renderExtUI();
+    return true;
+  });
+}
+/* + Add a source URL: fetched once and sorted (spec §4) */
+function addSource(url){
+  const u=String(url||"").trim();
+  if(!extUrl(u))return Promise.resolve({ok:false,why:"That isn't a web address (it must start with http:// or https://)."});
+  if((settings.sources||[]).some(s=>s.url===u))return Promise.resolve({ok:false,why:"That source is already in the list."});
+  return extFetchBytes(u,EXT_CHECK_MS).then(bytes=>{
+    let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){return {ok:false,why:"It didn't answer with JSON."};}
+    const src={id:uid(),kind:"plain",url:u,on:true,checked:Date.now(),error:"",manifest:null,base:""};
+    if(obj&&obj._type==="fieldbook-data"){
+      try{src.manifest=readManifest(obj,bytes.length);}catch(e){return {ok:false,why:"Its manifest can't be used: "+e.message+"."};}
+      src.kind="manifest";src.base=u;
+    }else if(!(obj&&typeof obj==="object"&&(isRulesPack(obj)||Array.isArray(obj.include)))){
+      return {ok:false,why:"It isn't a Fieldbook manifest or rules file."};
+    }
+    settings.sources.push(src);
+    const err=saveSettings();
+    return {ok:true,why:err?"Added, but your settings couldn't be saved: "+err:""};
+  },e=>({ok:false,why:"It couldn't be reached: "+((e&&e.message)||e)+"."}));
+}
+/* ---- candidates (spec §5 step 1) ---- */
+function offerCandidate(o){
+  const e=o.entry,url=new URL(e.path,o.source.base||o.source.url).href;
+  return {key:extKey(e.system,e.file),category:e.category,system:e.system,file:e.file,title:e.title,version:e.version,
+    minApp:e.minApp,sha256:e.sha256,size:e.size,requires:e.requires,origin:o.source.id,manual:false,
+    get:()=>extFetchBytes(url,EXT_FILE_MS)};
+}
+/* Files, a folder or a dropped set, as {name, bytes, path?}. A zip goes
+   through readDataArchive() and keeps its manifest's entries; a folder's
+   fieldbook-data.json does the same for the files beside it; a loose pack is
+   named by its own system and dataVersion. */
+function manualCandidates(payloads){
+  const cands=[],failed=[],list=Array.isArray(payloads)?payloads:[];
+  const fromBytes=(name,bytes,entry)=>{
+    let obj;
+    try{obj=JSON.parse(utf8Text(bytes));}catch(e){failed.push({name,why:"it isn't valid JSON"});return;}
+    if(!obj||typeof obj!=="object"||Array.isArray(obj)||!isRulesPack(obj)){failed.push({name,why:"it isn't a rules pack"});return;}
+    const file=String(name).split("/").pop(),system=srcLabel(obj);
+    const e=entry&&entry.system===system?entry:null;
+    cands.push({key:extKey(system,file),category:e?e.category:"rules",system,file,title:e?e.title:system,
+      version:e?e.version:(typeof obj.dataVersion==="string"?obj.dataVersion:""),minApp:e?e.minApp:"",
+      sha256:e?e.sha256:"",size:bytes.length,requires:e?e.requires:[],origin:"manual",manual:true,
+      get:()=>Promise.resolve(bytes)});
+  };
+  /* a folder's (or a drop's) own manifest, read first */
+  let folderMan=null;
+  const manFile=list.find(p=>p&&String(p.name).split("/").pop()==="fieldbook-data.json");
+  if(manFile){try{folderMan=readManifest(JSON.parse(utf8Text(manFile.bytes)),manFile.bytes.length);}catch(e){failed.push({name:"fieldbook-data.json",why:e.message});}}
+  const metaFor=file=>folderMan?folderMan.packs.find(p=>p.file===file)||null:null;
+  list.forEach(p=>{
+    if(!p||p===manFile)return;
+    const name=String(p.name||"file"),bytes=p.bytes;
+    if(!bytes||!ArrayBuffer.isView(bytes)){failed.push({name,why:"it couldn't be read"});return;}
+    if(isZipBytes(bytes)){
+      let arc;
+      try{arc=readDataArchive(bytes,name);}catch(e){failed.push({name,why:ZIP_WHY[e&&e.code]||"it couldn't be read"});return;}
+      arc.packs.forEach(pk=>fromBytes(pk.name,pk.bytes,pk.meta?extEntry(pk.meta,pk.builtFor):null));
+      return;
+    }
+    if(!/\.json$/i.test(name))return;
+    fromBytes(name,bytes,metaFor(name.split("/").pop()));
+  });
+  return {cands,failed};
+}
+/* ---- the plan (spec §5 step 2) ---- */
+function extLoadedGroup(system,file){return loadedRulesGroups().find(g=>g.isFile&&g.label===file&&g.source===system)||null;}
+/* why a candidate can't be installed because of the app's own version: the
+   exact minimum only when it's what blocked it (spec decision 3 + rulebook
+   fix #2 — "requires Fieldbook newer" is not a version a player can act on) */
+function extTooNewWhy(c){return (c.minApp&&extTooNew(c))?"requires Fieldbook "+c.minApp:"requires a newer Fieldbook";}
+function planInstall(cands){
+  const byKey=new Map();
+  (cands||[]).forEach(c=>{const ex=byKey.get(c.key);if(!ex||cmpDataVer(c.version,ex.version)>0)byKey.set(c.key,c);});
+  const line=c=>{
+    if(EXT_CATS.indexOf(c.category)<0)return {cand:c,outcome:"unsupported",have:"",ticked:false,canTick:false,why:extTooNewWhy(c)};
+    if(extTooNew(c))return {cand:c,outcome:"blocked",have:"",ticked:false,canTick:false,why:extTooNewWhy(c)};
+    const g=extLoadedGroup(c.system,c.file),have=g?g.dataVersion:"";
+    if(!g)return {cand:c,outcome:"install",have,ticked:true,canTick:true,why:""};
+    if(!parseDataVer(have)||!parseDataVer(c.version))return {cand:c,outcome:"replace",have,ticked:true,canTick:true,why:""};
+    const d=cmpDataVer(c.version,have);
+    if(d>0)return {cand:c,outcome:"update",have,ticked:true,canTick:true,why:""};
+    return {cand:c,outcome:d===0?"same":"older",have,ticked:false,canTick:!!c.manual,why:c.manual?"Replace anyway":""};
+  };
+  const lines=[...byKey.values()].map(line);
+  /* a ticked pack's missing requirement, offered by an enabled source, joins
+     the plan as its own install line (spec §8) — bounded, never a loop */
+  for(let pass=0;pass<10;pass++){
+    let added=false;
+    lines.filter(l=>l.ticked).forEach(l=>(l.cand.requires||[]).forEach(r=>{
+      if(loadedRulesGroups().some(g=>g.source===r.pack))return;
+      if(lines.some(x=>x.cand.system===r.pack))return;
+      const o=extOffers().find(x=>x.entry.system===r.pack&&(!r.file||x.entry.file===r.file)&&EXT_CATS.indexOf(x.entry.category)>=0&&!extTooNew(x.entry));
+      if(!o)return;
+      lines.push({cand:offerCandidate(o),outcome:"install",have:"",ticked:true,canTick:true,why:"needed by "+l.cand.title});added=true;
+    }));
+    if(!added)break;
+  }
+  return lines;
+}
+/* ---- the install (spec §5 steps 4 and 5): everything fetched and verified
+   first; one failure changes nothing ---- */
+function extVerify(c,bytes){
+  if(bytes.length>EXT_FILE_MAX)throw new Error("it's larger than 32 MB");
+  if(c.sha256&&sha256Hex(bytes)!==c.sha256)throw new Error("its sha256 doesn't match the manifest");
+  let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){throw new Error("it isn't valid JSON");}
+  if(!obj||typeof obj!=="object"||Array.isArray(obj)||!isRulesPack(obj))throw new Error("it isn't a rules pack");
+  if(srcLabel(obj)!==c.system)throw new Error(`it says it is ${srcLabel(obj)}, not ${c.system}`);
+  if(c.version&&obj.dataVersion!==c.version)throw new Error(`it is version ${obj.dataVersion||"(none)"}, the manifest says ${c.version}`);
+  return obj;
+}
+function runInstall(lines){
+  const todo=(lines||[]).filter(l=>l.ticked&&l.canTick!==false);
+  const got=[];
+  const step=i=>{
+    if(i>=todo.length)return Promise.resolve(null);
+    const c=todo[i].cand;
+    /* extVerify() in its OWN .then: a throw from the fetch and a throw from
+       verifying the bytes it returned both need to land on the error branch
+       below, and a throw inside an onFulfilled handler is never caught by an
+       onRejected passed to that SAME .then() call — only a rejection of the
+       promise .then() was called on is */
+    return Promise.resolve().then(()=>c.get()).then(bytes=>extVerify(c,bytes))
+      .then(obj=>{got.push({c,obj});return step(i+1);},
+        e=>({file:c.file,why:String((e&&e.message)||e)}));
+  };
+  return step(0).then(error=>{
+    if(error)return {ok:false,installed:[],error,saveErr:""};
+    if(!got.length)return {ok:true,installed:[],error:null,saveErr:""};
+    if(!settings.packOrigin||typeof settings.packOrigin!=="object")settings.packOrigin={};
+    const installed=[];
+    got.forEach(({c,obj})=>{importPack(obj,c.file);settings.packOrigin[c.key]=c.origin;installed.push(c.title);});
+    const setErr=saveSettings();
+    return saveRulesCache().then(cacheErr=>{
+      if(typeof refreshRulesUI==="function")refreshRulesUI();
+      renderRulesData();
+      return {ok:true,installed,error:null,saveErr:[cacheErr,setErr].filter(Boolean).join(" ")};
+    });
+  });
+}

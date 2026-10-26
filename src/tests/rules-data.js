@@ -3041,10 +3041,12 @@ function block(html, needle, tag) {
     X.saveRulesCache();
   };
   const HB = 'https://example.test/homebrew.json', OFF = 'http://127.0.0.1:9/offline-pack.json';
+  // #102: a plain source, the old-style shape fetchAllRules() reads from settings.sources now
+  const plain = urls => urls.map((url, i) => ({id: 'p' + i, kind: 'plain', url, on: true, checked: 0, error: '', manifest: null, base: ''}));
 
   // ---- (b) offline: a run where nothing arrives changes nothing
   seedFilePack();
-  X.settings.rulesSources = [OFF];
+  X.settings.sources = plain([OFF]);
   routes = {};
   const poolBefore = JSON.stringify(X.rules), cacheBefore = cache();
   chip.innerHTML = 'STALE';
@@ -3064,7 +3066,7 @@ function block(html, needle, tag) {
 
   // ---- (a) a file-imported pack survives a successful fetch of another source
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'v1'}, {name: 'Fizzle'}]}};
   chip.innerHTML = 'STALE';
   await run();
@@ -3101,7 +3103,7 @@ function block(html, needle, tag) {
   // ---- a source that fails keeps what it loaded last time; the others refresh
   const EX = 'https://example.test/extras.json';
   seedFilePack();
-  X.settings.rulesSources = [HB, EX];
+  X.settings.sources = plain([HB, EX]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]},
             [EX]: {system: 'Extras', items: [{name: 'Rope of Doom'}]}};
   await run();
@@ -3121,7 +3123,7 @@ function block(html, needle, tag) {
   await run();
   ck('later sources still win on name clashes',
      (X.rules.spells || []).filter(e => e.name === 'Zap').map(e => e.text).join() === 'second');
-  X.settings.rulesSources = [HB, HB + ' '];
+  X.settings.sources = plain([HB, HB + ' ']);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
   await run();
   ck('a source listed twice is fetched once', calls.length === 1, calls);
@@ -3129,7 +3131,7 @@ function block(html, needle, tag) {
   // ---- a manifest is one source: its includes arrive together or not at all
   const MAN = 'https://example.test/pack/manifest.json', A = 'https://example.test/pack/a.json', B = 'https://example.test/pack/b.json';
   seedFilePack();
-  X.settings.rulesSources = [MAN];
+  X.settings.sources = plain([MAN]);
   routes = {[MAN]: {name: 'Pack', include: ['a.json', 'b.json']},
             [A]: {system: 'Pack', spells: [{name: 'Alpha'}], include: ['manifest.json']},   // a loop
             [B]: {system: 'Pack', feats: [{name: 'Beta'}]}};
@@ -3148,7 +3150,7 @@ function block(html, needle, tag) {
 
   // ---- a response that is not a rules file fails the source; it is not half-merged
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: null};
   const before2 = JSON.stringify(X.rules), cache2 = cache();
   await run();
@@ -3164,7 +3166,7 @@ function block(html, needle, tag) {
   ck('...and says why', /no rules in it/.test(status.textContent), status.textContent);
 
   // ---- an include that cannot even be turned into a URL names its file too
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', include: ['http://[bad']}};
   await run();
   ck('an unresolvable include fails the source, naming the file',
@@ -3173,14 +3175,14 @@ function block(html, needle, tag) {
   // ---- provenance is the merge's to stamp: a stray _url in a FILE never lets a fetch delete it
   seedFilePack();
   X.mergeRules({system: 'Homebrew', spells: [{name: 'Hex', _url: HB}]}, 'mine.json');
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
   await run();
   ck('a file entry carrying a stray _url survives a fetch of that URL', names(null, 'spells').includes('Hex'), names(null, 'spells'));
 
   // ---- `requires` follows the source's fresh copy, unless a file shares its label
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}], requires: [{file: 'x.json', spells: ['Nope']}]}};
   await run();
   ck('requires: a fetched declaration is stored', !!(X.rules.requires || {}).Homebrew);
@@ -3194,7 +3196,7 @@ function block(html, needle, tag) {
 
   // ---- the cache write reflects the new pool, and a refused one says so
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
   state.quotaFull = true;
   await run();
@@ -3207,7 +3209,7 @@ function block(html, needle, tag) {
 
   // ---- #71: a fetched pack's unusable entries are reported, not silently dropped
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}, {text: 'no name'}], keywords: [{text: 'no term'}]}};
   await run();
   ck('#71 fetch-all: the usable entries arrive', names(null, 'spells', 'Homebrew').join() === 'Zap', names(null, 'spells'));
