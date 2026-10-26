@@ -1606,6 +1606,128 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 .cd-track{margin:4px 0}
 .cd-ties{display:flex;gap:8px;margin-top:8px}
 .cd-ties .tbtn,.cd .m-actions .tbtn{min-height:44px}
+
+/* ---- the inventory log dialog (#47) ---- */
+.il-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.il-f{font-family:var(--head);font-weight:600;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+  background:var(--field);border:1.5px solid var(--line);border-radius:99px;color:var(--ink-soft);padding:6px 12px;cursor:pointer;min-height:44px}
+.il-f.on{background:var(--accent);color:var(--paper);border-color:var(--accent)}
+.il-day{font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);
+  margin:14px 0 4px;padding-bottom:4px;border-bottom:1.5px solid var(--line)}
+.il-scroll>.il-day:first-child{margin-top:2px}
+.il-e{display:flex;align-items:flex-start;gap:10px;min-height:44px;padding:8px 0;border-bottom:1px dotted var(--hair)}
+.il-ic{flex:0 0 22px;text-align:center;font-size:15px;line-height:1.6;color:var(--accent)}
+.il-tx{flex:1 1 auto;min-width:0}
+.il-tx b{font-weight:700}
+.il-tx details{margin-top:2px}
+.il-tx summary{cursor:pointer;font-size:12px;color:var(--accent-2)}
+.il-l{font-size:13px;color:var(--ink-soft)}
+.il-l.in{color:var(--hb-healthy)}
+.il-l.out{color:var(--brick)}
+.il-side{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.il-t{font-family:var(--head);font-size:11px;color:var(--ink-soft)}
+.il-undo{min-height:44px;padding:4px 10px}
+.il-why{display:block;max-width:150px;text-align:right;font-size:11px;color:var(--ink-soft);line-height:1.3}
+.il-e.undone{opacity:.55}
+.il-e.undone .il-tx b,.il-e.undone .il-l{text-decoration:line-through}
+.il-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding-top:10px;border-top:1.5px solid var(--line)}
+.il-foot span{font-size:12px;color:var(--ink-soft)}
+/* The log sits in the wide dialog's body, which does not scroll (it is a flex
+   column for Settings' own scrollers). Its rows scroll in their own box, as the
+   trade's .tr-sides does, with the filters above and the foot below staying put
+   (final review C5: this was a :has() rule on the body, which a browser without
+   :has() never applied, leaving a long log squashed and out of reach). */
+/* the wide body keeps only 4px on the right (Settings' scroller): the scroller's
+   10px and the pinned pieces' margin make it 14px, the left's, as .tr-wrap does */
+.il-filters,.il-foot{flex:none;margin-right:10px}
+.il-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:10px}
+.il-foot{padding-bottom:12px}
+/* the Inventory card sits in the plain stack, not the Sheet's container-query
+   columns (30-sheet.css), so the narrow-card rule below ~380px of card width
+   uses a media query instead: the Log button drops its word, keeps its icon. */
+@media(max-width:480px){
+  .il-word{display:none}
+  /* + Add, ⇄ Trade and Log made the Equipment heading wider than a phone: its
+     edit, combat and note buttons ran off the page and it scrolled sideways.
+     The heading wraps instead, its buttons onto a second row. */
+  .card[data-note="inventory"]>.label{flex-wrap:wrap;row-gap:4px}
+  /* #47 fix round 1: .il-side was flex:0 0 auto beside .il-tx in a non-wrapping
+     row, so at phone widths the time/Undo column had nowhere to shrink to and
+     ran past the dialog's edge. Wrapping the row lets .il-tx keep its width
+     and drops time+Undo to their own full-width row beneath it, laid out
+     left-to-right so they still shrink instead of overflowing. */
+  .il-e{flex-wrap:wrap}
+  .il-side{flex:1 1 100%;flex-direction:row;flex-wrap:wrap;justify-content:space-between;
+    align-items:center;margin-top:4px}
+  .il-why{flex:1 1 100%;max-width:none;text-align:left;margin-top:2px}
+}
+
+/* ---- the trade window (#47) ----
+   Inside the wide dialog's non-scrolling body: "With" on top, the two sides in
+   the one scroller, the balance and the buttons pinned at the foot so the
+   balance is always in view. Side by side above 700px; tabs at 700 and under. */
+/* the wide body keeps only 4px on the right (Settings' scroller); match the left */
+.tr-wrap{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding-right:14px}
+.tr-with{flex:none;margin-bottom:8px}
+.tr-with input{min-height:44px}
+.tr-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tr-chip{font-family:var(--head);font-size:12px;font-weight:600;background:var(--field);border:1.5px solid var(--hair);border-radius:99px;
+  color:var(--ink-soft);padding:4px 12px;min-height:44px;cursor:pointer}
+.tr-chip:hover{border-color:var(--accent-2);color:var(--ink)}
+.tr-tabs{display:none;flex:none;border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.tr-tab{flex:1;min-height:44px;border:0;background:var(--field);color:var(--ink-soft);font-family:var(--head);font-weight:700;font-size:12px;
+  letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+.tr-tab[aria-selected="true"]{color:var(--ink);background:var(--paper-2);box-shadow:inset 0 -3px 0 var(--accent)}
+.tr-sides{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:start;padding:2px 2px 8px}
+.tr-side{border:1.5px solid var(--hair);border-radius:9px;padding:8px 10px;background:var(--field)}
+.tr-side h5{margin:0 0 4px;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-2)}
+.tr-none{margin:4px 0;font-size:13px;color:var(--ink-soft)}
+.tr-it{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dotted var(--hair)}
+.tr-nm{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.tr-nm input{min-height:44px;font-size:16px;padding:6px 8px}
+.tr-q{display:inline-flex;align-items:center;gap:4px;flex:none}
+.tr-q b{min-width:20px;text-align:center}
+.tr-pm{min-width:44px;min-height:44px;border:1.5px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font-size:18px;font-weight:700;cursor:pointer}
+.tr-pm:disabled{opacity:.4;cursor:default}
+.tr-worth{flex:none;font-size:12px;color:var(--ink-soft);white-space:nowrap}
+.tr-cost{flex:none;display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-soft)}
+.tr-cost input{width:72px;min-height:44px;font-size:16px;padding:6px;text-align:right}
+.tr-adds{display:flex;gap:6px;flex-wrap:wrap}
+.tr-add{font-family:var(--head);font-weight:700;font-size:12px;letter-spacing:.04em;color:var(--accent-2);background:none;border:1.5px dashed var(--hair);
+  border-radius:8px;min-height:44px;padding:6px 10px;margin-top:6px;cursor:pointer}
+.tr-add:hover{border-color:var(--accent-2)}
+.tr-pick{display:flex;flex-direction:column;gap:4px;margin-top:6px;padding:6px;border:1px dotted var(--hair);border-radius:8px;max-height:220px;overflow-y:auto}
+.tr-pickrow{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;padding:6px 10px;border:1px solid var(--hair);border-radius:7px;
+  background:var(--panel);color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.tr-pickrow:hover{border-color:var(--accent-2)}
+.tr-coins{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tr-coin{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--head);font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink-soft)}
+.tr-coin input{width:62px;min-height:44px;font-size:16px;padding:6px;text-align:center}
+.tr-apply{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;margin-top:8px;padding:0 4px 0 0;
+  border:0;background:none;color:var(--ink);font:inherit;font-size:14px;cursor:pointer;text-align:left}
+.tr-apply .switch{pointer-events:none}
+.tr-foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 0 14px;border-top:1.5px solid var(--line)}
+.tr-bal{flex:1 1 260px;font-size:14px;padding:8px 10px;border:1.5px solid var(--hair);border-radius:8px}
+.tr-bal.short{border-color:var(--brick);color:var(--brick)}
+.tr-bal.short .tr-net{font-weight:700}
+.tr-acts{display:flex;gap:8px;flex:none}
+.tr-acts .tbtn{min-height:44px;min-width:44px}
+.tr-done-ic{display:none;font-size:20px;line-height:1}
+@media(max-width:700px){
+  .tr-tabs{display:flex}
+  .tr-sides{grid-template-columns:minmax(0,1fr)}
+  .tr-coins{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);max-width:340px}
+  .tr-coin{min-width:0}
+  .tr-coin input{width:100%;padding:6px 2px}
+  .tr-it.tr-custom{flex-wrap:wrap}
+  .tr-custom .tr-nm{flex:1 1 100%}
+  .tr-on-give .tr-side[data-side="get"],.tr-on-get .tr-side[data-side="give"]{display:none}
+  .tr-foot{flex-wrap:nowrap}
+  .tr-bal{flex:1 1 auto;min-width:0;font-size:13px}
+  .tr-acts #trCancel{display:none}
+  .tr-done-lbl{display:none}
+  .tr-done-ic{display:inline}
+}
 </style>
 </head>
 <body>
@@ -1812,7 +1934,7 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
       </div>
 
       <div class="card" data-note="inventory">
-        <div class="label">Equipment &amp; Inventory <span class="chip enc-pill" id="encPill" style="display:none"></span> <button class="add" data-add="item"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="invCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="invCollapseLbl">Collapse all</span></button></div>
+        <div class="label">Equipment &amp; Inventory <span class="chip enc-pill" id="encPill" style="display:none"></span> <button class="add" data-add="item"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><button class="add" id="btnTrade" type="button">⇄ Trade</button><button class="add" id="btnInvLog" type="button" aria-label="Inventory log" title="Inventory log"><svg viewBox="0 0 24 24"><path d="M6 4h11a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2zM6 18a2 2 0 0 1 2-2h11M10 8h5M10 11h5"/></svg><span class="il-word">Log</span></button><span class="grow"></span><button class="add" id="invCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="invCollapseLbl">Collapse all</span></button></div>
         <div id="inventoryList"></div>
       </div>
       <div class="card" data-note="coins">
@@ -2088,6 +2210,7 @@ function blankChar(){
        fight's rows (cleared by combatEnd()), whose turn it is, and the two
        display settings. */
     party:[], combatants:[], combatTurn:"", initMode:"turns", initShowRolls:true,
+    invLog:[], invLogSize:500,
     size:"", encumbrance:"none", coinWeight:true, hpColor:true, hdStyle:"full", statStyle:"classic",
     /* Notes pinned to a section of the sheet, keyed by NOTE_SECTIONS id.
        NOT `notes` — that name is taken by the Story tab's bio field (see BIO
@@ -2112,8 +2235,10 @@ function blankChar(){
        weapon id -> {n, hits, misses, kind, snap}. `ammoInit` is NOT defaulted:
        the one-time pass sets it. `ammoRecovery` is the character's rule for what
        comes back (#104): half, all, hits or none; half is the rules as written
-       and what every sheet did before. */
-    ammoSpent:{}, ammoRecovery:"half",
+       and what every sheet did before. `ammoFight` is what a row's Recover
+       gave back during the current fight, per kind: kind -> {fired, back}, so
+       End combat's log line counts it (#47); End combat clears it. */
+    ammoSpent:{}, ammoRecovery:"half", ammoFight:{},
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);
@@ -4243,7 +4368,7 @@ function grantItemByName(name,qty,sid){
   /* a granted bundle arrives as its single piece too (#6): "Arrows (20)" is 20 Arrows */
   if(def){const u=unpackAmmo(def,rules.items);if(u.per>1){def=u.def;qty*=u.per;name=def.name;}}
   const ex=character.inventory.find(i=>i.grant===sid&&String(i.name||"").toLowerCase()===String(name||"").toLowerCase());
-  if(ex){ex.qty=num(ex.qty)+qty;return;}
+  if(ex){ex.qty=num(ex.qty)+qty;logGrant(sid,{dir:"+",text:`${name} ×${qty}`});return;}
   const it={id:uid(),name:(def&&def.name)||name,qty,description:(def&&def.description)||"",effects:(def&&Array.isArray(def.effects))?def.effects:[],equipped:false,grant:sid,origin:originFromSid(sid)};
   if(def&&def.weapon)it.weapon=def.weapon;
   {const am=def&&itemAmmo(def);if(am)it.ammo=am.bonus?{kind:am.kind,bonus:am.bonus}:{kind:am.kind};}
@@ -4262,6 +4387,7 @@ function grantItemByName(name,qty,sid){
   if(def)stampSrc(it,def,"item","items");   /* no def = a named grant with no matching item entry */
   character.inventory.push(it);
   if(it.weapon)addAttackForItem(it);
+  logGrant(sid,{dir:"+",text:`${name} ×${qty}`});
 }
 function addGrantGold(amt,sid){
   amt=num(amt);if(amt<=0)return;
@@ -4269,6 +4395,7 @@ function addGrantGold(amt,sid){
   const k=goldKey();character.coins[k]=num(character.coins[k])+amt;
   if(!character.grantGold)character.grantGold={};
   character.grantGold[sid]=num(character.grantGold[sid])+amt;
+  logGrant(sid,{dir:"+",text:`${amt} ${goldKey().toUpperCase()}`});
 }
 function applyEquipOption(o,sid){
   if(!o)return;
@@ -4287,8 +4414,11 @@ function applyEquipGrants(grants,sid,pending){
     else if(block)applyEquipOption(block,sid);
   });
 }
-/* remove everything a source granted: inventory items + their linked attacks + granted gold */
+/* remove everything a source granted: inventory items + their linked attacks + granted gold.
+   #47 (final review I2): what left is logged as ONE line, "Removed with <source>",
+   with no Undo — granting again belongs to the source, not to the log. */
 function revertEquipmentGrants(sid){
+  const gone=character.inventory.filter(i=>i.grant===sid).map(i=>({dir:"-",text:`${String(i.name||"Item")} ×${itemQty(i)}`}));
   const rmIds=character.inventory.filter(i=>i.grant===sid).map(i=>i.id);
   /* a granted stack's spent count goes with it, or Recover would bring it back —
      by id for a stack still here, and by the snapshot's own grant for one
@@ -4297,7 +4427,10 @@ function revertEquipmentGrants(sid){
   forgetGrantAmmo(character,sid);
   character.inventory=character.inventory.filter(i=>i.grant!==sid);
   if(rmIds.length)character.attacks=(character.attacks||[]).filter(a=>!rmIds.includes(a.itemId));
-  if(character.grantGold&&character.grantGold[sid]){const k=goldKey();character.coins=character.coins||{};character.coins[k]=Math.max(0,num(character.coins[k])-num(character.grantGold[sid]));delete character.grantGold[sid];}
+  if(character.grantGold&&character.grantGold[sid]){const k=goldKey();character.coins=character.coins||{};
+    const was=num(character.coins[k]);character.coins[k]=Math.max(0,was-num(character.grantGold[sid]));delete character.grantGold[sid];
+    if(was-character.coins[k]>0)gone.push({dir:"-",text:`${was-character.coins[k]} ${k.toUpperCase()}`});}
+  if(gone.length)logInv({kind:"grant",title:"Removed with "+grantSourceName(sid),lines:gone,undo:null,meta:{sid,revert:true}});
 }
 function grantFeatDef(featName,origin,pending){
   const fd=findFeatDef(featName)||{name:featName,description:"",effects:[]};
@@ -6430,6 +6563,36 @@ function ammoRecoverable(c){
   });
   return [...by.values()].filter(r=>r.back>0);
 }
+/* Every kind fired this fight, with what its rules give back, including 0 (#47's log line). */
+function ammoFightSummary(c){
+  const by=new Map();
+  Object.keys(ammoSpentMap(c)).forEach(id=>{
+    const e=ammoSpentEntry(c,id);if(!e.n||!e.kind)return;
+    const r=by.get(e.kind)||{kind:e.kind,fired:0,back:0};
+    r.fired+=e.n;r.back+=ammoBack(ammoRecoverRule(c,ammoEntryItem(c,id,e)),e);by.set(e.kind,r);
+  });
+  return [...by.values()];
+}
+/* What a row's Recover gave back during a fight (#47, final review I2): it
+   clears the counts ammoFightSummary() reads, so it is kept per kind in
+   c.ammoFight until End combat, whose log line adds it in. Outside a fight
+   there is no fight line to count it in, so nothing is kept. */
+function ammoFightMap(c){const m=c&&c.ammoFight;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
+function ammoFightKeep(c,list){
+  if(!inCombat(c)||!list.length)return;
+  if(!c.ammoFight||typeof c.ammoFight!=="object"||Array.isArray(c.ammoFight))c.ammoFight={};
+  list.forEach(r=>{const k=ammoKindOf(r.kind);if(!k)return;const o=ammoFightMap(c)[k]||{};
+    c.ammoFight[k]={fired:Math.max(0,num(o.fired))+num(r.fired),back:Math.max(0,num(o.back))+num(r.back)};});
+}
+/* The fight's totals per kind for End combat's line: what is still counted
+   (ammoFightSummary) plus what the rows already recovered (ammoFight). */
+function ammoFightTotals(c){
+  const by=new Map(ammoFightSummary(c).map(r=>[r.kind,Object.assign({},r)]));
+  Object.keys(ammoFightMap(c)).forEach(k=>{const o=ammoFightMap(c)[k],f=Math.max(0,num(o&&o.fired)),b=Math.max(0,num(o&&o.back));if(!f&&!b)return;
+    const r=by.get(k)||{kind:k,fired:0,back:0};r.fired+=f;r.back+=b;by.set(k,r);});
+  return [...by.values()];
+}
+function ammoLogTitle(kind,fired,back){const nm=ammoPlural(kind);return `${nm.charAt(0).toUpperCase()+nm.slice(1)}: ${fired} fired, ${back} recovered`;}
 /* Gives back what each entry's rule allows (#104), for the kinds asked
    (every kind when none are) — or, when `ids` is given, for those ammoSpent
    entries only (a thrown weapon's row recovers its own entry: final review,
@@ -6797,6 +6960,7 @@ function recoverWeaponAmmo(itemId,viaKey){
   const list=thrown?(e.n&&e.kind?[{kind:e.kind,fired:e.n,back:ammoThrownBack(character,it)}]:[])
                    :ammoRecoverable(character).filter(r=>r.kind===kind);
   const back=thrown?recoverAmmo(character,null,undefined,[it.id]):recoverAmmo(character,[kind]);
+  ammoFightKeep(character,list);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
   toast(back?`Recovered ${ammoSummaryText(list)}`:`No ${ammoPlural(kind)} to recover`);
@@ -6819,12 +6983,17 @@ function applyAmmoRecovery(){
   recoverAmmo(character,null,rec);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
-  return list.length?{text:`recovered ${ammoSummaryText(list)}`,rec}:null;
+  return list.length?{text:`recovered ${ammoSummaryText(list)}`,rec,list}:null;
 }
-/* The End combat toast's Undo recovery: only for the character it was shown for. */
-function undoRecoveryTap(rec,who){
+/* The End combat toast's Undo recovery: only for the character it was shown for.
+   `amend` ({lines, list}) is End combat's log lines and what its recovery gave
+   per kind: undone, that comes back off each line's "recovered" (#47). */
+function undoRecoveryTap(rec,who,amend){
   if(!character||character!==who)return false;
   if(!undoRecovery(character,rec))return false;
+  if(amend&&Array.isArray(amend.lines)&&Array.isArray(amend.list))amend.list.forEach(r=>{
+    const l=amend.lines.find(x=>x.kind===r.kind);if(!l||!l.e||!l.e.meta)return;
+    l.e.meta.back=Math.max(0,num(l.e.meta.back)-num(r.back));l.e.title=ammoLogTitle(r.kind,num(l.e.meta.fired),l.e.meta.back);});
   scheduleSave();
   renderInventory();renderAttacks();recompute();
   toast("Recovery undone");
@@ -7297,6 +7466,7 @@ function openCoinAdjust(){
     const {out}=plan();
     character.coins=character.coins||{};
     Object.keys(out).forEach(k=>{character.coins[k]=out[k].next;});
+    logCoins("Coins adjusted",Object.fromEntries(Object.keys(out).map(k=>[k,out[k].delta])));
     /* coins have weight, so a purse change moves carried weight and can move
        speed — re-render the inventory totals and recompute, not just the boxes */
     closeModal();renderCoins();renderInventory();recompute();scheduleSave();
@@ -7306,11 +7476,14 @@ function openCoinAdjust(){
 function convertCoins(){
   // value of each coin in copper; electrum counts as input but isn't generated as output
   const VAL={cp:1,sp:10,ep:50,gp:100,pp:1000};
+  const was=Object.assign({},character.coins);
   let total=0;["cp","sp","ep","gp","pp"].forEach(k=>{total+=num((character.coins||{})[k])*VAL[k];});
   const out=(character.system==="dnd")?[["pp",1000],["gp",100],["sp",10],["cp",1]]:[["gp",100],["sp",10],["cp",1]];
   const res={cp:"",sp:"",ep:"",gp:"",pp:""};
   out.forEach(([k,v])=>{const n=Math.floor(total/v);total-=n*v;res[k]=n>0?n:"";});
-  character.coins=res;renderCoins();renderInventory();recompute();scheduleSave();
+  character.coins=res;
+  logCoins("Converted coins",Object.fromEntries(["pp","gp","ep","sp","cp"].map(k=>[k,num(res[k])-num(was[k])])));
+  renderCoins();renderInventory();recompute();scheduleSave();
 }
 const COIN_ALL=[["cp","CP","Copper"],["sp","SP","Silver"],["ep","EP","Electrum"],
                 ["gp","GP","Gold"],["pp","PP","Platinum"]];
@@ -7375,10 +7548,12 @@ function renderCoins(){
 function applyCoinInput(inp){
   const k=inp.dataset.coin;if(!k)return true;
   character.coins=character.coins||{};
+  const was=num(character.coins[k]);
   const next=signedEntry(character.coins[k],inp.value);
   if(next===null){inp.value=(character.coins[k]!=null)?character.coins[k]:"";return false;}
   character.coins[k]=next;
   inp.value=next;
+  logCoins("Coins changed",{[k]:num(next)-was});
   renderInventory();recompute();
   scheduleSave();
   return true;
@@ -7503,6 +7678,488 @@ function renderAll(){
   syncCombatView();
 }
 
+/* ================= trade window and inventory log (#47) =================
+   Every item and coin change writes ONE line through logInv() (grants through
+   logGrant(), which batches a source's grants into one line). Each line keeps
+   what reversing it needs, so any line that can still be reversed cleanly
+   can be undone. Spec: src/docs/specs/2026-10-25-trade-window-design.md. */
+const INV_LOG_SIZES=[100,250,500,1000,2500];
+const INV_KINDS=["trade","add","edit","delete","use","coins","grant","ammo"];
+const COIN_CP={cp:1,sp:10,ep:50,gp:100,pp:1000};
+function coinsToCp(coins){let t=0;Object.keys(COIN_CP).forEach(k=>{t+=Math.round(num((coins||{})[k]))*COIN_CP[k];});return t;}
+function cpToGpText(cp){const v=Math.round(num(cp))/100;return `${String(Math.round(v*100)/100)} gp`;}
+/* cost is gp and may be fractional (an arrow costs 0.05 gp) — fnum, not num,
+   matching inventoryTotal()'s own read of it (25-origins-items.js). */
+function itemWorthCp(it,qty){return Math.round(fnum(it&&it.cost)*100*Math.max(0,num(qty)));}
+/* " · 2 gp" for a line that names what something cost; nothing when it cost nothing */
+function invCostText(cp,pre){return cp>0?pre+cpToGpText(cp)+(pre===" ("?")":""):"";}
+function invSnap(it){return it==null?null:JSON.parse(JSON.stringify(it));}
+function invSame(a,b){
+  const norm=v=>Array.isArray(v)?v.map(norm):(v&&typeof v==="object")?Object.keys(v).sort().reduce((o,k)=>{o[k]=norm(v[k]);return o;},{}):v;
+  return JSON.stringify(norm(a))===JSON.stringify(norm(b));
+}
+/* What each kind's `undo` must look like to be applied (final review M2): an
+   imported, hand-edited or future file's undo that doesn't fit is dropped,
+   keeping its line, so the Log dialog never reads a field that isn't there. */
+function invIsObj(v){return !!v&&typeof v==="object"&&!Array.isArray(v);}
+function invUndoShape(kind,u){
+  if(!invIsObj(u))return null;
+  const copy=v=>v==null||invIsObj(v);
+  const rows=a=>Array.isArray(a)&&a.every(p=>invIsObj(p)&&p.id!=null&&copy(p.snap)&&copy(p.atk));
+  if(kind==="add"||kind==="give")return rows(u.items)?u:null;
+  if(kind==="edit")return invIsObj(u.before)&&invIsObj(u.after)&&u.after.id!=null?u:null;
+  if(kind==="delete")return invIsObj(u.snap)&&copy(u.atk)?u:null;
+  if(kind==="use")return u.id!=null&&copy(u.snap)&&copy(u.atk)?u:null;
+  if(kind==="coins")return invIsObj(u.delta)?u:null;
+  if(kind==="trade")return Array.isArray(u.parts)&&u.parts.every(p=>invIsObj(p)&&["give","add","coins"].indexOf(p.kind)>=0&&invUndoShape(p.kind,p.u))?u:null;
+  return null;   /* grant and ammo have no undo */
+}
+function cleanInvLog(v,size){
+  const n=INV_LOG_SIZES.indexOf(num(size))>=0?num(size):500;
+  return (Array.isArray(v)?v:[]).filter(e=>e&&typeof e==="object"&&INV_KINDS.indexOf(e.kind)>=0&&num(e.at)>0)
+    .map(e=>({id:String(e.id||uid()),at:num(e.at),kind:e.kind,title:String(e.title||""),
+      lines:(Array.isArray(e.lines)?e.lines:[]).filter(l=>l&&typeof l==="object").map(l=>({dir:l.dir==="+"||l.dir==="-"?l.dir:"",text:String(l.text||"")})),
+      undo:invUndoShape(e.kind,e.undo),undone:e.undone===true,meta:(e.meta&&typeof e.meta==="object")?e.meta:{}}))
+    .slice(0,n);
+}
+function logInv(entry){
+  if(!Array.isArray(character.invLog))character.invLog=[];
+  const e={id:uid(),at:Date.now(),kind:entry.kind,title:String(entry.title||""),lines:entry.lines||[],undo:entry.undo||null,undone:false,meta:entry.meta||{}};
+  character.invLog.unshift(e);
+  const n=INV_LOG_SIZES.indexOf(num(character.invLogSize))>=0?num(character.invLogSize):500;
+  if(character.invLog.length>n)character.invLog.length=n;
+  return e;
+}
+/* The log size setting (final review M1). A smaller size trims at once — but
+   when that would drop lines it asks first, and declined, the size stays.
+   (Spec §2 decision 3 said "at the next write"; trimming at once is the
+   deliberate deviation, recorded in As built.) Returns whether it changed. */
+function setInvLogSize(n){
+  if(INV_LOG_SIZES.indexOf(num(n))<0)return false;
+  const len=(character.invLog||[]).length,drop=len-num(n);
+  if(drop>0&&!confirm(`Keep the newest ${num(n).toLocaleString("en-US")}? This removes ${drop.toLocaleString("en-US")} older line${drop===1?"":"s"}.`))return false;
+  character.invLogSize=num(n);
+  character.invLog=cleanInvLog(character.invLog,character.invLogSize);
+  scheduleSave();
+  return true;
+}
+function grantSourceName(sid){const s=String(sid||"");return s.slice(s.indexOf(":")+1)||s;}
+/* One line per source: a class's starting gear arrives as several calls in a row. */
+function logGrant(sid,line){
+  const top=(character.invLog||[])[0];
+  if(top&&top.kind==="grant"&&top.meta&&top.meta.sid===sid&&!top.meta.revert&&Date.now()-num(top.at)<5000){top.lines.push(line);return top;}
+  return logInv({kind:"grant",title:"Granted by "+grantSourceName(sid),lines:[line],undo:null,meta:{sid}});
+}
+/* ---- every writer logs exactly once (#47 Task 2) ---- */
+function invName(id){const it=(character.inventory||[]).find(x=>x.id===id);return it?String(it.name||"Item"):"Item";}
+function logFinderAdd(did){
+  if(!did||!did.length)return;
+  const lines=did.map(d=>{const it=(character.inventory||[]).find(x=>x.id===d.id);return {dir:"+",text:`${invName(d.id)} ×${d.qty}${invCostText(itemWorthCp(it,d.qty)," · ")}`};});
+  logInv({kind:"add",title:did.length===1?"Added "+invName(did[0].id):`Added ${did.length} items`,lines,undo:{items:did}});
+}
+/* The item form: a new item is an add; an edit is logged only if something changed. */
+function logItemSave(before,after){
+  if(!before){const q=itemQty(after);logInv({kind:"add",title:"Added "+(after.name||"Item"),lines:[{dir:"+",text:`${after.name||"Item"} ×${q}${invCostText(itemWorthCp(after,q)," · ")}`}],undo:{items:[{id:after.id,qty:q,created:true}]}});return;}
+  if(invSame(before,after))return;
+  const lines=[];
+  if(itemQty(before)!==itemQty(after))lines.push({dir:"",text:`Quantity ${itemQty(before)} → ${itemQty(after)}`});
+  if(before.name!==after.name)lines.push({dir:"",text:`Name ${before.name} → ${after.name}`});
+  if(!lines.length)lines.push({dir:"",text:"Details changed"});
+  logInv({kind:"edit",title:"Edited "+(after.name||"Item"),lines,undo:{before:invSnap(before),after:invSnap(after)}});
+}
+/* Coins: one line per commit, folding every denomination that actually moved. */
+function logCoins(title,delta){
+  const d={};Object.keys(delta||{}).forEach(k=>{const v=Math.round(num(delta[k]));if(v)d[k]=v;});
+  if(!Object.keys(d).length)return null;
+  const lines=Object.keys(d).map(k=>{const c=COIN_ALL.find(x=>x[0]===k);return {dir:d[k]>0?"+":"-",text:`${d[k]>0?"+":"−"}${Math.abs(d[k])} ${c?c[1]:k}`};});
+  return logInv({kind:"coins",title,lines,undo:{delta:d}});
+}
+/* ---- item helpers for undo (and the trade) ---- */
+/* Takes `qty` off a row, removing it (and its attack) at 0. It ALWAYS returns
+   a copy of the row, its attack and where both stood, taken before the change
+   (final review K1): an undo can then bring the row back even when it has
+   gone since for some other reason — fired, sold, deleted. */
+function invRemoveQty(id,qty){
+  const it=(character.inventory||[]).find(x=>x.id===id);if(!it)return {removed:false,snap:null,atk:null,at:null,atkAt:null};
+  const left=itemQty(it)-num(qty),at=character.inventory.indexOf(it),snap=invSnap(it);
+  const a0=(character.attacks||[]).find(a=>a.itemId===id)||null,atk=invSnap(a0),atkAt=a0?character.attacks.indexOf(a0):null;
+  if(left<=0){
+    character.inventory=character.inventory.filter(x=>x.id!==id);
+    character.attacks=(character.attacks||[]).filter(a=>a.itemId!==id);
+    forgetAmmo(character,id);
+    return {removed:true,snap,atk,at,atkAt};
+  }
+  it.qty=left;return {removed:false,snap,atk,at,atkAt};
+}
+/* `at` is where the row stood and `atkAt` where its attack stood: each goes
+   back there, clamped to its list, as the ammo undo does (62-ammo.js
+   undoFire). An old line with no index appends. `qty`, when given, is how many
+   come back (a copy taken before a partial Use or give holds the whole stack).
+   A granted item whose source has since been removed comes back as an
+   ordinary item (final review M3): nothing could ever revert that grant. */
+function invRestore(snap,atk,at,atkAt,qty){
+  const it=invSnap(snap);if((character.inventory||[]).some(x=>x.id===it.id))it.id=uid();
+  if(qty!=null)it.qty=num(qty);
+  if(it.grant&&!grantSidLive(character,it.grant)){if(!it.origin)it.origin=originFromSid(it.grant);delete it.grant;}
+  const put=(list,x,i)=>{if(Number.isInteger(i)&&i>=0)list.splice(Math.min(list.length,i),0,x);else list.push(x);};
+  put(character.inventory,it,at);
+  if(atk){const a=invSnap(atk);a.itemId=it.id;if(!Array.isArray(character.attacks))character.attacks=[];if(character.attacks.some(x=>x.id===a.id))a.id=uid();put(character.attacks,a,atkAt);it.attackId=a.id;}
+  return it.id;
+}
+/* ---- undo ---- */
+/* The check is exactly what the apply step can do (final review K1): a line
+   passes only when its undo will put something back. Inside a trade (`named`)
+   a reason names the item, since one trade moves several. */
+const INV_WHY={add:"It has since been used, sold or removed.",edit:"It has been changed again since.",gone:"It is no longer in your inventory.",broken:"This line can't be undone."};
+function invRow(id){return (character.inventory||[]).find(x=>x.id===id)||null;}
+function invCheckPart(kind,u,named){
+  /* records that stacked onto one row are summed: the row must still hold them all */
+  if(kind==="add"){const need={};for(const p of u.items)need[p.id]=(need[p.id]||0)+num(p.qty);for(const p of u.items){const it=invRow(p.id);if(!it||itemQty(it)<need[p.id]){const nm=String(p.name||(it&&it.name)||"");return named&&nm?`The ${nm} you got has since been used, sold or removed.`:INV_WHY.add;}}return "";}
+  if(kind==="give"){for(const p of u.items){if(!invRow(p.id)&&!p.snap){const nm=String(p.name||"");return nm?`The ${nm} you gave can't come back: this line kept no copy of it.`:INV_WHY.gone;}}return "";}
+  if(kind==="edit"){const it=invRow(u.after.id);return (it&&invSame(it,u.after))?"":INV_WHY.edit;}
+  if(kind==="coins"){
+    for(const k of Object.keys(u.delta)){const d=num(u.delta[k]);if(d>0&&num((character.coins||{})[k])<d){const c=COIN_ALL.find(x=>x[0]===k);return `Not enough ${c?c[1]:k.toUpperCase()} left to take back.`;}}
+    return "";
+  }
+  if(kind==="use"){
+    /* the row gives back the quantity or the use; a copy brings back what was used up */
+    const it=invRow(u.id);
+    if(it)return num(u.qty)>0||(num(u.used)>0&&it.uses)?"":INV_WHY.edit;
+    return u.snap&&num(u.qty)>0?"":INV_WHY.gone;
+  }
+  if(kind==="delete")return "";   /* its shape guarantees the copy */
+  return INV_WHY.broken;
+}
+function invUndoCheck(e){
+  if(!e||e.undone)return {ok:false,why:e&&e.undone?"Already undone.":""};
+  if(!e.undo||e.kind==="grant"||e.kind==="ammo")return {ok:false,why:""};
+  /* never throws: a shape cleanInvLog() didn't see (or a future one) is refused */
+  try{
+    if(!invUndoShape(e.kind,e.undo))return {ok:false,why:INV_WHY.broken};
+    if(e.kind==="trade"){for(const p of e.undo.parts){const w=invCheckPart(p.kind,p.u,true);if(w)return {ok:false,why:w};}return {ok:true,why:""};}
+    const w=invCheckPart(e.kind,e.undo,false);return {ok:!w,why:w};
+  }catch(err){return {ok:false,why:INV_WHY.broken};}
+}
+function invApplyPart(kind,u){
+  if(kind==="add")(u.items||[]).forEach(p=>{const it=character.inventory.find(x=>x.id===p.id);if(!it)return;if(p.created&&itemQty(it)<=num(p.qty))invRemoveQty(p.id,itemQty(it));else invRemoveQty(p.id,p.qty);});
+  else if(kind==="edit"){const i=character.inventory.findIndex(x=>x.id===u.after.id);if(i>=0){character.inventory[i]=invSnap(u.before);syncItemAttack(character.inventory[i]);}}
+  else if(kind==="delete")invRestore(u.snap,u.atk,u.at,u.atkAt);
+  else if(kind==="use"){
+    /* the row still here: add back; gone: its copy, with the quantity used */
+    const it=invRow(u.id);
+    if(it){if(num(u.qty))it.qty=itemQty(it)+num(u.qty);if(num(u.used)&&it.uses)it.uses.used=Math.max(0,num(it.uses.used)-num(u.used));}
+    else if(u.snap)invRestore(u.snap,u.atk||null,u.at,u.atkAt,num(u.qty));
+  }
+  else if(kind==="coins"){character.coins=character.coins||{};Object.keys(u.delta||{}).forEach(k=>{character.coins[k]=num(character.coins[k])-num(u.delta[k]);});}
+  /* newest removal first: each `at` was read with the earlier removals already
+     gone. The row still here: add back; gone: its copy, with the quantity given. */
+  else if(kind==="give")(u.items||[]).slice().reverse().forEach(p=>{const it=invRow(p.id);if(it)it.qty=itemQty(it)+num(p.qty);else if(p.snap)invRestore(p.snap,p.atk,p.at,p.atkAt,num(p.qty));});
+}
+function invUndo(id){
+  const e=(character.invLog||[]).find(x=>x.id===id);if(!e)return "That line is no longer in the log.";
+  const c=invUndoCheck(e);if(!c.ok)return c.why||"This line can't be undone.";
+  if(e.kind==="trade")(e.undo.parts||[]).forEach(p=>invApplyPart(p.kind,p.u));else invApplyPart(e.kind,e.undo);
+  e.undone=true;
+  logInv({kind:e.kind,title:"Undid: "+e.title,lines:[],undo:null});
+  renderInventory();renderAttacks();renderCoins();recompute();scheduleSave();
+  return "";
+}
+/* ---- the Log dialog (#47 Task 3) ---- */
+const INV_FILTERS={all:null,trades:["trade"],items:["add","edit","delete","use","grant"],coins:["coins"],ammo:["ammo"]};
+const INV_ICON={trade:"⇄",add:"+",edit:"✎",delete:"🗑",use:"✦",coins:"¤",grant:"⚑",ammo:"➶"};
+let _invLogFilter="all";
+function invDayLabel(at){
+  const d=new Date(at),t=new Date();const day=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diff=(day(t)-day(d))/86400000;return diff===0?"Today":diff===1?"Yesterday":d.toLocaleDateString();
+}
+function invLogHTML(list,filter,size){
+  const kinds=INV_FILTERS[filter]||null,rows=(list||[]).filter(e=>!kinds||kinds.indexOf(e.kind)>=0);
+  let day="",out=`<div class="il-filters">`+Object.keys(INV_FILTERS).map(f=>`<button type="button" class="il-f${f===filter?" on":""}" data-ilfilter="${esc(f)}" aria-pressed="${f===filter?"true":"false"}">${esc(f[0].toUpperCase()+f.slice(1))}</button>`).join("")+`</div>`;
+  /* one scroller for the rows (final review C5), as the trade's .tr-sides is:
+     the filters and the foot stay put above and below it */
+  out+=`<div class="il-scroll">`;
+  if(!rows.length)out+=`<p class="empty">Nothing logged yet.</p>`;
+  rows.forEach(e=>{
+    const dl=invDayLabel(e.at);if(dl!==day){day=dl;out+=`<div class="il-day">${esc(dl)}</div>`;}
+    const c=invUndoCheck(e),time=new Date(e.at).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+    const undo=e.undone||!e.undo||e.kind==="grant"||e.kind==="ammo"?"":
+      (c.ok?`<button type="button" class="tbtn il-undo" data-invundo="${esc(e.id)}">Undo</button>`
+           :`<button type="button" class="tbtn il-undo" data-invundo="${esc(e.id)}" disabled title="${esc(c.why)}">Undo</button><small class="il-why">${esc(c.why)}</small>`);
+    const lines=(e.lines||[]).map(l=>`<div class="il-l ${esc(l.dir==="+"?"in":l.dir==="-"?"out":"")}">${esc(l.text)}</div>`).join("");
+    out+=`<div class="il-e${e.undone?" undone":""}" data-ilid="${esc(e.id)}"><span class="il-ic" aria-hidden="true">${INV_ICON[e.kind]||"•"}</span>`+
+      `<div class="il-tx"><b>${esc(e.title)}</b>${e.kind==="trade"&&lines?`<details><summary>Receipt</summary>${lines}</details>`:lines}</div>`+
+      `<div class="il-side"><span class="il-t">${esc(time)}</span>${undo}</div></div>`;
+  });
+  return out+`</div><div class="il-foot"><span>Keeps the newest ${esc(String(size))}.</span><button type="button" class="tbtn danger" id="invLogClear">Clear log</button></div>`;
+}
+function openInvLog(){
+  const paint=()=>{const b=document.getElementById("mBody");if(b)b.innerHTML=invLogHTML(character.invLog||[],_invLogFilter,character.invLogSize||500);};
+  openModal("Inventory log","","",{wide:true});paint();
+  const body=document.getElementById("mBody");if(!body||body.dataset.ilWired)return;
+  body.dataset.ilWired="1";
+  body.addEventListener("click",e=>{
+    if(!document.getElementById("invLogClear"))return;   /* only while the log is the open dialog */
+    const t=e.target;let m;
+    if((m=t.closest("[data-ilfilter]"))){_invLogFilter=m.dataset.ilfilter;paint();return;}
+    if((m=t.closest("[data-invundo]"))){const why=invUndo(m.dataset.invundo);if(why)toast(why);paint();return;}
+    if(t.closest("#invLogClear")){if(confirm("Clear the whole inventory log? Undo will no longer be possible for any of it.")){character.invLog=[];scheduleSave();paint();}return;}
+  });
+}
+/* ---- the trade window (#47 Task 4) ----
+   A draft holds the trade until Complete applies it as one step, logged as one
+   `trade` line whose undo has three parts: give (always clean), add (what you
+   got must still be there) and coins (the net change). Spec §6.2 and §8. */
+let _trade=null,_trPick=false;
+function newTradeDraft(opts){
+  const o=opts||{},arr=a=>Array.isArray(a)?a:[],coins=c=>Object.assign({},(c&&typeof c==="object")?c:{});
+  const give=o.give||{},get=o.get||{};
+  const d={with:String(o.with||""),
+    give:{items:arr(give.items).filter(x=>x&&x.id!=null).map(x=>({id:String(x.id),qty:Math.max(1,num(x.qty)||1)})),coins:coins(give.coins)},
+    get:{items:arr(get.items).filter(x=>x&&typeof x==="object").map(x=>({key:String(x.key||uid()),name:String(x.name||(x.def&&x.def.name)||""),qty:Math.max(1,num(x.qty)||1),
+      cost:x.cost!=null?Math.max(0,fnum(x.cost)):(x.def?(costToGp(x.def.cost)||0):0),def:x.def||null,custom:!!x.custom||!x.def})),coins:coins(get.coins)},
+    applyGive:true,applyGet:true,tab:"give"};
+  return tradeClamp(d,character);
+}
+/* What you give is capped at what you hold: whole coins, owned items. Run on
+   a seeded draft (#105) and again at Complete, so the balance, the receipt and
+   meta.giveCp all describe exactly what is applied. */
+function tradeClamp(d,ch){
+  const inv=(ch&&ch.inventory)||[],held=(ch&&ch.coins)||{},seen=new Set();
+  d.give.items=d.give.items.filter(g=>{const it=inv.find(x=>x.id===g.id);if(!it||seen.has(g.id))return false;seen.add(g.id);g.qty=Math.min(Math.max(0,num(g.qty)),itemQty(it));return g.qty>0;});
+  Object.keys(d.give.coins).forEach(k=>{d.give.coins[k]=Math.min(Math.max(0,num(d.give.coins[k])),Math.max(0,num(held[k])));});
+  Object.keys(d.get.coins).forEach(k=>{d.get.coins[k]=Math.max(0,num(d.get.coins[k]));});
+  return d;
+}
+function tradeEmpty(d){return !d.give.items.length&&!d.get.items.length&&!coinsToCp(d.give.coins)&&!coinsToCp(d.get.coins);}
+/* cost is gp of ONE and may be fractional: fnum, as itemWorthCp() reads it */
+function tradeGetCp(g){return Math.round(fnum(g.cost)*100*Math.max(0,num(g.qty)));}
+function tradeBalance(d,ch){
+  const inv=(ch&&ch.inventory)||[];
+  let giveCp=coinsToCp(d.give.coins),getCp=coinsToCp(d.get.coins);
+  if(d.applyGive)d.give.items.forEach(g=>{const it=inv.find(x=>x.id===g.id);if(it)giveCp+=itemWorthCp(it,g.qty);});
+  if(d.applyGet)d.get.items.forEach(g=>{getCp+=tradeGetCp(g);});
+  return {giveCp,getCp,diff:giveCp-getCp};
+}
+/* "n is the number of lines": each item, and each coin that moves */
+function tradeCount(side){return side.items.length+Object.keys(side.coins||{}).filter(k=>num(side.coins[k])>0).length;}
+function tradeTabsInner(d){
+  return ["give","get"].map(s=>`<button type="button" class="tr-tab" role="tab" id="${esc(s==="get"?"trTabGet":"trTabGive")}" aria-controls="${esc(s==="get"?"trSideGet":"trSideGive")}" data-trtab="${esc(s)}" aria-selected="${d.tab===s?"true":"false"}">You ${s} · ${tradeCount(d[s])}</button>`).join("");
+}
+function tradeBalHTML(d,ch){
+  const b=tradeBalance(d,ch),n=cpToGpText(Math.abs(b.diff));
+  const net=b.diff<0?`${esc(n)} short`:b.diff>0?`${esc(n)} over`:"Even";
+  return `<div class="tr-bal${b.diff<0?" short":""}">You give <b>${esc(cpToGpText(b.giveCp))}</b> · you get <b>${esc(cpToGpText(b.getCp))}</b> · <span class="tr-net">${net}</span></div>`;
+}
+function tradeCoinsHTML(side,coins,held){
+  return `<div class="tr-coins">`+coinKeys().map(k=>{const c=COIN_ALL.find(x=>x[0]===k),lbl=c?c[1]:k.toUpperCase(),v=num((coins||{})[k]);
+    const cap=held?` max="${esc(String(num(held[k])))}"`:"";
+    return `<label class="tr-coin"><span>${esc(lbl)}</span><input type="number" inputmode="numeric" data-trcoin="${esc(side+":"+k)}" min="0"${cap} step="1" value="${esc(v?String(v):"")}" placeholder="0" aria-label="${esc((side==="give"?"Give ":"Get ")+(c?c[2]:k))}"></label>`;}).join("")+`</div>`;
+}
+function tradeSwitchHTML(id,on){
+  return `<button type="button" class="tr-apply" id="${esc(id)}" role="switch" aria-checked="${on?"true":"false"}"><span>Apply item value</span><span class="switch${on?" on":""}" aria-hidden="true"></span></button>`;
+}
+function tradeStepHTML(attr,key,qty,max,name){
+  const mx=max!=null?` data-max="${esc(String(max))}"`:"";
+  return `<span class="tr-q"><button type="button" class="tr-pm" ${attr}="${esc(key)}" data-d="-1"${mx} aria-label="${esc((qty<=1?"Remove ":"One fewer ")+name)}">−</button>`+
+    `<b>${esc(String(qty))}</b><button type="button" class="tr-pm" ${attr}="${esc(key)}" data-d="1"${mx} aria-label="${esc("One more "+name)}"${max!=null&&qty>=max?" disabled":""}>+</button></span>`;
+}
+function tradeHTML(d,ch){
+  const inv=(ch&&ch.inventory)||[],held=(ch&&ch.coins)||{};
+  const sugg=[];
+  cleanParty(ch&&ch.party).map(p=>p.name).concat(((ch&&ch.invLog)||[]).map(e=>e&&e.meta&&e.meta.with))
+    .forEach(n=>{n=String(n||"").trim();if(n&&sugg.indexOf(n)<0&&sugg.length<8)sugg.push(n);});
+  let give="";
+  d.give.items.forEach(g=>{const it=inv.find(x=>x.id===g.id);if(!it)return;const nm=String(it.name||"Item");
+    give+=`<div class="tr-it"><span class="tr-nm">${esc(nm)}</span>${tradeStepHTML("data-trgive",g.id,g.qty,itemQty(it),nm)}<span class="tr-worth">${esc(cpToGpText(itemWorthCp(it,g.qty)))}</span></div>`;});
+  if(!give)give=`<p class="tr-none">Nothing yet.</p>`;
+  const left=inv.filter(it=>itemQty(it)>0&&!d.give.items.some(g=>g.id===it.id));
+  const pick=_trPick?`<div class="tr-pick">`+(left.length?left.map(it=>`<button type="button" class="tr-pickrow" data-traddgive="${esc(it.id)}"><span>${esc(String(it.name||"Item"))} ×${esc(String(itemQty(it)))}</span><span class="tr-worth">${esc(cpToGpText(itemWorthCp(it,1)))} each</span></button>`).join(""):`<p class="tr-none">Everything you carry is already in the trade.</p>`)+`</div>`:"";
+  let get="";
+  d.get.items.forEach(g=>{const nm=String(g.name||"")||"Custom item";
+    const name=g.custom?`<input type="text" class="tr-name" data-trname="${esc(g.key)}" value="${esc(g.name)}" placeholder="Item name" aria-label="Custom item name" maxlength="80">`:esc(nm);
+    get+=`<div class="tr-it${g.custom?" tr-custom":""}"><span class="tr-nm">${name}</span>${tradeStepHTML("data-trget",g.key,g.qty,999,nm)}`+
+      `<label class="tr-cost"><input type="number" inputmode="decimal" data-trcost="${esc(g.key)}" min="0" step="0.01" value="${esc(String(fnum(g.cost)))}" aria-label="${esc("Cost of one "+nm+", in gp")}"><span>gp</span></label></div>`;});
+  if(!get)get=`<p class="tr-none">Nothing yet.</p>`;
+  return `<div class="tr-wrap tr-on-${d.tab==="get"?"get":"give"}">`+
+    `<div class="tr-with"><label class="f" for="trWith">With</label><input type="text" id="trWith" value="${esc(d.with)}" placeholder="Who you're trading with (optional)" autocomplete="off" maxlength="60">`+
+    (sugg.length?`<div class="tr-chips">${sugg.map(n=>`<button type="button" class="tr-chip" data-trwith="${esc(n)}">${esc(n)}</button>`).join("")}</div>`:"")+`</div>`+
+    `<div class="tr-tabs" role="tablist">${tradeTabsInner(d)}</div>`+
+    `<div class="tr-sides">`+
+      `<section class="tr-side" data-side="give" id="trSideGive" role="tabpanel" aria-labelledby="trTabGive"><h5>You give</h5>${give}`+
+        `<button type="button" class="tr-add" id="trPickGive" aria-expanded="${_trPick?"true":"false"}">+ From your inventory</button>${pick}`+
+        `${tradeCoinsHTML("give",d.give.coins,held)}${tradeSwitchHTML("trApplyGive",d.applyGive)}</section>`+
+      `<section class="tr-side" data-side="get" id="trSideGet" role="tabpanel" aria-labelledby="trTabGet"><h5>You get</h5>${get}`+
+        `<div class="tr-adds"><button type="button" class="tr-add" id="trFind">+ Find an item</button><button type="button" class="tr-add" id="trCustom">+ Custom item</button></div>`+
+        `${tradeCoinsHTML("get",d.get.coins,null)}${tradeSwitchHTML("trApplyGet",d.applyGet)}</section>`+
+    `</div>`+
+    `<div class="tr-foot">${tradeBalHTML(d,ch)}<div class="tr-acts"><button type="button" class="tbtn" id="trCancel">Cancel</button>`+
+      `<button type="button" class="tbtn primary" id="trComplete" aria-label="Complete trade" title="Complete trade"${tradeEmpty(d)?" disabled":""}><span class="tr-done-ic" aria-hidden="true">✓</span><span class="tr-done-lbl">Complete Trade</span></button></div></div>`+
+  `</div>`;
+}
+function completeTrade(d){
+  if(!d)return null;
+  tradeClamp(d,character);
+  if(tradeEmpty(d))return null;
+  const who=String(d.with||"").trim(),b=tradeBalance(d,character),lines=[],giveRecs=[],gotRecs=[];
+  /* 1. what you give: capped at what you own, as the window caps it */
+  d.give.items.forEach(g=>{
+    const it=(character.inventory||[]).find(x=>x.id===g.id);if(!it)return;
+    const q=Math.min(Math.max(0,num(g.qty)),itemQty(it)),nm=String(it.name||"Item");if(q<=0)return;
+    const worth=itemWorthCp(it,q),r=invRemoveQty(g.id,q);
+    /* a copy every time (final review K1): undo restores it if the row has gone since */
+    giveRecs.push({id:g.id,qty:q,name:nm,snap:r.snap,atk:r.atk,at:r.at,atkAt:r.atkAt});
+    lines.push({dir:"-",text:`${nm} ×${q}${invCostText(worth," (")}`});
+  });
+  /* 2. coins: the net change per denomination, giving capped at what you hold;
+     the receipt lists them high to low, as the coin card does (pp → cp) */
+  character.coins=character.coins||{};
+  const delta={},cl=k=>{const c=COIN_ALL.find(x=>x[0]===k);return c?c[1]:k.toUpperCase();};
+  Object.keys(COIN_CP).reverse().forEach(k=>{
+    const gv=Math.min(Math.max(0,Math.round(num(d.give.coins[k]))),Math.max(0,num(character.coins[k]))),gt=Math.max(0,Math.round(num(d.get.coins[k])));
+    if(gv)lines.push({dir:"-",text:`${gv} ${cl(k)}`});
+    if(gt)lines.push({dir:"+",text:`${gt} ${cl(k)}`});
+    const v=gt-gv;if(v){delta[k]=v;character.coins[k]=num(character.coins[k])+v;}
+  });
+  /* 3. what you get: library items through the finder's own path (so they stack
+     as the finder stacks them); custom items with origin `custom` (spec §6.2) */
+  d.get.items.forEach(g=>{
+    const q=Math.min(999,Math.max(1,num(g.qty))),cost=Math.max(0,fnum(g.cost));
+    if(g.custom||!g.def){
+      const name=String(g.name||"").trim()||"Custom item";
+      /* the fields every other way of making an item gives it (final review I1) */
+      const it={id:uid(),name,qty:q,description:"",effects:[],equipped:false,cost,origin:{kind:"custom",detail:who?"traded from "+who:"traded",at:Date.now()}};
+      character.inventory.push(it);gotRecs.push({id:it.id,qty:q,created:true,name});
+      lines.push({dir:"+",text:`${name} ×${q}${invCostText(Math.round(cost*100*q)," (")}`});
+    }else{
+      const nm=String(g.name||g.def.name||"Item");
+      addLibraryItems([g.def],{kind:"traded",detail:who,at:Date.now()},cost,q).forEach(r=>gotRecs.push(Object.assign(r,{name:nm})));
+      lines.push({dir:"+",text:`${nm} ×${q}${invCostText(Math.round(cost*100*q)," (")}`});
+    }
+  });
+  lines.push({dir:"",text:`You gave ${cpToGpText(b.giveCp)} · you got ${cpToGpText(b.getCp)}`});
+  lines.push({dir:"",text:`Item value: ${d.applyGive?"counted":"not counted"} on what you gave, ${d.applyGet?"counted":"not counted"} on what you got`});
+  /* 4. one line */
+  const e=logInv({kind:"trade",title:who?"Traded with "+who:"Traded",lines,
+    meta:{with:who,applyGive:!!d.applyGive,applyGet:!!d.applyGet,giveCp:b.giveCp,getCp:b.getCp},
+    undo:{parts:[{kind:"give",u:{items:giveRecs}},{kind:"add",u:{items:gotRecs}},{kind:"coins",u:{delta}}]}});
+  /* 5. */
+  renderInventory();renderAttacks();renderCoins();recompute();scheduleSave();
+  return e;
+}
+/* Where focus was, as a selector that finds the same control after a repaint:
+   its id, else its trade hook (+ the stepper's direction). */
+function tradeFocusSel(el){
+  if(!el||el===document.body||!el.closest||!el.closest("#mBody"))return null;
+  if(el.id)return attrSel("id",el.id);
+  for(const k of ["data-trgive","data-trget","data-trcost","data-trname","data-trcoin","data-trtab","data-traddgive","data-trwith"]){
+    if(el.hasAttribute(k))return attrSel(k,el.getAttribute(k))+(el.hasAttribute("data-d")?attrSel("data-d",el.getAttribute("data-d")):"");
+  }
+  return null;
+}
+function tradePaint(sel){
+  const body=document.getElementById("mBody");if(!body||!_trade)return;
+  const sc=body.querySelector(".tr-sides"),top=sc?sc.scrollTop:0;
+  if(sel===undefined)sel=tradeFocusSel(document.activeElement);
+  body.innerHTML=tradeHTML(_trade,character);
+  const sc2=body.querySelector(".tr-sides");if(sc2)sc2.scrollTop=top;
+  if(!sel)return;
+  let el=body.querySelector(sel);
+  /* a + at its cap is disabled: stay on the same row's − */
+  if(el&&el.disabled)el=body.querySelector(sel.replace('[data-d="1"]','[data-d="-1"]'));
+  if(!el||el.disabled){const box=document.querySelector("#modal .modal");if(box)box.focus({preventScroll:true});return;}
+  el.focus({preventScroll:true});
+}
+/* Typing changes the totals, not the rows: refresh those in place, so the box
+   being typed in is never replaced under the caret. */
+function tradeRefresh(){
+  const body=document.getElementById("mBody");if(!body||!_trade)return;
+  const bal=body.querySelector(".tr-bal");if(bal)bal.outerHTML=tradeBalHTML(_trade,character);
+  const tabs=body.querySelector(".tr-tabs");if(tabs)tabs.innerHTML=tradeTabsInner(_trade);
+  const done=document.getElementById("trComplete");if(done)done.disabled=tradeEmpty(_trade);
+}
+function showTrade(){
+  openModal("Trade",tradeHTML(_trade,character),"",{wide:true});
+  setDismissGuard(()=>_trade&&!tradeEmpty(_trade)?"Discard this trade?":null);
+}
+/* The finder is its own full-screen layer UNDER the modal, so the trade window
+   steps aside while it is up and comes back from the draft either way. */
+function tradeFind(){
+  const lib=rules.items||[];
+  if(!lib.length){toast("No rules items are loaded. Add a custom item instead.");return;}
+  const back=()=>{const bt=document.getElementById("btnTrade");if(bt&&bt.getClientRects().length)bt.focus({preventScroll:true});if(_trade)showTrade();};
+  closeModal();
+  openBrowse(Object.assign(itemBrowseCfg(lib),{
+    added:x=>!!_trade&&_trade.get.items.some(g=>!g.custom&&String(g.name).toLowerCase()===String(x.name||"").toLowerCase()),
+    onCustom:()=>{if(_trade){_trade.get.items.push({key:uid(),name:"",qty:1,cost:0,def:null,custom:true});_trade.tab="get";}back();},
+    onAdd:(entries,og,costOverride,qty)=>{
+      if(!_trade)return;
+      entries.forEach(x=>{
+        const ex=_trade.get.items.find(g=>!g.custom&&String(g.name).toLowerCase()===String(x.name||"").toLowerCase());
+        if(ex){ex.qty=Math.min(999,ex.qty+finderQty(qty));if(costOverride!=null)ex.cost=costOverride;return;}
+        _trade.get.items.push({key:uid(),name:String(x.name||""),qty:finderQty(qty),cost:costOverride??costToGp(x.cost)??0,def:x,custom:false});
+      });
+      _trade.tab="get";closeBrowse();back();
+    },
+    onClose:back
+  }));
+}
+function openTrade(opts){
+  _trade=newTradeDraft(opts);_trPick=false;
+  showTrade();
+  const body=document.getElementById("mBody");if(!body||body.dataset.trWired)return;
+  body.dataset.trWired="1";
+  const open=()=>!!_trade&&!!document.getElementById("trComplete");   /* only while the trade is the open dialog */
+  body.addEventListener("click",e=>{
+    if(!open())return;
+    const t=e.target,d=_trade,inv=character.inventory||[];let m;
+    if((m=t.closest("[data-trtab]"))){d.tab=m.dataset.trtab==="get"?"get":"give";return tradePaint();}
+    if((m=t.closest("[data-trwith]"))){d.with=m.dataset.trwith;return tradePaint();}
+    if(t.closest("#trApplyGive")){d.applyGive=!d.applyGive;return tradePaint();}
+    if(t.closest("#trApplyGet")){d.applyGet=!d.applyGet;return tradePaint();}
+    if(t.closest("#trPickGive")){_trPick=!_trPick;return tradePaint();}
+    if((m=t.closest("[data-traddgive]"))){
+      const it=inv.find(x=>x.id===m.dataset.traddgive);
+      if(it&&itemQty(it)>0&&!d.give.items.some(g=>g.id===it.id))d.give.items.push({id:it.id,qty:1});
+      if(!inv.some(x=>itemQty(x)>0&&!d.give.items.some(g=>g.id===x.id)))_trPick=false;
+      return tradePaint(it?attrSel("data-trgive",it.id)+'[data-d="1"]':null);
+    }
+    if((m=t.closest("[data-trgive]"))){
+      const g=d.give.items.find(x=>x.id===m.dataset.trgive),it=inv.find(x=>x.id===m.dataset.trgive);
+      if(g){g.qty=Math.min(it?itemQty(it):0,g.qty+num(m.dataset.d));if(g.qty<=0)d.give.items=d.give.items.filter(x=>x!==g);}
+      return tradePaint();
+    }
+    if((m=t.closest("[data-trget]"))){
+      const g=d.get.items.find(x=>x.key===m.dataset.trget);
+      if(g){g.qty=Math.min(999,g.qty+num(m.dataset.d));if(g.qty<=0)d.get.items=d.get.items.filter(x=>x!==g);}
+      return tradePaint();
+    }
+    if(t.closest("#trCustom")){const k=uid();d.get.items.push({key:k,name:"",qty:1,cost:0,def:null,custom:true});d.tab="get";return tradePaint(attrSel("data-trname",k));}
+    if(t.closest("#trFind"))return tradeFind();
+    if(t.closest("#trCancel")){_trade=null;closeModal();return;}
+    if(t.closest("#trComplete")){
+      if(tradeEmpty(d))return;
+      const b=tradeBalance(d,character);
+      if(b.diff<0&&!confirm(`You're ${cpToGpText(-b.diff)} short. Complete the trade anyway?`))return;
+      const done=completeTrade(d);_trade=null;closeModal();
+      if(done)toast(done.title+". It's in the log.");
+      return;
+    }
+  });
+  body.addEventListener("input",e=>{
+    if(!open())return;
+    const t=e.target,d=_trade;
+    if(t.id==="trWith"){d.with=t.value;return;}
+    if(t.dataset.trcoin){
+      const [side,k]=t.dataset.trcoin.split(":"),s=d[side==="get"?"get":"give"];let v=Math.max(0,num(t.value));
+      if(side==="give")v=Math.min(v,Math.max(0,num((character.coins||{})[k])));
+      /* coins are whole: the box shows what the draft holds (2.5 → 2, −3 → 0, over the cap → the cap) */
+      if(t.value!==""&&t.value!==String(v))t.value=String(v);
+      s.coins[k]=v;return tradeRefresh();
+    }
+    if(t.dataset.trcost){const g=d.get.items.find(x=>x.key===t.dataset.trcost);if(g)g.cost=Math.max(0,fnum(t.value));return tradeRefresh();}
+    if(t.dataset.trname){const g=d.get.items.find(x=>x.key===t.dataset.trname);if(g)g.name=t.value;return;}
+  });
+}
 /* ================= persistence ================= */
 const K_CHAR="hw-fb-char", K_SET="hw-fb-settings", K_RULES="hw-fb-rules", K_LIB="hw-fb-library";
 /* saveDue: an edit scheduleSave() has not written yet. The timer alone can't say
@@ -7981,7 +8638,7 @@ function migrate(s){
   /* AFTER both repairs: checklists and tasks become journal pages (#95). The
      new pages take fresh uid()s, which cannot collide with a repaired one. */
   migrateTrackerPages(base,Date.now());
-  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","editHide","journalCollapse","trackerCollapse","trackerTotals","ammoSpent"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
+  ["featCollapse","invCollapse","atkCollapse","grantGold","hdUsed","secNotes","noteCollapse","editHide","journalCollapse","trackerCollapse","trackerTotals","ammoSpent","ammoFight"].forEach(k=>{ if(!base[k]||typeof base[k]!=="object"||Array.isArray(base[k]))base[k]=blank[k]; });
   if(base.race!==null&&(typeof base.race!=="object"||Array.isArray(base.race)))base.race=null;
   if(base.bg!==null&&(typeof base.bg!=="object"||Array.isArray(base.bg)))base.bg=null;
   /* AFTER the list guards above, so it can rely on inventory being an array. */
@@ -8000,6 +8657,9 @@ function migrate(s){
   /* a marker only in Turns mode, and never on a dead row (final review m1) */
   base.combatTurn=base.initMode!=="turns"?"":base.combatants.some(r=>r.id===s.combatTurn&&!combatantDead(r))?String(s.combatTurn):initFirstAlive(base.combatants);
   base.initShowRolls=s.initShowRolls!==false;
+  /* #47: the inventory log */
+  base.invLogSize=INV_LOG_SIZES.indexOf(num(s.invLogSize))>=0?num(s.invLogSize):500;
+  base.invLog=cleanInvLog(s.invLog,base.invLogSize);
   migrateSheet103(base);
   return base;
 }
@@ -9248,14 +9908,21 @@ function openItemForm(existing){
   const iOrig=document.getElementById("iOrigin"),iOrigD=document.getElementById("iOrigDet");
   if(iOrig)iOrig.addEventListener("change",()=>{const d=originDef(iOrig.value);
     if(iOrigD){iOrigD.disabled=!iOrig.value;if(!iOrig.value)iOrigD.value="";iOrigD.placeholder=(d&&d.ph)||"place, who, etc.";}});
-  document.getElementById("iSave").addEventListener("click",()=>{
-    if(groupFieldBlocked("iCategory"))return;
+  /* The record Save writes, read from the form as it stands. ONE function
+     (#47, final review I1): the baseline taken as the form opens and the record
+     at Save are built the same way, so an unchanged Save writes no log line
+     however many fields the form fills in on its own — a potion's healing read
+     from its description, armour's AC, a missing used or qty. Nothing in it may
+     depend on the clock: an origin with no date takes the form's opening time.
+     Returns {rec}, or {err} with what to tell the player. */
+  const openedAt=Date.now();
+  const readRec=()=>{
     const rec={id:it.id,name:document.getElementById("iName").value.trim()||"Item",qty:(v=>v===""?1:Math.max(0,num(v)))(String(document.getElementById("iQty").value).trim()),description:document.getElementById("iDesc").value,effects:collectFx(fxWrap),equipped};
     const so=invSectionName(document.getElementById("iCategory").value);if(so)rec.sectionOverride=so;
     if(it.category)rec.category=it.category;if(it.type)rec.type=it.type;
     const cv=document.getElementById("iCost").value;if(cv!==""&&fnum(cv)>=0)rec.cost=fnum(cv);
     const wv=document.getElementById("iWeight").value;if(wv!==""&&fnum(wv)>0)rec.weight=fnum(wv);
-    const ok=document.getElementById("iOrigin").value;if(ok)rec.origin={kind:ok,detail:document.getElementById("iOrigDet").value.trim(),at:(it.origin&&it.origin.at)||Date.now()};
+    const ok=document.getElementById("iOrigin").value;if(ok)rec.origin={kind:ok,detail:document.getElementById("iOrigDet").value.trim(),at:(it.origin&&it.origin.at)||openedAt};
     if(it.grant)rec.grant=it.grant;
     if(it.attackId)rec.attackId=it.attackId;
     /* rec is rebuilt from the form, so anything the form doesn't ask about has to
@@ -9282,12 +9949,12 @@ function openItemForm(existing){
     if(isWeapon&&dice){rec.weapon={kind:document.getElementById("iWKind").value,ability:document.getElementById("iWAbil").value,dice,damageType:document.getElementById("iWType").value.trim(),notes:(wFrom&&wFrom.notes)||""};if(wFrom&&wFrom.atkMisc!=null)rec.weapon.atkMisc=wFrom.atkMisc;if(wFrom&&wFrom.dmgMisc!=null)rec.weapon.dmgMisc=wFrom.dmgMisc;}
     if(isWeapon&&dice&&rec.weapon){
       const wk=kindOf("iWAmmo","iWAmmoOther");
-      if(wk===null){alert("Name the kind of ammunition this weapon fires, or choose None.");return;}
+      if(wk===null)return {err:"Name the kind of ammunition this weapon fires, or choose None."};
       if(wk)rec.weapon.ammo=wk;
     }
     if(isAmmo){
       const k=kindOf("iAmmoKind","iAmmoKindOther");
-      if(!k){alert("Name the kind of ammunition, or untick Ammunition.");return;}
+      if(!k)return {err:"Name the kind of ammunition, or untick Ammunition."};
       const b=num(document.getElementById("iAmmoBonus").value);
       rec.ammo=b?{kind:k,bonus:b}:{kind:k};
     }
@@ -9304,7 +9971,7 @@ function openItemForm(existing){
     const um=Math.max(0,num(document.getElementById("iUses").value));
     if(um>0)rec.uses={max:um,per:document.getElementById("iUsesPer").value,used:Math.min(num(it.uses&&it.uses.used),um)};
     const heal=document.getElementById("iHeal").value.trim(), stName=document.getElementById("iStatus").value.trim();
-    if(heal&&!parseDiceExpr(heal)){alert(`“${heal}” isn't dice this app can roll. Try 2d4+2, 1d8, or a plain number.`);return;}
+    if(heal&&!parseDiceExpr(heal))return {err:`“${heal}” isn't dice this app can roll. Try 2d4+2, 1d8, or a plain number.`};
     if(heal||stName||consume){
       rec.use={};
       if(heal)rec.use.heal=heal;
@@ -9316,8 +9983,17 @@ function openItemForm(existing){
          straight back and clearing it could never stick. */
       rec.use={off:true};
     }
+    return {rec};
+  };
+  const base=readRec();
+  document.getElementById("iSave").addEventListener("click",()=>{
+    if(groupFieldBlocked("iCategory"))return;
+    const r=readRec();if(r.err){alert(r.err);return;}
+    const rec=r.rec,unchanged=!!existing&&!!base.rec&&invSame(base.rec,rec);
+    const was=invSnap(character.inventory.find(x=>x.id===it.id)||null);
     const i=character.inventory.findIndex(x=>x.id===it.id);if(i>=0)character.inventory[i]=rec;else character.inventory.push(rec);
     syncItemAttack(rec);
+    if(!unchanged)logItemSave(was,invSnap(character.inventory.find(x=>x.id===rec.id)));
     closeModal();renderInventory();renderAttacks();recompute();scheduleSave();
   });
 }
@@ -9373,6 +10049,10 @@ function addStatusByName(name){
    the status lands on another tab, so a silent apply leaves the player hunting
    for the change. */
 function applyItemUse(it,u,heal,note){
+  /* #47: a copy of the item, its attack and where both stood, every time —
+     Undo brings the copy back if the row has gone since (final review K1) */
+  const a0=(character.attacks||[]).find(a=>a.itemId===it.id)||null;
+  const snap0=invSnap(it),atk0=invSnap(a0),at0=character.inventory.indexOf(it),atkAt0=a0?character.attacks.indexOf(a0):null;
   const lines=[];
   if(heal>0){
     adjustHP(heal);renderHP();
@@ -9396,6 +10076,15 @@ function applyItemUse(it,u,heal,note){
       character.attacks=(character.attacks||[]).filter(a=>a.itemId!==it.id);
       lines.push("That was the last one — removed from your inventory");
     }else{it.qty=left;lines.push(`${left} left`);}
+  }
+  /* one log line, saying what is left — and none when the inventory didn't
+     move: healing or a status alone is not an item change (final review M4) */
+  if(u.consume||mx>0){
+    const said=[];
+    if(u.consume)said.push(`−1 · ${Math.max(0,itemQty(snap0)-1)} left`);
+    if(mx>0)said.push(`1 use · ${mx-num(it.uses.used)} of ${mx} left`);
+    logInv({kind:"use",title:"Used "+(it.name||"item"),lines:[{dir:"-",text:said.join(" · ")}],
+      undo:{id:it.id,qty:u.consume?1:0,used:mx>0?1:0,snap:snap0,atk:atk0,at:at0,atkAt:atkAt0}});
   }
   renderInventory();renderStatuses();renderAttacks();recompute();scheduleSave();
   restSummary("Used "+(it.name||"item"),lines.length?lines:["Nothing to apply — this item has no effect set."],"");
@@ -9703,7 +10392,10 @@ function openBrowse(cfg){
     else if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
   host.onchange=e=>{if(e.target.id==="brOrigin"){syncOrigDet();paintGroupBadges();}};
   host.onclick=e=>{let m;
-    if(e.target.closest("#brClose"))return closeBrowse();
+    /* cfg.onClose fires on the Close button only. Add calls cfg.onAdd and
+       + Custom calls cfg.onCustom instead; neither calls onClose (#47: the
+       trade window comes back through whichever of the three ran). */
+    if(e.target.closest("#brClose")){closeBrowse();if(cfg.onClose)cfg.onClose();return;}
     if(e.target.closest("#brFilters")){st.showFilters=!st.showFilters;render();return;}
     if(e.target.closest("#brCustom")){closeBrowse();if(cfg.onCustom)cfg.onCustom();return;}
     if(e.target.closest("#brClear")||e.target.closest("#brClearF")){clearAll();render();return;}
@@ -9711,7 +10403,7 @@ function openBrowse(cfg){
     if((m=e.target.closest("[data-brinfo]"))){const e2=(cfg.items||[]).find(x=>idOf(x)===m.dataset.brinfo);if(e2&&cfg.preview)cfg.preview(e2);return;}
     if((m=e.target.closest("[data-facet]"))){const set=st.facets[m.dataset.facet];if(set.has(m.dataset.val))set.delete(m.dataset.val);else set.add(m.dataset.val);render();return;}
     if((m=e.target.closest("[data-toggle]"))){st.facets[m.dataset.toggle]=!st.facets[m.dataset.toggle];render();return;}
-    if(e.target.closest("#brAdd")){const chosen=(cfg.items||[]).filter(x=>st.sel.has(idOf(x)));const os=document.getElementById("brOrigin"),od=document.getElementById("brOrigDet"),oc=document.getElementById("brCost");const og=(os&&os.value)?{kind:os.value,detail:(od?od.value.trim():""),at:Date.now()}:null;const costOverride=(oc&&oc.value!=="")?num(oc.value):null;const oq=document.getElementById("brQty"),qty=oq?finderQty(oq.value):1;if(chosen.length&&cfg.onAdd)cfg.onAdd(chosen,og,costOverride,qty);closeBrowse();return;}
+    if(e.target.closest("#brAdd")){const chosen=(cfg.items||[]).filter(x=>st.sel.has(idOf(x)));const os=document.getElementById("brOrigin"),od=document.getElementById("brOrigDet"),oc=document.getElementById("brCost");const og=(os&&os.value)?{kind:os.value,detail:(od?od.value.trim():""),at:Date.now()}:null;const costOverride=(oc&&oc.value!=="")?Math.max(0,fnum(oc.value)):null;const oq=document.getElementById("brQty"),qty=oq?finderQty(oq.value):1;if(chosen.length&&cfg.onAdd)cfg.onAdd(chosen,og,costOverride,qty);closeBrowse();return;}
     if((m=e.target.closest("[data-row]"))){const id=m.dataset.row;if(st.sel.has(id))st.sel.delete(id);else st.sel.add(id);m.classList.toggle("sel",st.sel.has(id));const mk=m.querySelector(".brk");if(mk)mk.textContent=st.sel.has(id)?"✓":(added((cfg.items||[]).find(x=>idOf(x)===id))?"•":"");foot();return;}
   };
   render();host.classList.add("show");const si=document.getElementById("brSearch");if(si)si.focus();
@@ -9726,12 +10418,13 @@ function finderQty(v){const n=Math.floor(Number(v));return Number.isFinite(n)&&n
    one linked attack however many are added. No rendering, so the suite can call it. */
 function addLibraryItems(entries,og,costOverride,qty){
   const n=finderQty(qty);
+  const out=[];
   entries.forEach(x0=>{
     /* A bundle ("Arrows (20)") arrives as its single piece, so the quantity is
        the count of arrows (#6): ×2 of a twenty-arrow bundle adds 40. */
     const u=unpackAmmo(x0,rules.items), x=u.def, add=n*u.per;
     const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());
-    if(ex){ex.qty=num(ex.qty)+add;return;}
+    if(ex){ex.qty=num(ex.qty)+add;out.push({id:ex.id,qty:add,created:false});return;}
     const m=itemMetaLine(x);
     const it={id:uid(),name:x.name,qty:add,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:!!x.weapon};
     if(og)it.origin=og;
@@ -9742,7 +10435,9 @@ function addLibraryItems(entries,og,costOverride,qty){
     stampSrc(it,x,"item","items","browse");
     character.inventory.push(it);
     if(it.weapon)addAttackForItem(it);
+    out.push({id:it.id,qty:add,created:true});
   });
+  return out;
 }
 /* ---- the pickers' filters, shared with the Rules tab (#99) ----
    Each returns the facet list openBrowse() takes. The Rules tab's tables filter
@@ -9776,24 +10471,31 @@ function spellFacets(lib,opts){
     {key:"conc",label:"Concentration",type:"toggle",match:e=>/concentration/i.test(e.meta||"")}
   ];
 }
-function browseItems(){
-  const lib=rules.items||[];
-  if(!lib.length)return openItemForm();
-  openBrowse({
+/* The item picker's list, search, filters, Qty and Cost: shared by Add and by
+   the trade window's "+ Find an item" (#47), which supplies its own added,
+   onCustom, onAdd and onClose, and no Origin (a trade's is always Traded). */
+function itemBrowseCfg(lib){
+  return {
     noun:"items", noun1:"item", items:lib, id:x=>x._id||x.name,
     search:x=>`${x.name} ${x.type||""} ${x.category||""} ${x.rarity||""}`,
     row:x=>({title:x.name,tag:(x.rarity&&x.rarity!=="Mundane")?x.rarity:(x.cost||"")}),
     sort:(a,b)=>String(itemCatOf(a)).localeCompare(String(itemCatOf(b)))||String(a.name||"").localeCompare(String(b.name||"")),
     group:x=>itemCatOf(x),
-    added:x=>character.inventory.some(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
     preview:x=>openItemInfo(x),
-    onCustom:()=>openItemForm(),
-    originSelect:true,
     costInput:true,
     facets:itemFacets(lib),
-    qtyInput:true,
-    onAdd:(entries,og,costOverride,qty)=>{addLibraryItems(entries,og,costOverride,qty);renderInventory();renderAttacks();recompute();scheduleSave();}
-  });
+    qtyInput:true
+  };
+}
+function browseItems(){
+  const lib=rules.items||[];
+  if(!lib.length)return openItemForm();
+  openBrowse(Object.assign(itemBrowseCfg(lib),{
+    added:x=>character.inventory.some(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase()),
+    onCustom:()=>openItemForm(),
+    originSelect:true,
+    onAdd:(entries,og,costOverride,qty)=>{const did=addLibraryItems(entries,og,costOverride,qty);logFinderAdd(did);renderInventory();renderAttacks();recompute();scheduleSave();}
+  }));
 }
 /* create an Attacks & Weapons entry linked to a weapon inventory item */
 function addAttackForItem(item){
@@ -10910,7 +11612,7 @@ function moveCombatSection(list,from,to){
 
 /* Start always means round 1, even over a round the Active Spells card left
    behind. Active spells are not touched: their time moves only when rounds do. */
-function combatStart(c){c.combatActive=true;c.combatRound=1;}
+function combatStart(c){c.combatActive=true;c.combatRound=1;c.ammoFight={};}
 /* The summary counts the round being ended as finished (round 7 → 7 rounds,
    42 sec), while the header shows the time at the START of the current round
    (combatElapsedSec: round 7 → 36 sec). Both on purpose — don't "fix" one to
@@ -11203,12 +11905,19 @@ function startCombatNow(){combatStart(character);renderActiveSpells();renderComb
 function endCombatAsk(){
   const r=num(character.combatRound);
   if(!confirm(`End combat at round ${r}?`))return false;
+  /* one log line per ammunition kind fired this fight (#47) — read before
+     combatEnd/applyAmmoRecovery below ever touch ammoSpent, and counting what
+     the rows' Recover already gave back (ammoFight). No undo of its own; the
+     toast's Undo recovery takes its recovery back off the line. */
+  const logged=ammoFightTotals(character).map(a=>({kind:a.kind,e:logInv({kind:"ammo",title:ammoLogTitle(a.kind,a.fired,a.back),
+    lines:[{dir:"",text:`Fight of ${r} round${r===1?"":"s"}`}],undo:null,meta:{rounds:r,kind:a.kind,fired:a.fired,back:a.back}})}));
+  character.ammoFight={};
   const s=combatEnd(character);
   renderActiveSpells();renderCombatChrome();scheduleSave();
   /* then the ammunition (#104): recovered by the rule, with an Undo recovery on the toast */
   const got=applyAmmoRecovery(), who=character;
   const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`+(got?` · ${got.text}`:"");
-  toast(msg,got?{label:"Undo recovery",run:()=>undoRecoveryTap(got.rec,who)}:undefined);setCombatLive(msg);
+  toast(msg,got?{label:"Undo recovery",run:()=>undoRecoveryTap(got.rec,who,{lines:logged,list:got.list})}:undefined);setCombatLive(msg);
   return true;
 }
 
@@ -12520,6 +13229,9 @@ function openSettings(){
     setGroupHTML("Ammunition",
       setRowHTML("Ammo recovery","What comes back after a fight. Thrown weapons and items set to Always come back anyway; firearm bullets never do.",
         `<select id="setAmmoRec" aria-label="Ammo recovery">${AMMO_RECOVERY.map(([v,l])=>`<option value="${esc(v)}"${ammoRecoveryOf(character)===v?" selected":""}>${esc(l)}</option>`).join("")}</select>`))+
+    setGroupHTML("Inventory",
+      setRowHTML("Inventory log size","How many lines of trades, items and coins the log keeps. Trimming it drops the oldest lines, and their Undo with them.",
+        `<select id="setInvLogSize" aria-label="Inventory log size">${INV_LOG_SIZES.map(v=>`<option value="${esc(String(v))}"${num(character.invLogSize)===v?" selected":""}>${esc(v.toLocaleString())}</option>`).join("")}</select>`))+
     tabsGroupHTML(character):"";
   const secCarrying=hasChar?setGroupHTML("Size and weight",
       setRowHTML("Size","From your ancestry unless you choose one. It sets your carrying capacity.",
@@ -12623,6 +13335,7 @@ function openSettings(){
     b.classList.toggle("on",show);b.setAttribute("aria-checked",show?"true":"false");
   }));
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
+  {const s=document.getElementById("setInvLogSize");if(s)s.addEventListener("change",()=>{if(!setInvLogSize(num(s.value)))s.value=String(character.invLogSize);});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
   document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
   document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());
@@ -14015,12 +14728,15 @@ function wire(){
     if((m=t.closest("[data-orig-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.origItem);if(it)openOriginInfo(itemOrigin(it));return;}
     if((m=t.closest("[data-orig-spell]"))){const sp=character.spells.find(x=>x.id===m.dataset.origSpell);if(sp)openOriginInfo(spellOrigin(sp));return;}
     if((m=t.closest("[data-edit-item]")))return openItemForm(character.inventory.find(x=>x.id===m.dataset.editItem));
-    if((m=t.closest("[data-del-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.delItem);if(it){const hasAtk=character.attacks.some(a=>a.itemId===it.id);if(confirm(`Delete “${it.name}”?${hasAtk?" Its linked attack will be removed too.":""}`)){character.inventory=character.inventory.filter(x=>x.id!==it.id);forgetAmmo(character,it.id);character.attacks=character.attacks.filter(a=>a.itemId!==it.id);renderInventory();renderAttacks();recompute();scheduleSave();}}return;}
+    if((m=t.closest("[data-del-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.delItem);if(it){const hasAtk=character.attacks.some(a=>a.itemId===it.id);if(confirm(`Delete “${it.name}”?${hasAtk?" Its linked attack will be removed too.":""}`)){const a0=character.attacks.find(a=>a.itemId===it.id)||null,atk0=invSnap(a0),at0=character.inventory.indexOf(it),atkAt0=a0?character.attacks.indexOf(a0):null;character.inventory=character.inventory.filter(x=>x.id!==it.id);forgetAmmo(character,it.id);character.attacks=character.attacks.filter(a=>a.itemId!==it.id);logInv({kind:"delete",title:"Deleted "+(it.name||"item"),lines:[{dir:"-",text:`${it.name||"item"} ×${itemQty(it)}`}],undo:{snap:invSnap(it),at:at0,atk:atk0,atkAt:atkAt0}});renderInventory();renderAttacks();recompute();scheduleSave();}}return;}
     if((m=t.closest("[data-toggle-item]"))){const it=character.inventory.find(x=>x.id===m.dataset.toggleItem);if(it){it.equipped=!it.equipped;renderInventory();recompute();scheduleSave();}return;}
     if((m=t.closest("[data-useitem]")))return useItem(m.dataset.useitem);
     /* Same "click pip i" semantics the feature and hit-dice pips have: tapping
        the pip that is currently the last spent one gives that use back. */
     if((m=t.closest("[data-iuse]"))){const it=character.inventory.find(x=>x.id===m.dataset.iuse);if(it&&it.uses){const i=num(m.dataset.i);it.uses.used=(num(it.uses.used)===i)?i-1:i;renderInventory();scheduleSave();}return;}
+    /* #47: the Log and the trade window each open their own dialog */
+    if(t.closest("#btnInvLog"))return openInvLog();
+    if(t.closest("#btnTrade"))return openTrade({});
     // spells
     if((m=t.closest("[data-edit-spell]")))return openSpellForm(character.spells.find(x=>x.id===m.dataset.editSpell));
     if((m=t.closest("[data-view-spell]")))return openSpellView(character.spells.find(x=>x.id===m.dataset.viewSpell));
