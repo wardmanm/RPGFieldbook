@@ -580,7 +580,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The public registry (R3)** — Drops the four packs in the removal commit
 - **How private packs are released (R4)** — Data-only releases, `X.Y.Z-N`, `fieldbook-data-private-<ver>.zip`, through `data-release.js --registry`
 - **A pack the build has no baseline for (R5)** — A quiet `vX` chip, the `known` state
-- **Shipped book quotes (R7)** — Invented examples in `downloadRulesTemplates()`, README-converter and rules-schema
+- **Shipped book quotes (R7)** — Invented examples in the templates Get templates used to download (removed in #102), README-converter and rules-schema
 - **`srd-corrections.json`'s `find` strings (R8)** — Kept, allowlisted; for Mike to confirm
 - **Where the leak scan lives (R9)** — The private repo, in Mike's local run and the private CI (push and nightly)
 - **Public tests (R10)** — Same logic, no book content: SRD entries or invented fixtures; pack assertions move private

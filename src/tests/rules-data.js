@@ -1077,28 +1077,29 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
 
 // ---------- Settings modal: the sidebar's pages (#107)
 ck('six pages, in the order the sidebar lists them',
-   X.SET_PAGES.map(p => p.k).join() === 'appearance,display,carrying,rules,backup,credits');
+   X.SET_PAGES.map(p => p.k).join() === 'appearance,display,carrying,extensions,backup,credits');
 ck('every page has a title, an icon and a unique key',
    X.SET_PAGES.every(p => p.title && /<(path|circle|rect|ellipse)/.test(p.icon)) && new Set(X.SET_PAGES.map(p => p.k)).size === 6);
 ck('only Sheet display and Carrying belong to a character',
    X.SET_PAGES.filter(p => p.scope === 'char').map(p => p.k).join() === 'display,carrying' &&
    X.SET_PAGES.every(p => p.scope === 'char' || p.scope === 'app'));
-ck('without a character the character pages are not shown', X.setPagesFor(false).map(p => p.k).join() === 'appearance,rules,backup,credits');
+ck('without a character the character pages are not shown', X.setPagesFor(false).map(p => p.k).join() === 'appearance,extensions,backup,credits');
 ck('...with one, all six are', X.setPagesFor(true).length === 6);
-ck('the remembered page opens', X.setPageOf('rules', false) === 'rules' && X.setPageOf('carrying', true) === 'carrying');
+ck('the remembered page opens', X.setPageOf('extensions', false) === 'extensions' && X.setPageOf('carrying', true) === 'carrying');
+ck('#102 a page remembered as "rules" (Rules data, before Extensions) opens Extensions', X.setPageOf('rules', true) === 'extensions');
 ck('a character page with no character open opens Appearance', X.setPageOf('display', false) === 'appearance');
 [undefined, null, '', 'nope', 7, {}, '__proto__', 'constructor'].forEach(bad =>
   ck('a stored page of ' + JSON.stringify(bad) + ' opens Appearance', X.setPageOf(bad, true) === 'appearance'));
-ck('setPageDef finds a page, and is null for rubbish', (X.setPageDef('rules') || {}).title === 'Rules data' && X.setPageDef('zzz') === null);
+ck('setPageDef finds a page, and is null for rubbish', (X.setPageDef('extensions') || {}).title === 'Extensions' && X.setPageDef('zzz') === null);
 {
-  const keys = ['appearance', 'rules', 'backup', 'credits'];
-  ck('↓ moves to the next shown page and wraps', X.setPageStep(keys, 'rules', 'ArrowDown') === 'backup' && X.setPageStep(keys, 'credits', 'ArrowDown') === 'appearance');
-  ck('↑ moves back and wraps', X.setPageStep(keys, 'rules', 'ArrowUp') === 'appearance' && X.setPageStep(keys, 'appearance', 'ArrowUp') === 'credits');
+  const keys = ['appearance', 'extensions', 'backup', 'credits'];
+  ck('↓ moves to the next shown page and wraps', X.setPageStep(keys, 'extensions', 'ArrowDown') === 'backup' && X.setPageStep(keys, 'credits', 'ArrowDown') === 'appearance');
+  ck('↑ moves back and wraps', X.setPageStep(keys, 'extensions', 'ArrowUp') === 'appearance' && X.setPageStep(keys, 'appearance', 'ArrowUp') === 'credits');
   ck('Home and End go to the ends', X.setPageStep(keys, 'backup', 'Home') === 'appearance' && X.setPageStep(keys, 'appearance', 'End') === 'credits');
-  ck('any other key, or a page not shown, stays put', X.setPageStep(keys, 'rules', 'x') === 'rules' && X.setPageStep(keys, 'display', 'ArrowDown') === 'display');
+  ck('any other key, or a page not shown, stays put', X.setPageStep(keys, 'extensions', 'x') === 'extensions' && X.setPageStep(keys, 'display', 'ArrowDown') === 'display');
 }
 {
-  const nav = X.setNavHTML(X.setPagesFor(true), 'carrying', {rules: '<span class="set-cnt">12</span>'});
+  const nav = X.setNavHTML(X.setPagesFor(true), 'carrying', {extensions: '<span class="set-cnt">12</span>'});
   ck('the sidebar is a vertical tab list', /role="tablist" aria-orientation="vertical"/.test(nav));
   ck('one tab per page, each tied to its panel',
      (nav.match(/role="tab"/g) || []).length === 6 && /id="setTab-carrying" data-setpage="carrying" aria-controls="setPage-carrying"/.test(nav));
@@ -1109,19 +1110,19 @@ ck('setPageDef finds a page, and is null for rubbish', (X.setPageDef('rules') ||
   ck('the character pages sit under their caption, set apart from the rest',
      nav.indexOf('data-setpage="appearance"') < nav.indexOf('This character') &&
      nav.indexOf('This character') < nav.indexOf('data-setpage="display"') &&
-     /data-setpage="carrying"[\s\S]*?class="set-sep"[\s\S]*?data-setpage="rules"/.test(nav));
+     /data-setpage="carrying"[\s\S]*?class="set-sep"[\s\S]*?data-setpage="extensions"/.test(nav));
   ck('no caption without a character', !/This character|set-sep/.test(X.setNavHTML(X.setPagesFor(false), 'appearance', {})));
-  ck('a badge is drawn only where given', /data-setbadge="rules"><span class="set-cnt">12<\/span>/.test(nav) && (nav.match(/data-setbadge/g) || []).length === 1);
+  ck('a badge is drawn only where given', /data-setbadge="extensions"><span class="set-cnt">12<\/span>/.test(nav) && (nav.match(/data-setbadge/g) || []).length === 1);
   ck('...and the tab that carries one is described by it, for a screen reader',
-     /data-setpage="rules"[^>]*aria-describedby="setBadgeDesc-rules"/.test(nav) && (nav.match(/aria-describedby/g) || []).length === 1);
+     /data-setpage="extensions"[^>]*aria-describedby="setBadgeDesc-extensions"/.test(nav) && (nav.match(/aria-describedby/g) || []).length === 1);
 }
 {
   const page = X.setPageHTML('carrying', '<p>x</p>', {active: true, sub: 'For <b>Pib</b>'});
   ck('a page is the tab panel its tab names',
      /<section class="set-page" role="tabpanel" id="setPage-carrying" aria-labelledby="setTab-carrying" data-setpagebody="carrying">/.test(page), page);
   ck('...titled, with its subtitle escaped', /class="set-ptitle">Carrying</.test(page) && page.includes('For &lt;b&gt;Pib&lt;/b&gt;'));
-  const off = X.setPageHTML('rules', '<p>y</p>', {});
-  ck('an inactive page is in the dialog, hidden', /data-setpagebody="rules" hidden>/.test(off) && off.includes('<p>y</p>'));
+  const off = X.setPageHTML('extensions', '<p>y</p>', {});
+  ck('an inactive page is in the dialog, hidden', /data-setpagebody="extensions" hidden>/.test(off) && off.includes('<p>y</p>'));
   ck('an unknown page draws nothing', X.setPageHTML('zzz', '<p>x</p>', {active: true}) === '');
 }
 {
@@ -1137,10 +1138,10 @@ ck('setPage is a setting a file is recognised by', X.SETTINGS_KEYS.includes('set
 ck('...defaulting to Appearance',
    /let settings=\{[^\n]*setPage:"appearance"[^\n]*\};/.test(fs.readFileSync(path.join(ROOT, 'src/js/00-constants.js'), 'utf8')));
 X.resetRules();
-ck('the Rules data badge shows nothing with nothing loaded, and says so to a screen reader',
-   X.rulesNavBadgeHTML() === '<span id="setBadgeDesc-rules" hidden>none loaded</span>', X.rulesNavBadgeHTML());
+ck('the Extensions badge shows nothing with nothing loaded, and says so to a screen reader',
+   X.rulesNavBadgeHTML() === '<span id="setBadgeDesc-extensions" hidden>none loaded</span>', X.rulesNavBadgeHTML());
 X.mergeRules({system: 'XPHB', spells: [{name: 'Bless'}, {name: 'Shield'}]}, 'x.json');
-ck('...and counts the pool once something is', X.rulesNavBadgeHTML() === '<span class="set-cnt" title="2 entries">2</span><span id="setBadgeDesc-rules" hidden>2 entries</span>', X.rulesNavBadgeHTML());
+ck('...and counts the pool once something is', X.rulesNavBadgeHTML() === '<span class="set-cnt" title="2 entries">2</span><span id="setBadgeDesc-extensions" hidden>2 entries</span>', X.rulesNavBadgeHTML());
 X.resetRules();
 ck('entry count is zero with nothing loaded', X.rulesEntryCount() === 0);
 X.mergeRules({system: 'XPHB', races: [{name: 'Elf'}, {name: 'Orc'}], spells: [{name: 'Bless'}]}, 'x.json');
@@ -2289,12 +2290,23 @@ function block(html, needle, tag) {
   const used = ids(/getElementById\("([A-Za-z][\w-]*)"\)/g);
   // #setSections is built by openSettings itself, outside the section markup
   declared.add('setSections');
+  /* #102: the Extensions page is drawn by extPageHTML() in 89-extensions.js
+     and wired there by wireExtPage(), delegated from #extPage */
+  const ext = fs.readFileSync(path.join(ROOT, 'src/js/89-extensions.js'), 'utf8');
+  const extMarkup = ext.slice(ext.indexOf('function extSecHTML('), ext.indexOf('function extRowFor('));
+  const extWire = ext.slice(ext.indexOf('function wireExtPage('));
+  const extIds = new Set(); { const re = /\bid="([A-Za-z][\w-]*)"/g; let m; while ((m = re.exec(extMarkup))) extIds.add(m[1]); }
+  extIds.forEach(k => declared.add(k));
   const missing = [...used].filter(k => !declared.has(k));
   ck('every control openSettings looks up exists in its markup', missing.length === 0, missing);
   // ids the modal renders but never wires are dead weight or a forgotten handler
-  const inert = new Set(['srcList', 'rulesData', 'rulesStatus', 'encHint', 'setSections']);
-  const unwired = [...declared].filter(k => !used.has(k) && !inert.has(k));
+  const inert = new Set(['rulesStatus', 'extSaveErr', 'encHint', 'setSections', 'extPage']);
+  const unwired = [...declared].filter(k => !used.has(k) && !inert.has(k) &&
+    !(extIds.has(k) && (extWire.includes('"#' + k + '"') || extWire.includes('getElementById("' + k + '")'))));
   ck('every control it renders is wired up somewhere', unwired.length === 0, unwired);
+  ck('#102 the Extensions page draws each of the hooks Task 6 relies on',
+    ['extPage', 'extUpdateAll', 'extCheckNow', 'extManual', 'extAddUrl', 'extAddGo', 'extRemoveRules', 'extRemoveSources', 'rulesStatus'].every(k => extIds.has(k)),
+    [...extIds]);
 }
 
 // ---------- Settings modal: each control on its page (#107)
@@ -2306,7 +2318,10 @@ function block(html, needle, tag) {
   ck('Sheet display holds the card choices', on('secDisplay', ['swHpColor', 'swTrackers']));
   ck('#103 ...and the advancement choice and the familiars icon', on('secDisplay', ['segAdv', 'swFamiliars']));
   ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
-  ck('Rules data holds the sources, the list and the sheet check', on('secRules', ['srcList', 'newSrc', 'btnFetchRules', 'btnClearRules', 'rulesData', 'btnCharUpdate']));
+  ck('#102 Extensions is the extensions page, the file input and the sheet check',
+     /const secRules=extPageHTML\(\)\+/.test(sec('secRules')) && on('secRules', ['fileRules', 'btnCharUpdate']));
+  ck('#102 the old source list, Fetch all, Get templates and Clear all are gone',
+     !/srcList|newSrc|addSrc|btnFetchRules|btnImportRules|btnRulesTemplate|btnClearRules|id="rulesData"|renderSrcRows|downloadRulesTemplates/.test(src));
   ck('Backup holds the library and the settings file', on('secBackup', ['swHome', 'btnExportSettings', 'btnImportSettings', 'setImpStatus']));
   ck('encumbrance is a segmented choice now, not a dropdown', !/id="setEnc"/.test(src) &&
      /character\.encumbrance=b\.dataset\.enc;/.test(src) && ['none', 'standard', 'variant'].every(v => sec('secCarrying').includes('["' + v + '",')));
@@ -2323,7 +2338,10 @@ function block(html, needle, tag) {
   /* spec §7: a duplicated id would let getElementById wire one copy and leave the
      other dead; the two-way check above collects ids into a Set, so count here */
   {
-    const body = src.slice(src.indexOf('function openSettings()'), src.indexOf('function encSettingsHint('));
+    /* #102: with the Extensions page's own markup, which openSettings() draws */
+    const extSrc = fs.readFileSync(path.join(ROOT, 'src/js/89-extensions.js'), 'utf8');
+    const body = src.slice(src.indexOf('function openSettings()'), src.indexOf('function encSettingsHint(')) +
+      extSrc.slice(extSrc.indexOf('function extSecHTML('), extSrc.indexOf('function extRowFor('));
     const counts = {};
     (body.match(/\bid="([A-Za-z][\w-]*)"/g) || []).forEach(m => { const k = m.slice(4, -1); counts[k] = (counts[k] || 0) + 1; });
     const twice = Object.keys(counts).filter(k => counts[k] > 1);
@@ -2337,7 +2355,7 @@ function block(html, needle, tag) {
      ['segSkin', 'segTheme', 'segAdv', 'segEnc'].every(id => /aria-pressed="\$\{/.test((src.match(new RegExp('id="' + id + '"[\\s\\S]{0,700}')) || [''])[0])) &&
      /const g=e\.target\.closest\("\.seg"\);if\(g\)g\.querySelectorAll\("button"\)\.forEach\(b=>b\.setAttribute\("aria-pressed",b\.classList\.contains\("on"\)\?"true":"false"\)\);/.test(src));
   ck('the badge refresh targets the sidebar',
-     /querySelector\('\[data-setbadge="rules"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));
+     /querySelector\('\[data-setbadge="extensions"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));
   const mcss = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8');
   /* review: a sticky sidebar inside one scroller was cut off on a landscape phone
      until the page was scrolled to its end; each pane scrolls on its own now */
@@ -3024,7 +3042,7 @@ function block(html, needle, tag) {
   const chip = {innerHTML: 'STALE'};
   const getById = ctx.document.getElementById;
   ctx.document.getElementById = id => id === 'rulesStatus' ? status : getById(id);
-  ctx.document.querySelector = sel => /data-setbadge="rules"/.test(sel) ? chip : null;
+  ctx.document.querySelector = sel => /data-setbadge="extensions"/.test(sel) ? chip : null;
   // drain every microtask the fetch chain queues, whether or not it returns a promise
   const run = async () => { calls = []; await X.fetchAllRules(); await new Promise(r => setImmediate(r)); };
   const cache = () => store[X.K_RULES];

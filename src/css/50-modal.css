@@ -93,9 +93,6 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .set-row-ctl .seg{min-width:250px}
 .set-row-ctl select{width:250px}
 .set-btns{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
-.set-addsrc{display:flex;gap:7px;margin:4px 0}
-.set-actions{justify-content:flex-start;margin-top:8px;flex-wrap:wrap}
-.set-actions #btnClearRules{margin-left:auto}
 .m-body p.set-note{margin:8px 0 0}
 /* the icon rail: Icon tabs on (applyTheme() sets html[data-tabs]), or a narrow screen */
 html[data-tabs="icons"] .set-wrap{grid-template-columns:52px minmax(0,1fr);gap:0 14px}
@@ -113,6 +110,54 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
   .set-row-ctl .seg,.set-row-ctl select{min-width:0;width:100%}
   .set-btns{justify-content:flex-start}
 }
+/* #102 the Extensions page (Settings → Extensions) and its details dialog.
+   Every button is a 44px target, except a section's Remove all (32px, a
+   deliberate secondary target) */
+.ext-sec{margin:0 0 14px}
+.ext-sec-h{display:flex;align-items:center;gap:8px;border-bottom:1.5px solid var(--line);margin-bottom:8px}
+.ext-fold{flex:1;min-width:0;display:flex;align-items:center;gap:8px;min-height:44px;background:none;border:0;padding:0;font-family:var(--head);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);text-align:left;cursor:pointer}
+.ext-fold:focus-visible{outline:2px solid var(--accent-2);outline-offset:1px}
+.ext-car{width:12px;font-size:10px}
+.ext-n{letter-spacing:0;text-transform:none;font-family:var(--body);font-size:12px}
+.ext-secbtn{min-height:32px;padding:4px 10px;flex:none}
+.ext-banner{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;margin:0 0 12px;border:1.5px solid var(--warn);border-radius:8px;background:var(--panel)}
+.ext-grow{flex:1 1 160px;min-width:0;overflow-wrap:anywhere}
+.ext-list{border:1px solid var(--hair);border-radius:8px;background:var(--panel)}
+.ext-row,.ext-src{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-top:1px dotted var(--hair)}
+.ext-row:first-child,.ext-src:first-child{border-top:0}
+.ext-main{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}
+.ext-name{display:inline-flex;align-items:center;max-width:100%;background:none;border:0;padding:0;min-height:44px;font-family:var(--head);font-size:14px;font-weight:700;color:var(--ink);text-align:left;cursor:pointer;text-decoration:underline dotted var(--line);text-underline-offset:3px;overflow-wrap:anywhere}
+.ext-main>.chip,.ext-main>.rd-src{white-space:nowrap;display:inline-block;margin-left:4px}
+.ext-sum{font-size:13px;color:var(--ink-soft)}
+.ext-from{font-size:12px;color:var(--ink-soft);opacity:.85}
+.ext-from.ext-err{color:var(--brick);opacity:1}
+.ext-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.chip.ext-req{border:1px solid var(--brick);color:var(--brick);background:none;font-family:var(--head);text-decoration:none;text-transform:none}
+/* a requirement chip that does something is small to look at, and 44px to tap */
+button.chip.ext-req,a.chip.ext-req{position:relative;cursor:pointer}
+button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%)}
+/* nothing to tap: a source doesn't offer it and it gave no link */
+.chip.ext-req.ext-plain{border-style:dashed;opacity:.85}
+.chip.ext-app{border:1px solid var(--warn);color:var(--warn);background:none;text-transform:none}
+/* the version, the action and the delete wrap as one unit, never one by one */
+.ext-side{display:flex;align-items:center;gap:8px;flex:none;margin-left:auto}
+.ext-src .ext-main{flex-basis:150px}
+.ext-ver{font-family:ui-monospace,monospace;font-size:12px;color:var(--ink-soft);white-space:nowrap}
+.ext-up{color:var(--accent-2)}
+.ext-act{min-height:44px}
+/* the app's switch is 28px tall; its ::after is the knob, so ::before widens the tap */
+.ext-src .switch::before{content:"";position:absolute;left:-4px;right:-4px;top:-10px;bottom:-10px}
+.ext-del{width:44px;height:44px;flex:none}
+.ext-add{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ext-add input{flex:1 1 220px;min-width:0;min-height:44px}
+.ext-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.m-body .ext-dlg p{margin:0 0 8px}
+.ext-meta{font-size:12px;color:var(--ink-soft);margin:0 0 8px}
+.ext-box{border:1px solid var(--hair);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:13px;background:var(--panel);overflow-wrap:anywhere}
+.ext-box div{padding:2px 0}
+.ext-k{display:inline-block;width:84px;color:var(--ink-soft)}
+.ext-box a{color:var(--accent-2);text-decoration:underline;text-underline-offset:2px}
+.ext-dlg .m-actions .tbtn{min-height:44px}
 /* the download offer at the top of the changelog while an update is pending —
    the pill replaced the version button, so this is the only route to the release */
 .updbanner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;

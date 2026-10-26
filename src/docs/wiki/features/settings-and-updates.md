@@ -12,10 +12,11 @@ credits that the icons and the loaded packs require.
 `removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataUpdateFor()`, `dataStatusHTML()`,
 `rulesCacheWarning()`, `rulesBadge()`, `rulesCreditsHTML()`, `SETTINGS_KEYS`, `foldLegacySettings()`, `readSettingsFile()`, `importSettings()`,
 `rulesPackSummary()`, `settingsImportQuestionHTML()`, `askSettingsImport()`,
-`finishSettingsImport()`, `settingsImportStatus()` in `88-settings.js` · `renderSrcRows()`,
+`finishSettingsImport()`, `settingsImportStatus()` in `88-settings.js` ·
 `renderRulesData()`, `rulesDataHTML()`, `dataUpdateHint()`, `fetchAllRules()`, `fetchRulesFrom()`,
-`applyFetchedSource()`, `importRulesFiles()`, `poolFromExport()`, `downloadRulesTemplates()`,
-`requiresStatusHTML()` in `89-rules-merge.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
+`applyFetchedSource()`, `importRulesFiles()`, `poolFromExport()`,
+`requiresStatusHTML()` in `89-rules-merge.js` · `extPageHTML()`, `extRowHTML()`, `extSourcesHTML()`,
+`extDetailsHTML()`, `openExtDetails()`, `renderExtUI()`, `wireExtPage()` in `89-extensions.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
 `cmpDataVer()`, `checkForUpdate()`, `showUpdatePill()`, `updBannerHTML()`, `openChangelog()`,
 `pickDataRelease()`, `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js` ·
 `boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js` in
@@ -46,7 +47,7 @@ and actions are buttons.
 | **Appearance** | *Look:* skin (changing it with a character open also sets its `system`), mode (system/light/dark), hand-drawn borders. *Interface:* icon tabs, "Tap outside to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)) |
 | **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card. *Ammunition* (#104): "Ammo recovery" — Half (rules as written) / All / Hits only / None, writing `character.ammoRecovery`. *Inventory* (#47): "Inventory log size" — 100 / 250 / 500 / 1,000 / 2,500 (`INV_LOG_SIZES`), through `setInvLogSize()`, which writes `character.invLogSize` and trims `character.invLog` at once: a smaller size that would drop lines first asks "Keep the newest 100? This removes 2,400 older lines.", and declined, the size and the select stay as they were (see [Inventory](inventory.md)). *Tabs* (#52): one switch per word tab, writing `character.hiddenTabs` |
 | **Carrying** | Only with a character open, titled "For *name*". *Size and weight:* size (a dropdown), encumbrance (segmented: Off, Standard, Variant), coins count as weight, and the live "carrying X of Y" line (`encSettingsHint()`) |
-| **Rules data** | *Sources:* the URL list and its Add box, Fetch all, Import files, Get templates, Clear all (set apart), the status line. *Loaded data:* the loaded-data list. *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against |
+| **Extensions** (Rules data until #102; a stored `setPage:"rules"` opens it) | The updates banner, *Rules data* (one row per loaded or offered pack, its own Remove all), *Unsupported*, *Sources* (with Add a source URL, Check now, Manual install…), the status line. *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against. The Sources list, Loaded data, Fetch all, Get templates and Clear all described below were removed in #102; Task 7 of #102 rewrites this page |
 | **Backup** | *Characters:* the character library. *Settings file:* Export and Import, and the status line that says what an import did (`#setImpStatus`) |
 | **Credits** | The game-icons.net attribution CC BY 3.0 requires, in the app because `fieldbook.html` travels as a lone file (see [Theming & icons](../ui/theming-and-icons.md)); then "Rules data you have loaded" (`rulesCreditsHTML()`): each loaded pack that states a licence or a credit, as its title, its attribution and its licence. `CC-BY-4.0`, `CC-BY-SA-3.0` and `MIT` link to their licence pages; any other id is plain text; everything is escaped. The list is left out when no loaded pack has a credit. The credits come from `rules.credits` (see [Data archive](../architecture/data-archive.md)) |
 
@@ -98,8 +99,8 @@ sources hint says it needs a connection. The mechanics are in
 name, replacing what that file loaded before. The status line says "Reading N files…" at once, then
 names each zip with its pack count and data version, and each file that failed with the reason
 ("Couldn't import 83-locked.zip: it's password-protected."), on the home screen's status line too
-(see [Data archive](../architecture/data-archive.md)); **Get templates** downloads a manifest and one
-example file per category; **Clear all** confirms, says characters are unaffected, and empties the
+(see [Data archive](../architecture/data-archive.md)); **Get templates** used to download a manifest
+and one example file per category (removed in #102); **Clear all** confirms, says characters are unaffected, and empties the
 pool. A legacy `settings.rulesUrl` is folded into the list at boot.
 
 **Loaded data.** `rulesDataHTML()` (also shown in the home screen's setup) groups what is loaded by

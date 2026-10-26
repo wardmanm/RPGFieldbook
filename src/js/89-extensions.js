@@ -196,7 +196,9 @@ function extFetchBytes(url,ms,cap){
     if(!r||!r.ok){const e=new Error("HTTP "+(r?r.status:"error"));e.status=r?r.status:0;throw e;}
     if(cap){
       const len=r.headers&&typeof r.headers.get==="function"?num(r.headers.get("content-length")):0;
-      if(len>cap)throw new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");
+      /* abort first, so the refusal really stops the download rather than
+         leaving the body streaming in behind it (#102 Task 4 follow-up N4) */
+      if(len>cap){if(ac)ac.abort();throw new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");}
     }
     return r.arrayBuffer();
   });
@@ -237,13 +239,16 @@ function checkSource(src){
     src.error=String((e&&e.message)||e||"it couldn't be reached");
   });
 }
-/* The last "couldn't save your sources" error from a boot-time checkSources()
-   — boot stays quiet (spec §4), but a storage failure still has to be
-   reported somewhere (constraint 2), not swallowed; Task 5's Extensions page
-   reads this to show it. Cleared the next time any save lands, boot or not
-   (#102 fix round 1, Important 3). */
+/* The last "couldn't save your sources" error from a checkSources() save —
+   boot stays quiet (spec §4), but a storage failure still has to be reported
+   somewhere (constraint 2), not swallowed; the Extensions page shows it as
+   "at the last check". Set by checkSources(); cleared by any successful
+   settings save in this fragment — checkSources(), addSource() and
+   runInstall() — since each one writes the same sources (#102 fix round 1,
+   Important 3; Task 4 follow-up N3). */
 let extSaveError="";
 function extSaveErrorText(){return extSaveError;}
+function extSaveOk(err){if(!err)extSaveError="";return err;}
 /* Every enabled manifest source, and the official one: at boot (quiet, never
    offline) and on Check now. Reads manifests only, never pack files. */
 function checkSources(opts){
@@ -285,14 +290,17 @@ function addSource(url){
        runInstall) */
     if(!Array.isArray(settings.sources))settings.sources=[];
     settings.sources.push(src);
-    const err=saveSettings();
+    const err=extSaveOk(saveSettings());
     return {ok:true,why:err?"Added, but your settings couldn't be saved: "+err
       :(empty?"Added, but it offers nothing this Fieldbook can install.":"")};
   },e=>{
     const base="It couldn't be reached: "+((e&&e.message)||e)+".";
-    /* "Failed to fetch" (no e.status) is also what a host with no CORS
-       header produces — hint at that too (#102 fix round 1, Minor 2) */
-    return {ok:false,why:(e&&e.status)?base:base+" It may also be blocking requests from other sites — it must allow cross-origin reads."};
+    /* fetch() rejects with a TypeError ("Failed to fetch") for a network
+       failure, which is also what a host with no CORS header produces — hint
+       at that, but only then: never on our own timeout or an HTTP status
+       (#102 fix round 1, Minor 2; Task 4 follow-up N2). By name, not
+       instanceof: the error can come from another realm. */
+    return {ok:false,why:(e&&e.name==="TypeError")?base+" It may also be blocking requests from other sites — it must allow cross-origin reads.":base};
   });
 }
 /* ---- candidates (spec §5 step 1) ---- */
@@ -317,8 +325,10 @@ function offerCandidate(o){
    folders (#102 fix round 1, Minor 3: "root/one/x_full.json" and
    "root/two/x_full.json" used to both match the first manifest found,
    anywhere in the drop, because only their shared BASE name was compared).
-   One that can't be read is skipped quietly: it is a manifest file, never a
-   rules pack, so it is never reported as "it isn't a rules pack". */
+   One that can't be read is reported in `failed` with why (its packs then
+   install without a sha256 check, and the player should know); a readable
+   one is never reported, and never as "it isn't a rules pack" (#102 Task 4
+   follow-up N1). */
 function manualCandidates(payloads){
   const cands=[],failed=[],list=Array.isArray(payloads)?payloads:[];
   const fromBytes=(name,bytes,entry,kind)=>{
@@ -346,8 +356,9 @@ function manualCandidates(payloads){
     const path=String((p&&(p.path||p.name))||"");
     if(path.split("/").pop()!=="fieldbook-data.json")return;
     manFiles.add(p);
-    if(!p.bytes||!ArrayBuffer.isView(p.bytes))return;
-    let man;try{man=readManifest(JSON.parse(utf8Text(p.bytes)),p.bytes.length);}catch(e){return;}
+    if(!p.bytes||!ArrayBuffer.isView(p.bytes)){failed.push({name:path,why:"its manifest couldn't be read"});return;}
+    let obj;try{obj=JSON.parse(utf8Text(p.bytes));}catch(e){failed.push({name:path,why:"its manifest isn't valid JSON"});return;}
+    let man;try{man=readManifest(obj,p.bytes.length);}catch(e){failed.push({name:path,why:"its manifest can't be used: "+((e&&e.message)||e)});return;}
     const dir=path.slice(0,path.length-"fieldbook-data.json".length);
     man.packs.forEach(entry=>{metaByPath.set(dir+entry.path,entry);});
   });
@@ -494,7 +505,7 @@ function runInstall(lines){
       reindexRules();recomputeDups();
       return {ok:false,installed:[],error:{file:failFile,why:"it couldn't be merged: "+String((e&&e.message)||e)},saveErr:"",skipped:{}};
     }
-    const setErr=saveSettings();
+    const setErr=extSaveOk(saveSettings());
     /* a saveRulesCache() rejection (it never does today — every failure it
        hits is caught and falls back to localStorage — but must not be
        trusted to stay that way) becomes `saveErr` too, instead of leaving
@@ -506,4 +517,235 @@ function runInstall(lines){
       return {ok:true,installed,error:null,saveErr:[cacheErr,setErr].filter(Boolean).join(" "),skipped};
     });
   });
+}
+/* ---- the Extensions page (spec §6.2) ----
+   Settings → Extensions: one section per category (only rules today), then
+   Unsupported, then Sources. Every string a manifest supplies is escaped here;
+   only http(s) URLs ever become links (extUrl() in readManifest/extEntry). */
+function extParas(t){return String(t||"").split(/\n\s*\n/).map(s=>s.trim()).filter(Boolean).map(s=>`<p>${esc(s)}</p>`).join("");}
+/* "checked 9:02 pm" (today) or "checked 24/10/2026 9:02 pm"; `bare` drops the
+   word, for the dialog's "Checked" line */
+function extAgo(t,bare){
+  if(!t)return bare?"not yet":"not checked yet";
+  const d=new Date(t);
+  return (bare?"":"checked ")+(new Date().toDateString()===d.toDateString()?"today, ":d.toLocaleDateString()+" ")+d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+}
+function extSourceName(src){
+  if(src.kind==="official")return "Fieldbook public data";
+  return (src.manifest&&src.manifest.name)||String(src.url||"").replace(/^https?:\/\//i,"");
+}
+/* a loaded pack's contents, "12 spells · 3 classes": what the old Loaded data
+   list showed, kept for a pack no manifest describes */
+function extCatsLine(g){return g?Object.entries(g.cats).map(([c,n])=>`${n} ${n===1?(CAT_ONE[c]||c):catName(c).toLowerCase()}`).join(" · "):"";}
+/* A requirement chip (spec decision 14): a button that opens the pack's details
+   when a source offers it; otherwise a link when the requirement carries an
+   http(s) url; otherwise a plain label. One helper for rows and the dialog. */
+function extReqOffer(r){return extOffers().find(o=>o.entry.system===r.pack&&(!r.file||o.entry.file===r.file))||null;}
+function extReqChip(r){
+  const lbl=`requires ${esc(r.pack)}`,u=extUrl(r.url);
+  if(extReqOffer(r))return `<button type="button" class="chip ext-req" data-ext-req="${esc(r.pack)}">${lbl}</button>`;
+  if(u)return `<a class="chip ext-req" data-ext-req="${esc(r.pack)}" href="${esc(u)}" target="_blank" rel="noopener">${lbl}</a>`;
+  return `<span class="chip ext-req ext-plain" data-ext-req="${esc(r.pack)}">${lbl}</span>`;
+}
+function extMissingReqs(entry){
+  return (entry&&entry.requires||[]).filter(r=>!loadedRulesGroups().some(g=>g.source===r.pack));
+}
+/* the "requires Fieldbook …" chips of an entry: Ruling 2's wording, from
+   extTooNewWhy(), the same helper the install plan uses */
+function extChipsHTML(r){
+  const e=r.offer&&r.offer.entry,chips=[];
+  if(e&&(r.state==="blocked"||r.state==="unsupported"))chips.push(`<span class="chip ext-app">${esc(extTooNewWhy(e))}</span>`);
+  if(e)extMissingReqs(e).forEach(rq=>chips.push(extReqChip(rq)));
+  return chips.length?`<div class="ext-chips">${chips.join("")}</div>`:"";
+}
+function extSecHTML(key,title,count,body,action){
+  const shut=!!(settings.setCollapse||{})["ext:"+key];
+  return `<section class="ext-sec">`+
+    `<div class="ext-sec-h"><button type="button" class="ext-fold" data-ext-sec="${esc(key)}" aria-expanded="${shut?"false":"true"}"><span class="ext-car" aria-hidden="true">${shut?"▸":"▾"}</span>${esc(title)}${count!=null?` <span class="ext-n">${esc(String(count))}</span>`:""}</button>${action||""}</div>`+
+    `<div class="ext-sec-b"${shut?" hidden":""}>${body}</div></section>`;
+}
+function extRowTitle(r){
+  const g=r.group,o=r.offer;
+  return o?o.entry.title:(g?(g.isFile&&g.source?g.source:g.label):r.key);
+}
+function extRowHTML(r){
+  const g=r.group,o=r.offer,e=o&&o.entry,title=extRowTitle(r);
+  const from=g
+    ?(o&&(settings.packOrigin||{})[r.key]===o.source.id?"from "+extSourceName(o.source)
+      :(g.isFile?"imported from a file · "+g.label:"fetched from a source URL"))
+    :(o?"from "+extSourceName(o.source)+" · not installed":"");
+  const have=g&&parseDataVer(g.dataVersion)?g.dataVersion:"";
+  let ver="",act="";
+  if(r.state==="update"){ver=`${esc(have||"—")} → <b class="ext-up">${esc(e.version)}</b>`;act=`<button type="button" class="tbtn ext-act" data-ext-update="${esc(r.key)}">Update</button>`;}
+  else if(r.state==="install"){ver=`<b>${esc(e.version)}</b>`;act=`<button type="button" class="tbtn ext-act" data-ext-install="${esc(r.key)}">Install</button>`;}
+  else if(have)ver=esc(have);
+  else if(e)ver=esc(e.version);
+  /* the boot check's "update available" chips only where no source offers the
+     pack (an offer says the same with an Update button); the plain version
+     chip never, since the version column shows it */
+  const st=g&&!o?dataStatus(g).state:"";
+  const status=g?((st==="stale"||st==="update")?dataStatusHTML(g):"")+requiresStatusHTML(g):"";
+  const sum=(e&&e.summary)||extCatsLine(g);
+  const del=g?`<button type="button" class="icon danger ext-del" data-rd-del="${esc(g.key)}" aria-label="${esc("Remove "+title)}" title="Remove this data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0 1 14h8l1-14"/></svg></button>`:"";
+  return `<div class="ext-row"><div class="ext-main"><button type="button" class="ext-name" data-ext-open="${esc(r.key)}">${esc(title)}</button>${status}`+
+    (sum?`<div class="ext-sum">${esc(sum)}</div>`:"")+
+    (from?`<div class="ext-from">${esc(from)}</div>`:"")+
+    extChipsHTML(r)+
+    `</div>${ver||act||del?`<div class="ext-side">${ver?`<span class="ext-ver">${ver}</span>`:""}${act}${del}</div>`:""}</div>`;
+}
+function extSourcesHTML(){
+  const rows=(settings.sources||[]).map(s=>{
+    const name=extSourceName(s),note=s.kind==="plain"?"plain file":(s.error?"couldn't check: "+s.error:extAgo(s.checked));
+    const sub=s.kind==="official"?"built in · "+note:(s.kind==="manifest"?String(s.url).replace(/^https?:\/\//i,"")+" · "+note:note);
+    const ctl=s.kind==="official"
+      ?`<button type="button" class="switch ${s.on?"on":""}" data-ext-src-on="${esc(s.id)}" role="switch" aria-checked="${s.on?"true":"false"}" aria-label="Use Fieldbook public data"></button>`
+      :(s.kind==="plain"?`<button type="button" class="tbtn ext-act" data-ext-src-fetch="${esc(s.id)}">Fetch</button>`:"")+`<button type="button" class="tbtn ext-act" data-ext-src-del="${esc(s.id)}">Remove</button>`;
+    return `<div class="ext-src"><div class="ext-main"><b>${esc(name)}</b><div class="ext-from${s.error?" ext-err":""}">${esc(sub)}</div></div>${ctl}</div>`;
+  }).join("");
+  return (rows?`<div class="ext-list">${rows}</div>`:"")+
+    `<div class="ext-add"><input id="extAddUrl" type="url" inputmode="url" placeholder="https://…/fieldbook-data.json" aria-label="Source URL"><button type="button" class="tbtn ext-act" id="extAddGo">+ Add a source URL</button></div>`+
+    `<div class="ext-acts"><button type="button" class="tbtn ext-act" id="extCheckNow">Check now</button><button type="button" class="tbtn ext-act" id="extManual">Manual install…</button></div>`;
+}
+function extPageHTML(){
+  const rows=extPackRows(),rules=rows.filter(r=>r.state!=="unsupported"),uns=rows.filter(r=>r.state==="unsupported");
+  const ups=rows.filter(r=>r.state==="update");
+  const warn=rulesCacheWarning()?`<p class="status err">${esc(rulesCacheWarning())}</p>`:"";
+  /* a settings save that failed at the last source check (boot is quiet, so
+     this is where it is said: constraint 2) */
+  const saveErr=extSaveErrorText()?`<p class="status err" id="extSaveErr">${esc("Couldn't save your sources at the last check: "+extSaveErrorText())}</p>`:"";
+  const banner=ups.length?`<div class="ext-banner"><span class="ext-grow"><b>${ups.length} update${ups.length===1?"":"s"}</b> · ${esc(ups.map(r=>r.offer.entry.title).join(", "))}</span><button type="button" class="tbtn primary ext-act" id="extUpdateAll">Update all</button></div>`:"";
+  const rulesBody=rules.length?`<div class="ext-list">${rules.map(extRowHTML).join("")}</div>`:`<p class="hint">No rules data yet. Install it from a source below, or use Manual install.</p>`;
+  return `<div id="extPage">`+warn+saveErr+banner+
+    extSecHTML("rules","Rules data",rules.length,rulesBody,rules.some(r=>r.group)?`<button type="button" class="tbtn danger ext-secbtn" id="extRemoveRules">Remove all</button>`:"")+
+    (uns.length?extSecHTML("unsupported","Unsupported",uns.length,`<div class="ext-list">${uns.map(extRowHTML).join("")}</div>`,""):"")+
+    extSecHTML("sources","Sources",(settings.sources||[]).length,extSourcesHTML(),
+      (settings.sources||[]).some(s=>s.kind!=="official")?`<button type="button" class="tbtn danger ext-secbtn" id="extRemoveSources">Remove all</button>`:"")+
+    `<div class="status" id="rulesStatus" role="status">${esc(rulesStatusText())}</div>`+
+    `</div>`;
+}
+/* ---- the details dialog (spec §6.3) ---- */
+function extRowFor(key){return extPackRows().find(r=>r.key===key)||null;}
+function extDetailsHTML(key){
+  const r=extRowFor(key);if(!r)return `<p class="hint">That extension isn't listed any more.</p>`;
+  const e=r.offer&&r.offer.entry,src=r.offer&&r.offer.source,g=r.group;
+  const cat=e?(e.category==="rules"?"Rules data":e.category):"Rules data";
+  const ver=(g&&parseDataVer(g.dataVersion)?g.dataVersion:"")||(e?e.version:"");
+  const others=src?extPackRows().filter(x=>x.key!==key&&x.offer&&x.offer.source.id===src.id):[];
+  const kv=(k,v)=>v?`<div><span class="ext-k">${esc(k)}</span>${v}</div>`:"";
+  const home=src&&src.manifest&&extUrl(src.manifest.homepage);
+  const box=src?`<div class="ext-box"><b>Source</b>`+
+    kv("Name",esc(extSourceName(src)))+
+    kv("Manifest",esc(src.kind==="official"?"the Fieldbook release":String(src.base||src.url).replace(/^https?:\/\//i,"")))+
+    kv("Homepage",home?`<a href="${esc(home)}" target="_blank" rel="noopener">${esc(home.replace(/^https?:\/\//i,""))}</a>`:"")+
+    kv("Checked",esc(extAgo(src.checked,true)))+
+    kv("Licence",esc([e&&e.license,e&&e.attribution].filter(Boolean).join(" · ")))+`</div>`:
+    `<div class="ext-box"><b>Source</b><div>${esc(g&&g.isFile?"Imported from a file: "+g.label:"Fetched from a source URL")}</div></div>`;
+  const alsoBox=others.length?`<div class="ext-box"><b>Also from this source</b>${others.map(x=>`<div><button type="button" class="ext-name" data-ext-open="${esc(x.key)}">${esc(x.offer.entry.title)}</button>${x.state==="blocked"||x.state==="unsupported"?` · ${esc(extTooNewWhy(x.offer.entry))}`:""}</div>`).join("")}</div>`:"";
+  const act=r.state==="update"?`<button type="button" class="tbtn primary" data-ext-update="${esc(key)}">Update</button>`
+    :(r.state==="install"?`<button type="button" class="tbtn primary" data-ext-install="${esc(key)}">Install</button>`:"");
+  const desc=e&&e.description?extParas(e.description):(e&&e.summary?extParas(e.summary):"");
+  return `<div class="ext-dlg"><div class="ext-meta">${esc(cat)}${ver?" · "+esc(ver):""} · ${g?"installed":"not installed"}</div>`+
+    (desc||(g?`<p class="hint">${esc(extCatsLine(g))}</p>`:`<p class="hint">No description.</p>`))+
+    extChipsHTML(r)+box+alsoBox+
+    `<div class="m-actions"><button type="button" class="tbtn" id="extDlgClose">Close</button>${act}</div></div>`;
+}
+function openExtDetails(key){
+  const r=extRowFor(key);
+  openModal(r?extRowTitle(r):"Extension",extDetailsHTML(key),"",{});
+  const body=document.getElementById("mBody");
+  const close=document.getElementById("extDlgClose");
+  if(close)close.addEventListener("click",()=>{closeModal();settings.setPage="extensions";openSettings();});
+  body.querySelectorAll("[data-ext-open]").forEach(b=>b.addEventListener("click",()=>openExtDetails(b.dataset.extOpen)));
+  body.querySelectorAll("[data-ext-update],[data-ext-install]").forEach(b=>b.addEventListener("click",()=>extUpdateFromRows([extRowFor(b.dataset.extUpdate||b.dataset.extInstall)])));
+  body.querySelectorAll("button[data-ext-req]").forEach(b=>b.addEventListener("click",()=>extReqTap(b)));
+}
+/* a requirement button: only drawn when a source offers the pack */
+function extReqTap(b){
+  const o=extReqOffer({pack:b.dataset.extReq});
+  if(o)openExtDetails(extKey(o.entry.system,o.entry.file));
+}
+function extUpdateFromRows(rows){
+  const cands=(rows||[]).filter(r=>r&&r.offer&&(r.state==="update"||r.state==="install")).map(r=>offerCandidate(r.offer));
+  if(!cands.length)return;
+  /* the plan dialog is Task 6's (#102); until it exists this does nothing */
+  if(typeof openInstallPlan==="function")openInstallPlan(planInstall(cands),{back:"settings"});
+}
+/* Repaint the page in place. What the player is in the middle of survives it:
+   the status line's message, a URL being typed, and keyboard focus on a
+   section toggle or a control with an id. */
+function renderExtUI(){
+  const host=document.getElementById("extPage");
+  if(host){
+    const st=host.querySelector("#rulesStatus"),inp=host.querySelector("#extAddUrl");
+    const keep={msg:st?st.textContent:null,cls:st?st.className:"",url:inp?inp.value:"",focus:null};
+    const a=document.activeElement;
+    if(a&&typeof host.contains==="function"&&host.contains(a))keep.focus=a.id?"#"+a.id:(a.dataset&&a.dataset.extSec?`[data-ext-sec="${a.dataset.extSec}"]`:null);
+    host.outerHTML=extPageHTML();
+    const fresh=document.getElementById("extPage");
+    if(fresh){
+      const st2=fresh.querySelector("#rulesStatus"),inp2=fresh.querySelector("#extAddUrl");
+      if(st2&&keep.msg!=null){st2.textContent=keep.msg;st2.className=keep.cls;}
+      if(inp2&&keep.url)inp2.value=keep.url;
+      if(keep.focus){const f=fresh.querySelector(keep.focus);if(f&&typeof f.focus==="function")f.focus();}
+      wireExtPage(fresh);
+    }
+  }
+  if(typeof renderExtPill==="function")renderExtPill();
+  const badge=document.querySelector('[data-setbadge="extensions"]');if(badge)badge.innerHTML=rulesNavBadgeHTML();
+}
+/* a settings save from the page: said on the status line when it fails
+   (constraint 2), and clearing the recorded check error when it lands */
+function extSaveSources(what){const err=extSaveOk(saveSettings());if(err)updateRulesStatus("Couldn't save "+(what||"your sources")+": "+err,"err");return err;}
+/* bound to the fresh #extPage each time it is drawn, so listeners never stack */
+function wireExtPage(root){
+  root.addEventListener("click",e=>{
+    const t=e.target;let b;
+    if(!t||typeof t.closest!=="function")return;
+    if((b=t.closest("[data-ext-sec]"))){
+      const k="ext:"+b.dataset.extSec;
+      if(!settings.setCollapse||typeof settings.setCollapse!=="object")settings.setCollapse={};
+      settings.setCollapse[k]=!settings.setCollapse[k];extSaveSources("which sections are folded");return renderExtUI();}
+    if((b=t.closest("[data-ext-open]")))return openExtDetails(b.dataset.extOpen);
+    if((b=t.closest("[data-ext-update],[data-ext-install]")))return extUpdateFromRows([extRowFor(b.dataset.extUpdate||b.dataset.extInstall)]);
+    if(t.closest("#extUpdateAll"))return extUpdateFromRows(extUpdateRows());
+    if((b=t.closest("button[data-ext-req]")))return extReqTap(b);
+    if((b=t.closest("[data-rd-del]"))){const g=loadedRulesGroups().find(x=>x.key===b.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`))removeRulesGroup(b.dataset.rdDel);return;}
+    if(t.closest("#extRemoveRules"))return clearAllRules();
+    if(t.closest("#extRemoveSources")){
+      if(!confirm("Remove every source you added, and switch off Fieldbook public data?\n\nPacks you've installed stay installed."))return;
+      settings.sources=(settings.sources||[]).filter(s=>s.kind==="official");settings.sources.forEach(s=>{s.on=false;});
+      const err=extSaveSources();renderExtUI();if(!err)updateRulesStatus("Sources removed. Your installed packs stay.","ok");return;}
+    if((b=t.closest("[data-ext-src-on]"))){
+      const s=(settings.sources||[]).find(x=>x.id===b.dataset.extSrcOn);if(!s)return;
+      s.on=!s.on;extSaveSources();renderExtUI();
+      if(s.on)checkSources({});
+      return;}
+    if((b=t.closest("[data-ext-src-del]"))){
+      settings.sources=(settings.sources||[]).filter(x=>x.id!==b.dataset.extSrcDel);
+      const err=extSaveSources();renderExtUI();if(!err)updateRulesStatus("Source removed. Its packs stay installed.","ok");return;}
+    if((b=t.closest("[data-ext-src-fetch]"))){const s=(settings.sources||[]).find(x=>x.id===b.dataset.extSrcFetch);if(s)fetchAllRules([s.url]);return;}
+    if(t.closest("#extCheckNow")){
+      if(navigator.onLine===false)return updateRulesStatus("You're offline, so nothing was checked.","err");
+      updateRulesStatus("Checking your sources…","");
+      return checkSources({}).then(()=>{
+        if(extSaveErrorText())return;   /* checkSources() already said so */
+        const bad=(settings.sources||[]).filter(s=>s.on&&s.kind!=="plain"&&s.error).length;
+        updateRulesStatus(bad?`Checked. ${bad} source${bad===1?"":"s"} couldn't be checked; the row says why.`:"Checked.",bad?"err":"ok");
+      });}
+    if(t.closest("#extAddGo")){
+      const i=document.getElementById("extAddUrl");const v=i?i.value:"";
+      updateRulesStatus("Reading that source…","");
+      return addSource(v).then(r=>{
+        if(!r.ok)return updateRulesStatus(r.why,"err");
+        const s=(settings.sources||[])[(settings.sources||[]).length-1];
+        const okMsg=s&&s.kind==="plain"?"Source added. Press Fetch on its row to load its rules.":"Source added.";
+        const inp=document.getElementById("extAddUrl");if(inp)inp.value="";
+        renderExtUI();
+        updateRulesStatus(r.why||okMsg,r.why?"err":"ok");
+      });}
+    /* Task 6 (#102) defines the Manual install dialog */
+    if(t.closest("#extManual")&&typeof openManualInstall==="function")return openManualInstall();
+  });
+  /* a drop onto the page is a Manual install (spec §6.4; Task 6 defines it) */
+  if(typeof extWireDrop==="function")extWireDrop(root);
 }

@@ -22,6 +22,8 @@ const {X, ctx, state, bootError} = loadApp([
   'extFetchBytes', 'checkSource', 'checkSources', 'addSource', 'offerCandidate', 'manualCandidates',
   'planInstall', 'runInstall', 'importPack', 'loadedRulesGroups',
   'extSaveErrorText', 'EXT_FILE_MAX', 'EXT_MAN_MAX',
+  'extPageHTML', 'extRowHTML', 'extSourcesHTML', 'extDetailsHTML', 'extParas', 'setPageOf', 'SET_PAGES',
+  'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 ctx.URL = URL;   // offerCandidate() resolves a pack's path against its source with it (#102)
@@ -1159,6 +1161,160 @@ section('#102 fix round 1: runInstall reports what importPack skipped, like fetc
   const r = await X.runInstall([{cand, outcome: 'install', ticked: true, canTick: true}]);
   ck('#102 fix round 1: runInstall returns a skipped summary', r.ok === true && r.skipped && r.skipped.spells === 1, r);
   X.resetRules(); X.settings.packOrigin = {};
+});
+
+section('#102 the Extensions page markup', () => {
+  X.resetRules();
+  X.importPack({system: 'SRD 5.2', dataVersion: '1.8.1', spells: [{name: 'Bless', level: 1}]}, 'srd52_full.json');
+  X.importPack({system: '2024 Rules', dataVersion: '1.8.0', spells: [{name: 'Haste', level: 3}]}, 'xphb_full.json');
+  const evil = '<img src=x onerror=alert(1)>';
+  X.settings.sources = [
+    {id: 'official', kind: 'official', url: '', on: true, checked: Date.now(), error: '', base: 'https://raw.example/m.json',
+      manifest: X.readManifest({_type: 'fieldbook-data', name: 'Fieldbook public data', builtFor: '1.0.0', packs: [
+        {file: 'srd52_full.json', system: 'SRD 5.2', version: '1.9.0', sha256: 'a'.repeat(64), title: 'SRD 5.2', summary: 'Free rules.'}]}, 100)},
+    {id: 's2', kind: 'manifest', url: 'https://ember.example/m.json', on: true, checked: Date.now(), error: 'HTTP 500', base: 'https://ember.example/m.json',
+      manifest: X.readManifest({_type: 'fieldbook-data', name: evil, homepage: 'javascript:alert(1)', builtFor: '1.0.0', packs: [
+        {file: 'ember_full.json', system: 'Ember', version: '2.1.0', sha256: 'b'.repeat(64), title: evil, summary: evil, description: evil + '\n\nSecond para.',
+          minApp: '99.0.0', requires: [{pack: 'SRD 5.2', url: 'javascript:alert(1)'}, {pack: 'Mystery', url: 'https://m.example'}]},
+        {file: 'ember_ui.json', system: 'Ember Theme', version: '1.0.0', category: 'ui', sha256: 'c'.repeat(64), minApp: '2.0.0'}]}, 100)},
+    {id: 'p1', kind: 'plain', url: 'https://plain.example/spells.json', on: true, checked: 0, error: '', manifest: null, base: ''}];
+  X.settings.packOrigin = {'SRD 5.2|srd52_full.json': 'official'}; X.settings.dismissedUpdates = {}; X.settings.setCollapse = {};
+  const h = X.extPageHTML();
+  ck('#102 the banner offers Update all for one update', /id="extUpdateAll"/.test(h) && /1 update/.test(h) && /SRD 5\.2/.test(h));
+  ck('#102 sections: Rules data, Unsupported, Sources, each foldable',
+    /data-ext-sec="rules"/.test(h) && /data-ext-sec="unsupported"/.test(h) && /data-ext-sec="sources"/.test(h) && /aria-expanded="true"/.test(h));
+  ck('#102 the update row shows 1.8.1 → 1.9.0 and Update', /1\.8\.1/.test(h) && /1\.9\.0/.test(h) && /data-ext-update="SRD 5\.2\|srd52_full\.json"/.test(h));
+  ck('#102 a hand-imported pack reads "imported from a file"', /imported from a file/.test(h));
+  ck('#102 a too-new pack reads "requires Fieldbook 99.0.0" and has no live Install',
+    /requires Fieldbook 99\.0\.0/.test(h) && !/data-ext-install="Ember\|ember_full\.json"/.test(h));
+  ck('#102 an unsupported category reads "requires Fieldbook 2.0.0" under Unsupported', /Unsupported/.test(h) && /requires Fieldbook 2\.0\.0/.test(h));
+  ck('#102 a missing requirement is a chip "requires Mystery"', /data-ext-req="Mystery"[^>]*>requires Mystery</.test(h));
+  ck('#102 hostile manifest text is escaped everywhere', !h.includes('<img src=x') && h.includes('&lt;img src=x'));
+  // esc() writes an apostrophe as &#39; (brief's /couldn.t/ assumed a literal one)
+  ck('#102 a source that failed says why', /couldn(?:'|&#39;)t check: HTTP 500/.test(h));
+  ck('#102 the plain source has Fetch and Remove', /data-ext-src-fetch="p1"/.test(h) && /data-ext-src-del="p1"/.test(h));
+  ck('#102 the built-in source has a switch, not Remove', /data-ext-src-on="official"/.test(h) && !/data-ext-src-del="official"/.test(h));
+  ck('#102 the row of actions: Add, Check now, Manual install', /id="extAddUrl"/.test(h) && /id="extCheckNow"/.test(h) && /id="extManual"[^>]*>Manual install/.test(h));
+  ck('#102 no Get templates and no Fetch all', !/Get templates/.test(h) && !/Fetch all/.test(h));
+  X.settings.setCollapse = {'ext:rules': true};
+  ck('#102 a folded section stays folded', /data-ext-sec="rules"[^>]*aria-expanded="false"/.test(X.extPageHTML()));
+  const d = X.extDetailsHTML('Ember|ember_full.json');
+  ck('#102 details: the full description as escaped paragraphs', (d.match(/<p>/g) || []).length >= 2 && !d.includes('<img src=x'));
+  ck('#102 details: a javascript: homepage and requires url never become links', !/href="javascript/i.test(d));
+  ck('#102 details: the source box and the other extensions from that source', /Source/.test(d) && /ember\.example\/m\.json/.test(d) && /data-ext-open="Ember Theme\|ember_ui\.json"/.test(d));
+  ck('#102 a requirement with an https url links out', /href="https:\/\/m\.example"[^>]*target="_blank"[^>]*rel="noopener"/.test(d));
+  ck('#102 extParas splits on blank lines and escapes', X.extParas('a<b\n\nc') === '<p>a&lt;b</p><p>c</p>');
+  ck('#102 the Settings page is Extensions, and a stored "rules" opens it',
+    X.SET_PAGES.some(p => p.k === 'extensions' && p.title === 'Extensions') && X.setPageOf('rules', false) === 'extensions');
+  X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {}; X.settings.setCollapse = {};
+});
+
+section('#102 the Extensions page: wording, chips, the save error and the badge', () => {
+  X.resetRules();
+  X.importPack({system: 'SRD 5.2', dataVersion: '1.8.1', spells: [{name: 'Bless', level: 1}]}, 'srd52_full.json');
+  const man = packs => X.readManifest({_type: 'fieldbook-data', name: 'M', builtFor: '1.0.0', packs}, 100);
+  X.settings.sources = [
+    {id: 'official', kind: 'official', url: '', on: true, checked: 0, error: '', base: 'https://raw.example/m.json',
+      manifest: man([{file: 'srd52_full.json', system: 'SRD 5.2', version: '1.9.0', sha256: 'a'.repeat(64)},
+        {file: 'needed_full.json', system: 'Needed', version: '1.0.0', sha256: 'd'.repeat(64)}])},
+    {id: 'm2', kind: 'manifest', url: 'https://m2.example/m.json', on: true, checked: 0, error: '', base: 'https://m2.example/m.json',
+      manifest: man([{file: 'odd_full.json', system: 'Odd', version: '1.0.0', category: 'ui', sha256: 'e'.repeat(64)},
+        {file: 'kid_full.json', system: 'Kid', version: '1.0.0', sha256: 'f'.repeat(64),
+          requires: [{pack: 'Needed', url: 'https://needed.example'}, {pack: 'Nowhere'}]}])}];
+  X.settings.packOrigin = {}; X.settings.dismissedUpdates = {}; X.settings.setCollapse = {};
+  const h = X.extPageHTML();
+  ck('#102 Ruling 2: an unsupported category whose minApp is not newer reads "requires a newer Fieldbook"',
+    /requires a newer Fieldbook/.test(h) && !/requires Fieldbook 1\.0\.0/.test(h), h);
+  ck('#102 a requirement a source offers is a button (opens its details), even when it has a url',
+    /<button[^>]*data-ext-req="Needed"[^>]*>requires Needed</.test(h) && !/href="https:\/\/needed\.example"/.test(h));
+  ck('#102 a requirement nothing answers is a plain label, not a button or a link',
+    /<span[^>]*data-ext-req="Nowhere"[^>]*>requires Nowhere</.test(h) && !/<(button|a)[^>]*data-ext-req="Nowhere"/.test(h));
+  ck('#102 the badge dot shows while an update is pending, under the extensions key',
+    /set-dot/.test(X.rulesNavBadgeHTML()) && /id="setBadgeDesc-extensions"/.test(X.rulesNavBadgeHTML()));
+  X.settings.dismissedUpdates = {'SRD 5.2|srd52_full.json': '1.9.0'};
+  ck('#102 ...and not once the pill has cleared it', !/set-dot/.test(X.rulesNavBadgeHTML()), X.rulesNavBadgeHTML());
+  ck('#102 no save error, no save-error line', !/at the last check/.test(h));
+  const realSave = ctx.saveSettings; ctx.saveSettings = () => 'disk full';
+  ctx.navigator.onLine = true;
+  return X.checkSources({boot: true}).then(() => {
+    ctx.navigator.onLine = false; ctx.saveSettings = realSave;
+    ck('#102 a failed save at the last check shows on the page, as an error',
+      /class="status err"[^>]*>Couldn(?:'|&#39;)t save your sources at the last check: disk full/.test(X.extPageHTML()));
+    X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {}; X.settings.dismissedUpdates = {};
+  });
+});
+
+section('#102 renderRulesData repaints the Extensions page and the extensions badge', () => {
+  const writes = {badge: '', page: 0};
+  const badge = {set innerHTML(v) { writes.badge = v; }, get innerHTML() { return writes.badge; }};
+  const page = {set outerHTML(v) { writes.page++; }, querySelector: () => null, querySelectorAll: () => [], addEventListener() {}};
+  const realQ = ctx.document.querySelector, realG = ctx.document.getElementById;
+  ctx.document.querySelector = sel => /data-setbadge="extensions"/.test(sel) ? badge : null;
+  ctx.document.getElementById = id => id === 'extPage' ? page : realG(id);
+  X.renderRulesData();
+  ck('#102 renderRulesData refreshes the extensions badge', writes.badge === X.rulesNavBadgeHTML() && writes.badge !== '', writes.badge);
+  ck('#102 ...and repaints the Extensions page', writes.page === 1, writes.page);
+  ctx.document.querySelector = realQ; ctx.document.getElementById = realG;
+});
+
+section('#102 Task 4 follow-up N1: an unreadable folder manifest is reported, not dropped', () => {
+  const enc = s => new TextEncoder().encode(s);
+  const good = {_type: 'fieldbook-data', builtFor: '1.0.0', packs: [{file: 'x_full.json', system: 'A', version: '1.0.0', sha256: 'a'.repeat(64)}]};
+  const mc = X.manualCandidates([
+    {name: 'root/fieldbook-data.json', bytes: enc(JSON.stringify({_type: 'fieldbook-data', packs: 'nope'}))},
+    {name: 'root/x_full.json', bytes: enc(packJSON('A', '1.0.0'))},
+    {name: 'other/fieldbook-data.json', bytes: enc('not json{')},
+    {name: 'third/fieldbook-data.json', bytes: enc(JSON.stringify(good))},
+  ]);
+  ck('#102 N1: a manifest readManifest rejects is in failed, with why',
+    mc.failed.some(f => f.name === 'root/fieldbook-data.json' && /manifest/.test(f.why)), mc.failed);
+  ck('#102 N1: a manifest that is not JSON is in failed too',
+    mc.failed.some(f => f.name === 'other/fieldbook-data.json' && /JSON/.test(f.why)), mc.failed);
+  ck('#102 N1: a readable second manifest stays quiet', !mc.failed.some(f => f.name === 'third/fieldbook-data.json') && mc.failed.length === 2, mc.failed);
+  ck('#102 N1: the pack beside the broken manifest is still a candidate, with no sha256', mc.cands.length === 1 && mc.cands[0].sha256 === '', mc.cands);
+});
+
+section('#102 Task 4 follow-up N2: the cross-origin hint is for a network failure only', async () => {
+  const realFetch = ctx.fetch;
+  X.settings.sources = [];
+  ctx.fetch = () => Promise.reject(new TypeError('Failed to fetch'));
+  const r1 = await X.addSource('https://n2.example/a.json');
+  ck('#102 N2: a TypeError (network or CORS) carries the cross-origin hint', r1.ok === false && /cross-origin/.test(r1.why), r1);
+  ctx.fetch = () => Promise.reject(new Error('it took too long to answer'));
+  const r2 = await X.addSource('https://n2.example/b.json');
+  ck('#102 N2: a timeout does not', r2.ok === false && /took too long/.test(r2.why) && !/cross-origin/.test(r2.why), r2);
+  ctx.fetch = realFetch; X.settings.sources = [];
+});
+
+section('#102 Task 4 follow-up N3: any successful sources save clears the recorded save error', async () => {
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  const realSave = ctx.saveSettings, realOnline = ctx.navigator.onLine;
+  ctx.navigator.onLine = true; X.settings.sources = [];
+  const fail = async () => { ctx.saveSettings = () => 'disk full'; await X.checkSources({boot: true}); ctx.saveSettings = () => ''; };
+  await fail();
+  ck('#102 N3: (set up) the error is recorded', X.extSaveErrorText() === 'disk full');
+  extRoutes['https://n3.example/p.json'] = {system: 'N3', dataVersion: '1.0.0', spells: [{name: 'N'}]};
+  const r = await X.addSource('https://n3.example/p.json');
+  ck('#102 N3: a successful addSource save clears it', r.ok === true && X.extSaveErrorText() === '', [r, X.extSaveErrorText()]);
+  await fail();
+  const cand = {key: 'N3b|n3b_full.json', category: 'rules', system: 'N3b', file: 'n3b_full.json', title: 'N3b', version: '1.0.0', minApp: '', sha256: '',
+    size: 0, requires: [], origin: 'manual', manual: true, get: () => Promise.resolve(new TextEncoder().encode(packJSON('N3b', '1.0.0')))};
+  const ri = await X.runInstall([{cand, ticked: true, canTick: true}]);
+  ck('#102 N3: a successful runInstall save clears it', ri.ok === true && X.extSaveErrorText() === '', [ri, X.extSaveErrorText()]);
+  ctx.saveSettings = realSave; ctx.navigator.onLine = realOnline;
+  X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {};
+});
+
+section('#102 Task 4 follow-up N4: an early Content-Length refusal aborts the request', async () => {
+  const realFetch = ctx.fetch, realAC = ctx.AbortController;
+  ctx.AbortController = AbortController;
+  let signal = null;
+  ctx.fetch = (u, opts) => { signal = opts && opts.signal; return Promise.resolve({ok: true, status: 200,
+    headers: {get: k => k === 'content-length' ? String(X.EXT_MAN_MAX + 1) : null}, arrayBuffer: () => new Promise(() => {})}); };
+  let msg = '';
+  try { await X.extFetchBytes('https://n4.example/m.json', 1000, X.EXT_MAN_MAX); } catch (e) { msg = e.message; }
+  ck('#102 N4: the refusal aborts the controller', /64 KB/.test(msg) && signal && signal.aborted === true, [msg, signal && signal.aborted]);
+  ctx.fetch = realFetch; ctx.AbortController = realAC;
 });
 
 // ---- add new sections above this line ----
