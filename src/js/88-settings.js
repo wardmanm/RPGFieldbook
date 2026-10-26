@@ -149,9 +149,11 @@ function openSettings(){
         `<button type="button" class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight" role="switch" aria-checked="${character.coinWeight!==false?"true":"false"}" aria-label="Coins count as weight"></button>`,true)+
       `<p class="hint set-note" id="encHint">${esc(encSettingsHint())}</p>`):"";
   /* #102: the page itself is 89-extensions.js's, repainted in place by
-     renderExtUI(); the file input sits outside it so a repaint never drops
-     its listener */
+     renderExtUI(); the status line (a live region) and the file input sit
+     outside it, so a repaint never recreates the one or drops the other's
+     listener */
   const secRules=extPageHTML()+
+    `<div class="status" id="rulesStatus" role="status">${esc(rulesStatusText())}</div>`+
     `<input type="file" id="fileRules" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">`+
     (hasChar?setGroupHTML("This sheet",
       setRowHTML("Rules updates",`Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compares this sheet with your loaded rules; a backup is saved first.`,
@@ -234,7 +236,7 @@ function openSettings(){
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
   {const s=document.getElementById("setInvLogSize");if(s)s.addEventListener("change",()=>{if(!setInvLogSize(num(s.value)))s.value=String(character.invLogSize);});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
-  document.getElementById("fileRules").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
+  document.getElementById("fileRules").addEventListener("change",e=>{if(e.target.files.length)manualInstallFiles(e.target.files,{back:"settings"});e.target.value="";});
   document.getElementById("btnExportSettings").addEventListener("click",()=>dl(new Blob([JSON.stringify({_type:"fieldbook-settings",settings,rules},null,2)],{type:"application/json"}),"fieldbook-settings.json"));
   document.getElementById("btnImportSettings").addEventListener("click",()=>document.getElementById("fileSettings").click());
   document.getElementById("fileSettings").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{let p=null;try{p=JSON.parse(r.result);}catch(err){}importSettings(p);};r.readAsText(f);e.target.value="";});

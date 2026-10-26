@@ -24,6 +24,8 @@ const {X, ctx, state, bootError} = loadApp([
   'extSaveErrorText', 'EXT_FILE_MAX', 'EXT_MAN_MAX',
   'extPageHTML', 'extRowHTML', 'extSourcesHTML', 'extDetailsHTML', 'extParas', 'setPageOf', 'SET_PAGES',
   'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
+  'extPlanHTML', 'renderExtPill', 'showUpdatePill', 'openInstallPlan', 'manualInstallFiles', 'readDropped',
+  'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 ctx.URL = URL;   // offerCandidate() resolves a pack's path against its source with it (#102)
@@ -1315,6 +1317,193 @@ section('#102 Task 4 follow-up N4: an early Content-Length refusal aborts the re
   try { await X.extFetchBytes('https://n4.example/m.json', 1000, X.EXT_MAN_MAX); } catch (e) { msg = e.message; }
   ck('#102 N4: the refusal aborts the controller', /64 KB/.test(msg) && signal && signal.aborted === true, [msg, signal && signal.aborted]);
   ctx.fetch = realFetch; ctx.AbortController = realAC;
+});
+
+section('#102 the plan dialog and the pills', () => {
+  X.resetRules();
+  X.importPack({system: 'A', dataVersion: '1.0.0', spells: [{name: 'A1', level: 1}]}, 'a_full.json');
+  const cand = (system, file, version, o) => Object.assign({key: system + '|' + file, category: 'rules', system, file, title: '<b>' + system + '</b>', version,
+    minApp: '', sha256: '', size: 2048, requires: [], origin: 'm1', manual: false, get: () => Promise.resolve(new Uint8Array())}, o || {});
+  const lines = X.planInstall([cand('A', 'a_full.json', '1.1.0'), cand('N', 'n_full.json', '1.0.0', {minApp: '99.0.0'}), cand('A2', 'a2_full.json', '1.0.0', {manual: true})]);
+  const h = X.extPlanHTML(lines);
+  ck('#102 the plan lists each pack with its outcome and versions', /1\.0\.0 → 1\.1\.0/.test(h) && /requires Fieldbook 99\.0\.0/.test(h) && /New/.test(h));
+  ck('#102 ticked lines are checked; the blocked one is disabled', /data-plan-i="0"[^>]*checked/.test(h) && /data-plan-i="1"[^>]*disabled/.test(h));
+  ck('#102 the confirm button counts the ticked lines', /id="planGo"[^>]*>Install 2</.test(h));
+  ck('#102 plan titles are escaped', !h.includes('<b>A</b>') && h.includes('&lt;b&gt;A&lt;/b&gt;'));
+  ck('#102 sizes read in KB', /2 KB/.test(h));
+  const none = X.extPlanHTML(X.planInstall([cand('A', 'a_full.json', '1.0.0')]));
+  ck('#102 a plan with nothing to do says so, with only Close', /Nothing to install/.test(none) && !/id="planGo"/.test(none));
+  // the app pill respects dismissal
+  const pill = {textContent: '', title: '', style: {}}, ver = {style: {}}, x = {hidden: true};
+  const realGet = ctx.document.getElementById;
+  ctx.document.getElementById = id => id === 'updatePill' ? pill : id === 'btnVer' ? ver : id === 'updatePillX' ? x : realGet(id);
+  X.updateAvailable = {ver: '9.9.9', url: 'https://github.com/x'};
+  X.settings.dismissedUpdates = {app: '9.9.9'};
+  pill.style.display = 'none'; X.showUpdatePill();
+  ck('#102 a cleared app update stays hidden', pill.style.display === 'none');
+  X.updateAvailable = {ver: '9.9.10', url: 'https://github.com/x'};
+  X.showUpdatePill();
+  ck('#102 a newer app update shows again, with its ×', pill.style.display === 'inline-flex' && x.hidden === false);
+  ctx.document.getElementById = realGet; X.updateAvailable = null; X.settings.dismissedUpdates = {};
+  X.resetRules();
+});
+
+/* a tiny element: records its listeners, so a suite can fire them */
+const fakeEl = props => {
+  const h = {};
+  return Object.assign({addEventListener: (t, f) => { (h[t] = h[t] || []).push(f); }, fire: (t, e) => (h[t] || []).map(f => f(e || {})),
+    textContent: '', className: '', disabled: false, hidden: false, innerHTML: '', title: '', dataset: {}, style: {}, inserted: [],
+    insertAdjacentHTML(pos, html) { this.inserted.push(html); }, focus() {}}, props || {});
+};
+section('#102 the plan dialog: ticks, Install N, a failure names the file, success toasts', async () => {
+  X.resetRules();
+  const c = (system, o) => Object.assign({key: system + '|' + system.toLowerCase() + '_full.json', category: 'rules', system, file: system.toLowerCase() + '_full.json',
+    title: system, version: '1.0.0', minApp: '', sha256: '', size: 10, requires: [], origin: 'm1', manual: false, get: () => Promise.resolve(new Uint8Array())}, o || {});
+  const lines = X.planInstall([c('P'), c('Q')]);
+  const go = fakeEl(), close = fakeEl(), status = fakeEl();
+  const boxes = lines.map((l, i) => fakeEl({checked: true, dataset: {planI: String(i)}}));
+  const realGet = ctx.document.getElementById, realQSA = ctx.document.querySelectorAll;
+  const realRun = ctx.runInstall, realToast = ctx.toast, realOpen = ctx.openSettings;
+  const toasts = [], opened = [];
+  ctx.document.getElementById = id => ({planGo: go, planClose: close, planStatus: status})[id] || realGet(id);
+  ctx.document.querySelectorAll = sel => sel === '[data-plan-i]' ? boxes : realQSA(sel);
+  ctx.toast = (msg, action, opts) => toasts.push([msg, opts || {}]);
+  ctx.openSettings = () => opened.push(1);
+  try {
+    X.openInstallPlan(lines, {back: 'settings'});
+    boxes[0].checked = false; boxes[0].fire('change');
+    ck('#102 unticking a line recounts Install N', go.textContent === 'Install 1' && go.disabled === false && lines[0].ticked === false, go.textContent);
+    boxes[1].checked = false; boxes[1].fire('change');
+    ck('#102 nothing ticked disables Install', go.textContent === 'Install 0' && go.disabled === true);
+    boxes[1].checked = true; boxes[1].fire('change');
+    ctx.runInstall = () => Promise.resolve({ok: false, installed: [], error: {file: 'q_full.json', why: "its sha256 doesn't match the manifest"}, saveErr: '', skipped: {}});
+    await Promise.all(go.fire('click'));
+    await new Promise(r => setImmediate(r));
+    ck('#102 a failed install changes nothing and names the file and why',
+      /Nothing was installed/.test(status.textContent) && /q_full\.json/.test(status.textContent) && /sha256/.test(status.textContent) &&
+      /err/.test(status.className) && go.disabled === false && toasts.length === 0 && opened.length === 0, status.textContent);
+    ctx.runInstall = () => Promise.resolve({ok: true, installed: ['Q'], error: null, saveErr: '', skipped: {spells: 2}});
+    go.fire('click');
+    await new Promise(r => setImmediate(r));
+    ck('#102 a good install toasts the count and what was skipped, then goes back to Settings',
+      toasts.length === 1 && /^Installed 1 pack\. Skipped 2 spells/.test(toasts[0][0]) && toasts[0][1].long === true && opened.length === 1, toasts);
+  } finally {
+    ctx.document.getElementById = realGet; ctx.document.querySelectorAll = realQSA;
+    ctx.runInstall = realRun; ctx.toast = realToast; ctx.openSettings = realOpen;
+  }
+  const t = X.extInstalledText({ok: true, installed: ['A', 'B'], saveErr: '', skipped: {}});
+  ck('#102 the toast for a clean install is just the count', t.text === 'Installed 2 packs' && !t.opts.err && !t.opts.long, t);
+  const t2 = X.extInstalledText({ok: true, installed: ['A'], saveErr: 'Storage is full.', skipped: {spells: 1}});
+  ck('#102 a save error is in the toast, and makes it an error', /^Installed 1 pack\. Skipped 1 spell with no name\. Storage is full\.$/.test(t2.text) && t2.opts.err === true, t2);
+  X.resetRules();
+});
+
+section('#102 Manual install: files, folders and drops reach the plan', async () => {
+  X.resetRules();
+  const realFR = ctx.FileReader, realPlan = ctx.openInstallPlan, realGet = ctx.document.getElementById;
+  let reads = 0; const planned = []; const hint = fakeEl();
+  ctx.FileReader = class { readAsArrayBuffer(f) { reads++; const b = Buffer.from(f.bytes); this.result = b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); this.onload(); } };
+  ctx.openInstallPlan = (lines, opts) => planned.push({lines, opts});
+  ctx.document.getElementById = id => id === 'planStatus' ? hint : realGet(id);
+  try {
+    await X.manualInstallFiles([{name: 'z_full.json', bytes: packJSON('Z', '1.0.0')}, {name: 'bad.json', bytes: 'nope{'},
+      {name: 'photo.png', bytes: 'xxxx'}, {name: 'y_full.json', webkitRelativePath: 'dir/sub/y_full.json', bytes: packJSON('Y', '2.0.0')}], {back: 'settings'});
+    const p = planned[0];
+    ck('#102 chosen files and a folder\'s files become plan lines', p && p.lines.map(l => l.cand.system + ':' + l.outcome).sort().join() === 'Y:install,Z:install' && p.opts.back === 'settings', p && p.lines);
+    ck('#102 only .json and .zip files are read', reads === 3, reads);
+    ck('#102 a file that can\'t be used is named in the dialog', hint.inserted.some(x => /Skipped bad\.json: it isn(?:'|&#39;)t valid JSON\./.test(x)), hint.inserted);
+    // a drop: a folder entry holding a pack and a sub-folder, read recursively; a dragged string is ignored
+    const fileEntry = (name, bytes) => ({isFile: true, isDirectory: false, name, file: cb => cb({name, bytes})});
+    const dirEntry = (name, kids) => ({isFile: false, isDirectory: true, name, createReader: () => { let done = false; return {readEntries: cb => { const out = done ? [] : kids; done = true; cb(out); }}; }});
+    const dt = {items: [
+      {kind: 'file', webkitGetAsEntry: () => dirEntry('pack', [fileEntry('w_full.json', packJSON('W', '1.0.0')), dirEntry('more', [fileEntry('v_full.json', packJSON('V', '1.0.0'))])])},
+      {kind: 'string', webkitGetAsEntry: () => null},
+      {kind: 'file', webkitGetAsEntry: () => fileEntry('u_full.json', packJSON('U', '1.0.0'))}], files: []};
+    const got = await X.readDropped(dt);
+    ck('#102 a dropped folder is read recursively, with its paths', got.map(g => g.name).sort().join() === 'pack/more/v_full.json,pack/w_full.json,u_full.json', got.map(g => g.name));
+    const plain = await X.readDropped({items: [], files: [{name: 'z_full.json', bytes: packJSON('Z', '1.0.0')}]});
+    ck('#102 a drop without entries falls back to its files', plain.length === 1 && plain[0].name === 'z_full.json');
+    const noEntry = await X.readDropped({items: [{kind: 'file', webkitGetAsEntry: () => null, getAsFile: () => ({name: 't_full.json', bytes: packJSON('T', '1.0.0')})},
+      {kind: 'file', webkitGetAsEntry: () => null, getAsFile: () => ({name: 'pic.png', bytes: 'x'})}], files: []});
+    ck('#102 a file item with no entry is read as a file; a non-pack is not', noEntry.map(g => g.name).join() === 't_full.json', noEntry.map(g => g.name));
+  } finally {
+    ctx.FileReader = realFR; ctx.openInstallPlan = realPlan; ctx.document.getElementById = realGet;
+  }
+  X.resetRules();
+});
+
+section('#102 the Extensions pill', () => {
+  X.resetRules();
+  X.importPack({system: 'A', dataVersion: '1.0.0', spells: [{name: 'A1', level: 1}]}, 'a_full.json');
+  X.settings.sources = [{id: 'm1', kind: 'manifest', url: 'https://m.example/m.json', on: true, checked: 1, error: '', base: 'https://m.example/m.json',
+    manifest: X.readManifest({_type: 'fieldbook-data', builtFor: '1.0.0', packs: [{file: 'a_full.json', system: 'A', version: '1.1.0', sha256: 'a'.repeat(64)}]}, 100)}];
+  X.settings.dismissedUpdates = {};
+  const wrap = fakeEl({hidden: true}), go = fakeEl(), realGet = ctx.document.getElementById;
+  ctx.document.getElementById = id => id === 'extPill' ? wrap : id === 'extPillGo' ? go : realGet(id);
+  try {
+    X.renderExtPill();
+    ck('#102 the pill shows "Extensions · 1 update", the long part droppable at 390px',
+      wrap.hidden === false && /<span class="extpill-long">Extensions · <\/span>1 update$/.test(go.innerHTML) && /Settings → Extensions/.test(go.title), go.innerHTML);
+    X.dismissUpdates(); X.renderExtPill();
+    ck('#102 its × clears it until a newer version', wrap.hidden === true);
+  } finally { ctx.document.getElementById = realGet; }
+  X.resetRules(); X.settings.sources = []; X.settings.dismissedUpdates = {};
+});
+
+section('#102 Task 5 review minors', () => {
+  // 1: focus survives a repaint by its data-ext-* key, and a removed row falls back
+  const sec = key => ({querySelector: () => ({dataset: {extSec: key}})});
+  const el = (ds, key) => ({id: '', dataset: ds, closest: s => s === '.ext-sec' ? sec(key) : null});
+  ck('#102 m1: a keyed control is found again by its key',
+    X.extFocusTargets(el({extSrcOn: 'official'}, 'sources')).join('|') === '[data-ext-src-on="official"]|#extAddUrl', X.extFocusTargets(el({extSrcOn: 'official'}, 'sources')));
+  ck('#102 m1: a rules row falls back to its section toggle',
+    X.extFocusTargets(el({extOpen: 'A|a.json'}, 'rules')).join('|') === '[data-ext-open="A|a.json"]|[data-ext-sec="rules"]');
+  ck('#102 m1: a hostile key is escaped', X.extFocusTargets(el({extOpen: 'a"]b\\'}, 'rules'))[0] === '[data-ext-open="a\\"]b\\\\"]');
+  const realCSS = ctx.CSS; ctx.CSS = {escape: s => 'E(' + s + ')'};
+  ck('#102 m1: CSS.escape is used where it exists', X.extFocusTargets(el({extSrcDel: 'p1'}, 'sources'))[0] === '[data-ext-src-del="E(p1)"]');
+  ck('#102 m1: an id is kept by id', X.extFocusTargets({id: 'extAddGo', dataset: {}, closest: () => null})[0] === '#E(extAddGo)');
+  ctx.CSS = realCSS;
+  // 2: a requirement button carries its file, and opens that file's offer
+  X.resetRules();
+  X.settings.sources = [{id: 'm1', kind: 'manifest', url: 'https://m.example/m.json', on: true, checked: 1, error: '', base: 'https://m.example/m.json',
+    manifest: X.readManifest({_type: 'fieldbook-data', builtFor: '1.0.0', packs: [
+      {file: 'other_full.json', system: 'S', version: '1.0.0', sha256: 'a'.repeat(64)},
+      {file: 's_full.json', system: 'S', version: '1.0.0', sha256: 'b'.repeat(64)}]}, 100)}];
+  const chip = X.extReqChip({pack: 'S', file: 's_full.json', url: ''});
+  ck('#102 m2: the requirement button carries its file', /<button[^>]*data-ext-req="S"[^>]*data-ext-req-file="s_full\.json"/.test(chip), chip);
+  const realOpen = ctx.openExtDetails, seen = []; ctx.openExtDetails = k => seen.push(k);
+  X.extReqTap({dataset: {extReq: 'S', extReqFile: 's_full.json'}});
+  X.extReqTap({dataset: {extReq: 'S'}});
+  ctx.openExtDetails = realOpen;
+  ck('#102 m2: tapping it opens that file, not the first file of the pack', seen[0] === 'S|s_full.json' && seen[1] === 'S|other_full.json', seen);
+  // 3: the "isn't listed any more" dialog has a Close back to Settings
+  const gone = X.extDetailsHTML('Nope|nope.json');
+  ck("#102 m3: the \"isn't listed\" dialog has the Close foot", /isn(?:'|&#39;)t listed any more/.test(gone) && /id="extDlgClose"/.test(gone), gone);
+  X.settings.sources = [];
+  // 4: wrapped chips' 44px hit areas don't overlap the next row
+  const css = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8');
+  ck('#102 m4: .ext-chips rows are 12px apart', /\.ext-chips\{[^}]*row-gap:12px/.test(css), (/\.ext-chips\{[^}]*\}/.exec(css) || [])[0]);
+  // 6: the live region sits outside #extPage, so a repaint never recreates it
+  const setSrc = fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8');
+  const extSrc = fs.readFileSync(path.join(ROOT, 'src/js/89-extensions.js'), 'utf8');
+  const render = extSrc.slice(extSrc.indexOf('function renderExtUI('), extSrc.indexOf('function extSaveSources('));
+  ck('#102 m6: #rulesStatus is not part of the repainted page', !/rulesStatus/.test(X.extPageHTML()));
+  ck('#102 m6: Settings draws #rulesStatus beside the page, as a live region',
+    /const secRules=extPageHTML\(\)\+[\s\S]*?id="rulesStatus" role="status"[\s\S]*?\n  const /.test(setSrc));
+  ck('#102 m6: renderExtUI no longer keeps the status line itself', render.length > 0 && !/rulesStatus/.test(render), render.slice(0, 200));
+});
+
+section('#102 every rules file input goes through Manual install', () => {
+  const boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  const setSrc = fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8');
+  const tpl = fs.readFileSync(path.join(ROOT, 'src/fieldbook.template.html'), 'utf8');
+  ['homeRulesFiles', 'rbRulesFiles'].forEach(id => ck('#102 ' + id + ' opens the plan through manualInstallFiles',
+    new RegExp('getElementById\\("' + id + '"\\)\\.addEventListener\\("change",[^\\n]*manualInstallFiles\\(e\\.target\\.files\\)').test(boot)));
+  ck('#102 #fileRules opens the plan through manualInstallFiles, back to Settings', /getElementById\("fileRules"\)\.addEventListener\("change",[^\n]*manualInstallFiles\(e\.target\.files,\{back:"settings"\}\)/.test(setSrc));
+  ck('#102 no file input imports straight past the plan', !/importRulesFiles\(e\.target\.files\)/.test(boot + setSrc));
+  ck('#102 the top bar has the Extensions pill and both ×s',
+    ['extPill', 'extPillGo', 'extPillX', 'updatePillX'].every(id => tpl.includes('id="' + id + '"')));
+  ck('#102 the pills are wired', ['updatePillX', 'extPillGo', 'extPillX'].every(id => boot.includes('getElementById("' + id + '")')));
 });
 
 // ---- add new sections above this line ----

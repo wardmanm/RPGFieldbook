@@ -131,7 +131,8 @@ html[data-tabs="icons"] .set-tbadge{position:absolute;top:6px;right:6px}
 .ext-sum{font-size:13px;color:var(--ink-soft)}
 .ext-from{font-size:12px;color:var(--ink-soft);opacity:.85}
 .ext-from.ext-err{color:var(--brick);opacity:1}
-.ext-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+/* rows 12px apart: a 22px chip's 44px hit area then stops short of the chip above */
+.ext-chips{display:flex;gap:6px;row-gap:12px;flex-wrap:wrap;margin-top:4px}
 .chip.ext-req{border:1px solid var(--brick);color:var(--brick);background:none;font-family:var(--head);text-decoration:none;text-transform:none}
 /* a requirement chip that does something is small to look at, and 44px to tap */
 button.chip.ext-req,a.chip.ext-req{position:relative;cursor:pointer}
@@ -151,6 +152,13 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .ext-add{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .ext-add input{flex:1 1 220px;min-width:0;min-height:44px}
 .ext-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+/* Manual install's drop zone, and the Extensions page while something is dragged over it (#102) */
+.ext-drop{margin-top:10px;padding:22px;border:1.5px dashed var(--hair);border-radius:8px;text-align:center;color:var(--ink-soft)}
+.ext-drop.ext-dropping,#extPage.ext-dropping{outline:2px dashed var(--accent);outline-offset:4px}
+/* the install plan: a tickable row; the checkbox is the row's label, so the whole row toggles */
+.ext-row.ext-plan{cursor:pointer;min-height:44px}
+.ext-row.ext-plan input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--accent)}
+.ext-row.ext-plan input:disabled{cursor:default}
 .m-body .ext-dlg p{margin:0 0 8px}
 .ext-meta{font-size:12px;color:var(--ink-soft);margin:0 0 8px}
 .ext-box{border:1px solid var(--hair);border-radius:8px;padding:8px 10px;margin-top:10px;font-size:13px;background:var(--panel);overflow-wrap:anywhere}

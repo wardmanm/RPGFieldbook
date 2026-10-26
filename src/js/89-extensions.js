@@ -543,7 +543,10 @@ function extCatsLine(g){return g?Object.entries(g.cats).map(([c,n])=>`${n} ${n==
 function extReqOffer(r){return extOffers().find(o=>o.entry.system===r.pack&&(!r.file||o.entry.file===r.file))||null;}
 function extReqChip(r){
   const lbl=`requires ${esc(r.pack)}`,u=extUrl(r.url);
-  if(extReqOffer(r))return `<button type="button" class="chip ext-req" data-ext-req="${esc(r.pack)}">${lbl}</button>`;
+  /* the button carries the requirement's FILE too, so a tap opens the same
+     offer this check found, not another file of the same pack (#102 Task 5
+     review, minor 2) */
+  if(extReqOffer(r))return `<button type="button" class="chip ext-req" data-ext-req="${esc(r.pack)}" data-ext-req-file="${esc(r.file||"")}">${lbl}</button>`;
   if(u)return `<a class="chip ext-req" data-ext-req="${esc(r.pack)}" href="${esc(u)}" target="_blank" rel="noopener">${lbl}</a>`;
   return `<span class="chip ext-req ext-plain" data-ext-req="${esc(r.pack)}">${lbl}</span>`;
 }
@@ -620,13 +623,13 @@ function extPageHTML(){
     (uns.length?extSecHTML("unsupported","Unsupported",uns.length,`<div class="ext-list">${uns.map(extRowHTML).join("")}</div>`,""):"")+
     extSecHTML("sources","Sources",(settings.sources||[]).length,extSourcesHTML(),
       (settings.sources||[]).some(s=>s.kind!=="official")?`<button type="button" class="tbtn danger ext-secbtn" id="extRemoveSources">Remove all</button>`:"")+
-    `<div class="status" id="rulesStatus" role="status">${esc(rulesStatusText())}</div>`+
     `</div>`;
 }
 /* ---- the details dialog (spec §6.3) ---- */
 function extRowFor(key){return extPackRows().find(r=>r.key===key)||null;}
 function extDetailsHTML(key){
-  const r=extRowFor(key);if(!r)return `<p class="hint">That extension isn't listed any more.</p>`;
+  const foot=act=>`<div class="m-actions"><button type="button" class="tbtn" id="extDlgClose">Close</button>${act||""}</div>`;
+  const r=extRowFor(key);if(!r)return `<div class="ext-dlg"><p class="hint">That extension isn't listed any more.</p>${foot()}</div>`;
   const e=r.offer&&r.offer.entry,src=r.offer&&r.offer.source,g=r.group;
   const cat=e?(e.category==="rules"?"Rules data":e.category):"Rules data";
   const ver=(g&&parseDataVer(g.dataVersion)?g.dataVersion:"")||(e?e.version:"");
@@ -647,7 +650,7 @@ function extDetailsHTML(key){
   return `<div class="ext-dlg"><div class="ext-meta">${esc(cat)}${ver?" · "+esc(ver):""} · ${g?"installed":"not installed"}</div>`+
     (desc||(g?`<p class="hint">${esc(extCatsLine(g))}</p>`:`<p class="hint">No description.</p>`))+
     extChipsHTML(r)+box+alsoBox+
-    `<div class="m-actions"><button type="button" class="tbtn" id="extDlgClose">Close</button>${act}</div></div>`;
+    foot(act)+`</div>`;
 }
 function openExtDetails(key){
   const r=extRowFor(key);
@@ -661,7 +664,7 @@ function openExtDetails(key){
 }
 /* a requirement button: only drawn when a source offers the pack */
 function extReqTap(b){
-  const o=extReqOffer({pack:b.dataset.extReq});
+  const o=extReqOffer({pack:b.dataset.extReq,file:b.dataset.extReqFile||""});
   if(o)openExtDetails(extKey(o.entry.system,o.entry.file));
 }
 function extUpdateFromRows(rows){
@@ -670,23 +673,43 @@ function extUpdateFromRows(rows){
   /* the plan dialog is Task 6's (#102); until it exists this does nothing */
   if(typeof openInstallPlan==="function")openInstallPlan(planInstall(cands),{back:"settings"});
 }
+/* A selector that finds the same control again after a repaint: its id, or
+   its data-ext-* (or data-rd-*) key; then, for a control whose row the repaint
+   removed, Sources' URL box or the toggle of the section it was in (#102 Task 5
+   review, minor 1). Values go through CSS.escape where it exists. */
+function extCssEsc(v){return typeof CSS!=="undefined"&&CSS&&typeof CSS.escape==="function"?CSS.escape(String(v)):String(v).replace(/["\\]/g,"\\$&");}
+function extFocusTargets(a){
+  if(!a)return [];
+  const out=[];
+  if(a.id)out.push("#"+extCssEsc(a.id));
+  else{
+    const ds=a.dataset||{},k=Object.keys(ds).find(x=>/^(ext|rd)[A-Z]/.test(x));
+    if(k)out.push(`[data-${k.replace(/[A-Z]/g,c=>"-"+c.toLowerCase())}="${extCssEsc(ds[k])}"]`);
+  }
+  const sec=typeof a.closest==="function"?a.closest(".ext-sec"):null;
+  const tog=sec&&sec.querySelector("[data-ext-sec]"),key=tog&&tog.dataset?tog.dataset.extSec:"";
+  if(key==="sources")out.push("#extAddUrl");
+  else if(key)out.push(`[data-ext-sec="${extCssEsc(key)}"]`);
+  return out.filter((x,i)=>out.indexOf(x)===i);
+}
 /* Repaint the page in place. What the player is in the middle of survives it:
-   the status line's message, a URL being typed, and keyboard focus on a
-   section toggle or a control with an id. */
+   a URL being typed, and keyboard focus (extFocusTargets()). The status line,
+   #rulesStatus, sits outside the page, so a repaint never touches it. */
 function renderExtUI(){
   const host=document.getElementById("extPage");
   if(host){
-    const st=host.querySelector("#rulesStatus"),inp=host.querySelector("#extAddUrl");
-    const keep={msg:st?st.textContent:null,cls:st?st.className:"",url:inp?inp.value:"",focus:null};
+    const inp=host.querySelector("#extAddUrl"),url=inp?inp.value:"";
     const a=document.activeElement;
-    if(a&&typeof host.contains==="function"&&host.contains(a))keep.focus=a.id?"#"+a.id:(a.dataset&&a.dataset.extSec?`[data-ext-sec="${a.dataset.extSec}"]`:null);
+    const focus=a&&typeof host.contains==="function"&&host.contains(a)?extFocusTargets(a):[];
     host.outerHTML=extPageHTML();
     const fresh=document.getElementById("extPage");
     if(fresh){
-      const st2=fresh.querySelector("#rulesStatus"),inp2=fresh.querySelector("#extAddUrl");
-      if(st2&&keep.msg!=null){st2.textContent=keep.msg;st2.className=keep.cls;}
-      if(inp2&&keep.url)inp2.value=keep.url;
-      if(keep.focus){const f=fresh.querySelector(keep.focus);if(f&&typeof f.focus==="function")f.focus();}
+      const inp2=fresh.querySelector("#extAddUrl");
+      if(inp2&&url)inp2.value=url;
+      for(const sel of focus){
+        let f=null;try{f=fresh.querySelector(sel);}catch(e){/* a selector this browser can't parse: try the next one */}
+        if(f&&typeof f.focus==="function"){f.focus();break;}
+      }
       wireExtPage(fresh);
     }
   }
@@ -748,4 +771,150 @@ function wireExtPage(root){
   });
   /* a drop onto the page is a Manual install (spec §6.4; Task 6 defines it) */
   if(typeof extWireDrop==="function")extWireDrop(root);
+}
+/* ---- the plan dialog (spec §5 step 3): each pack's outcome, versions, size
+   and source; only install and update lines start ticked; nothing happens
+   until Install N ---- */
+function extSize(n){n=num(n);return n>=1048576?(Math.round(n/104857.6)/10)+" MB":Math.max(1,Math.round(n/1024))+" KB";}
+const EXT_OUTCOME={install:"New",update:"Update",replace:"Replace",same:"Same version",older:"Older than yours",blocked:"",unsupported:""};
+/* where a plan line comes from: a file the player chose, or a source's name */
+function extPlanFrom(c){
+  if(c.manual)return "from a file";
+  const src=(settings.sources||[]).find(s=>s.id===c.origin);
+  return src?"from "+extSourceName(src):"";
+}
+function extPlanHTML(lines){
+  const ticked=lines.filter(l=>l.ticked&&l.canTick).length;
+  if(!lines.some(l=>l.canTick))return `<p class="hint">Nothing to install: ${lines.length?"you already have these, or they need a newer Fieldbook.":"no rules packs found."}</p>`+
+    (lines.length?`<div class="ext-list">${lines.map((l,i)=>extPlanRow(l,i)).join("")}</div>`:"")+
+    `<div class="m-actions"><button type="button" class="tbtn" id="planClose">Close</button></div>`;
+  return `<p class="hint">Nothing changes until you press Install. Every file is checked before any is installed.</p>`+
+    `<div class="ext-list">${lines.map((l,i)=>extPlanRow(l,i)).join("")}</div>`+
+    `<div class="status" id="planStatus" role="status"></div>`+
+    `<div class="m-actions"><button type="button" class="tbtn" id="planClose">Cancel</button><button type="button" class="tbtn primary" id="planGo"${ticked?"":" disabled"}>Install ${ticked}</button></div>`;
+}
+function extPlanRow(l,i){
+  const c=l.cand;
+  const ver=l.have&&(l.outcome==="update"||l.outcome==="replace"||l.outcome==="same"||l.outcome==="older")?`${esc(l.have)} → ${esc(c.version||"?")}`:esc(c.version||"");
+  const from=extPlanFrom(c);
+  const tag=l.outcome==="blocked"||l.outcome==="unsupported"?`<span class="chip ext-app">${esc(l.why)}</span>`
+    :`<span class="ext-from">${esc([EXT_OUTCOME[l.outcome]||"",l.why,from].filter(Boolean).join(" · "))}</span>`;
+  return `<label class="ext-row ext-plan"><input type="checkbox" data-plan-i="${esc(String(i))}"${l.ticked&&l.canTick?" checked":""}${l.canTick?"":" disabled"}>`+
+    `<span class="ext-main"><b>${esc(c.title)}</b><span class="ext-ver"> ${ver}</span><br>${tag}</span><span class="ext-ver">${c.size?esc(extSize(c.size)):""}</span></label>`;
+}
+/* the toast after an install: the count, then what importPack() skipped (as
+   a file import says it, skippedSummary()), then a save that didn't land —
+   which makes it an error that stays (constraint 2) */
+function extInstalledText(r){
+  const n=(r.installed||[]).length,sk=skippedSummary(r.skipped||{}),err=r.saveErr||"";
+  const text=`Installed ${n} pack${n===1?"":"s"}`+(sk||err?"."+sk+(err?" "+err:""):"");
+  return {text,opts:{err:!!err,long:!!sk}};
+}
+function openInstallPlan(lines,opts){
+  const o=opts||{};
+  openModal("Install",extPlanHTML(lines),"",{});
+  const back=()=>{closeModal();if(o.back==="settings"){settings.setPage="extensions";openSettings();}};
+  const close=document.getElementById("planClose");if(close)close.addEventListener("click",back);
+  const go=document.getElementById("planGo");if(!go)return;
+  /* the dialog may have been closed, or replaced, while the files downloaded */
+  const live=()=>document.getElementById("planGo")===go;
+  const count=()=>{const n=lines.filter(l=>l.ticked&&l.canTick).length;go.textContent="Install "+n;go.disabled=!n;};
+  document.querySelectorAll("[data-plan-i]").forEach(cb=>cb.addEventListener("change",()=>{const l=lines[num(cb.dataset.planI)];if(l)l.ticked=!!cb.checked;count();}));
+  go.addEventListener("click",()=>{
+    go.disabled=true;
+    const st=document.getElementById("planStatus");if(st){st.className="status";st.textContent="Downloading and checking…";}
+    return runInstall(lines).then(r=>{
+      if(!r.ok){
+        const msg=`Nothing was installed: ${r.error.file} — ${r.error.why}.`;
+        if(live()&&st){st.className="status err";st.textContent=msg;count();}
+        else toast(msg,null,{err:true});
+        return;
+      }
+      const t=extInstalledText(r);
+      toast(t.text,null,t.opts);
+      if(live())back();
+    });
+  });
+}
+/* ---- Manual install (spec §6.4): files, a folder or a drop, all to the plan ---- */
+function extReadFile(f){
+  return new Promise(res=>{const r=new FileReader();
+    r.onload=()=>res({name:f.webkitRelativePath||f.name,bytes:new Uint8Array(r.result)});
+    r.onerror=()=>res({name:f.webkitRelativePath||f.name,bytes:null});r.readAsArrayBuffer(f);});
+}
+/* only .json and .zip are ever read: a chosen or dropped folder can hold
+   anything, and an image would be read into memory just to be ignored */
+const extWanted=f=>/\.(json|zip)$/i.test(String((f&&(f.webkitRelativePath||f.name))||""));
+function manualInstallFiles(files,opts){
+  const list=Array.from(files||[]).filter(extWanted);
+  return Promise.all(list.map(extReadFile)).then(payloads=>extManualPlan(payloads,opts));
+}
+function extManualPlan(payloads,opts){
+  const {cands,failed}=manualCandidates(payloads);
+  openInstallPlan(planInstall(cands),opts||{});
+  if(failed.length){
+    const st=document.getElementById("planStatus")||document.querySelector("#mBody .hint");
+    if(st)st.insertAdjacentHTML("afterend",`<p class="status err">${esc(failed.map(f=>`Skipped ${f.name}: ${f.why}.`).join(" "))}</p>`);
+  }
+}
+/* a drop: files, a zip, or whole folders (webkitGetAsEntry), read recursively */
+function readDropped(dt){
+  const out=[];
+  const walk=(entry,prefix)=>new Promise(res=>{
+    if(!entry)return res();
+    if(entry.isFile){
+      if(!extWanted(entry))return res();
+      return entry.file(f=>extReadFile(f).then(p=>{p.name=prefix+entry.name;out.push(p);res();}),()=>res());
+    }
+    if(entry.isDirectory){
+      /* readEntries() hands a directory over in batches, until an empty one */
+      const rd=entry.createReader(),all=[];
+      const more=()=>rd.readEntries(es=>{
+        if(!es.length)return Promise.all(all.map(x=>walk(x,prefix+entry.name+"/"))).then(()=>res());
+        all.push(...es);more();
+      },()=>res());
+      return more();
+    }
+    res();
+  });
+  const items=dt&&dt.items?Array.from(dt.items).filter(it=>it&&it.kind==="file"):[];
+  const readFile=f=>f&&extWanted(f)?extReadFile(f).then(p=>{out.push(p);}):Promise.resolve();
+  /* an item with no entry (a browser without the entries API for it) is
+     still a file: read it as one */
+  const jobs=items.length&&typeof items[0].webkitGetAsEntry==="function"
+    ?items.map(it=>{const en=it.webkitGetAsEntry();return en?walk(en,""):readFile(typeof it.getAsFile==="function"?it.getAsFile():null);})
+    :Array.from((dt&&dt.files)||[]).map(readFile);
+  return Promise.all(jobs).then(()=>out);
+}
+function openManualInstall(){
+  openModal("Manual install",
+    `<p class="hint">Downloaded a data zip or pack files? Choose them or drop them here. You'll see what changes before anything installs.</p>`+
+    `<div class="ext-acts"><button type="button" class="tbtn" id="miFiles">Choose files</button><button type="button" class="tbtn" id="miFolder">Choose a folder</button></div>`+
+    `<div class="ext-drop" id="miDrop">Drop files, a zip or a folder here</div>`+
+    `<input type="file" id="miFileIn" multiple accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" class="hidefile">`+
+    `<input type="file" id="miDirIn" webkitdirectory multiple class="hidefile">`+
+    `<div class="m-actions"><button type="button" class="tbtn" id="miClose">Close</button></div>`,"",{});
+  const fi=document.getElementById("miFileIn"),di=document.getElementById("miDirIn"),drop=document.getElementById("miDrop");
+  document.getElementById("miFiles").addEventListener("click",()=>fi.click());
+  document.getElementById("miFolder").addEventListener("click",()=>di.click());
+  document.getElementById("miClose").addEventListener("click",()=>{closeModal();settings.setPage="extensions";openSettings();});
+  [fi,di].forEach(inp=>inp.addEventListener("change",()=>{if(inp.files.length)manualInstallFiles(inp.files,{back:"settings"});inp.value="";}));
+  extWireDrop(drop);
+}
+/* files, a zip or a folder dropped on the Manual install box or the Extensions page */
+function extWireDrop(el){
+  if(!el)return;
+  el.addEventListener("dragover",e=>{e.preventDefault();el.classList.add("ext-dropping");});
+  /* leaving for a child element is not leaving the drop zone */
+  el.addEventListener("dragleave",e=>{if(!e.relatedTarget||!el.contains(e.relatedTarget))el.classList.remove("ext-dropping");});
+  el.addEventListener("drop",e=>{e.preventDefault();el.classList.remove("ext-dropping");
+    readDropped(e.dataTransfer).then(p=>{if(p.length)extManualPlan(p,{back:"settings"});});});
+}
+/* ---- the pills (spec §6.1): "Extensions · N updates", "N updates" at 390px ---- */
+function renderExtPill(){
+  const wrap=document.getElementById("extPill"),go=document.getElementById("extPillGo");if(!wrap||!go)return;
+  const n=extPillCount();
+  wrap.hidden=!n;
+  if(n){go.innerHTML=`<span class="extpill-long">Extensions · </span>${esc(String(n))} update${n===1?"":"s"}`;
+    go.title=`${n} extension update${n===1?"":"s"}: open Settings → Extensions`;}
 }

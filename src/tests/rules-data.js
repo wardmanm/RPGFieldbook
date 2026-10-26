@@ -2305,8 +2305,10 @@ function block(html, needle, tag) {
     !(extIds.has(k) && (extWire.includes('"#' + k + '"') || extWire.includes('getElementById("' + k + '")'))));
   ck('every control it renders is wired up somewhere', unwired.length === 0, unwired);
   ck('#102 the Extensions page draws each of the hooks Task 6 relies on',
-    ['extPage', 'extUpdateAll', 'extCheckNow', 'extManual', 'extAddUrl', 'extAddGo', 'extRemoveRules', 'extRemoveSources', 'rulesStatus'].every(k => extIds.has(k)),
+    ['extPage', 'extUpdateAll', 'extCheckNow', 'extManual', 'extAddUrl', 'extAddGo', 'extRemoveRules', 'extRemoveSources'].every(k => extIds.has(k)),
     [...extIds]);
+  // the status line is a live region: Settings draws it beside the page, never inside the repaint (#102 Task 5 review, minor 6)
+  ck('#102 #rulesStatus sits outside #extPage', !extIds.has('rulesStatus') && declared.has('rulesStatus'));
 }
 
 // ---------- Settings modal: each control on its page (#107)
