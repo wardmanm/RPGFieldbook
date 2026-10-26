@@ -186,11 +186,22 @@ function dismissUpdates(){
    Content-Length above it before the body is ever read — EXT_MAN_MAX for a
    manifest check, EXT_FILE_MAX for a pack file — so a hostile or mistaken
    host can't make the tab buffer a huge response just to have it thrown
-   away afterwards. */
+   away afterwards.
+
+   The header is only a hint: a chunked answer has none. So the body is read
+   through its stream with a running byte count, and the read is cancelled
+   and the request aborted the moment the count passes `cap` (#102 final
+   review I3, Ruling 17: an 80 MB chunked answer to a manifest check used to
+   be buffered whole). arrayBuffer() is the fallback only where a response
+   has no body stream, and the cap is still checked on what it returns. */
 function extFetchBytes(url,ms,cap){
   const ac=typeof AbortController==="function"?new AbortController():null;
-  let timer;
-  const timeout=new Promise((_,rej)=>{timer=setTimeout(()=>{if(ac)ac.abort();rej(new Error("it took too long to answer"));},ms);});
+  const tooBig=()=>new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");
+  let timer,reader=null;
+  /* stop everything: the request where AbortController exists, the stream's
+     reader always (it may be all there is to stop) */
+  const stop=()=>{if(ac)ac.abort();if(reader){try{const p=reader.cancel();if(p&&typeof p.catch==="function")p.catch(()=>{});}catch(e){/* already closed or errored: nothing left to stop */}}};
+  const timeout=new Promise((_,rej)=>{timer=setTimeout(()=>{stop();rej(new Error("it took too long to answer"));},ms);});
   const opts=ac?{cache:"no-store",signal:ac.signal}:{cache:"no-store"};
   const run=fetch(url,opts).then(r=>{
     if(!r||!r.ok){const e=new Error("HTTP "+(r?r.status:"error"));e.status=r?r.status:0;throw e;}
@@ -198,11 +209,28 @@ function extFetchBytes(url,ms,cap){
       const len=r.headers&&typeof r.headers.get==="function"?num(r.headers.get("content-length")):0;
       /* abort first, so the refusal really stops the download rather than
          leaving the body streaming in behind it (#102 Task 4 follow-up N4) */
-      if(len>cap){if(ac)ac.abort();throw new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");}
+      if(len>cap){stop();throw tooBig();}
     }
-    return r.arrayBuffer();
+    if(!r.body||typeof r.body.getReader!=="function")
+      return r.arrayBuffer().then(b=>{const u=new Uint8Array(b);if(cap&&u.length>cap)throw tooBig();return u;});
+    reader=r.body.getReader();
+    const parts=[];let total=0;
+    const pump=()=>reader.read().then(c=>{
+      if(!c||c.done){
+        const out=new Uint8Array(total);let at=0;
+        parts.forEach(p=>{out.set(p,at);at+=p.length;});
+        return out;
+      }
+      /* isView, not instanceof: a chunk can come from another realm (see sha256Hex) */
+      const v=ArrayBuffer.isView(c.value)?new Uint8Array(c.value.buffer,c.value.byteOffset,c.value.byteLength):new Uint8Array(c.value||0);
+      total+=v.length;
+      if(cap&&total>cap){stop();throw tooBig();}
+      parts.push(v);
+      return pump();
+    });
+    return pump();
   });
-  return Promise.race([run,timeout]).then(b=>new Uint8Array(b)).finally(()=>clearTimeout(timer));
+  return Promise.race([run,timeout]).then(b=>b instanceof Uint8Array?b:new Uint8Array(b)).finally(()=>clearTimeout(timer));
 }
 /* the official source's manifest URL: the newest release this app can run
    (pickDataRelease(), as the boot data check), at its tag, on raw — which
@@ -210,7 +238,12 @@ function extFetchBytes(url,ms,cap){
 function extOfficialUrl(){
   if(!UPDATE_REPO)return Promise.resolve("");
   return extFetchBytes(`https://api.github.com/repos/${UPDATE_REPO}/releases?per_page=100`,EXT_CHECK_MS).then(b=>{
-    const pick=pickDataRelease(JSON.parse(utf8Text(b)),APP_VERSION);
+    /* an answer that isn't a JSON list (a proxy's HTML page, a JSON error
+       object) is said in words on the row, never as a raw parser message
+       (#102 final review M8, Ruling 18) */
+    let list;try{list=JSON.parse(utf8Text(b));}catch(e){list=null;}
+    if(!Array.isArray(list))throw new Error("GitHub's release list couldn't be read");
+    const pick=pickDataRelease(list,APP_VERSION);
     return pick?`https://raw.githubusercontent.com/${UPDATE_REPO}/${encodeURIComponent(pick.tag)}/releases/data/fieldbook-data.json`:"";
   });
 }
@@ -273,7 +306,10 @@ function addSource(url){
   let norm=u;try{norm=new URL(u).href;}catch(e){/* keep norm=u; extUrl() already refused anything new URL() can't parse at all */}
   const dup=(settings.sources||[]).some(s=>{let sn=s.url;try{sn=new URL(s.url).href;}catch(e){}return sn===norm;});
   if(dup)return Promise.resolve({ok:false,why:"That source is already in the list."});
-  return extFetchBytes(u,EXT_CHECK_MS).then(bytes=>{
+  /* capped like a pack file, not like a manifest: a plain source may be a
+     whole pack (spec §4), well over 64 KB; a manifest over 64 KB is still
+     refused, by readManifest()'s own check below (#102 final review I3) */
+  return extFetchBytes(u,EXT_CHECK_MS,EXT_FILE_MAX).then(bytes=>{
     let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){return {ok:false,why:"It didn't answer with JSON."};}
     const src={id:uid(),kind:"plain",url:u,on:true,checked:Date.now(),error:"",manifest:null,base:""};
     let empty=false;
@@ -534,9 +570,17 @@ function extAgo(t,bare){
   const d=new Date(t);
   return (bare?"":"checked ")+(new Date().toDateString()===d.toDateString()?"today, ":d.toLocaleDateString()+" ")+d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
 }
+/* A source as the player sees it named. A manifest names itself, so its name
+   alone proves nothing: anyone can publish one called "Fieldbook public data".
+   Every manifest source is "name (host)" wherever it is named — rows, the
+   plan, the details and Sources — and only the built-in official source reads
+   the bare "Fieldbook public data" (#102 final review I2, Ruling 16). */
+function extSourceHost(src){try{return new URL(String(src&&src.url||"")).host;}catch(e){return "";}}
 function extSourceName(src){
   if(src.kind==="official")return "Fieldbook public data";
-  return (src.manifest&&src.manifest.name)||String(src.url||"").replace(/^https?:\/\//i,"");
+  const name=src.manifest&&src.manifest.name,host=extSourceHost(src);
+  if(name&&host)return name===host?host:name+" ("+host+")";
+  return name||String(src.url||"").replace(/^https?:\/\//i,"");
 }
 /* a loaded pack's contents, "12 spells · 3 classes": what the old Loaded data
    list showed, kept for a pack no manifest describes */
@@ -577,9 +621,13 @@ function extRowTitle(r){
 }
 function extRowHTML(r){
   const g=r.group,o=r.offer,e=o&&o.entry,title=extRowTitle(r);
+  /* decision 11 lets any enabled source update a pack another source (or a
+     file) installed; without signing, saying WHO offers that update is the
+     player's only defence, so the row names it (Ruling 16) */
+  const own=!!o&&(settings.packOrigin||{})[r.key]===o.source.id;
   const from=g
-    ?(o&&(settings.packOrigin||{})[r.key]===o.source.id?"from "+extSourceName(o.source)
-      :(g.isFile?"imported from a file · "+g.label:"fetched from a source URL"))
+    ?(own?"from "+extSourceName(o.source)
+      :(g.isFile?"imported from a file · "+g.label:"fetched from a source URL")+(o&&r.state==="update"?" · update from "+extSourceName(o.source):""))
     :(o?"from "+extSourceName(o.source)+" · not installed":"");
   const have=g&&parseDataVer(g.dataVersion)?g.dataVersion:"";
   let ver="",act="";
@@ -647,7 +695,7 @@ function extDetailsHTML(key){
     kv("Checked",esc(extAgo(src.checked,true)))+
     kv("Licence",esc([e&&e.license,e&&e.attribution].filter(Boolean).join(" · ")))+`</div>`:
     `<div class="ext-box"><b>Source</b><div>${esc(g&&g.isFile?"Imported from a file: "+g.label:"Fetched from a source URL")}</div></div>`;
-  const alsoBox=others.length?`<div class="ext-box"><b>Also from this source</b>${others.map(x=>`<div><button type="button" class="ext-name" data-ext-open="${esc(x.key)}">${esc(x.offer.entry.title)}</button>${x.state==="blocked"||x.state==="unsupported"?` · ${esc(extTooNewWhy(x.offer.entry))}`:""}</div>`).join("")}</div>`:"";
+  const alsoBox=others.length?`<div class="ext-box"><b>Also from ${esc(extSourceName(src))}</b>${others.map(x=>`<div><button type="button" class="ext-name" data-ext-open="${esc(x.key)}">${esc(x.offer.entry.title)}</button>${x.state==="blocked"||x.state==="unsupported"?` · ${esc(extTooNewWhy(x.offer.entry))}`:""}</div>`).join("")}</div>`:"";
   const act=r.state==="update"?`<button type="button" class="tbtn primary" data-ext-update="${esc(key)}">Update</button>`
     :(r.state==="install"?`<button type="button" class="tbtn primary" data-ext-install="${esc(key)}">Install</button>`:"");
   const desc=e&&e.description?extParas(e.description):(e&&e.summary?extParas(e.summary):"");
@@ -781,11 +829,15 @@ function wireExtPage(root){
    until Install N ---- */
 function extSize(n){n=num(n);return n>=1048576?(Math.round(n/104857.6)/10)+" MB":Math.max(1,Math.round(n/1024))+" KB";}
 const EXT_OUTCOME={install:"New",update:"Update",replace:"Replace",same:"Same version",older:"Older than yours",blocked:"",unsupported:""};
-/* where a plan line comes from: a file the player chose, or a source's name */
-function extPlanFrom(c){
+/* where a plan line comes from: a file the player chose, or a source's name —
+   "update from" it when it would update a loaded pack that some other source,
+   or a file, installed (Ruling 16) */
+function extPlanFrom(c,l){
   if(c.manual)return "from a file";
   const src=(settings.sources||[]).find(s=>s.id===c.origin);
-  return src?"from "+extSourceName(src):"";
+  if(!src)return "";
+  const stranger=!!l&&(l.outcome==="update"||l.outcome==="replace")&&(settings.packOrigin||{})[c.key]!==c.origin;
+  return (stranger?"update from ":"from ")+extSourceName(src);
 }
 function extPlanHTML(lines){
   const ticked=lines.filter(l=>l.ticked&&l.canTick).length;
@@ -800,9 +852,11 @@ function extPlanHTML(lines){
 function extPlanRow(l,i){
   const c=l.cand;
   const ver=l.have&&(l.outcome==="update"||l.outcome==="replace"||l.outcome==="same"||l.outcome==="older")?`${esc(l.have)} → ${esc(c.version||"?")}`:esc(c.version||"");
-  const from=extPlanFrom(c);
+  const from=extPlanFrom(c,l);
+  /* "Update · update from X" says it twice: an update from a stranger reads "Update from X" */
+  const said=l.outcome==="update"&&/^update from /.test(from)?["Update"+from.slice(6),l.why]:[EXT_OUTCOME[l.outcome]||"",l.why,from];
   const tag=l.outcome==="blocked"||l.outcome==="unsupported"?`<span class="chip ext-app">${esc(l.why)}</span>`
-    :`<span class="ext-from">${esc([EXT_OUTCOME[l.outcome]||"",l.why,from].filter(Boolean).join(" · "))}</span>`;
+    :`<span class="ext-from">${esc(said.filter(Boolean).join(" · "))}</span>`;
   return `<label class="ext-row ext-plan"><input type="checkbox" data-plan-i="${esc(String(i))}"${l.ticked&&l.canTick?" checked":""}${l.canTick?"":" disabled"}>`+
     `<span class="ext-main"><b>${esc(c.title)}</b><span class="ext-ver"> ${ver}</span><br>${tag}</span><span class="ext-ver">${c.size?esc(extSize(c.size)):""}</span></label>`;
 }

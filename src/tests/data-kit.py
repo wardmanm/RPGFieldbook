@@ -662,6 +662,21 @@ ck("#102 ...and leaves no fb-data-release-* scratch folder behind (fix round 2)"
    after == before, (before, after))
 shutil.rmtree(d)
 
+# ---------- Ruling 18: an error in data-release.js's exit-handler cleanup never
+# changes its exit code. A preload makes fs.rmSync clean up and then throw, the
+# way a busy or vanished scratch folder would.
+preload = os.path.join(tempfile.mkdtemp(prefix="fb-preload-"), "rmsync-throws.js")
+open(preload, "w").write('const fs = require("fs"), real = fs.rmSync;\n'
+                         'fs.rmSync = (p, o) => { real(p, o); throw new Error("EBUSY: simulated rmSync failure"); };\n')
+d = checkout()
+write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 7}]})
+git(d, "commit", "-qam", "change alpha")
+r = subprocess.run(["node", "--require", preload, "scripts/data-release.js"], cwd=d, capture_output=True, text=True)
+ck("#102 Ruling 18: a cleanup error in the exit handler leaves a good data release exiting 0",
+   r.returncode == 0 and read_json(d, "data/packs.json")["release"] == "1.8.0-1", (r.returncode, r.stderr[-400:]))
+shutil.rmtree(d)
+shutil.rmtree(os.path.dirname(preload))
+
 # ---------- the kit (#85, R12/R13): the example pack builds and passes --public,
 # and the kit zip (once built) works on its own, unzipped anywhere (Review Focus 3)
 EXAMPLE_PACK = os.path.join(ROOT, "tools", "data-kit", "example-pack")
@@ -976,6 +991,29 @@ ck("#102 validate reads a folder", subprocess.run([sys.executable, FBDATA, "vali
 open(os.path.join(out, fm["packs"][0]["file"]), "a").write(" ")
 r = subprocess.run([sys.executable, FBDATA, "validate", out], capture_output=True, text=True)
 ck("#102 validate names a folder file whose sha256 no longer matches", r.returncode == 1 and "sha256" in r.stderr, r.stderr)
+
+# Ruling 18 (M9): Finder's .DS_Store (or any dotfile) in releases/data/ is not a
+# pack, so neither release-files nor validate <folder> trips on it; a stray
+# non-dotfile is still named
+out2 = os.path.join(d, "releases", "data2")
+os.makedirs(out2)
+open(os.path.join(out2, ".DS_Store"), "wb").write(b"\x00\x00\x00\x01Bud1")
+r = subprocess.run([sys.executable, FBDATA, "release-files", os.path.join(d, "dist"), "-o", out2,
+                    "--registry", registry_path, "--built-for", "1.9.0"], capture_output=True, text=True)
+ck("#102 M9: release-files ignores a .DS_Store in the folder", r.returncode == 0, r.stderr)
+ck("#102 M9: ...and leaves it where it is", os.path.isfile(os.path.join(out2, ".DS_Store")), sorted(os.listdir(out2)))
+r = subprocess.run([sys.executable, FBDATA, "validate", out2], capture_output=True, text=True)
+ck("#102 M9: validate <folder> ignores a dotfile", r.returncode == 0, r.stderr)
+open(os.path.join(out2, "stray.txt"), "w").write("x")
+r = subprocess.run([sys.executable, FBDATA, "validate", out2], capture_output=True, text=True)
+ck("#102 M9: ...but still names a stray file that isn't a dotfile",
+   r.returncode == 1 and "not in the manifest: stray.txt" in r.stderr and ".DS_Store" not in r.stderr, r.stderr)
+os.remove(os.path.join(out2, "stray.txt"))
+os.makedirs(os.path.join(out2, "odd_full.json"))
+r = subprocess.run([sys.executable, FBDATA, "release-files", os.path.join(d, "dist"), "-o", out2,
+                    "--registry", registry_path, "--built-for", "1.9.0"], capture_output=True, text=True)
+ck("#102 M9 (T1 deferred): release-files' stale-file sweep never tries to remove a folder named *.json",
+   "IsADirectoryError" not in r.stderr and "PermissionError" not in r.stderr and "Traceback" not in r.stderr, r.stderr)
 
 # ---------- #102: the release paths write releases/data/
 build_sh = open(os.path.join(ROOT, "build.sh"), encoding="utf-8").read()

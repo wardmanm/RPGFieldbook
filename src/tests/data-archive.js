@@ -1235,7 +1235,14 @@ section('#102 the Extensions page: wording, chips, the save error and the badge'
   ck('#102 the badge dot shows while an update is pending, under the extensions key',
     /set-dot/.test(X.rulesNavBadgeHTML()) && /id="setBadgeDesc-extensions"/.test(X.rulesNavBadgeHTML()));
   X.settings.dismissedUpdates = {'SRD 5.2|srd52_full.json': '1.9.0'};
-  ck('#102 ...and not once the pill has cleared it', !/set-dot/.test(X.rulesNavBadgeHTML()), X.rulesNavBadgeHTML());
+  /* Ruling 15: the dot follows spec §6.2 ("shows while updates are pending"),
+     extUpdateRows(), not the pill's count: clearing the pill leaves it */
+  ck('#102 Ruling 15: the dot stays once the pill has cleared the update', X.extPillCount() === 0 && /set-dot/.test(X.rulesNavBadgeHTML()), X.rulesNavBadgeHTML());
+  ck('#102 Ruling 15: ...and the description still says "update"', / · update$/.test(X.rulesBadge()), X.rulesBadge());
+  X.importPack({system: 'SRD 5.2', dataVersion: '1.9.0', spells: [{name: 'Bless', level: 1}]}, 'srd52_full.json');
+  ck('#102 Ruling 15: ...and goes once the update is installed', X.extUpdateRows().length === 0 && !/set-dot/.test(X.rulesNavBadgeHTML()), X.rulesNavBadgeHTML());
+  X.resetRules();
+  X.importPack({system: 'SRD 5.2', dataVersion: '1.8.1', spells: [{name: 'Bless', level: 1}]}, 'srd52_full.json');
   ck('#102 no save error, no save-error line', !/at the last check/.test(h));
   const realSave = ctx.saveSettings; ctx.saveSettings = () => 'disk full';
   ctx.navigator.onLine = true;
@@ -1643,6 +1650,176 @@ section('#102 Task 6 fix round 2: the plan cannot be dismissed while it installs
     ctx.document.getElementById = realGet; ctx.document.querySelectorAll = realQSA; ctx.runInstall = realRun; ctx.closeModal = realClose; ctx.toast = realToast;
   }
   X.resetRules();
+});
+
+section('#102 Ruling 16: a manifest source is named with its host, and a stranger\'s update says who offers it', () => {
+  /* the final review's live repro (I2): SRD 5.2 imported by hand (every
+     pre-#102 player's state), plus a manifest at evil.example that calls
+     itself "Fieldbook public data" and offers SRD 5.2|srd52_full.json */
+  X.resetRules();
+  X.importPack({system: 'SRD 5.2', dataVersion: '1.8.0', spells: [{name: 'Bless', level: 1}]}, 'srd52_full.json');
+  const man = (name, packs) => X.readManifest({_type: 'fieldbook-data', name, builtFor: '1.0.0', packs}, 100);
+  const srd = v => ({file: 'srd52_full.json', system: 'SRD 5.2', version: v, sha256: 'a'.repeat(64), title: 'SRD 5.2 — System Reference Document'});
+  const official = (packs) => ({id: 'official', kind: 'official', url: '', on: true, checked: 0, error: '', base: 'https://raw.example/fieldbook-data.json', manifest: packs ? man('Fieldbook public data', packs) : null});
+  const evil = {id: 'evil', kind: 'manifest', url: 'https://evil.example/fieldbook-data.json', on: true, checked: 0, error: '',
+    base: 'https://evil.example/fieldbook-data.json', manifest: man('Fieldbook public data', [srd('1.8.1')])};
+  X.settings.sources = [official(null), evil];
+  X.settings.packOrigin = {}; X.settings.dismissedUpdates = {}; X.settings.setCollapse = {};
+  const KEY = 'SRD 5.2|srd52_full.json';
+  /* "Fieldbook public data" NOT followed by the host: what only the official source may read */
+  const bare = /Fieldbook public data(?! \(evil\.example\))/;
+  const row = () => X.extRowHTML(X.extPackRows().find(r => r.key === KEY));
+  let h = row();
+  ck('#102 I2: the hand-imported row says who offers the update, by name and host',
+    /update from Fieldbook public data \(evil\.example\)/.test(h) && /1\.8\.0 → <b class="ext-up">1\.8\.1/.test(h), h);
+  ck('#102 I2: ...and nothing on the row reads as the official source', !bare.test(h), h);
+  const plan = () => X.extPlanHTML(X.planInstall([X.offerCandidate(X.extPackRows().find(r => r.key === KEY).offer)]));
+  let p = plan();
+  ck('#102 I2: the plan line says "update from" the stranger, with its host',
+    /update from Fieldbook public data \(evil\.example\)/i.test(p) && !bare.test(p), p);
+  const d = X.extDetailsHTML(KEY);
+  ck('#102 I2: the details\' Source box names it with its host', /Name<\/span>Fieldbook public data \(evil\.example\)/.test(d) && !bare.test(d), d);
+  const srcs = X.extSourcesHTML();
+  ck('#102 I2: the Sources list names it with its host', /<b>Fieldbook public data \(evil\.example\)<\/b>/.test(srcs), srcs);
+  // installed by hand (packOrigin "manual") is the same: not the offering source
+  X.settings.packOrigin = {[KEY]: 'manual'};
+  ck('#102 I2: a pack whose origin is "manual" also says who offers the update', /update from Fieldbook public data \(evil\.example\)/.test(row()), row());
+  // a name with markup is escaped, and still carries the host
+  evil.manifest = man('<b>Fieldbook public data</b>', [srd('1.8.1')]);
+  h = row();
+  ck('#102 I2: an escaped name still carries its host', /update from &lt;b&gt;Fieldbook public data&lt;\/b&gt; \(evil\.example\)/.test(h) && !h.includes('<b>Fieldbook'), h);
+  evil.manifest = man('Fieldbook public data', [srd('1.8.1')]);
+  // the "Also from" box names the source too
+  evil.manifest = man('Fieldbook public data', [srd('1.8.1'), {file: 'x_full.json', system: 'X', version: '1.0.0', sha256: 'b'.repeat(64)}]);
+  ck('#102 I2: "Also from" names the source with its host', /Also from Fieldbook public data \(evil\.example\)/.test(X.extDetailsHTML(KEY)), X.extDetailsHTML(KEY));
+  // the official source: the bare name, and the pack it installed reads "from", not "update from"
+  X.settings.sources = [official([srd('1.9.0')]), evil];
+  X.settings.packOrigin = {[KEY]: 'official'};
+  h = row(); p = plan();
+  ck('#102 I2: the official source alone reads "Fieldbook public data", with no host',
+    /from Fieldbook public data</.test(h) && !/update from/.test(h) && !/\(raw\.example\)/.test(h), h);
+  ck('#102 I2: ...and its own update\'s plan line is a plain "from"', /Update · from Fieldbook public data</.test(p) && !/update from/.test(p), p);
+  // the stranger's own install: once it installed the pack, its row reads plain "from", with the host
+  X.settings.sources = [official(null), evil];
+  X.settings.packOrigin = {[KEY]: 'evil'};
+  h = row();
+  ck('#102 I2: the installing source reads "from name (host)", not "update from"',
+    /from Fieldbook public data \(evil\.example\)/.test(h) && !/update from/.test(h), h);
+  X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {}; X.settings.dismissedUpdates = {};
+});
+
+section('#102 Ruling 17: the size caps hold without a Content-Length, by counting the stream', async () => {
+  /* the final review's live repro (I3): a chunked answer with no
+     Content-Length used to be buffered whole (80 MB against a 64 KB cap)
+     before anything refused it */
+  const realFetch = ctx.fetch, realAC = ctx.AbortController;
+  ctx.AbortController = AbortController;
+  /* a body that yields `chunk`-byte pieces, `max` of them (Infinity: forever) */
+  const streamed = (chunk, max, opts) => {
+    const o = opts || {}, log = {reads: 0, cancelled: false, arrayBuffer: false, signal: null};
+    const res = {ok: true, status: 200, headers: {get: () => null},
+      body: {getReader: () => ({
+        read: () => {
+          if (o.stallAfter != null && log.reads >= o.stallAfter) { log.reads++; return new Promise(() => {}); }
+          if (log.cancelled || log.reads >= max) return Promise.resolve({done: true, value: undefined});
+          log.reads++;
+          return Promise.resolve({done: false, value: new Uint8Array(chunk).fill(log.reads % 251)});
+        },
+        cancel: () => { log.cancelled = true; return Promise.resolve(); },
+        releaseLock() {}})},
+      arrayBuffer: () => { log.arrayBuffer = true; return Promise.resolve(new ArrayBuffer(chunk * Math.min(max, 4))); }};
+    return {res, log};
+  };
+  try {
+    // a manifest check: 16 KB chunks with no end, against the 64 KB cap
+    let s = streamed(16384, Infinity);
+    ctx.fetch = (u, opts) => { s.log.signal = opts && opts.signal; return Promise.resolve(s.res); };
+    let msg = '';
+    try { await X.extFetchBytes('https://flood.example/m.json', 1000, X.EXT_MAN_MAX); } catch (e) { msg = e.message; }
+    ck('#102 I3: a stream past the 64 KB cap is refused with the cap message', msg === 'the manifest is larger than 64 KB', msg);
+    ck('#102 I3: ...after reading just past the cap, never the whole body', s.log.reads === 5 && !s.log.arrayBuffer, s.log);
+    ck('#102 I3: ...and the reader is cancelled and the request aborted', s.log.cancelled && s.log.signal && s.log.signal.aborted === true, s.log);
+    // a pack file: the 32 MB cap, the same way (1 MB chunks)
+    s = streamed(1048576, Infinity);
+    ctx.fetch = (u, opts) => { s.log.signal = opts && opts.signal; return Promise.resolve(s.res); };
+    msg = '';
+    try { await X.extFetchBytes('https://flood.example/p.json', 1000, X.EXT_FILE_MAX); } catch (e) { msg = e.message; }
+    ck('#102 I3: a pack stream past 32 MB is refused with the cap message', msg === "it's larger than 32 MB" && s.log.reads === 33 && s.log.cancelled, [msg, s.log.reads]);
+    // under the cap: the exact bytes, in order
+    s = streamed(1000, 3);
+    ctx.fetch = () => Promise.resolve(s.res);
+    const got = await X.extFetchBytes('https://ok.example/m.json', 1000, X.EXT_MAN_MAX);
+    const want = Buffer.concat([1, 2, 3].map(i => Buffer.alloc(1000, i % 251)));
+    ck('#102 I3: a stream under the cap returns exactly its bytes', got.length === 3000 && Buffer.from(got).equals(want) && !s.log.arrayBuffer, got.length);
+    // exactly at the cap is allowed
+    s = streamed(16384, 4);
+    ctx.fetch = () => Promise.resolve(s.res);
+    const at = await X.extFetchBytes('https://ok.example/m.json', 1000, X.EXT_MAN_MAX);
+    ck('#102 I3: exactly 64 KB is not over the cap', at.length === X.EXT_MAN_MAX, at.length);
+    // no body stream: arrayBuffer, and the cap is still checked after
+    const noBody = n => ({ok: true, status: 200, headers: {get: () => null}, arrayBuffer: () => Promise.resolve(new ArrayBuffer(n))});
+    ctx.fetch = () => Promise.resolve(noBody(X.EXT_MAN_MAX + 1));
+    msg = '';
+    try { await X.extFetchBytes('https://old.example/m.json', 1000, X.EXT_MAN_MAX); } catch (e) { msg = e.message; }
+    ck('#102 I3: with no body stream, arrayBuffer is the fallback and the cap still holds', msg === 'the manifest is larger than 64 KB', msg);
+    ctx.fetch = () => Promise.resolve(noBody(10));
+    ck('#102 I3: ...and a small body still reads', (await X.extFetchBytes('https://old.example/m.json', 1000, X.EXT_MAN_MAX)).length === 10);
+    // the timeout covers the whole stream: a body that stalls after one chunk
+    const realST = ctx.setTimeout, realCT = ctx.clearTimeout;
+    ctx.setTimeout = setTimeout; ctx.clearTimeout = clearTimeout;
+    s = streamed(100, Infinity, {stallAfter: 1});
+    ctx.fetch = (u, opts) => { s.log.signal = opts && opts.signal; return Promise.resolve(s.res); };
+    msg = '';
+    const t0 = Date.now();
+    try { await X.extFetchBytes('https://slow.example/m.json', 50, X.EXT_MAN_MAX); } catch (e) { msg = e.message; }
+    ctx.setTimeout = realST; ctx.clearTimeout = realCT;
+    ck('#102 I3: a stream that stalls mid-body still times out, and is stopped', /took too long/.test(msg) && Date.now() - t0 < 2000 && s.log.signal.aborted && s.log.cancelled, [msg, s.log]);
+    // a boot check against a flooding manifest source: refused, the error on its row
+    s = streamed(16384, Infinity);
+    ctx.fetch = () => Promise.resolve(s.res);
+    const src = {id: 'f', kind: 'manifest', url: 'https://flood.example/m.json', on: true, checked: 0, error: '', manifest: null, base: ''};
+    await X.checkSource(src);
+    ck('#102 I3: checkSource refuses a flooding manifest and says why', /larger than 64 KB/.test(src.error) && s.log.reads === 5, [src.error, s.log.reads]);
+    // addSource is capped too: it used to pass no cap at all
+    X.settings.sources = [];
+    s = streamed(1048576, Infinity);
+    ctx.fetch = () => Promise.resolve(s.res);
+    const r = await X.addSource('https://flood.example/add.json');
+    ck('#102 I3: addSource stops a body with no end at the 32 MB cap', r.ok === false && /larger than 32 MB/.test(r.why) && s.log.reads === 33 && s.log.cancelled, [r, s.log.reads]);
+    // ...a manifest over 64 KB is still refused (readManifest's own check)...
+    const bigMan = JSON.stringify({_type: 'fieldbook-data', builtFor: '1.0.0', pad: 'x'.repeat(X.EXT_MAN_MAX), packs: []});
+    ctx.fetch = () => Promise.resolve(noBody(0)).then(res => Object.assign(res, {arrayBuffer: () => Promise.resolve(new TextEncoder().encode(bigMan).buffer)}));
+    const r2 = await X.addSource('https://big.example/m.json');
+    ck('#102 I3: addSource still refuses a manifest over 64 KB', r2.ok === false && /larger than 64 KB/.test(r2.why), r2);
+    // ...while a plain rules file over 64 KB, which spec §4 allows as a source, still adds
+    const bigPlain = JSON.stringify({system: 'Big', dataVersion: '1.0.0', spells: [{name: 'B', text: 'y'.repeat(200000)}]});
+    ctx.fetch = () => Promise.resolve(noBody(0)).then(res => Object.assign(res, {arrayBuffer: () => Promise.resolve(new TextEncoder().encode(bigPlain).buffer)}));
+    const r3 = await X.addSource('https://big.example/plain.json');
+    ck('#102 I3: a plain rules file over 64 KB still adds as a source', r3.ok === true && X.settings.sources.some(x => x.kind === 'plain' && x.url === 'https://big.example/plain.json'), r3);
+  } finally {
+    ctx.fetch = realFetch; ctx.AbortController = realAC; X.settings.sources = [];
+  }
+});
+
+section("#102 Ruling 18 (M8): a garbled release list reads as GitHub's, not a parser message", async () => {
+  const realFetch = ctx.fetch;
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  const LIST = 'https://api.github.com/repos/wardmanm/RPGFieldbook/releases?per_page=100';
+  const off = () => ({id: 'official', kind: 'official', url: '', on: true, checked: 0, error: '', manifest: null, base: ''});
+  try {
+    extRoutes[LIST] = '<html>rate limited</html>';
+    let src = off();
+    await X.checkSource(src);
+    ck("#102 M8: an answer that isn't JSON says GitHub's release list couldn't be read", src.error === "GitHub's release list couldn't be read", src.error);
+    extRoutes[LIST] = {message: 'Moved'};
+    src = off();
+    await X.checkSource(src);
+    ck('#102 M8: ...and so does JSON that is not a list', src.error === "GitHub's release list couldn't be read", src.error);
+    extRoutes[LIST] = [];
+    src = off();
+    await X.checkSource(src);
+    ck('#102 M8: an empty list is still "nothing to offer", not an error', src.error === '' && src.manifest === null, src);
+  } finally { ctx.fetch = realFetch; }
 });
 
 // ---- add new sections above this line ----

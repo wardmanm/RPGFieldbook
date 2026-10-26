@@ -368,8 +368,11 @@ def cmd_release_files(a):
     built_for = a.built_for if a.built_for is not None else app_version()
     manifest, entries = build_manifest(reg, a.bundles, built_for, False)
     os.makedirs(a.output, exist_ok=True)
+    # the stale bundles of an earlier run go; a dotfile (Finder's .DS_Store)
+    # or a folder is never touched, and validate_archive() ignores dotfiles
+    # (#102 final review M9)
     for n in os.listdir(a.output):
-        if n.endswith(".json"):
+        if n.endswith(".json") and not n.startswith(".") and os.path.isfile(os.path.join(a.output, n)):
             os.remove(os.path.join(a.output, n))
     for name, raw in entries.items():
         with open(os.path.join(a.output, name), "wb") as f:
@@ -466,9 +469,12 @@ def _validate_entries(names, read, public):
 
 def validate_archive(path, public=False):
     """Problems with an archive or a releases/data folder (spec §6.3, #102),
-    one line each; [] when it is sound."""
+    one line each; [] when it is sound. In a folder, a dotfile (Finder's
+    .DS_Store, an editor's swap file) is not an entry: no release ships one,
+    and it must not fail a local release (#102 final review M9)."""
     if os.path.isdir(path):
-        names = sorted(n for n in os.listdir(path) if os.path.isfile(os.path.join(path, n)))
+        names = sorted(n for n in os.listdir(path)
+                       if not n.startswith(".") and os.path.isfile(os.path.join(path, n)))
 
         def read(n):
             with open(os.path.join(path, n), "rb") as f:

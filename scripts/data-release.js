@@ -132,8 +132,13 @@ if (!PRIVATE) {
   // no public licence, R13), and die() calls process.exit(1), which skips a
   // surrounding `finally`. Register the cleanup on "exit" instead — it runs on
   // every exit path, and fs.rmSync is synchronous, so it's safe inside the
-  // handler (#102 fix round 2).
-  process.on("exit", () => fs.rmSync(tmp, { recursive: true, force: true }));
+  // handler (#102 fix round 2). A cleanup that fails only warns: an exception
+  // thrown in an "exit" handler would replace the exit code, turning a release
+  // that succeeded into a failure (#102 final review, Ruling 18).
+  process.on("exit", () => {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); }
+    catch (e) { console.error(`data-release: couldn't remove the scratch folder ${tmp}: ${e.message}`); }
+  });
   fbdata(["bundle", "-o", tmp]);
   fbdata(["release-files", tmp, "-o", path.join(ROOT, "releases", "data")]);
 }

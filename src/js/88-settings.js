@@ -76,8 +76,10 @@ function tabsGroupHTML(c){
   }).join(""));
 }
 /* the Extensions tab's count, and a dot while a newer copy of a loaded pack is
-   out: the boot data check's, or a source's update the pill hasn't cleared
-   (extPillCount(), #102); renderRulesData() and renderExtUI() keep it current. The tab's aria-label replaces its
+   out: the boot data check's, or any update a source offers (extUpdateRows(),
+   #102) — spec §6.2's "shows while updates are pending", so clearing the
+   top-bar pill leaves the dot (Ruling 15); renderRulesData() and renderExtUI()
+   keep it current. The tab's aria-label replaces its
    contents, so the same facts are its description (setNavHTML() points
    aria-describedby here), the way the old section header read them aloud. */
 function rulesNavBadgeHTML(){
@@ -85,7 +87,7 @@ function rulesNavBadgeHTML(){
   return (n?`<span class="set-cnt" title="${esc(rulesBadge())}">${n}</span>`:"")+(up?`<span class="set-dot" title="Newer rules data is out"></span>`:"")+
     `<span id="setBadgeDesc-extensions" hidden>${esc(rulesBadge())}</span>`;
 }
-function rulesUpdatePending(){return loadedRulesGroups().some(g=>dataStatus(g).state==="update")||extPillCount()>0;}
+function rulesUpdatePending(){return loadedRulesGroups().some(g=>dataStatus(g).state==="update")||extUpdateRows().length>0;}
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
 /* the Extensions tab's description; renderRulesData() keeps it current after the modal opens */
 function rulesBadge(){
