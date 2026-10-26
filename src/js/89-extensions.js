@@ -50,7 +50,15 @@ function sha256Hex(bytes){
 }
 /* ---- reading a manifest ---- */
 function extUrl(u){return typeof u==="string"&&/^https?:\/\//i.test(u)?u:"";}
-function extText(s,max){return typeof s==="string"?s.slice(0,max):"";}
+/* Manifest text, cut to its cap. Every invisible format character (\p{Cf}:
+   the bidi controls U+200E/F, U+202A-202E, U+2066-2069 and U+061C, the
+   zero-width characters and the BOM) goes first: a name ending in U+202E
+   made the browser draw "name (host)" with the host reversed, so
+   "moc.buhtig.ws" read "(sw.github.com)" (#102 re-review N1, Mike's call:
+   strip them). Stripped before the cut, so they never use up the length. */
+const EXT_INVISIBLE=/\p{Cf}/gu;
+function extPlain(s){return typeof s==="string"?s.replace(EXT_INVISIBLE,""):"";}
+function extText(s,max){return typeof s==="string"?extPlain(s).slice(0,max):"";}
 /* a path relative to the manifest: an ALLOW-list, not a blacklist of
    "dangerous" characters. new URL() rewrites its whole input before it
    collapses ../ dot-segments — it decodes %2e, and it strips every ASCII tab
@@ -76,7 +84,7 @@ function extEntry(p,builtFor){
   const app=v=>typeof v==="string"&&/^\d+\.\d+\.\d+$/.test(v)?v:"";
   return {path,file,system,
     category:typeof p.category==="string"&&p.category.trim()?p.category.trim():"rules",
-    title:extText(p.title,200)||system,summary:extText(p.summary,EXT_SUMMARY_MAX),description:extText(p.description,EXT_DESC_MAX),
+    title:extText(p.title,200)||extText(system,200),summary:extText(p.summary,EXT_SUMMARY_MAX),description:extText(p.description,EXT_DESC_MAX),
     version:p.version,minApp:app(p.minApp)||app(builtFor),
     sha256:/^[0-9a-f]{64}$/.test(String(p.sha256||""))?p.sha256:"",size:Math.max(0,num(p.size)),
     license:extText(p.license,64),attribution:extText(p.attribution,2000),
@@ -196,7 +204,7 @@ function dismissUpdates(){
    has no body stream, and the cap is still checked on what it returns. */
 function extFetchBytes(url,ms,cap){
   const ac=typeof AbortController==="function"?new AbortController():null;
-  const tooBig=()=>new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");
+  const tooBig=()=>{const e=new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");e.tooBig=true;return e;};
   let timer,reader=null;
   /* stop everything: the request where AbortController exists, the stream's
      reader always (it may be all there is to stop) */
@@ -330,6 +338,9 @@ function addSource(url){
     return {ok:true,why:err?"Added, but your settings couldn't be saved: "+err
       :(empty?"Added, but it offers nothing this Fieldbook can install.":"")};
   },e=>{
+    /* the host answered, just with too much: say so, not "couldn't be
+       reached" (#102 re-review N2). addSource() caps at EXT_FILE_MAX. */
+    if(e&&e.tooBig)return {ok:false,why:"Its answer is larger than 32 MB."};
     const base="It couldn't be reached: "+((e&&e.message)||e)+".";
     /* fetch() rejects with a TypeError ("Failed to fetch") for a network
        failure, which is also what a host with no CORS header produces — hint
@@ -575,12 +586,16 @@ function extAgo(t,bare){
    Every manifest source is "name (host)" wherever it is named — rows, the
    plan, the details and Sources — and only the built-in official source reads
    the bare "Fieldbook public data" (#102 final review I2, Ruling 16). */
-function extSourceHost(src){try{return new URL(String(src&&src.url||"")).host;}catch(e){return "";}}
+/* The host as new URL() gives it is already clean (an IDN is punycode, and
+   the URL parser drops or refuses format characters), and the name has been
+   through extText(); both are stripped again here all the same, so a name
+   saved before that fix can't reverse the host either (#102 re-review N1). */
+function extSourceHost(src){try{return extPlain(new URL(String(src&&src.url||"")).host);}catch(e){return "";}}
 function extSourceName(src){
   if(src.kind==="official")return "Fieldbook public data";
-  const name=src.manifest&&src.manifest.name,host=extSourceHost(src);
+  const name=extPlain(src.manifest&&src.manifest.name).trim(),host=extSourceHost(src);
   if(name&&host)return name===host?host:name+" ("+host+")";
-  return name||String(src.url||"").replace(/^https?:\/\//i,"");
+  return name||extPlain(String(src.url||"")).replace(/^https?:\/\//i,"");
 }
 /* a loaded pack's contents, "12 spells · 3 classes": what the old Loaded data
    list showed, kept for a pack no manifest describes */

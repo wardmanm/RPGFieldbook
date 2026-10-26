@@ -25,7 +25,7 @@ const {X, ctx, state, bootError} = loadApp([
   'extPageHTML', 'extRowHTML', 'extSourcesHTML', 'extDetailsHTML', 'extParas', 'setPageOf', 'SET_PAGES',
   'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
   'extPlanHTML', 'renderExtPill', 'showUpdatePill', 'openInstallPlan', 'manualInstallFiles', 'readDropped',
-  'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap',
+  'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap', 'extText', 'extSourceName', 'extSourceHost',
   'rulesStatusText', 'extWireDrop', 'extManualPlan', 'extPillFocusBack', 'EXT_DROP_MAX', 'dismissModal',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -1786,6 +1786,8 @@ section('#102 Ruling 17: the size caps hold without a Content-Length, by countin
     ctx.fetch = () => Promise.resolve(s.res);
     const r = await X.addSource('https://flood.example/add.json');
     ck('#102 I3: addSource stops a body with no end at the 32 MB cap', r.ok === false && /larger than 32 MB/.test(r.why) && s.log.reads === 33 && s.log.cancelled, [r, s.log.reads]);
+    ck('#102 N2: ...and says the answer was too large, not that the host couldn\'t be reached',
+      r.why === 'Its answer is larger than 32 MB.' && !/couldn't be reached/.test(r.why), r.why);
     // ...a manifest over 64 KB is still refused (readManifest's own check)...
     const bigMan = JSON.stringify({_type: 'fieldbook-data', builtFor: '1.0.0', pad: 'x'.repeat(X.EXT_MAN_MAX), packs: []});
     ctx.fetch = () => Promise.resolve(noBody(0)).then(res => Object.assign(res, {arrayBuffer: () => Promise.resolve(new TextEncoder().encode(bigMan).buffer)}));
@@ -1820,6 +1822,46 @@ section("#102 Ruling 18 (M8): a garbled release list reads as GitHub's, not a pa
     await X.checkSource(src);
     ck('#102 M8: an empty list is still "nothing to offer", not an error', src.error === '' && src.manifest === null, src);
   } finally { ctx.fetch = realFetch; }
+});
+
+section('#102 N1: invisible format characters are stripped, so a bidi override cannot reverse the host', () => {
+  const RLO = '‮';
+  // extText strips every \p{Cf} before the cap, and keeps everything else
+  ck('#102 N1: extText strips U+200B, U+FEFF, U+2066 and U+202E',
+    X.extText('a​b﻿c⁦d‮e⁩f‎‏؜g', 200) === 'abcdefg', JSON.stringify(X.extText('a​b﻿c⁦d‮e', 200)));
+  ck('#102 N1: ...before the cap, so stripped characters never use up the length',
+    X.extText('‮‮‮abcdef', 3) === 'abc', X.extText('‮‮‮abcdef', 3));
+  const kept = 'Café Élan — naïve façade 🐉 ✨ 日本語 עברית';
+  ck('#102 N1: accented, emoji, CJK and right-to-left letters are kept', X.extText(kept, 200) === kept, X.extText(kept, 200));
+  // every manifest string goes through it
+  const m = X.readManifest({_type: 'fieldbook-data', name: 'N' + RLO, builtFor: '1.0.0', packs: [
+    {file: 'a_full.json', system: 'A', version: '1.0.0', sha256: 'a'.repeat(64), title: 'T' + RLO, summary: 'S​', description: 'D﻿',
+      license: 'L⁦', attribution: 'At‮', requires: [{pack: 'R‮'}]},
+    {file: 'b_full.json', system: 'B' + RLO, version: '1.0.0', sha256: 'b'.repeat(64)}]}, 100);
+  const e = m.packs[0];
+  ck('#102 N1: name, title, summary, description, licence, attribution and requires.pack are all stripped',
+    m.name === 'N' && e.title === 'T' && e.summary === 'S' && e.description === 'D' && e.license === 'L' && e.attribution === 'At' && e.requires[0].pack === 'R',
+    JSON.stringify([m.name, e.title, e.summary, e.description, e.license, e.attribution, e.requires[0].pack]));
+  ck('#102 N1: a title that falls back to the system is stripped too', m.packs[1].title === 'B', JSON.stringify(m.packs[1].title));
+  // the reviewer's exact repro: the host must read forwards in the row, the plan line and the Sources title
+  X.resetRules();
+  X.importPack({system: 'SRD 5.2', dataVersion: '1.8.0', spells: [{name: 'Bless', level: 1}]}, 'srd52_full.json');
+  const spoof = {id: 'sp', kind: 'manifest', url: 'https://moc.buhtig.ws/m.json', on: true, checked: 0, error: '', base: 'https://moc.buhtig.ws/m.json',
+    manifest: X.readManifest({_type: 'fieldbook-data', name: 'Fieldbook public data ' + RLO, builtFor: '1.0.0', packs: [
+      {file: 'srd52_full.json', system: 'SRD 5.2', version: '1.8.1', sha256: 'a'.repeat(64), title: 'SRD 5.2'}]}, 100)};
+  X.settings.sources = [{id: 'official', kind: 'official', url: '', on: true, checked: 0, error: '', manifest: null, base: ''}, spoof];
+  X.settings.packOrigin = {}; X.settings.dismissedUpdates = {};
+  const KEY = 'SRD 5.2|srd52_full.json';
+  const row = X.extRowHTML(X.extPackRows().find(r => r.key === KEY));
+  const plan = X.extPlanHTML(X.planInstall([X.offerCandidate(X.extPackRows().find(r => r.key === KEY).offer)]));
+  const srcs = X.extSourcesHTML();
+  [['row', row], ['plan line', plan], ['Sources title', srcs]].forEach(([what, h]) =>
+    ck('#102 N1: the ' + what + ' shows "moc.buhtig.ws" and no U+202E', h.includes('(moc.buhtig.ws)') && !h.includes(RLO), h));
+  // even a source stored before this fix (its manifest name unstripped) is named without it
+  spoof.manifest.name = 'Fieldbook public data ' + RLO;
+  ck('#102 N1: extSourceName strips a stored name that predates the fix', !X.extSourceName(spoof).includes(RLO) && X.extSourceName(spoof).endsWith('(moc.buhtig.ws)'), X.extSourceName(spoof));
+  ck('#102 N1: the host is punycode and clean (an IDN host)', X.extSourceHost({url: 'https://bücher.example/m.json'}) === 'xn--bcher-kva.example', X.extSourceHost({url: 'https://bücher.example/m.json'}));
+  X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {};
 });
 
 // ---- add new sections above this line ----
