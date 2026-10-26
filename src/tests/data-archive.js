@@ -16,6 +16,9 @@ const {X, ctx, state, bootError} = loadApp([
   'importRulesPayloads', 'importPack', 'importSummary', 'importRulesFiles', 'RULE_CATS',
   'creditOf', 'rulesCreditsHTML', 'removeRulesGroup', 'clearAllRules', 'reindexRules', 'prunePackMeta',
   'pickDataRelease', 'dataUpdateFrom', 'checkForDataUpdate', 'rulesDataHTML', 'rulesBadge', 'APP_VERSION', 'dataUpdateHint',
+  'sha256Hex', 'extUrl', 'extRelPath', 'extEntry', 'readManifest', 'extKey', 'extTooNew', 'convertSources',
+  'extOffers', 'availableFor', 'extPackRows', 'extUpdateRows', 'extPillCount', 'dismissUpdates',
+  'settings', 'EXT_CATS', 'foldLegacySettings',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 
@@ -726,6 +729,99 @@ section('final review 9: a manifest listing too many files is refused', () => {
   const manifest = MANIFEST('1.8.0', Array.from({length: 1001}, (_, i) => 'p' + i + '.json'));
   ck('a manifest claiming 1,001 files: toomany',
      code(() => X.readDataArchive(makeZip([{name: 'fieldbook-data.json', data: manifest}]), 'big.zip')) === 'toomany');
+});
+
+// ---------- #102: sha256Hex
+section('#102 sha256Hex', () => {
+  const crypto = require('crypto');
+  const hex = b => crypto.createHash('sha256').update(Buffer.from(b)).digest('hex');
+  const big = new Uint8Array(1024 * 1024); for (let i = 0; i < big.length; i++) big[i] = (i * 31 + 7) & 255;
+  [[], [0x61, 0x62, 0x63], Array.from({length: 55}, () => 0x61), Array.from({length: 56}, () => 0x61), Array.from({length: 64}, () => 0x62)]
+    .forEach(a => ck('#102 sha256Hex of ' + a.length + ' bytes matches Node', X.sha256Hex(new Uint8Array(a)) === hex(a)));
+  ck('#102 sha256Hex of 1 MB matches Node', X.sha256Hex(big) === hex(big));
+  ck('#102 sha256Hex reads a view at an offset', X.sha256Hex(new Uint8Array(big.buffer, 10, 100)) === hex(big.subarray(10, 110)));
+});
+
+// ---------- #102: reading a manifest
+section('#102 readManifest', () => {
+  const pk = o => Object.assign({file: 'srd52_full.json', system: 'SRD 5.2', version: '1.9.0', sha256: 'a'.repeat(64)}, o);
+  const m = X.readManifest({_type: 'fieldbook-data', format: 2, name: 'N', homepage: 'https://x.org', version: '1.9.0', builtFor: '1.9.0',
+    packs: [pk({title: 'SRD', summary: 's'.repeat(500), description: 'd'.repeat(9000), requires: [{pack: 'X', url: 'javascript:alert(1)'}, {pack: 'Y', url: 'https://y.org'}]})]}, 900);
+  const e = m.packs[0];
+  ck('#102 a format-2 manifest reads', m.name === 'N' && m.homepage === 'https://x.org' && e.system === 'SRD 5.2' && e.file === 'srd52_full.json', m);
+  ck('#102 category defaults to rules, minApp to builtFor', e.category === 'rules' && e.minApp === '1.9.0');
+  ck('#102 summary is cut to 140 and description to 4,000', e.summary.length === 140 && e.description.length === 4000);
+  ck('#102 a requires url that isn\'t http(s) becomes ""', e.requires[0].url === '' && e.requires[1].url === 'https://y.org', e.requires);
+  const m1 = X.readManifest({_type: 'fieldbook-data', format: 1, version: '1.8.1', builtFor: '1.8.1', packs: [{file: 'a_full.json', system: 'A', version: '1.8.0', sha256: 'b'.repeat(64)}]}, 200);
+  ck('#102 a format-1 manifest (today\'s zip) reads with defaults', m1.packs[0].title === 'A' && m1.packs[0].minApp === '1.8.1' && m1.packs[0].summary === '');
+  ck('#102 a homepage that isn\'t http(s) becomes ""', X.readManifest({_type: 'fieldbook-data', homepage: 'javascript:x', packs: []}, 50).homepage === '');
+  ['../x_full.json', '/abs_full.json', 'https://evil.org/x_full.json', 'a\\b_full.json', 'dir/../x_full.json', 'x.txt', '']
+    .forEach(f => ck('#102 an unsafe or non-json path is dropped: ' + JSON.stringify(f),
+      X.readManifest({_type: 'fieldbook-data', packs: [pk({file: f})]}, 100).packs.length === 0));
+  ck('#102 a path in a folder keeps its base name as the file',
+    X.readManifest({_type: 'fieldbook-data', packs: [pk({file: 'packs/srd52_full.json'})]}, 100).packs[0].file === 'srd52_full.json');
+  ck('#102 a pack with no version is dropped', X.readManifest({_type: 'fieldbook-data', packs: [pk({version: 'x'})]}, 100).packs.length === 0);
+  const dup = X.readManifest({_type: 'fieldbook-data', packs: [pk({version: '1.8.0'}), pk({version: '1.9.0'}), pk({version: '1.8.5'})]}, 100);
+  ck('#102 the same system|file twice keeps the newest', dup.packs.length === 1 && dup.packs[0].version === '1.9.0');
+  const thrown = (o, n) => { try { X.readManifest(o, n); return ''; } catch (e) { return e.message; } };
+  ck('#102 not a manifest throws', /isn't a Fieldbook manifest/.test(thrown({packs: []}, 10)));
+  ck('#102 over 64 KB throws', /larger than 64 KB/.test(thrown({_type: 'fieldbook-data', packs: []}, 65537)));
+  ck('#102 over 1,000 packs throws', /more than 1,000/.test(thrown({_type: 'fieldbook-data', packs: Array.from({length: 1001}, () => pk({}))}, 100)));
+  ck('#102 extUrl keeps http(s) only', X.extUrl('https://a') === 'https://a' && X.extUrl('HTTP://a') === 'HTTP://a' && X.extUrl('javascript:x') === '' && X.extUrl(7) === '');
+});
+
+// ---------- #102: settings conversion
+section('#102 convertSources', () => {
+  const s = {rulesSources: ['https://a.org/x.json', ' https://b.org/y.json '], rulesUrl: 'https://c.org/z.json'};
+  ck('#102 the first conversion reports a change', X.convertSources(s) === true);
+  ck('#102 the official source exists once, first, on', s.sources.filter(x => x.kind === 'official').length === 1 && s.sources[0].id === 'official' && s.sources[0].on === true, s.sources);
+  ck('#102 rulesSources and rulesUrl become plain sources, trimmed',
+    JSON.stringify(s.sources.filter(x => x.kind === 'plain').map(x => x.url)) === JSON.stringify(['https://a.org/x.json', 'https://b.org/y.json', 'https://c.org/z.json']));
+  ck('#102 the old fields are gone', !('rulesSources' in s) && !('rulesUrl' in s));
+  ck('#102 packOrigin and dismissedUpdates default to {}', JSON.stringify(s.packOrigin) === '{}' && JSON.stringify(s.dismissedUpdates) === '{}');
+  const before = JSON.stringify(s);
+  ck('#102 a second conversion changes nothing', X.convertSources(s) === false && JSON.stringify(s) === before);
+  const junk = {sources: [null, {kind: 'weird'}, {kind: 'manifest', url: 'javascript:x'}, {kind: 'official'}, {kind: 'official'}]};
+  X.convertSources(junk);
+  ck('#102 malformed sources are dropped, and two officials become one', junk.sources.length === 1 && junk.sources[0].kind === 'official', junk.sources);
+});
+
+// ---------- #102: offers, row states, the pill count and dismissal
+section('#102 offers and rows', () => {
+  X.resetRules();
+  const loadPack = (system, file, ver) => X.importPack({system, dataVersion: ver, spells: [{name: system + ' Spell', level: 1}]}, file);
+  loadPack('SRD 5.2', 'srd52_full.json', '1.8.1');
+  loadPack('Homebrew', 'homebrew_full.json', '1.2.0');
+  const man = (packs, extra) => X.readManifest(Object.assign({_type: 'fieldbook-data', builtFor: '1.0.0', packs}, extra || {}), 100);
+  const e = (system, file, version, o) => Object.assign({file, system, version, sha256: 'c'.repeat(64)}, o || {});
+  X.settings.sources = [
+    {id: 'official', kind: 'official', url: '', on: true, checked: 1, error: '', base: 'https://raw.example/fieldbook-data.json',
+      manifest: man([e('SRD 5.2', 'srd52_full.json', '1.9.0'), e('Homebrew', 'homebrew_full.json', '1.2.0')])},
+    {id: 's2', kind: 'manifest', url: 'https://ember.example/m.json', on: true, checked: 1, error: '', base: 'https://ember.example/m.json',
+      manifest: man([e('Ember', 'ember_full.json', '2.1.0', {minApp: '99.0.0'}), e('Ember Theme', 'ember_ui.json', '1.0.0', {category: 'ui'}),
+                     e('SRD 5.2', 'srd52_full.json', '1.9.5')])},
+    {id: 's3', kind: 'manifest', url: 'https://off.example/m.json', on: false, checked: 1, error: '', base: 'https://off.example/m.json',
+      manifest: man([e('Off', 'off_full.json', '1.0.0')])}];
+  X.settings.packOrigin = {'SRD 5.2|srd52_full.json': 'official'};
+  X.settings.dismissedUpdates = {};
+  ck('#102 offers come from enabled sources only', !X.extOffers().some(o => o.entry.system === 'Off'));
+  ck('#102 the installing source wins over a newer offer elsewhere', X.availableFor('SRD 5.2', 'srd52_full.json').source.id === 'official');
+  X.settings.packOrigin = {};
+  ck('#102 with no installing source, the newest offer wins', X.availableFor('SRD 5.2', 'srd52_full.json').entry.version === '1.9.5');
+  X.settings.packOrigin = {'SRD 5.2|srd52_full.json': 'official'};
+  const rows = X.extPackRows(), by = k => rows.find(r => r.key === k);
+  ck('#102 a newer offer is an update', by('SRD 5.2|srd52_full.json').state === 'update');
+  ck('#102 the same version is current', by('Homebrew|homebrew_full.json').state === 'current');
+  ck('#102 an offer too new for this app is blocked', by('Ember|ember_full.json').state === 'blocked' && X.extTooNew(by('Ember|ember_full.json').offer.entry));
+  ck('#102 an unknown category is unsupported', by('Ember Theme|ember_ui.json').state === 'unsupported');
+  ck('#102 the pill counts updates', X.extPillCount() === 1 && X.extUpdateRows().length === 1);
+  X.dismissUpdates();
+  ck('#102 dismissal: the pill hides, the update stays on the row', X.extPillCount() === 0 && X.extUpdateRows().length === 1);
+  X.settings.sources[0].manifest = man([e('SRD 5.2', 'srd52_full.json', '1.9.0')]);
+  ck('#102 dismissal: the same version never brings it back', X.extPillCount() === 0);
+  X.settings.sources[0].manifest = man([e('SRD 5.2', 'srd52_full.json', '1.9.1')]);
+  ck('#102 dismissal: a newer version brings it back', X.extPillCount() === 1);
+  X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {}; X.settings.dismissedUpdates = {};
 });
 
 // ---- add new sections above this line ----

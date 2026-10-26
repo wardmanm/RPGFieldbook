@@ -56,6 +56,7 @@
     "src/js/88-settings.js",
     "src/js/89-zip.js",
     "src/js/89-rules-merge.js",
+    "src/js/89-extensions.js",
     "src/js/90-boot.js"
   ]
 }

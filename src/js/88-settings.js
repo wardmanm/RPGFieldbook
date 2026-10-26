@@ -277,17 +277,12 @@ function encSettingsChanged(){
    cannot say "import the settings but keep my rules" without making Cancel
    import something. Nothing is lost, so nothing is asked, when the file brings
    no rules or none are loaded yet. */
-const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCat","tabIcons","backdropClose","setPage"];
+const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","sources","packOrigin","dismissedUpdates","setCollapse","rulesCat","tabIcons","backdropClose","setPage"];
 /* What boot does to settings from an older build, shared with Import settings
-   so an old file arrives in the same shape: the first builds' single `rulesUrl`
-   joins the sources list. True when that changed something worth saving. */
-function foldLegacySettings(){
-  if(!Array.isArray(settings.rulesSources))settings.rulesSources=[];
-  if(!settings.rulesUrl)return false;
-  if(!settings.rulesSources.includes(settings.rulesUrl))settings.rulesSources.push(settings.rulesUrl);
-  delete settings.rulesUrl;
-  return true;
-}
+   so an old file arrives in the same shape: `rulesSources` and the first
+   builds' single `rulesUrl` convert into `settings.sources` (#102), via
+   convertSources(). True when that changed something worth saving. */
+function foldLegacySettings(){return convertSources(settings);}
 /* The parsed file -> {settings, pool, used, skipped}, or null when it is not a
    settings file at all. A bare object must carry some setting, or a rules pack
    or character picked by mistake would be written into settings key by key. */

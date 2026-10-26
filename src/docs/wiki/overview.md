@@ -156,6 +156,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()`, pack credits (`rulesCreditsHTML()`) | [Settings & updates](features/settings-and-updates.md), [Data archive](architecture/data-archive.md) |
 | `89-zip.js` | the zip reader: `readDataArchive()`, `inflateRaw()`, `zipEntries()` — pure | [Data archive](architecture/data-archive.md) |
 | `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, fetch and import of packs and zips (`importRulesPayloads()`, `importPack()`) | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
+| `89-extensions.js` | Extensions (#102): manifests, sources, the install pipeline, the Extensions page | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
 | `90-boot.js` | `wire()`, `boot()` — always last | [Shell](ui/shell.md), [Build & source split](architecture/build-and-source-split.md) |
 | `00-tokens.css` | theme tokens, both skins, light/dark | [Theming & icons](ui/theming-and-icons.md) |
 | `10-chrome.css` | top bar and tabs | [Shell](ui/shell.md) |

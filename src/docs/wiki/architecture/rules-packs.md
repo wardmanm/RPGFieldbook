@@ -17,6 +17,7 @@ covers what the app does with packs.
 `creditOf()`, `fetchAllRules()`,
 `fetchRulesFrom()`, `applyFetchedSource()`, `poolFromExport()`, `missingRequirements()`, `requiresStatusHTML()`,
 `missingSummary()`, `rulesDataHTML()`, `renderRulesData()` in `89-rules-merge.js`; `glossRepair()` in `00-constants.js`;
+`readManifest()`, `extEntry()`, `convertSources()`, `extOffers()`, `availableFor()` in `89-extensions.js`;
 `loadedRulesGroups()`, `rulesBucket()`, `removeRulesGroup()`, `prunePackMeta()`, `clearAllRules()`,
 `dataStatus()`, `dataStatusHTML()`, `refreshRulesUI()`, `rulesBadge()` in `88-settings.js`; `systemOf()`, `racesForCharacter()` in `52-race.js`; `findRaceDef()`,
 `findClassDef()`, `subclassesFor()` in `50-classrace.js`; `DATA_VERSIONS` and `cmpDataVer()` in
