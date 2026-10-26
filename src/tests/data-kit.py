@@ -7,6 +7,7 @@ Spec: src/docs/specs/2026-10-07-data-archive-design.md"""
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -329,6 +330,10 @@ def checkout(app="1.8.0", release="1.8.0"):
     write(d, "src/docs/UNRELEASED.md", raw="# Notebook\n\n## Pending\n\n- A change a player can see.\n")
     reg = read_json(d, "data/packs.json")
     reg["release"] = release
+    # #102: a public data release now bundles and validates --public (R13),
+    # which refuses any pack with no allowlisted licence.
+    reg["packs"][0]["license"] = "CC-BY-4.0"
+    reg["packs"][1]["license"] = "MIT"
     write(d, "data/packs.json", reg)
     subprocess.run([sys.executable, os.path.join(d, "tools/data-kit/fbdata.py"), "versions", "--seed"], capture_output=True)
     git(d, "init", "-q")
@@ -949,6 +954,19 @@ ck("#102 validate reads a folder", subprocess.run([sys.executable, FBDATA, "vali
 open(os.path.join(out, fm["packs"][0]["file"]), "a").write(" ")
 r = subprocess.run([sys.executable, FBDATA, "validate", out], capture_output=True, text=True)
 ck("#102 validate names a folder file whose sha256 no longer matches", r.returncode == 1 and "sha256" in r.stderr, r.stderr)
+
+# ---------- #102: the release paths write releases/data/
+build_sh = open(os.path.join(ROOT, "build.sh"), encoding="utf-8").read()
+ck("#102 build.sh writes releases/data on a release build only",
+   re.search(r'if \[ -n "\$RELEASE" \][^\n]*\n[^\n]*release-files dist -o releases/data', build_sh) is not None)
+dr = open(os.path.join(ROOT, "scripts", "data-release.js"), encoding="utf-8").read()
+ck("#102 data-release.js bundles and writes releases/data for the public registry",
+   '"release-files"' in dr and "releases/data" in dr and "if (!PRIVATE)" in dr)
+ck("#102 data-release.js tells you to commit releases/data", "git add data/packs.json releases/data" in dr)
+for wf in ("release.yml", "data-release.yml"):
+    t = open(os.path.join(ROOT, ".github", "workflows", wf), encoding="utf-8").read()
+    ck("#102 %s checks releases/data against the build" % wf,
+       "fbdata.py validate --public releases/data" in t and 'cmp "releases/data/' in t)
 
 # ---- add new cases above this line ----
 print("")

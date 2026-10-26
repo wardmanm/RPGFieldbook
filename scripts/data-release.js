@@ -121,6 +121,17 @@ if (DRY) {
   process.exit(0);
 }
 fbdata(["versions", "--bump", next, ...fbArgs]);
+
+// #102: the official source's files at this tag. Bundled from the bumped
+// registry into a scratch folder, then written flat to releases/data/ — what
+// raw.githubusercontent.com serves the app. A private registry has no public
+// raw URL, so it gets none.
+if (!PRIVATE) {
+  const tmp = fs.mkdtempSync(path.join(require("os").tmpdir(), "fb-data-release-"));
+  fbdata(["bundle", "-o", tmp]);
+  fbdata(["release-files", tmp, "-o", path.join(ROOT, "releases", "data")]);
+}
+
 if (PRIVATE) {
   const regRel = path.relative(REPO, REG_FS);
   console.log(`\nwrote ${regRel}. PUBLISH data ${next} — nothing is public until you do this:\n`);
@@ -129,8 +140,8 @@ if (PRIVATE) {
   console.log(`    git -C ${REPO} tag -a ${tag} -m "Fieldbook data ${next}"`);
   console.log(`    git -C ${REPO} push && git -C ${REPO} push origin ${tag}`);
 } else {
-  console.log(`\nwrote data/packs.json. PUBLISH data ${next} — nothing is public until you do this:\n`);
-  console.log("    git add data/packs.json");
+  console.log(`\nwrote data/packs.json and releases/data. PUBLISH data ${next} — nothing is public until you do this:\n`);
+  console.log("    git add data/packs.json releases/data");
   console.log(`    git commit -m "Data release ${next}"`);
   console.log(`    git tag -a ${tag} -m "Fieldbook data ${next}"`);
   console.log(`    git push && git push origin ${tag}`);

@@ -117,6 +117,14 @@ pack_archive() {
   fi
   "$py" tools/data-kit/fbdata.py validate "$ARCHIVE" || {
     rm -f "$ARCHIVE"; echo "    $ARCHIVE failed validation and was deleted"; exit 1; }
+
+  # #102: the official source's files, committed with the release so
+  # raw.githubusercontent.com serves them at the tag. Only a real release
+  # writes them: a +dev archive is not that release's data.
+  if [ -n "$RELEASE" ] && [ -z "$suf" ]; then
+    "$py" tools/data-kit/fbdata.py release-files dist -o releases/data || {
+      echo "    releases/data failed validation"; exit 1; }
+  fi
 }
 
 # The data kit (#85): fbdata.py and the converter with the files they read, flat,

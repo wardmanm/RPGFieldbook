@@ -106,6 +106,9 @@ of them.** It:
 - empties the notebook,
 - and then `build.sh` rebuilds, revalidates and re-zips, the rules-data archive included.
 
+`./build.sh --release` also writes `releases/data/` (the official source's manifest and packs,
+#102); `git add -A` takes it, and CI checks it matches the build.
+
 It refuses to release with an empty notebook, and refuses a version that isn't higher than the
 current one (that would break the in-app update check). **A release needs `python3`** (`python`
 will do): without it, `release.js` refuses before writing anything. `src/js/30-version.js` is
@@ -197,7 +200,7 @@ registry's `release` belongs to another app version, and when the tag already ex
 prints, and never runs:
 
 ```bash
-git add data/packs.json
+git add data/packs.json releases/data
 git commit -m "Data release 1.8.0-1"
 git tag -a data-v1.8.0-1 -m "Fieldbook data 1.8.0-1"
 git push && git push origin data-v1.8.0-1
