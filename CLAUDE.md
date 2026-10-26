@@ -31,8 +31,9 @@ and Humblewood packs live in the private repo (`RPGFieldbookPrivate`, linked int
 2. **Offline-first, and storage failures are loud.** localStorage for characters, settings and the
    library; IndexedDB for the rules cache (localStorage, LZW-compressed, as fallback). Every IndexedDB
    call is timed out. A storage write that does not land must SAY SO — never an empty `catch` around
-   `setItem`. The only network calls — the rules-source fetch and the GitHub update checks (app and
-   rules data) — are optional and fail silently offline. → [storage](src/docs/wiki/architecture/storage.md)
+   `setItem`. The only network calls — the GitHub update checks (app and rules data), the extension
+   sources' manifest checks (at boot and on Check now), and the pack downloads and plain-source
+   fetches a player starts — are optional and fail quietly offline; nothing installs unasked. → [storage](src/docs/wiki/architecture/storage.md)
 3. **Backward-compatible data.** Never break loading of existing saved characters. New character
    fields are optional, get a default in `blankChar()`, and survive a save→load round trip.
    → [character model](src/docs/wiki/architecture/character-model.md)
@@ -44,7 +45,7 @@ src/                     THE SOURCE OF TRUTH — edit here, never the built file
   fieldbook.template.html  the page SHELL: top bar, tab bar, home, modal, back-to-top
   manifest.json          the authoritative concatenation ORDER — add/remove a fragment here
   html/*.html            7 fragments, one tab panel each
-  js/*.js                37 fragments, concatenated into the single <script>
+  js/*.js                38 fragments, concatenated into the single <script>
   css/*.css              9 fragments, concatenated into the single <style>
   icons/icons.json       hand-authored emblem map → scripts/fetch-icons.js → js/05-icons.js
   tests/                 the suites — ./src/tests/run.sh

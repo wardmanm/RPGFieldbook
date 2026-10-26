@@ -249,7 +249,7 @@ X.saveRulesCache();
   const w=X.rulesCacheWarning();
   ck('a refused write is REPORTED, not swallowed', w!=='', w);
   ck('the warning says it will not survive a reload', /next time|reload/i.test(w), w);
-  ck('the warning says what to do about it', /unload|re-import/i.test(w), w);
+  ck('the warning says what to do about it', /remove a pack|install them again/i.test(w), w);
   ck('the warning quotes a size in bytes, not characters', /\d+\s*(KB|MB)/.test(w), w);
   ck('the warning reaches the loaded-data list in red', /status err/.test(X.rulesDataHTML()));
   // the pool itself is untouched — this is a save failure, not a load failure
@@ -1077,28 +1077,29 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
 
 // ---------- Settings modal: the sidebar's pages (#107)
 ck('six pages, in the order the sidebar lists them',
-   X.SET_PAGES.map(p => p.k).join() === 'appearance,display,carrying,rules,backup,credits');
+   X.SET_PAGES.map(p => p.k).join() === 'appearance,display,carrying,extensions,backup,credits');
 ck('every page has a title, an icon and a unique key',
    X.SET_PAGES.every(p => p.title && /<(path|circle|rect|ellipse)/.test(p.icon)) && new Set(X.SET_PAGES.map(p => p.k)).size === 6);
 ck('only Sheet display and Carrying belong to a character',
    X.SET_PAGES.filter(p => p.scope === 'char').map(p => p.k).join() === 'display,carrying' &&
    X.SET_PAGES.every(p => p.scope === 'char' || p.scope === 'app'));
-ck('without a character the character pages are not shown', X.setPagesFor(false).map(p => p.k).join() === 'appearance,rules,backup,credits');
+ck('without a character the character pages are not shown', X.setPagesFor(false).map(p => p.k).join() === 'appearance,extensions,backup,credits');
 ck('...with one, all six are', X.setPagesFor(true).length === 6);
-ck('the remembered page opens', X.setPageOf('rules', false) === 'rules' && X.setPageOf('carrying', true) === 'carrying');
+ck('the remembered page opens', X.setPageOf('extensions', false) === 'extensions' && X.setPageOf('carrying', true) === 'carrying');
+ck('#102 a page remembered as "rules" (Rules data, before Extensions) opens Extensions', X.setPageOf('rules', true) === 'extensions');
 ck('a character page with no character open opens Appearance', X.setPageOf('display', false) === 'appearance');
 [undefined, null, '', 'nope', 7, {}, '__proto__', 'constructor'].forEach(bad =>
   ck('a stored page of ' + JSON.stringify(bad) + ' opens Appearance', X.setPageOf(bad, true) === 'appearance'));
-ck('setPageDef finds a page, and is null for rubbish', (X.setPageDef('rules') || {}).title === 'Rules data' && X.setPageDef('zzz') === null);
+ck('setPageDef finds a page, and is null for rubbish', (X.setPageDef('extensions') || {}).title === 'Extensions' && X.setPageDef('zzz') === null);
 {
-  const keys = ['appearance', 'rules', 'backup', 'credits'];
-  ck('↓ moves to the next shown page and wraps', X.setPageStep(keys, 'rules', 'ArrowDown') === 'backup' && X.setPageStep(keys, 'credits', 'ArrowDown') === 'appearance');
-  ck('↑ moves back and wraps', X.setPageStep(keys, 'rules', 'ArrowUp') === 'appearance' && X.setPageStep(keys, 'appearance', 'ArrowUp') === 'credits');
+  const keys = ['appearance', 'extensions', 'backup', 'credits'];
+  ck('↓ moves to the next shown page and wraps', X.setPageStep(keys, 'extensions', 'ArrowDown') === 'backup' && X.setPageStep(keys, 'credits', 'ArrowDown') === 'appearance');
+  ck('↑ moves back and wraps', X.setPageStep(keys, 'extensions', 'ArrowUp') === 'appearance' && X.setPageStep(keys, 'appearance', 'ArrowUp') === 'credits');
   ck('Home and End go to the ends', X.setPageStep(keys, 'backup', 'Home') === 'appearance' && X.setPageStep(keys, 'appearance', 'End') === 'credits');
-  ck('any other key, or a page not shown, stays put', X.setPageStep(keys, 'rules', 'x') === 'rules' && X.setPageStep(keys, 'display', 'ArrowDown') === 'display');
+  ck('any other key, or a page not shown, stays put', X.setPageStep(keys, 'extensions', 'x') === 'extensions' && X.setPageStep(keys, 'display', 'ArrowDown') === 'display');
 }
 {
-  const nav = X.setNavHTML(X.setPagesFor(true), 'carrying', {rules: '<span class="set-cnt">12</span>'});
+  const nav = X.setNavHTML(X.setPagesFor(true), 'carrying', {extensions: '<span class="set-cnt">12</span>'});
   ck('the sidebar is a vertical tab list', /role="tablist" aria-orientation="vertical"/.test(nav));
   ck('one tab per page, each tied to its panel',
      (nav.match(/role="tab"/g) || []).length === 6 && /id="setTab-carrying" data-setpage="carrying" aria-controls="setPage-carrying"/.test(nav));
@@ -1109,19 +1110,19 @@ ck('setPageDef finds a page, and is null for rubbish', (X.setPageDef('rules') ||
   ck('the character pages sit under their caption, set apart from the rest',
      nav.indexOf('data-setpage="appearance"') < nav.indexOf('This character') &&
      nav.indexOf('This character') < nav.indexOf('data-setpage="display"') &&
-     /data-setpage="carrying"[\s\S]*?class="set-sep"[\s\S]*?data-setpage="rules"/.test(nav));
+     /data-setpage="carrying"[\s\S]*?class="set-sep"[\s\S]*?data-setpage="extensions"/.test(nav));
   ck('no caption without a character', !/This character|set-sep/.test(X.setNavHTML(X.setPagesFor(false), 'appearance', {})));
-  ck('a badge is drawn only where given', /data-setbadge="rules"><span class="set-cnt">12<\/span>/.test(nav) && (nav.match(/data-setbadge/g) || []).length === 1);
+  ck('a badge is drawn only where given', /data-setbadge="extensions"><span class="set-cnt">12<\/span>/.test(nav) && (nav.match(/data-setbadge/g) || []).length === 1);
   ck('...and the tab that carries one is described by it, for a screen reader',
-     /data-setpage="rules"[^>]*aria-describedby="setBadgeDesc-rules"/.test(nav) && (nav.match(/aria-describedby/g) || []).length === 1);
+     /data-setpage="extensions"[^>]*aria-describedby="setBadgeDesc-extensions"/.test(nav) && (nav.match(/aria-describedby/g) || []).length === 1);
 }
 {
   const page = X.setPageHTML('carrying', '<p>x</p>', {active: true, sub: 'For <b>Pib</b>'});
   ck('a page is the tab panel its tab names',
      /<section class="set-page" role="tabpanel" id="setPage-carrying" aria-labelledby="setTab-carrying" data-setpagebody="carrying">/.test(page), page);
   ck('...titled, with its subtitle escaped', /class="set-ptitle">Carrying</.test(page) && page.includes('For &lt;b&gt;Pib&lt;/b&gt;'));
-  const off = X.setPageHTML('rules', '<p>y</p>', {});
-  ck('an inactive page is in the dialog, hidden', /data-setpagebody="rules" hidden>/.test(off) && off.includes('<p>y</p>'));
+  const off = X.setPageHTML('extensions', '<p>y</p>', {});
+  ck('an inactive page is in the dialog, hidden', /data-setpagebody="extensions" hidden>/.test(off) && off.includes('<p>y</p>'));
   ck('an unknown page draws nothing', X.setPageHTML('zzz', '<p>x</p>', {active: true}) === '');
 }
 {
@@ -1137,10 +1138,10 @@ ck('setPage is a setting a file is recognised by', X.SETTINGS_KEYS.includes('set
 ck('...defaulting to Appearance',
    /let settings=\{[^\n]*setPage:"appearance"[^\n]*\};/.test(fs.readFileSync(path.join(ROOT, 'src/js/00-constants.js'), 'utf8')));
 X.resetRules();
-ck('the Rules data badge shows nothing with nothing loaded, and says so to a screen reader',
-   X.rulesNavBadgeHTML() === '<span id="setBadgeDesc-rules" hidden>none loaded</span>', X.rulesNavBadgeHTML());
+ck('the Extensions badge shows nothing with nothing loaded, and says so to a screen reader',
+   X.rulesNavBadgeHTML() === '<span id="setBadgeDesc-extensions" hidden>none loaded</span>', X.rulesNavBadgeHTML());
 X.mergeRules({system: 'XPHB', spells: [{name: 'Bless'}, {name: 'Shield'}]}, 'x.json');
-ck('...and counts the pool once something is', X.rulesNavBadgeHTML() === '<span class="set-cnt" title="2 entries">2</span><span id="setBadgeDesc-rules" hidden>2 entries</span>', X.rulesNavBadgeHTML());
+ck('...and counts the pool once something is', X.rulesNavBadgeHTML() === '<span class="set-cnt" title="2 entries">2</span><span id="setBadgeDesc-extensions" hidden>2 entries</span>', X.rulesNavBadgeHTML());
 X.resetRules();
 ck('entry count is zero with nothing loaded', X.rulesEntryCount() === 0);
 X.mergeRules({system: 'XPHB', races: [{name: 'Elf'}, {name: 'Orc'}], spells: [{name: 'Bless'}]}, 'x.json');
@@ -2289,12 +2290,25 @@ function block(html, needle, tag) {
   const used = ids(/getElementById\("([A-Za-z][\w-]*)"\)/g);
   // #setSections is built by openSettings itself, outside the section markup
   declared.add('setSections');
+  /* #102: the Extensions page is drawn by extPageHTML() in 89-extensions.js
+     and wired there by wireExtPage(), delegated from #extPage */
+  const ext = fs.readFileSync(path.join(ROOT, 'src/js/89-extensions.js'), 'utf8');
+  const extMarkup = ext.slice(ext.indexOf('function extSecHTML('), ext.indexOf('function extRowFor('));
+  const extWire = ext.slice(ext.indexOf('function wireExtPage('));
+  const extIds = new Set(); { const re = /\bid="([A-Za-z][\w-]*)"/g; let m; while ((m = re.exec(extMarkup))) extIds.add(m[1]); }
+  extIds.forEach(k => declared.add(k));
   const missing = [...used].filter(k => !declared.has(k));
   ck('every control openSettings looks up exists in its markup', missing.length === 0, missing);
   // ids the modal renders but never wires are dead weight or a forgotten handler
-  const inert = new Set(['srcList', 'rulesData', 'rulesStatus', 'encHint', 'setSections']);
-  const unwired = [...declared].filter(k => !used.has(k) && !inert.has(k));
+  const inert = new Set(['rulesStatus', 'extSaveErr', 'encHint', 'setSections', 'extPage']);
+  const unwired = [...declared].filter(k => !used.has(k) && !inert.has(k) &&
+    !(extIds.has(k) && (extWire.includes('"#' + k + '"') || extWire.includes('getElementById("' + k + '")'))));
   ck('every control it renders is wired up somewhere', unwired.length === 0, unwired);
+  ck('#102 the Extensions page draws each of the hooks Task 6 relies on',
+    ['extPage', 'extUpdateAll', 'extCheckNow', 'extManual', 'extAddUrl', 'extAddGo', 'extRemoveRules', 'extRemoveSources'].every(k => extIds.has(k)),
+    [...extIds]);
+  // the status line is a live region: Settings draws it beside the page, never inside the repaint (#102 Task 5 review, minor 6)
+  ck('#102 #rulesStatus sits outside #extPage', !extIds.has('rulesStatus') && declared.has('rulesStatus'));
 }
 
 // ---------- Settings modal: each control on its page (#107)
@@ -2306,7 +2320,10 @@ function block(html, needle, tag) {
   ck('Sheet display holds the card choices', on('secDisplay', ['swHpColor', 'swTrackers']));
   ck('#103 ...and the advancement choice and the familiars icon', on('secDisplay', ['segAdv', 'swFamiliars']));
   ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
-  ck('Rules data holds the sources, the list and the sheet check', on('secRules', ['srcList', 'newSrc', 'btnFetchRules', 'btnClearRules', 'rulesData', 'btnCharUpdate']));
+  ck('#102 Extensions is the extensions page, its status line and the sheet check (no #fileRules)',
+     /const secRules=extPageHTML\(\)\+/.test(sec('secRules')) && on('secRules', ['rulesStatus', 'btnCharUpdate']) && !/fileRules/.test(src));
+  ck('#102 the old source list, Fetch all, Get templates and Clear all are gone',
+     !/srcList|newSrc|addSrc|btnFetchRules|btnImportRules|btnRulesTemplate|btnClearRules|id="rulesData"|renderSrcRows|downloadRulesTemplates/.test(src));
   ck('Backup holds the library and the settings file', on('secBackup', ['swHome', 'btnExportSettings', 'btnImportSettings', 'setImpStatus']));
   ck('encumbrance is a segmented choice now, not a dropdown', !/id="setEnc"/.test(src) &&
      /character\.encumbrance=b\.dataset\.enc;/.test(src) && ['none', 'standard', 'variant'].every(v => sec('secCarrying').includes('["' + v + '",')));
@@ -2323,7 +2340,10 @@ function block(html, needle, tag) {
   /* spec §7: a duplicated id would let getElementById wire one copy and leave the
      other dead; the two-way check above collects ids into a Set, so count here */
   {
-    const body = src.slice(src.indexOf('function openSettings()'), src.indexOf('function encSettingsHint('));
+    /* #102: with the Extensions page's own markup, which openSettings() draws */
+    const extSrc = fs.readFileSync(path.join(ROOT, 'src/js/89-extensions.js'), 'utf8');
+    const body = src.slice(src.indexOf('function openSettings()'), src.indexOf('function encSettingsHint(')) +
+      extSrc.slice(extSrc.indexOf('function extSecHTML('), extSrc.indexOf('function extRowFor('));
     const counts = {};
     (body.match(/\bid="([A-Za-z][\w-]*)"/g) || []).forEach(m => { const k = m.slice(4, -1); counts[k] = (counts[k] || 0) + 1; });
     const twice = Object.keys(counts).filter(k => counts[k] > 1);
@@ -2337,7 +2357,7 @@ function block(html, needle, tag) {
      ['segSkin', 'segTheme', 'segAdv', 'segEnc'].every(id => /aria-pressed="\$\{/.test((src.match(new RegExp('id="' + id + '"[\\s\\S]{0,700}')) || [''])[0])) &&
      /const g=e\.target\.closest\("\.seg"\);if\(g\)g\.querySelectorAll\("button"\)\.forEach\(b=>b\.setAttribute\("aria-pressed",b\.classList\.contains\("on"\)\?"true":"false"\)\);/.test(src));
   ck('the badge refresh targets the sidebar',
-     /querySelector\('\[data-setbadge="rules"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));
+     /querySelector\('\[data-setbadge="extensions"\]'\)[\s\S]{0,40}innerHTML=rulesNavBadgeHTML\(\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/89-rules-merge.js'), 'utf8')));
   const mcss = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8');
   /* review: a sticky sidebar inside one scroller was cut off on a landscape phone
      until the page was scrolled to its end; each pane scrolls on its own now */
@@ -3024,7 +3044,7 @@ function block(html, needle, tag) {
   const chip = {innerHTML: 'STALE'};
   const getById = ctx.document.getElementById;
   ctx.document.getElementById = id => id === 'rulesStatus' ? status : getById(id);
-  ctx.document.querySelector = sel => /data-setbadge="rules"/.test(sel) ? chip : null;
+  ctx.document.querySelector = sel => /data-setbadge="extensions"/.test(sel) ? chip : null;
   // drain every microtask the fetch chain queues, whether or not it returns a promise
   const run = async () => { calls = []; await X.fetchAllRules(); await new Promise(r => setImmediate(r)); };
   const cache = () => store[X.K_RULES];
@@ -3041,10 +3061,12 @@ function block(html, needle, tag) {
     X.saveRulesCache();
   };
   const HB = 'https://example.test/homebrew.json', OFF = 'http://127.0.0.1:9/offline-pack.json';
+  // #102: a plain source, the old-style shape fetchAllRules() reads from settings.sources now
+  const plain = urls => urls.map((url, i) => ({id: 'p' + i, kind: 'plain', url, on: true, checked: 0, error: '', manifest: null, base: ''}));
 
   // ---- (b) offline: a run where nothing arrives changes nothing
   seedFilePack();
-  X.settings.rulesSources = [OFF];
+  X.settings.sources = plain([OFF]);
   routes = {};
   const poolBefore = JSON.stringify(X.rules), cacheBefore = cache();
   chip.innerHTML = 'STALE';
@@ -3064,7 +3086,7 @@ function block(html, needle, tag) {
 
   // ---- (a) a file-imported pack survives a successful fetch of another source
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap', text: 'v1'}, {name: 'Fizzle'}]}};
   chip.innerHTML = 'STALE';
   await run();
@@ -3101,7 +3123,7 @@ function block(html, needle, tag) {
   // ---- a source that fails keeps what it loaded last time; the others refresh
   const EX = 'https://example.test/extras.json';
   seedFilePack();
-  X.settings.rulesSources = [HB, EX];
+  X.settings.sources = plain([HB, EX]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]},
             [EX]: {system: 'Extras', items: [{name: 'Rope of Doom'}]}};
   await run();
@@ -3121,7 +3143,7 @@ function block(html, needle, tag) {
   await run();
   ck('later sources still win on name clashes',
      (X.rules.spells || []).filter(e => e.name === 'Zap').map(e => e.text).join() === 'second');
-  X.settings.rulesSources = [HB, HB + ' '];
+  X.settings.sources = plain([HB, HB + ' ']);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
   await run();
   ck('a source listed twice is fetched once', calls.length === 1, calls);
@@ -3129,7 +3151,7 @@ function block(html, needle, tag) {
   // ---- a manifest is one source: its includes arrive together or not at all
   const MAN = 'https://example.test/pack/manifest.json', A = 'https://example.test/pack/a.json', B = 'https://example.test/pack/b.json';
   seedFilePack();
-  X.settings.rulesSources = [MAN];
+  X.settings.sources = plain([MAN]);
   routes = {[MAN]: {name: 'Pack', include: ['a.json', 'b.json']},
             [A]: {system: 'Pack', spells: [{name: 'Alpha'}], include: ['manifest.json']},   // a loop
             [B]: {system: 'Pack', feats: [{name: 'Beta'}]}};
@@ -3148,7 +3170,7 @@ function block(html, needle, tag) {
 
   // ---- a response that is not a rules file fails the source; it is not half-merged
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: null};
   const before2 = JSON.stringify(X.rules), cache2 = cache();
   await run();
@@ -3164,7 +3186,7 @@ function block(html, needle, tag) {
   ck('...and says why', /no rules in it/.test(status.textContent), status.textContent);
 
   // ---- an include that cannot even be turned into a URL names its file too
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', include: ['http://[bad']}};
   await run();
   ck('an unresolvable include fails the source, naming the file',
@@ -3173,14 +3195,14 @@ function block(html, needle, tag) {
   // ---- provenance is the merge's to stamp: a stray _url in a FILE never lets a fetch delete it
   seedFilePack();
   X.mergeRules({system: 'Homebrew', spells: [{name: 'Hex', _url: HB}]}, 'mine.json');
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
   await run();
   ck('a file entry carrying a stray _url survives a fetch of that URL', names(null, 'spells').includes('Hex'), names(null, 'spells'));
 
   // ---- `requires` follows the source's fresh copy, unless a file shares its label
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}], requires: [{file: 'x.json', spells: ['Nope']}]}};
   await run();
   ck('requires: a fetched declaration is stored', !!(X.rules.requires || {}).Homebrew);
@@ -3194,7 +3216,7 @@ function block(html, needle, tag) {
 
   // ---- the cache write reflects the new pool, and a refused one says so
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
   state.quotaFull = true;
   await run();
@@ -3207,13 +3229,30 @@ function block(html, needle, tag) {
 
   // ---- #71: a fetched pack's unusable entries are reported, not silently dropped
   seedFilePack();
-  X.settings.rulesSources = [HB];
+  X.settings.sources = plain([HB]);
   routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}, {text: 'no name'}], keywords: [{text: 'no term'}]}};
   await run();
   ck('#71 fetch-all: the usable entries arrive', names(null, 'spells', 'Homebrew').join() === 'Zap', names(null, 'spells'));
   ck('#71 fetch-all: the status line says what was skipped',
      /skipped/i.test(status.textContent) && /1 glossary entry/.test(status.textContent) && /1 spell/.test(status.textContent),
      status.textContent);
+
+  // ---- #102 fix round 1 (Minor 11): fetchAllRules(urls) takes an explicit
+  // list, bypassing settings.sources entirely — even with no plain source
+  // configured at all
+  seedFilePack();
+  X.settings.sources = [];
+  routes = {[HB]: {system: 'Homebrew', spells: [{name: 'Zap'}]}};
+  calls = [];
+  await X.fetchAllRules([HB]);
+  await new Promise(r => setImmediate(r));
+  ck('#102 fetchAllRules(urls): an explicit list is fetched with no plain source configured',
+     names(null, 'spells', 'Homebrew').join() === 'Zap' && calls.length === 1, [names(null, 'spells'), calls]);
+  routes = {}; calls = [];
+  await X.fetchAllRules();
+  await new Promise(r => setImmediate(r));
+  ck('#102 fetchAllRules(): with no argument and no plain source, there is nothing to fetch',
+     /no plain source/i.test(status.textContent) && calls.length === 0, status.textContent);
 
   // ---- the Rules data badge follows every change to the pool, not only Fetch all
   chip.innerHTML = 'STALE';

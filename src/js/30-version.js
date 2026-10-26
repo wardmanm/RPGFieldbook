@@ -64,11 +64,15 @@ function checkForUpdate(){
    tooltip and stays in the changelog's title, so it is never lost. */
 function showUpdatePill(){
   if(!updateAvailable)return;
+  /* cleared with its × until a newer version arrives (#102, spec decision 9) */
+  const cleared=(settings.dismissedUpdates||{}).app;
+  if(cleared&&cmpVer(updateAvailable.ver,cleared)<=0)return;
   const el=document.getElementById("updatePill");if(!el)return;
   const ver=document.getElementById("btnVer");if(ver)ver.style.display="none";
   el.textContent="↑ v"+updateAvailable.ver;
   el.title=`Update to version ${updateAvailable.ver} available — you're on ${APP_VERSION}. Tap for what's new and the download.`;
   el.style.display="inline-flex";
+  const x=document.getElementById("updatePillX");if(x)x.hidden=false;
 }
 /* Newer rules DATA than what is loaded (#83). Data can be released without the
    app, as data-vX.Y.Z-N, and those releases are never GitHub's "latest", so

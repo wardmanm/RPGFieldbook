@@ -13,7 +13,7 @@ write is how five loaded packs quietly came back as two.
 `70-persistence.js`; `loadRulesCacheAsync()`, `finishImport()` in `71-char-io.js`;
 `loadCharById()`, `newCharacter()`, `deleteCharacter()`, `setAutoload()`, `migrateOldChar()` in
 `75-home-theme.js`;
-`rulesCacheWarning()`, `finishSettingsImport()` in `88-settings.js`; `boot()` in `90-boot.js` · **Tests:** `rules-data.js`
+`rulesCacheWarning()`, `finishSettingsImport()` in `88-settings.js`; `convertSources()`, `extSaveErrorText()`, `runInstall()` in `89-extensions.js`; `boot()` in `90-boot.js` · **Tests:** `rules-data.js`
 (the fallback, the loud path, the LZW round trips), `char-update.js` (backup semantics, the index
 read-back, the refused-write paths and leaving a character) · **See also:** [Character model](character-model.md), [Rules packs](rules-packs.md),
 [Home & characters](../features/home-and-characters.md),
@@ -25,7 +25,7 @@ read-back, the refused-write paths and leaving a character) · **See also:** [Ch
 |---|---|---|
 | localStorage | `hw-fb-c-<id>`, from `charKey()` | one character, as `JSON.stringify(character)` |
 | localStorage | `hw-fb-library` (`K_LIB`) | `{autoload, index:[{id, name, system, appVersion, updated}]}` |
-| localStorage | `hw-fb-settings` (`K_SET`) | `settings`: skin, theme, rough, `rulesSources`, `setPage` (the Settings page last viewed, #107), `rulesCat` (the Rules tab's category last opened, #99), `tabIcons`, `backdropClose`; `setCollapse` and `rulesCollapse`, the old Settings and Rules-tab fold states, are no longer read but stay in older saves |
+| localStorage | `hw-fb-settings` (`K_SET`) | `settings`: skin, theme, rough, `sources` (the extension sources and their last-read manifests, #102), `packOrigin` (which source installed each pack), `dismissedUpdates` (the newest version of each pack, and `app`, whose notice the player cleared), `setPage` (the Settings page last viewed, #107), `setCollapse` (only its `ext:<section>` keys, the Extensions page's folds, are read now), `rulesCat` (the Rules tab's category last opened, #99), `tabIcons`, `backdropClose`; `rulesSources` and `rulesUrl` convert into `sources` at boot and are deleted, and `rulesCollapse`, the old Rules-tab fold state, is no longer read but stays in older saves |
 | IndexedDB | database `hw-fb-cache`, store `kv`, key `rules` | the rules pool as plain JSON. This copy wins |
 | localStorage | `hw-fb-rules` (`K_RULES`) | the rules pool, LZW-compressed. Fallback and migration source only |
 | localStorage | `hw-fb-char` (`K_CHAR`) | a pre-library single-character save, moved into the library once by `migrateOldChar()` |
@@ -79,17 +79,23 @@ offer it as a download. A dropped index write removes the orphaned blob.
 
 It returns a promise of the error string. When the promise settles it reports through
 `updateRulesStatus()` and re-renders the loaded-data list, where `rulesCacheWarning()` puts the
-message in red above the list. The callers have usually drawn their status line already by then,
-which is why the report is asynchronous. `fetchAllRules()` waits for that promise and writes the
-error into its own status line, and `finishSettingsImport()` does the same on the Import settings
-line. A fetch that brought nothing does not save at all: the pool did not
+message in red above the list (on the Extensions page, above its sections). The callers have
+usually drawn their status line already by then, which is why the report is asynchronous.
+`fetchAllRules()` waits for that promise and writes the error into its own status line,
+`finishSettingsImport()` does the same on the Import settings line, and `runInstall()` puts it in
+the install's toast, which then stays as an error. A fetch that brought nothing does not save at all: the pool did not
 change, so the cache already matches it, and overwriting it is how an offline Fetch all used to
-leave the next launch with no rules (see [Rules packs](rules-packs.md)).
+leave the next launch with no rules (see [Rules packs](rules-packs.md)). An install that fails
+changes nothing, so it saves nothing either.
 
 **Settings** are one `localStorage` key, written whole by `saveSettings()` after every change.
 It returns `""`, or why the write was refused (`storageWhy()`). The toggles ignore that, since each
 one is re-saved at the next change. Import settings reports it: "Settings imported for this
-session only: …".
+session only: …". The Extensions page (#102) reports it too: a source added, removed, switched or
+folded says "Couldn't save …" on its status line, and an install puts it in its toast. The boot
+source check stays quiet, so a save refused there is kept (`extSaveErrorText()`) and the page shows
+it as "Couldn't save your sources at the last check: …" until a later save lands. A pill's ×
+toasts it ("Couldn't save that you cleared the notice: …").
 
 **Every IndexedDB call is timed out.** `idbOpen()` and each `idbTx()` go through `idbTimeout()`,
 which rejects after `IDB_TIMEOUT` (4000 ms). A missing or throwing IndexedDB rejects at once. A
@@ -207,3 +213,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-29 — A refused character write raises a warning strip that stays until a save lands; new, imported and migrated characters report it too. → ledger L4771, #81
 - 2026-09-29 — Leaving a character flushes its pending save and asks before dropping one that can't land; delete and the autoload star report a refused index write. → ledger L4856, #81
 - 2026-10-16 — `settings.setPage` replaces the Settings fold state (`setCollapse`, no longer read). → ledger L5930, #107
+- 2026-10-26 — `settings.sources`, `packOrigin` and `dismissedUpdates` replace `rulesSources`; the Extensions page's folds are `setCollapse` `ext:` keys; a source save refused at the boot check is kept and shown on the page. → ledger L7428, #102

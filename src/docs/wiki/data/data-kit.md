@@ -9,11 +9,12 @@ one command. It is Python 3.8+ with the standard library only, so the same file 
 `tools/data-kit/README.md`; the converter's is [README-converter](../../../../docs/README-converter.md).
 
 **Code:** `main()`, `bundle()`, `bundle_text()`, `cmd_bundle()`, `cmd_digest()`, `cmd_versions()`,
-`pack_digest()`, `changed_packs()`, `load_registry()`, `check_registry()`, `cmd_pack()`,
-`notice_md()`, `validate_archive()`, `cmd_validate()`, `kit_file()`, `cmd_convert()`, `cmd_build()`,
+`pack_digest()`, `changed_packs()`, `load_registry()`, `check_registry()`, `build_manifest()`, `cmd_pack()`,
+`cmd_release_files()`, `notice_md()`, `validate_archive()`, `cmd_validate()`, `kit_file()`, `cmd_convert()`, `cmd_build()`,
 `app_version()` in `tools/data-kit/fbdata.py`; `build.sh` (`pack_kit`) · **Data:**
 `data/packs.json`, `tools/data-kit/README.md`, `tools/data-kit/example-pack/example-pack.json` ·
-**Tests:** `data-kit.py` (golden bundle checks, versions, digests, `pack` and `validate`,
+**Tests:** `data-kit.py` (golden bundle checks, versions, digests, `pack` and `validate`, the
+format-2 manifest fields, `validate`'s length, `minApp`, `size` and path checks, `release-files`,
 `validate --public`, `build` from a folder of packs, a registry and one pack file, `kit_file()`,
 the example pack, the kit zip unzipped with no repo around it, the release scripts in a scratch repo),
 `converter.py` (`build` on a mini dump) · **See also:** [Data archive](../architecture/data-archive.md),
@@ -33,8 +34,9 @@ own.
 | `bundle` | Rolls each registered `data/<dir>/` into `dist/<file>`, stamped with the registry's title, version, licence and credit (below) | `python3 tools/data-kit/fbdata.py bundle -o dist` |
 | `digest` | Each pack's computed content digest beside the recorded one | `python3 tools/data-kit/fbdata.py digest` |
 | `versions` | `--changed` lists packs whose digest moved since their release; `--check` exits 1 if any did; `--bump V` gives those packs version V and sets `release`; `--seed` records every digest as released (never again: see [Data archive](../architecture/data-archive.md)) | `python3 tools/data-kit/fbdata.py versions --changed --registry _private-data/data/packs.json --data-root _private-data/data` |
-| `pack` | Writes the archive from the bundles: `fieldbook-data.json`, `NOTICE.md` and each pack, sorted and dated 1980-01-01, so the same input gives the same bytes. `--dev` names its version `<release>+dev`; `--built-for` records the app version | `python3 tools/data-kit/fbdata.py pack dist -o dist/fieldbook-data-standalone-1.8.0.zip` |
-| `validate` | Checks an archive: one line per problem, exit 1. `--public` also refuses a pack whose licence is not `CC-BY-4.0`, `CC-BY-SA-3.0` or `MIT` (`PUBLIC_LICENCES`) | `python3 tools/data-kit/fbdata.py validate --public dist/fieldbook-data-standalone-1.8.0.zip` |
+| `pack` | Writes the archive from the bundles: `fieldbook-data.json` (format 2 since #102: per pack `category`, `title`, `summary`, `description`, `minApp`, `size`, `sha256` and `requires`; the registry's `name` and `homepage` on top), `NOTICE.md` and each pack, sorted and dated 1980-01-01, so the same input gives the same bytes. `--dev` names its version `<release>+dev`; `--built-for` records the app version | `python3 tools/data-kit/fbdata.py pack dist -o dist/fieldbook-data-standalone-1.8.0.zip` |
+| `release-files` | Writes `releases/data/` (#102): the same manifest and every bundle, flat, after deleting the folder's old `.json` files (regular, non-dot files only), then validates it `--public`. Run by `./build.sh --release` and `data-release.js`, never by hand | `python3 tools/data-kit/fbdata.py release-files dist -o releases/data` |
+| `validate` | Checks an archive, or a `releases/data` folder: one line per problem, exit 1. In a folder, dotfiles such as `.DS_Store` are ignored. It takes format 1 or 2; for format 2 it also refuses a `summary` over 140 characters, a `description` over 4,000, a `minApp` that isn't `X.Y.Z` and a `size` that isn't the file's. Paths must be relative with no `..`. `--public` also refuses a pack whose licence is not `CC-BY-4.0`, `CC-BY-SA-3.0` or `MIT` (`PUBLIC_LICENCES`) | `python3 tools/data-kit/fbdata.py validate --public dist/fieldbook-data-standalone-1.8.0.zip` |
 | `convert` | Runs `convert.py` with the kit's `overlay.json`, `class-resources.json` and (for `srd`) `srd-corrections.json` filled in, unless the caller names their own (`--overlay PATH` or `--overlay=PATH`; `_given()`) | `python3 tools/data-kit/fbdata.py convert srd _conversion-data/5etools-v2.36.1 -o /tmp/srd` |
 | `build` | One command from a source to a validated archive (below) | `python fbdata.py build ~/5etools/data -o srd.zip` |
 
@@ -134,7 +136,11 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
 - **The built kit zip is tested where it ships.** `ci.yml` and `release.yml` re-run `data-kit.py`
   after the full build, and fail unless its kit-zip checks ran and passed: its Tests step runs
   before the build, when there is no kit zip and those checks skip.
-- **A public archive passes `validate --public`**, in both public release workflows.
+- **A public archive passes `validate --public`**, in both public release workflows, and so does
+  `releases/data/`.
+- **The registry's new fields are checked on read** (`check_registry()`): `summary` 1–140 and
+  `description` 1–4,000 characters, `minApp` `X.Y.Z`, `category` non-empty, `homepage` http(s),
+  `name` 1–120 characters.
 
 ## Traps
 
@@ -163,6 +169,14 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
 
 - `convert.py`'s own lookup still never checks beside itself for `overlay.json` and
   `class-resources.json`; the kit works around it. See [Converter](converter.md).
+- **`release-files` deferred minors (#102):** its stale-`*.json` loop has no `isfile` guard (a
+  folder named `*.json` would traceback), and it deletes then writes rather than writing beside and
+  renaming as `pack` does. `./build.sh --release --no-zip` skips `releases/data/`, since
+  `release-files` runs in the zip step; the release skill always builds the zips, and CI catches a
+  missing folder.
+- **`data-release.js`'s cleanup (#102):** the exit handler's `fs.rmSync` is unguarded, so a cleanup
+  error after a successful release would turn exit 0 into 1; and `data-kit.py`'s leak test
+  snapshots the shared OS temp folder, a narrow flake if two worktrees run the suite at once.
 
 ## History
 
@@ -170,3 +184,5 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
 - 2026-10-09 — The kit zip, `kit_file()`, `convert`, `build`, `validate --public` and the example pack; the app zip drops `scripts/`. → ledger L5352, L5426, #85
 - 2026-10-09 — `convert` keeps a caller's `--flag=PATH`; `build` at a 5e-tools root points at `data/`; CI and `release.yml` test the built kit zip. → ledger L5592, #85
 - 2026-10-12 — `BUNDLE_FORMAT` joins every digest; a fingerprint test pins the bundler's output per format. → ledger L5627, #86
+- 2026-10-26 — `pack` writes the format-2 manifest; `validate` takes folders and checks the new fields; `release-files` writes `releases/data/`. → ledger L7428, #102
+- 2026-10-26 — `validate <folder>` and `release-files` ignore dotfiles; `data-release.js`'s exit cleanup can't change its exit code. → ledger L7477, #102

@@ -27,9 +27,10 @@ Known behaviour that is accepted for now.
   → ledger L3886, and [Vitals & rest](../features/vitals-and-rest.md)
 - **Multiclass ability prerequisites** (e.g. INT 13 for a Wizard) are neither carried by the pack nor
   enforced. → ledger L3886
-- **A fetched source's packs stay until removed by hand** once the source is taken out of the list,
-  and a pack fetched before `_url` stamping keeps any entry its source has since dropped (a re-fetch
-  replaces the rest by name). Both follow from Fetch all never discarding what it didn't replace.
+- **A source's packs stay until removed by hand** once the source is taken out of the list (#102
+  decision 13), and a pack fetched before `_url` stamping keeps any entry its plain source has since
+  dropped (a re-fetch replaces the rest by name). Both follow from a fetch never discarding what it
+  didn't replace.
   → ledger L3797, and [Rules packs](../architecture/rules-packs.md)
 - **A class's gold alternative is the average of its dice**, not a roll (`_dice_avg_gold()` in
   `convert.py`). → ledger L42
@@ -92,12 +93,10 @@ Known behaviour that is accepted for now.
   imports the `.json` files inside; the release notes, `NOTICE.md` and README §3a say so. The
   manifest has no rules keys, so an old copy given it as a loose file merges nothing. → ledger
   L5082, and [Data archive](../architecture/data-archive.md)
-- **A data update is announced, never installed.** The notice links the release; the player
-  downloads the zip and imports it. → ledger L5082, and
-  [Settings & updates](../features/settings-and-updates.md)
-- **The newer-data notice needs the network** (the GitHub releases list and the tag's registry), and
-  is silent offline or when GitHub refuses, so an offline player never learns of a data release.
-  It runs once per load, like the app's update check. → ledger L5082
+- **The newer-data notice and the source check need the network** (the GitHub releases list, the
+  tag's registry, each source's manifest), and are silent offline or when GitHub refuses, so an
+  offline player never learns of a data release. They run once per load, like the app's update
+  check; Check now on the Extensions page runs the source check again. → ledger L5082, L7428
 - **With the D&D 2024 and SRD 5.2 packs both loaded, import order decides which copy of a shared
   name a lookup finds.** The two packs come from separate archives since #85 (the public one and the
   private one), `findTable()` and the other name lookups take the first match in the pool, and a
@@ -145,6 +144,17 @@ Known behaviour that is accepted for now.
 
 ## Deferred
 
+- **#102's deferred minors.** Three unauthenticated GitHub API calls per boot (the app check asks
+  for the latest release; the data check and the official source each list the releases), against
+  GitHub's 60 an hour; memoising the list is deferred (M10). A plain source's URL is only checked to be non-empty (old relative
+  sources are allowed by design; it reaches only `fetch`). `extVerify()` doesn't compare the bytes'
+  length with the manifest's declared `size` (the sha256 covers it when present), and a page with
+  no `fetch` at all throws synchronously. Small simplifications (one shared newest-by-key helper, a
+  size message keyed on the cap constant) wait for 2.0. → ledger L7428, and
+  [Rules packs](../architecture/rules-packs.md)
+- **#102's release-tooling minors**: `release-files` deletes before it writes;
+  `./build.sh --release --no-zip` skips `releases/data/`; `data-kit.py`'s leak test reads the shared
+  temp folder. → ledger L7428, and [Data kit](../data/data-kit.md)
 Wanted, not yet done. Each needs work, not a source.
 
 - **Humblewood species have no size.** They all resolve to Medium (`charSize()`), but Jerbeen, Luma
@@ -287,9 +297,9 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   the font stacks fall back to local serifs. → [Theming & icons](../ui/theming-and-icons.md)
 - `boot()` and `renderHome()` call `localStorage.getItem` outside a `try`, so a browser that throws on
   storage access would stop boot **(unverified)**. → [Storage](../architecture/storage.md)
-- **Import, remove and Clear all still write a green status line synchronously.** When the rules
-  cache can't be saved (no IndexedDB, quota), the refusal shows only in the red line above the pack
-  list, not on the status line — Fetch all now reports it in both. → ledger L3797, and
+- **Remove and Remove all still write a green status line synchronously.** When the rules cache
+  can't be saved (no IndexedDB, quota), the refusal shows only in the red line above the pack list,
+  not on the status line — a plain source's Fetch reports it in both, and an install in its toast. → ledger L3797, and
   [Storage](../architecture/storage.md)
 
 ### Latent: no shipped data triggers these yet
@@ -390,7 +400,7 @@ Each is recorded, with its reason, in the page's Decisions table; each is easy t
   [Grants & provenance](../architecture/grants-and-provenance.md)
 - **Multiclass characters saved before #66 are not changed** — they keep a second class's saves,
   skills and gear; removing that class still reverts them. → ledger L3886
-- **Fetch all adds no confirmation dialog**, since nothing is lost unless a fresh copy replaces it; a
+- **A plain source's Fetch adds no confirmation dialog**, since nothing is lost unless a fresh copy replaces it; a
   fetched pack with the same system and entry names as a file import replaces those entries, as
   re-importing the file would. → ledger L3797, [Rules packs](../architecture/rules-packs.md)
 
@@ -411,7 +421,7 @@ Each is recorded, with its reason, in the page's Decisions table; each is easy t
   dropped. → ledger L4206, [Character model](../architecture/character-model.md)
 - **A keyword written `{name, description}` loads as its term and text** (`desc` is not an alias);
   pack entries with no usable name are skipped and counted on the status line, not shown as a chip
-  in Loaded data, and a settings file's unusable entries are dropped without a message. → ledger
+  on the pack's row, and a settings file's unusable entries are dropped without a message. → ledger
   L4206, [Rules packs](../architecture/rules-packs.md)
 - **Magic weapons take their names from the base weapon data, not a copy of the base weapon's
   fields** — the dump's magic weapons already carry every base field. → ledger L4327,
@@ -512,3 +522,5 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-25 — Added from #47's QA: the Log button's missing glyph, the potion's unchanged save writing a line, and selling reading short. → ledger L7291, #47
 - 2026-10-25 — #47's final review fixed the Log button's glyph and the potion's unchanged save; added the log's storage size, measured. → ledger L7339, #47
 - 2026-10-25 — Edit lines keep only what changed, so the log's storage entry narrows to one-copy lines; selling no longer reads short. → ledger L7401, #47
+- 2026-10-26 — Fixed and removed: a data update announced, never installed (#102 installs and updates packs from a manifest). Added: #102's deferred minors, its release-tooling minors and the ≤560px notice row. → ledger L7428, #102
+- 2026-10-26 — Removed: the ≤560px notice row (decided: it stays) and two release-tooling minors fixed in #102's final wave (`release-files`' `isfile` guard, `data-release.js`'s exit cleanup). → ledger L7513, #102

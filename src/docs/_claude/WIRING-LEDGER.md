@@ -7424,3 +7424,144 @@ Mike's rulings on the three questions #47's final review left open, built on `is
 
 Pages: [inventory](../wiki/features/inventory.md), [theming & icons](../wiki/ui/theming-and-icons.md),
 [known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).
+
+## Extensions and manifest installs (#102, 2026-10-26)
+
+Fieldbook installs and updates packs from a **manifest**, and Settings → Rules data became
+**Extensions**. Built on `issue/102-extensions` in seven tasks. Spec
+`src/docs/specs/2026-10-26-extensions-manifest-design.md`, whose As built section lists every ruling
+and deferred minor.
+
+- **The manifest is format 2** of the data zip's `fieldbook-data.json`: per pack a `category`,
+  `title`, `summary` (≤140), `description` (≤4,000), `minApp`, `size`, `sha256` and `requires` (with
+  an optional http(s) `url`), at a path relative to the manifest; top-level `name` and `homepage`.
+  `fbdata.py pack` writes it; `validate` checks lengths, `minApp`, `size` and folders as well as
+  zips; the new `release-files` writes `releases/data/` (the manifest and the bundles, flat).
+  `data/packs.json` gains `name`, `homepage`, and per pack `summary` and `description`.
+- **The official source** is `releases/data/fieldbook-data.json` at the release tag on
+  raw.githubusercontent.com, which answers a `file://` page. `./build.sh --release` and
+  `data-release.js` (public registry only) write `releases/data/`; both workflows check it matches
+  the build and is public only.
+- **`89-extensions.js`**, the 38th JS fragment: `sha256Hex()` in JavaScript, `readManifest()` /
+  `extEntry()` (caps 64 KB, 1,000 packs, 32 MB a file; paths an allow-list of
+  `[A-Za-z0-9._-]` segments), `settings.sources` (official, manifest, plain) converted once from
+  `rulesSources`/`rulesUrl` by `convertSources()` on every boot, `checkSources()` at boot (quiet,
+  skipped offline) and on Check now, `availableFor()`, `planInstall()` and the all-or-nothing
+  `runInstall()` (fetch and verify everything first; a merge throw restores a snapshot), the
+  Extensions page, the details dialog, the plan dialog, Manual install (files, a folder, a drop) and
+  the pills.
+- **The pills.** "Extensions · N updates" (N updates at ≤560px) opens Settings → Extensions; each
+  pill's × writes `settings.dismissedUpdates` and hides it until a newer version arrives. The app
+  update pill gets the same ×, under `dismissedUpdates.app`.
+- **Gone:** the Sources URL list, Fetch all (a plain source has its own Fetch), Import files, Get
+  templates (`downloadRulesTemplates()`), the Settings Loaded data list, `renderSrcRows()` and
+  `#fileRules`. Every file picker (home, the Rules tab, Manual install) goes through
+  `manualInstallFiles()` and the plan. `importRulesFiles()` stays for the suites.
+- **Player text** that named the removed UI now names Settings → Extensions, Remove all and Manual
+  install (`706e885`), and `docs/rules-schema.md` gains "Publishing extensions".
+- CLAUDE.md constraint 2 names the manifest checks and pack downloads among the allowed network
+  calls. Closes known-issues' "A data update is announced, never installed".
+
+Open for Mike: at ≤560px a showing notice takes a third header row; the alternative is one combined
+"↑ N" pill with a menu (the reviewer recommends keeping the row).
+
+Pages: [data archive](../wiki/architecture/data-archive.md),
+[rules packs](../wiki/architecture/rules-packs.md),
+[settings & updates](../wiki/features/settings-and-updates.md),
+[storage](../wiki/architecture/storage.md), [shell](../wiki/ui/shell.md),
+[data kit](../wiki/data/data-kit.md), [known issues](../wiki/roadmap/known-issues.md),
+[overview](../wiki/overview.md), [1.9.0](../wiki/roadmap/1.9.0.md),
+[building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md); and
+[RELEASING](../RELEASING.md).
+
+## #102 final review fixes (2026-10-26)
+
+The whole-branch review of #102 came back "With fixes"; the controller ruled on each (Rulings 15–18).
+
+- **The Settings dot (I1, Ruling 15).** `rulesUpdatePending()` reads `extUpdateRows().length>0`, not
+  `extPillCount()`, so the sidebar dot and the "· update" description stay while any update is
+  pending (spec §6.2) and only the top-bar pill is cleared by its ×. Taken off "Open for Mike".
+- **Who offers an update (I2, Ruling 16).** A manifest names itself, so a stranger's manifest could
+  call itself "Fieldbook public data" and offer an update to a pack imported by hand, with nothing
+  saying who. `extSourceName()` now gives a manifest source as "*name* (*host*)" (`extSourceHost()`,
+  from its URL) in the rows, the plan, the details' Source box, "Also from *source*" (once "Also from
+  this source") and Sources; only the built-in source reads the bare "Fieldbook public data". A loaded
+  pack's update row whose offering source isn't `packOrigin` (a file, "manual", or another source)
+  adds "· update from *name (host)*", and its plan line reads "Update from *name (host)*".
+- **Caps without Content-Length (I3, Ruling 17).** `extFetchBytes()` reads `r.body.getReader()` with a
+  running byte count and, past the cap, cancels the reader, aborts the request and rejects with the
+  cap's own message; `arrayBuffer()` is the fallback only without a body stream, and its length is
+  checked too. The timer still covers the whole stream and now also cancels the reader.
+  **`addSource()` passes `EXT_FILE_MAX`, not the ruled `EXT_MAN_MAX`:** spec §4 lets a plain source
+  be a whole pack file (SRD 5.2's `classes.json` is 269 KB), which a 64 KB cap would refuse; a
+  manifest over 64 KB is still refused by `readManifest()`'s own byte check. Flagged to the controller.
+- **Ruling 18.** A release list that isn't a JSON list reads "GitHub's release list couldn't be read"
+  on the official row (M8). `fbdata.py` `validate <folder>` ignores dotfiles such as `.DS_Store`, and
+  `release-files`' stale sweep removes only regular, non-dot `*.json` files (M9, and T1's deferred
+  `isfile` guard). `data-release.js`'s exit-handler cleanup is in try/catch, so a cleanup error
+  warns instead of turning a good release into exit 1. The `setCollapse` comment in
+  `00-constants.js` names the `ext:*` keys (M10). `docs/rules-schema.md` §8 limits add `license` 64
+  characters and `requires` 50 entries, and says `validate` ignores dotfiles.
+
+Tests: data-archive (the inverted dot test; I2 with the reviewer's repro; I3 with stubbed streams,
+over, under and exactly at the cap, a stall, `checkSource()` and `addSource()`; M8), data-kit (M9;
+the exit handler under a preload whose `fs.rmSync` throws).
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md),
+[rules packs](../wiki/architecture/rules-packs.md), [data kit](../wiki/data/data-kit.md).
+
+## #102 bidi strip (2026-10-26)
+
+The re-review of the final fix wave found that a manifest name ending in U+202E (RIGHT-TO-LEFT
+OVERRIDE) made the browser draw "name (host)" with the host reversed: `moc.buhtig.ws` showed as
+"(sw.github.com)" on the row, the plan line and the Sources title (N1). Mike's call: strip invisible
+characters.
+
+- **`extText()` strips every format character, `\p{Cf}`, before the cap** (`extPlain()`,
+  `EXT_INVISIBLE`): the bidi controls U+200E/F, U+202A–202E, U+2066–2069 and U+061C, the zero-width
+  characters and the BOM. Every manifest string goes through it: name, titles (a title that falls
+  back to the system too), summaries, descriptions, licences, attributions, `requires[].pack`.
+  Letters, accents, emoji and right-to-left scripts are kept; an emoji joined by U+200D (ZWJ) splits
+  into its parts.
+- **`extSourceName()` and `extSourceHost()` strip again at display time**, so a manifest name saved
+  before this fix can't reverse the host either. `new URL().host` is already clean: an IDN comes back
+  as punycode, a zero-width character is dropped, and U+202E makes the URL invalid.
+- **N2:** `addSource()` over its cap says "Its answer is larger than 32 MB.", not "It couldn't be
+  reached: …" (the error carries `tooBig`).
+- **N3, the spec's As built:** Ruling 19 (`addSource()` at `EXT_FILE_MAX`) replaces "Flagged for the
+  controller"; Mike's three decisions are Rulings 20–22: strip invisible characters; Homebrew's
+  Xanathar's chip stays, and Homebrew moves into the private repo as separate work; the ≤560px notice
+  row stays. "Open for Mike" is empty. The wiki's open items for the notice row are closed, and
+  known issues drops the two release-tooling minors fixed in the last wave.
+
+Tests (data-archive): `extText()` strips U+200B, U+FEFF, U+2066 and U+202E, before the cap; accented,
+emoji, CJK and Hebrew text is kept; every manifest field is stripped; the reviewer's repro (name
+"Fieldbook public data ‮", URL `https://moc.buhtig.ws/m.json`) shows "(moc.buhtig.ws)" and no U+202E
+on the row, the plan line and Sources; a stored unstripped name; an IDN host is punycode; N2's wording.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md),
+[rules packs](../wiki/architecture/rules-packs.md), [shell](../wiki/ui/shell.md),
+[homebrew](../wiki/data/homebrew.md), [known issues](../wiki/roadmap/known-issues.md).
+
+## #102 bidi strip: URLs (2026-10-26)
+
+The second re-review found that the U+202E trick still worked through a source's own URL.
+`addSource()` stored the raw text the player typed (`url`/`base`), and the Sources sub-line and the
+details' Manifest line showed it unstripped. Live, `https://good.example/‮noj.live-lifedoog` drew
+the path, the separator and "checked today, …" backwards. This falls under Ruling 20 (Mike's
+"strip invisible characters").
+
+- `addSource()` fetches and stores the normalised URL, `new URL(u).href`, as `url` and `base`.
+  That form percent-encodes a raw U+202E.
+- Every URL shown as text goes through `extPlain()`: the Sources sub-line, the details' Manifest
+  line and the Homepage link text. The Homepage link's `href` is the normalised URL. Plain sources
+  converted from old settings were already shown through `extSourceName()`, which strips them.
+  Stored URLs that predate the fix are covered by the display strip.
+
+Tests (data-archive):
+- an added URL with a raw U+202E is stored normalised;
+- the Sources and details HTML carry no U+202E and still show the host;
+- a raw stored URL and a converted plain source display without it.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md),
+[rules packs](../wiki/architecture/rules-packs.md).

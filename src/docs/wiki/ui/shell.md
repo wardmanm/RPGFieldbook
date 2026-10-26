@@ -13,7 +13,8 @@ the back-to-top button, and the wiring in `90-boot.js` that binds all of it once
 `openModal()`, `closeModal()`, `dismissModal()`, `setDismissGuard()`, `modalTakeFocus()`,
 `modalGiveBackFocus()`, `openerSelector()` in `80-modal-forms.js` · `openBrowse()`, `closeBrowse()`
 in `85-browse.js` · `wire()`, `boot()` in `90-boot.js` · `toast()` in `60-attacks.js` ·
-`showUpdatePill()` in `30-version.js` · `10-chrome.css`, `50-modal.css` ·
+`showUpdatePill()` in `30-version.js` · `renderExtPill()`, `extPillFocusBack()`, `checkSources()` in
+`89-extensions.js` · `10-chrome.css`, `50-modal.css` ·
 **Tests:** `rules-data.js` (tab bar, the retired ☰ stays gone, back to top, dismissals,
 combat tab, no escaped modal title), `sheet.js` (`MODAL_FOCUS_FIELDS`, `openerSelector()`, `finderQty()`), `char-update.js`
 (what a dismissal hands on, what a choice window writes to `#mTitle`) ·
@@ -30,7 +31,7 @@ Source order in the template matters (see Rules). Layers are `z-index`:
 | Element | What it is | Layer |
 |---|---|---|
 | `#rough` SVG filter | the hand-drawn wobble, used as `filter:url(#rough)` | — |
-| `.topbar` | wordmark, version / update pill, save state, Home, theme, Settings, Print, Load, Save | 50, scrolls away |
+| `.topbar` | wordmark, version / update pill and its ×, the Extensions pill and its ×, save state, Home, theme, Settings, Print, Load, Save | 50, scrolls away |
 | `.tabbar` | six `.tab` buttons, then `.tab-tools` holding `#btnCombat` | 40, `position:sticky;top:0` |
 | `.page` | the seven tab panels; 80px of bottom padding (plus the safe area) so the last card scrolls clear of the back-to-top button | — |
 | `#btnToTop` | the back-to-top button, fixed bottom-right | 25 |
@@ -46,7 +47,15 @@ opened from a finder lands on top of it.
 
 In the top bar, `#btnVer` reads `v` + `APP_VERSION` and opens the changelog. When the update check
 finds a newer release, `showUpdatePill()` hides it and shows `#updatePill` in the same slot, with
-the same target ([Settings & updates](../features/settings-and-updates.md)). `#savestate` says
+the same target ([Settings & updates](../features/settings-and-updates.md)). Beside it,
+`#updatePillX` clears that notice, and `#extPill` holds the Extensions pill (`#extPillGo`, "Extensions
+· N updates", which opens Settings → Extensions) and its own × (`#extPillX`), #102. The version,
+the pills and their ×s pack left as one group: `#savestate` carries the bar's only auto margin
+(`margin-left:auto`), since one per pill split the free space and floated the Extensions pill
+mid-bar. A × is a 38×32px glyph whose `::after` widens the target to 44px rightwards, up and down,
+never left onto its pill. **Up to 560px** a notice and its × don't fit in the first row: the pills
+and ×s take `order:5`, a row of their own after the buttons, and the Extensions pill reads "N
+updates". So a phone showing a notice has three header rows instead of two. `#savestate` says
 Saving… / Autosaved / "Use Save ↑"; `scheduleSave()` writes it, and `boot()` writes the last one if
 storage is refused. The theme button flips light and dark, resolving "system" to what is showing
 first. Save is `exportChar()`; Load clicks the hidden `#fileLoad`, whose change runs `importChar()`.
@@ -130,9 +139,12 @@ One `#modal` backdrop holds `.modal` (`role="dialog"`, `aria-modal`, `tabindex="
   every click). A press and release on different elements deliver their click to the backdrop, so
   without both a selection dragged out of a field, or a press outside slid onto the dialog, would
   close it. If a guard is set, it returns a message and the
-  close waits on a `confirm` prompt. Done and Save handlers call `closeModal()` directly. Only
-  the "choose N" pickers arm a guard, via `armChoiceDismissGuard()` after `openModal()`
-  ([Character building](../features/character-building.md)).
+  close waits on a `confirm` prompt; a guard that returns `true` refuses outright, with no prompt.
+  Done and Save handlers call `closeModal()` directly. The "choose N" pickers arm a guard, via
+  `armChoiceDismissGuard()` after `openModal()`
+  ([Character building](../features/character-building.md)), and so does the install plan while
+  its files download (#102): its guard returns `true` and says "Installing… please wait.", since
+  closing can't stop an install already under way.
 - **What a dismissal hands on.** `setDismissGuard(fn, then)` may also register `then`, and
   `dismissModal()` runs it after `closeModal()`. The choice windows use it to open the windows still
   queued behind them, so a dismissed window costs only its own picks. Because every open and close
@@ -236,13 +248,16 @@ themes.
   through a local `on()` that skips a missing element.
 - A `prefers-color-scheme` listener re-applies the theme in "system" mode.
 
-`boot()` then runs: settings from localStorage (folding a legacy `rulesUrl` into `rulesSources`),
+`boot()` then runs: settings from localStorage (`foldLegacySettings()`, which converts the old
+`rulesSources` and `rulesUrl` into `settings.sources`, #102),
 the rules cache from localStorage synchronously (`readRulesCacheString()`), `reindexRules()`,
 `recomputeDups()`, `buildStats()`, `buildDeath()`, `buildSlots()`, `buildBio()`, `wire()`,
 `applyTheme()`, `migrateOldChar()`. It opens the autoload character, or seeds a blank one behind
 `showHome()`. It writes the save-state warning if storage is refused, then runs
 `loadRulesCacheAsync()` (IndexedDB, after first paint, see [Storage](../architecture/storage.md))
-and `checkForUpdate()`.
+and the three network checks, each optional and silent: `checkForUpdate()`, `checkForDataUpdate()`
+and `checkSources({boot:true})`. `wire()` has already drawn the Extensions pill from the manifests
+saved at the last check (`renderExtPill()`), so it shows before the network answers.
 
 The test harness evaluates every fragment except `90-boot.js`, so `wire()` and `boot()` never run
 under test. What guards them is regexes over the source in `rules-data.js`, plus browser QA.
@@ -333,6 +348,7 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 | Does `selectTab()` scroll? | No. The caller decides: the tab bar goes to the top, a note jump to its card | Scrolling inside it: a note jump would fight its own tab switch |
 | Where does the dismissal guard live? | `dismissModal()`, in front of the three user dismissals only | Inside `closeModal()`: every Done handler calls it and would have to answer its own prompt |
 | Which modals get a guard? | Only one that stands to lose something (the choice pickers) | A guard everywhere: for an ordinary form Escape is cancel and must stay instant |
+| Update notices on a phone (#102, Mike 2026-10-26) | At 560px and under, a showing notice takes its own header row after the buttons | One combined "↑ N" pill with a menu: one more tap to reach either notice, and a menu to build (L7513) |
 | Does a click outside close a dialog? (#106) | Only with Settings → Appearance → Tap outside to close dialogs, off by default, app-wide; and only a click pressed and let go on the backdrop | Always: a stray click, or a tap to put a phone's keyboard away, lost the form. Never: some players want it. Per character: it is how the app behaves, not the sheet |
 | Do × and Escape follow that setting? | No, they always close | Gating them: both are deliberate, and Escape is how a keyboard leaves a form |
 | Where a dismissed window's follow-up lives | With its guard, as `then`, cleared by every open and close | A module global: the old equipment queue outlived its window and fired after the next level-up (L3649) |
@@ -357,6 +373,7 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - **Two comments still describe the combat view's `inert`**, which went when the view became a tab
   (L3676): the focus comment above `modalTakeFocus()` and the one above `toast()`.
 - The tab bar is buttons with `aria-label`s, not an ARIA tablist.
+- The app pill's × is 38×32 with a 44px target only to its right (#102).
 - More: [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -391,3 +408,5 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-25 — A player can hide the word tabs a character doesn't use, per character: `HIDEABLE_TABS`, `applyHiddenTabs()`, `.tab[hidden]`, and a `selectTab()` guard; the Sheet and the combat swords can never be hidden. → ledger L6989, #52
 - 2026-10-25 — Final review fixes: `applyHiddenTabs()`'s redirect to the Sheet now scrolls to the top; corrected the Settings-flip repaint path and the hidden-tab guard's rationale. → ledger L7064, #52
 - 2026-10-25 — `openBrowse()` takes an `onClose`, run by Close only; the item finder's config is `itemBrowseCfg()`, shared with the trade window. → ledger L7291, #47
+- 2026-10-26 — The top bar gains the Extensions pill and a × on both pills, one auto margin on the save state, and a notice row after the buttons up to 560px; a dismissal guard returning `true` refuses outright; boot ends with the source check. → ledger L7428, #102
+- 2026-10-26 — The ≤560px notice row is decided (Mike): it stays; one combined pill was rejected. → ledger L7513, #102

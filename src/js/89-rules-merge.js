@@ -80,7 +80,7 @@ function missingSummary(){
   const bad=loadedRulesGroups().filter(g=>missingRequirements(g.source).length);
   if(!bad.length)return "";
   const names=[...new Set(bad.map(g=>g.source||g.label))];
-  return " "+names.join(", ")+(names.length===1?" refers":" refer")+" to content that isn't loaded — see Loaded data below.";
+  return " "+names.join(", ")+(names.length===1?" refers":" refer")+" to content that isn't loaded — see its row under Rules data.";
 }
 /* One line above the loaded-data list when a data release has newer copies of
    packs the player has loaded (#83). Quiet on purpose (R7): a data release is
@@ -116,17 +116,14 @@ function rulesDataHTML(){
 function renderRulesData(){
   const html=rulesDataHTML();
   ["rulesData","homeRulesData"].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
-  /* The Settings sidebar's Rules data tab counts the pool (#107). It is drawn once by
+  /* The Settings sidebar's Extensions tab (Rules data until #102) counts the pool (#107). It is drawn once by
      openSettings(), so without this it kept the count from when the modal
      opened, whatever an import, fetch, remove or clear did afterwards. Every
      path that changes the pool ends here, which is why the refresh lives here. */
-  const badge=document.querySelector('[data-setbadge="rules"]');
+  const badge=document.querySelector('[data-setbadge="extensions"]');
   if(badge)badge.innerHTML=rulesNavBadgeHTML();
-}
-function renderSrcRows(){
-  const host=document.getElementById("srcList");if(!host)return;
-  const srcs=settings.rulesSources||[];
-  host.innerHTML=srcs.length?srcs.map((u,i)=>`<div style="display:flex;gap:7px;margin-bottom:6px"><input value="${esc(u)}" data-src-i="${esc(i)}"><button class="icon danger" data-src-del="${esc(i)}" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join(""):`<p class="hint" style="margin:0 0 6px">No sources yet — add a URL below or use Import files.</p>`;
+  /* the Extensions page's rows are the loaded list now (#102) */
+  if(typeof renderExtUI==="function")renderExtUI();
 }
 /* `rules.requires` and `rules.credits` are keyed by a pack's own LABEL
    (srcLabel()), which a pack author writes freely — nothing stops it being
@@ -212,7 +209,7 @@ function keyOf(x,kind){if(!x||typeof x!=="object")return "";return kind==="subcl
 /* merge one rules file (any subset of keywords / traits|features / items / spells) into the live rules.
    Where it came from is stamped on every entry: `_file` for a file import, `_url`
    (the source URL from Settings, not an include under it) for a fetch. `_url` is
-   what lets the next Fetch all replace exactly what that source loaded before. */
+   what lets that source's next Fetch replace exactly what it loaded before. */
 function srcLabel(obj){return String(obj.system||obj.name||"Rules").trim();}
 /* A pack's licence and credit (#83), kept per source LABEL like `requires`, for
    Settings → Credits & licences: null when it states neither. Plain strings,
@@ -296,8 +293,8 @@ function mergeRules(obj,fileName,url){
    Each run of consecutive entries that share their provenance is merged as one
    pack, with that provenance handed back in the fields mergeRules reads
    (`system`, `rulebook`, `dataVersion`, `excludeSystems`, `requires`, the file
-   name or URL). So the loaded-data list, the version badges and Fetch all's
-   `_url` replacement come back as they were, and so does the order within each
+   name or URL). So the loaded-data list, the version badges and a plain source's
+   Fetch `_url` replacement come back as they were, and so does the order within each
    category, which name lookups take the first match from.
 
    What survives is mergeRules' decision, not this function's: only a
@@ -440,7 +437,7 @@ function applyFetchedSource(url,packs){
   prunePackMeta();reindexRules();recomputeDups();
   return skipped;
 }
-/* Settings → Fetch all. Fetching NEVER loses what is loaded (#65): this used to
+/* Settings → Extensions → a plain source's Fetch (Fetch all until #102). Fetching NEVER loses what is loaded (#65): this used to
    resetRules() first, which discarded every pack imported from a file, and when
    the fetch then failed it cached the empty pool over the good one.
 
@@ -449,9 +446,12 @@ function applyFetchedSource(url,packs){
    part keeps them; a run where nothing arrives changes neither the pool nor the
    cache, and says so. Offline is the expected case, not an edge. Returns a
    promise for the tests; the button ignores it. */
-function fetchAllRules(){
-  const srcs=[...new Set((settings.rulesSources||[]).map(s=>String(s||"").trim()).filter(Boolean))];
-  if(!srcs.length){updateRulesStatus("Add at least one source URL first.","err");return Promise.resolve();}
+function fetchAllRules(urls){
+  /* the plain sources (#102): old-style pack and include URLs, which have no
+     versions; a manifest source installs through the plan instead */
+  const from=Array.isArray(urls)?urls:(settings.sources||[]).filter(s=>s.kind==="plain"&&s.on).map(s=>s.url);
+  const srcs=[...new Set(from.map(s=>String(s||"").trim()).filter(Boolean))];
+  if(!srcs.length){updateRulesStatus("There's no plain source to fetch.","err");return Promise.resolve();}
   updateRulesStatus(`Fetching ${srcs.length} source${srcs.length>1?"s":""}…`,"");
   const memo=new Map(),results=[];
   /* a 200 with no rules in it ({} or an error object) is a failure, not "this
@@ -608,8 +608,10 @@ function rulesImportStatus(msg,cls,opts){
   if(t&&!document.getElementById("rulesStatus")&&!(h&&h.offsetParent!==null))
     toast(typeof t==="string"?t:msg,null,{err:!!opts.err,long:!!opts.long});
 }
-/* Settings → Import files, the home screen's import and the Rules tab's two:
-   read every file as bytes, import, save the cache, and say what happened.
+/* The old Settings → Import files, kept for the suites: since #102 every
+   picker (Manual install, the home screen's import and the Rules tab's two)
+   goes through manualInstallFiles() and the install plan instead. It reads
+   every file as bytes, imports, saves the cache, and says what happened.
    A save that does not land is said on the same line (the storage rule).
    Resolves to {msg, cls} once the save has landed or failed, for the suites. */
 function importRulesFiles(files){
@@ -649,61 +651,5 @@ function importRulesFiles(files){
     rulesImportStatus(msg,"err",{toast:true,err:true});
     return {msg,cls:"err"};
   });
-}
-/* download a split example set: a manifest plus one file per category */
-function downloadRulesTemplates(){
-  const files=[
-    ["humblewood.rules.json",{name:"Humblewood Rules",version:1,include:["conditions.json","races.json","classes.json","traits.json","items.json","spells.json","feats.json"]}],
-    ["conditions.json",{keywords:[
-      {term:"Frightened",type:"text",text:"Disadvantage on ability checks and attack rolls while the source of fear is in line of sight; can't willingly move closer to it."},
-      {term:"Poisoned",type:"text",text:"Disadvantage on attack rolls and ability checks."}]}],
-    ["races.json",{races:[
-      {name:"Strig",description:"Owlfolk of the Humblewood — patient nocturnal hunters.",abilityScores:{wis:2,dex:1},speed:25,skills:["Perception"],languages:"Birdfolk, Common",
-       traits:[{name:"Silent Feathers",description:"You have proficiency in the Stealth skill.",skills:["Stealth"]},{name:"Nocturnal",description:"You can see in dim light within 60 feet as if it were bright light."}]}]}],
-    ["classes.json",{classes:[
-      {name:"Bard",description:"A performer who channels story and song into magic.",hitDie:"d8",spellcasting:"cha",savingThrows:["dex","cha"],
-       levels:{
-         "1":{traits:[{name:"Bardic Inspiration",description:"Bonus action: give an ally a d6 inspiration die."}],choices:[{type:"skill",choose:3,from:["Acrobatics","Deception","History","Insight","Performance","Persuasion","Stealth"]}],spells:{known:4,note:"You know 4 cantrips/spells to start."}},
-         "2":{traits:[{name:"Jack of All Trades",description:"Add half proficiency to checks that lack it."}]},
-         "3":{traits:[{name:"Expertise",description:"Double proficiency for two chosen skills."}],choices:[{type:"subclass",label:"Choose a Bard College"}]},
-         "4":{choices:[{type:"asi"}]}
-       },
-       subclasses:{
-         "College of Lore":{description:"Bards who collect knowledge and secrets from every source.",levels:{
-            "3":{traits:[{name:"Cutting Words",description:"Reaction + inspiration die to subtract from a foe's roll."}],choices:[{type:"skill",choose:3,from:["Arcana","History","Investigation","Nature","Religion","Medicine"]}]}}},
-         "College of Valor":{description:"Skalds whose tales embolden warriors in battle.",levels:{
-            "3":{traits:[{name:"Bonus Proficiencies",description:"Medium armor, shields, and martial weapons."}]}}}
-       }},
-      {name:"Fighter",description:"A master of martial combat.",hitDie:"d10",savingThrows:["str","con"],
-       levels:{
-         "1":{traits:[{name:"Second Wind",description:"Bonus action: regain 1d10 + level HP, once per rest."}],choices:[
-            {type:"option",label:"Choose a Fighting Style",choose:1,from:[
-               {name:"Archery",description:"+2 to ranged weapon attack rolls.",effects:[{target:"attack.ranged",value:2}]},
-               {name:"Defense",description:"+1 AC while wearing armor.",effects:[{target:"ac",value:1}]},
-               {name:"Great Weapon Fighting",description:"Treat 1s and 2s on two-handed melee damage dice as 3s."},
-               {name:"Two-Weapon Fighting",description:"Add your ability modifier to the off-hand attack's damage."}]},
-            {type:"skill",choose:2,from:["Acrobatics","Athletics","History","Insight","Intimidation","Perception","Survival"]}]},
-         "3":{choices:[{type:"subclass",label:"Choose a Martial Archetype"}]},
-         "4":{choices:[{type:"asi"}]}
-       },
-       subclasses:{
-         "Champion":{description:"Hones raw physical prowess to perfection.",levels:{"3":{traits:[{name:"Improved Critical",description:"Crit on a 19 or 20."}]}}},
-         "Arcane Archer":{description:"Weaves magic into bow attacks.",spellcasting:"int",levels:{
-            "3":{traits:[{name:"Arcane Shot",description:"Unleash magical effects through your bow."}],choices:[{type:"skill",choose:1,from:["Arcana","Nature"]}],spells:{note:"Learn two Arcane Shot options."}}}}
-       }}]}],
-    ["traits.json",{traits:[
-      {name:"Keen Senses",source:"Ancestry",description:"You have proficiency in the Perception skill.",skills:["Perception"]}]}],
-    ["items.json",{items:[
-      {name:"Cloak of Protection",description:"+1 AC and saving throws while worn.",effects:[{target:"ac",value:1},{target:"save.str",value:1},{target:"save.dex",value:1},{target:"save.con",value:1},{target:"save.int",value:1},{target:"save.wis",value:1},{target:"save.cha",value:1}]},
-      {name:"Gauntlets of Might",description:"Example item using the attack effect targets: +1 to melee attack and damage rolls while equipped.",effects:[{target:"attack.melee",value:1},{target:"damage.melee",value:1}]}]}],
-    ["spells.json",{spells:[
-      {name:"Cure Wounds",level:1,class:["Ranger","Cleric","Druid"],meta:"1 action · Touch · V,S",text:"A creature you touch regains hit points equal to 1d8 + your spellcasting modifier."},
-      {name:"Hunter's Mark",level:1,class:"Ranger",meta:"1 bonus action · 90 ft · V · Concentration",text:"Mark a creature; deal extra 1d6 damage to it with weapon attacks and gain tracking benefits."},
-      {name:"Guidance",level:0,class:["Cleric","Druid"],meta:"1 action · Touch · V,S · Concentration",text:"The target can add 1d4 to one ability check of its choice before the spell ends."}]}],
-    ["feats.json",{feats:[
-      {name:"Alert",description:"+5 to initiative; you can't be surprised while conscious.",effects:[{target:"init",value:5}]},
-      {name:"Tough",description:"Your hit point maximum increases by twice your level.",effects:[]}]}]
-  ];
-  files.forEach(([n,o],i)=>setTimeout(()=>dl(new Blob([JSON.stringify(o,null,2)],{type:"application/json"}),n),i*300));
 }
 

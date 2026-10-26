@@ -79,3 +79,13 @@ Bullets below this line — leave the heading in place.
   them down to nothing.
 - Text on gold and red buttons, pills and banners is easier to read in every skin, most of all on
   the classic skin's light theme.
+- Settings → Rules data is now Extensions: install and update rules packs from Fieldbook's own
+  data, which is built in, or from any manifest URL you add, with Update all. When a newer
+  version of a pack you have is out, a pill in the top bar says so. Every download is checked
+  before anything installs, and if one fails, nothing changes.
+- Manual install takes rules files, a folder or a zip, chosen or dropped, and shows what will
+  change before anything installs.
+- Update notices can be cleared with their ×, and stay cleared until a newer version arrives.
+- Every source you add is named with its web address, and an update offered by a different source
+  from the one that installed a pack says who is offering it, so you can always see where a file
+  comes from.

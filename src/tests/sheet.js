@@ -4661,11 +4661,11 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     X.rules = Object.assign({}, keepRules, {classes: []});
     X.character = X.blankChar();
     X.openAddClass();
-    ck('#103 with no classes loaded, Add class points to Settings → Rules', body.includes(X.NO_RULES_HINT) &&
-       /Settings → Rules/.test(X.NO_RULES_HINT) && /<b>races<\/b> and <b>classes<\/b>/.test(X.NO_RULES_HINT), body);
+    ck('#103 with no classes loaded, Add class points to Settings → Extensions (#102)', body.includes(X.NO_RULES_HINT) &&
+       /Settings → Extensions/.test(X.NO_RULES_HINT) && /<b>races<\/b> and <b>classes<\/b>/.test(X.NO_RULES_HINT), body);
     X.rules = Object.assign({}, keepRules, {classes: [{name: 'Cleric', hitDie: 'd8'}]});
     X.openAddClass();
-    ck('#103 ...and says nothing of it when a pack has classes', !body.includes('Settings → Rules') && body.includes('Cleric'), body);
+    ck('#103 ...and says nothing of it when a pack has classes', !body.includes('Settings → Extensions') && body.includes('Cleric'), body);
   } finally { ctx.openModal = keep; X.rules = keepRules; }
 }
 

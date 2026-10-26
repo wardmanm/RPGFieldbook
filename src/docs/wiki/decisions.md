@@ -69,7 +69,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **A pack with no `dataVersion`** — `unknown`, no badge
 - **Duplicates inside a folder** — Mirror `mergeRules()`, and report them
 - **Where `overlay.json` and `class-resources.json` live** — The `data/` root
-- **What Fetch all does to what is loaded** — Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes
+- **What a fetch (Fetch all until #102) does to what is loaded** — Each source that arrives whole replaces only what it loaded last time (`_url`); nothing else changes
 - **How a settings file's pool is loaded** — Rebuilt through `mergeRules()`, one run of same-provenance entries at a time (`poolFromExport()`)
 - **An entry a pack has with no name** — Skip it, count it, and say so on the status line
 - **Where a wholesale pool is made safe** — `tidyRules()`, run by `reindexRules()`
@@ -77,6 +77,13 @@ When a page gains a Decisions row, add its line here under that page.
 - **How the SRD pack's species reach D&D characters (#84, R6)** — `systemOf()` reads a label starting `srd` as D&D, and the pack also carries `excludeSystems: ["humblewood"]`
 - **The Artificer and Mystic in the core pack** — Leave them, labelled `XPHB`
 - **Which of two same-named SRD and 2024 entries a lookup finds, now in two archives (#85)** — The one imported first; re-importing keeps its place
+- **How packs are installed from a source (#102)** — Each file a manifest names, fetched one by one and checked against its sha256
+- **How many install paths (#102)** — One: candidates, one plan, one confirm, one all-or-nothing install
+- **Pack identity (#102)** — System plus file name; the installing source offers its updates, a hand-imported pack is matched to any enabled source
+- **Older versions (#102)** — Never offered as an update
+- **Removing a source (#102)** — Its packs stay installed
+- **A pack another pack needs (#102)** — Pulled into the plan as its own ticked line when a source offers it
+- **How SHA-256 is computed (#102)** — `sha256Hex()` in JavaScript, checked against Node's `crypto`
 
 ### [Data archive](architecture/data-archive.md)
 
@@ -86,6 +93,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **What says a pack changed** — A digest of its content (canonical JSON)
 - **How a running copy learns of new data** — The releases list plus the tag's registry; a quiet notice
 - **Where digests are computed** — Only `fbdata.py`
+- **How the official files are served (#102)** — `releases/data/` in the release commit, read from raw.githubusercontent.com at the tag
+- **A pack built for a newer app (#102)** — Every pack has a `minApp`, defaulting to `builtFor`; one newer than the app is listed, never installed
+- **Kinds of extension (#102)** — Every pack has a `category`; only `rules` installs today
+- **Descriptions (#102)** — A `summary` of 140 characters for the row, a `description` of 4,000 for the details
 
 ### [Grants & provenance](architecture/grants-and-provenance.md)
 
@@ -417,6 +428,19 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where an import's outcome is shown** — A status line beside the Import button
 - **How a newer data release is shown** — Muted text on the row, one hint line above the list, a dot on the Settings sidebar's Rules data tab
 - **Where a player hides a tab (#52)** — Settings → Sheet display gets a Tabs group, one switch per word tab
+- **Where the update notice shows (#102)** — A pill in the top bar, "Extensions · N updates", that opens Settings → Extensions
+- **Clearing a notice (#102)** — Its × clears it until a newer version arrives; the row still offers Update; the app pill gets the same ×
+- **How updates happen (#102)** — Always by hand: Update all, or Update on a row
+- **When sources are checked (#102)** — At boot, quietly, for every enabled source, skipped offline; and on Check now
+- **Manual installs (#102)** — A Manual install dialog: Choose files, Choose a folder, and a drop zone, all through the plan
+- **The official source (#102)** — Built in and on by default; it can be switched off, not removed
+- **How the Extensions page is organised (#102)** — One section per category, then Sources; the source is a line on each row
+- **Sections on the Extensions page (#102)** — Every section folds, and each has its own Remove all
+- **The details dialog (#102)** — Opened from a pack's name: full description, requirements, the source, and the other packs from it
+- **A missing requirement (#102)** — A tappable "requires *X*" chip: *X*'s details when offered, else its link
+- **Wording (#102)** — "requires Fieldbook 1.10.0", falling back to "requires a newer Fieldbook" with no `minApp`; "requires SRD 5.2"; "Unsupported"; "Manual install"
+- **Get templates (#102)** — Removed
+- **The plan while it installs (#102, Ruling 14)** — Can't be dismissed; × and Escape say to wait
 
 ## UI
 
@@ -425,6 +449,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Does `selectTab()` scroll?** — No. The caller decides: the tab bar goes to the top, a note jump to its card
 - **Where does the dismissal guard live?** — `dismissModal()`, in front of the three user dismissals only
 - **Which modals get a guard?** — Only one that stands to lose something (the choice pickers)
+- **Update notices on a phone (#102, Mike 2026-10-26)** — At 560px and under, a showing notice takes its own header row after the buttons
 - **Does a click outside close a dialog? (#106)** — Only with Settings → Appearance → Tap outside to close dialogs, off by default; and only a click pressed and let go on the backdrop
 - **Do × and Escape follow that setting?** — No, they always close
 - **Where a dismissed window's follow-up lives** — With its guard, as `then`, cleared by every open and close
@@ -556,6 +581,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Matching a declared name** — Case-insensitive against everything loaded, whichever pack supplies it
 - **Where the verdict lives** — Recomputed at render time from `rules`; only the declaration is stored
 - **Where the pack's licence and credit live** — `license` and `attribution` in `data/packs.json`, stamped into the bundle
+- **The "requires Xanathar's Guide to Everything" chip on the official manifest (#102, Mike 2026-10-26)** — It stays. Homebrew depends on private content, so it is to move into the private repo, as separate work
 - **Its `requires` once SRD 5.2 exists (#84, R7)** — Left pointed at the 2024 pack for that release
 - **Xanathar's group's `file` once it goes private (#85)** — Dropped — the group names the book only
 
@@ -580,7 +606,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The public registry (R3)** — Drops the four packs in the removal commit
 - **How private packs are released (R4)** — Data-only releases, `X.Y.Z-N`, `fieldbook-data-private-<ver>.zip`, through `data-release.js --registry`
 - **A pack the build has no baseline for (R5)** — A quiet `vX` chip, the `known` state
-- **Shipped book quotes (R7)** — Invented examples in `downloadRulesTemplates()`, README-converter and rules-schema
+- **Shipped book quotes (R7)** — Invented examples in the templates Get templates used to download (removed in #102), README-converter and rules-schema
 - **`srd-corrections.json`'s `find` strings (R8)** — Kept, allowlisted; for Mike to confirm
 - **Where the leak scan lives (R9)** — The private repo, in Mike's local run and the private CI (push and nightly)
 - **Public tests (R10)** — Same logic, no book content: SRD entries or invented fixtures; pack assertions move private

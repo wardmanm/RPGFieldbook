@@ -1,12 +1,12 @@
 # Fieldbook Rules Pack Schema
 
 This is the authoritative reference for the JSON "rules packs" that the Fieldbook
-character-sheet app loads. It replaces the old `rules-example/` template files — an
-author (human or AI) can produce any pack from the specs below.
+character-sheet app loads. An author (human or AI) can produce any pack from the specs below.
 
-Packs are loaded in-app via **Settings → Rules data → Import files** (pick one or more `.json`
-files, or a zip of them — see §6.10b) or from a **manifest URL**. Everything merges into one
-shared rules pool that the sheet reads from (spell/feat/class pickers, the glossary tab,
+Packs are installed in-app from **Settings → Extensions**: from a source (Fieldbook's own public
+data is built in, and you can add the URL of any `fieldbook-data.json` manifest — see §8), or with
+**Manual install**, which takes `.json` files, a folder, or a zip of them (§6.10b). Everything merges
+into one shared rules pool that the sheet reads from (spell/feat/class pickers, the glossary tab,
 ancestry/background/class selection, and the effects engine).
 
 The companion tool `convert.py` generates most of these files from 5e-tools data; hand-author
@@ -91,8 +91,13 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   list is prose, so the spells it names are invisible to any automatic check.
 
   Nothing here ever blocks loading. The pack merges as normal and everything it does ship keeps
-  working; the app shows a red **! n missing** chip on that pack in Settings → Rules data, with a
-  tooltip naming what's absent and where to get it.
+  working; the app shows a red **! n missing** chip on that pack's row in Settings → Extensions,
+  with a tooltip naming what's absent and where to get it.
+
+  An entry may also carry a **`url`** (http or https only), where the missing pack can be found. A
+  pack that isn't loaded then shows as a tappable **requires *pack*** chip: it opens that pack's
+  details when one of the player's sources offers it, and otherwise opens the `url` in a new tab.
+  Without either it is a plain label. A `url` that isn't http(s) is ignored.
 - **`defaultLanguages`** *(optional, array of strings)* — languages every character of this
   ruleset knows; Fieldbook falls back to Common when a ruleset declares none:
 
@@ -112,7 +117,7 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   ```
 - **`rulebook`** *(optional, boolean)* — mark a pack that carries a whole system in one file, the
   way `srd52_full.json` and `homebrew_full.json` do. Purely presentational: the app files it
-  under a **Rulebook** heading in Settings → Loaded rules data instead of **Mixed**. Merging is
+  under a **Rulebook** heading in the home screen's loaded-data list instead of **Mixed**. Merging is
   unaffected — a rulebook merges exactly as its individual files would.
 - Category keys are all optional; include only what the pack provides. Split a large pack
   across several files (one category each) or keep it in one file — both work.
@@ -634,27 +639,33 @@ fieldbook-data-standalone-1.8.0.zip
   homebrew_full.json
 ```
 
-The manifest, `fieldbook-data.json`:
+The manifest, `fieldbook-data.json` (format 2; the same file Fieldbook reads from a source, §8):
 
 ```json
-{"_type": "fieldbook-data", "format": 1, "version": "1.8.0", "builtFor": "1.8.0",
- "packs": [{"file": "srd52_full.json", "system": "SRD 5.2", "version": "1.8.0",
-            "license": "CC-BY-4.0", "sha256": "…"},
-           {"file": "homebrew_full.json", "system": "Homebrew", "version": "1.8.0",
-            "license": "CC-BY-SA-3.0", "sha256": "…"}]}
+{"_type": "fieldbook-data", "format": 2, "name": "Fieldbook public data",
+ "homepage": "https://github.com/wardmanm/RPGFieldbook", "version": "1.8.0", "builtFor": "1.8.0",
+ "packs": [{"file": "srd52_full.json", "category": "rules", "system": "SRD 5.2", "title": "SRD 5.2",
+            "summary": "The free D&D rules: …", "version": "1.8.0", "size": 973157,
+            "sha256": "…", "license": "CC-BY-4.0", "attribution": "…"},
+           {"file": "homebrew_full.json", "category": "rules", "system": "Homebrew", "title": "Homebrew",
+            "summary": "…", "version": "1.8.0", "size": 41210, "sha256": "…",
+            "license": "CC-BY-SA-3.0", "attribution": "…",
+            "requires": [{"pack": "SRD 5.2", "file": "srd52_full.json"}]}]}
 ```
 
-- **`_type`** is always `"fieldbook-data"` and **`format`** is `1`. They are how the app knows the
-  zip is an archive.
+- **`_type`** is always `"fieldbook-data"` and **`format`** is `2` (`1` in archives from before
+  extensions, which had only `file`, `system`, `version`, `license` and `sha256` per pack; both are
+  read). They are how
+  the app knows the zip is an archive.
 - **`version`** is the archive's release, a data version (§6.10a). A local build of unreleased
   data adds `+dev` (`1.8.0+dev`); that suffix appears only here and in the file name.
 - **`builtFor`** is the Fieldbook version it was built with.
 - **`packs`** lists each pack in import order: its **`file`** (beside the manifest), its
   **`system`**, its **`version`** (the pack's `dataVersion`), its **`license`** when it has one, and
-  **`sha256`**, the hex SHA-256 of the file's bytes.
+  **`sha256`**, the hex SHA-256 of the file's bytes; the other fields are described in §8.
 
-The manifest deliberately has no `name`, `system` or category keys, so an older Fieldbook given it
-as a loose file merges nothing. Each pack is imported under its own file name, exactly as if the
+The manifest deliberately has no `system` or category keys at its top level, so an older Fieldbook
+given it as a loose file merges nothing. Each pack is imported under its own file name, exactly as if the
 `.json` files had been picked one by one. The manifest may also sit one folder down (a zip of the
 unzipped folder).
 
@@ -738,3 +749,132 @@ appear in the app's **Tables** tab, and any description that carries a `[Table: 
   If no matching table is loaded it degrades to the plain sentence "the *Name* table", so an anchor
   is always safe to author even when the tables pack is optional. `convert.py` writes these
   automatically wherever it lifts a table out of 5e-tools prose.
+
+## 8. Publishing extensions
+
+You can host your own packs so that players install them, and get your updates, from **Settings →
+Extensions**. A player adds your manifest's URL once (**+ Add a source URL**); from then on Fieldbook
+checks it each time it starts (when online), shows your packs with their descriptions, and offers
+**Install**, and **Update** when you publish a newer version. Nothing installs until the player
+confirms it, and every file is checked against the manifest before any of it is installed.
+
+### What to put on the web
+
+A folder with a manifest, `fieldbook-data.json`, and your pack files beside it (or in subfolders):
+
+```
+https://example.com/moonlit/fieldbook-data.json
+https://example.com/moonlit/moonlit_full.json
+https://example.com/moonlit/extras/moonlit-spells.json
+```
+
+```json
+{
+  "_type": "fieldbook-data",
+  "format": 2,
+  "name": "The Moonlit Path",
+  "homepage": "https://example.com/moonlit",
+  "version": "1.2.0",
+  "builtFor": "1.9.0",
+  "packs": [
+    {
+      "file": "moonlit_full.json",
+      "category": "rules",
+      "system": "Moonlit",
+      "title": "The Moonlit Path",
+      "summary": "Owlfolk and moth-folk ancestries, and a lantern-bearer subclass.",
+      "description": "Two ancestries for night-time campaigns.\n\nNeeds SRD 5.2 for the classes it builds on.",
+      "version": "1.2.0",
+      "minApp": "1.9.0",
+      "size": 48213,
+      "sha256": "9f2c…64 hex characters…",
+      "license": "CC-BY-4.0",
+      "attribution": "The Moonlit Path, by Jane Doe (https://example.com/moonlit), used under CC BY 4.0.",
+      "requires": [ { "pack": "SRD 5.2", "file": "srd52_full.json", "url": "https://github.com/wardmanm/RPGFieldbook" } ]
+    }
+  ]
+}
+```
+
+The pack files themselves are ordinary packs (§1). Each one's own `system` and `dataVersion` must
+match its manifest entry's `system` and `version`, or the install stops and names the file.
+
+### The manifest's fields
+
+Top level:
+
+- **`_type`** `"fieldbook-data"` and **`format`** `2` — required.
+- **`name`** — your source's name, shown in Settings → Extensions (up to 120 characters). Without
+  one, the app shows the URL.
+- **`homepage`** — an `http://` or `https://` link shown in each pack's details. Anything else is
+  ignored.
+- **`version`** — your release's version; **`builtFor`** — the Fieldbook version you made it for
+  (`X.Y.Z`), which is the default `minApp` of every pack.
+- **`packs`** — the list below. Listing the same `system` and `file` twice keeps the newer entry.
+
+Per pack:
+
+- **`file`** *(required)* — where the pack is, **relative to the manifest**: `moonlit_full.json` or
+  `extras/moonlit-spells.json`. Each part between `/` may hold only letters, digits, `.`, `_` and
+  `-` (`[A-Za-z0-9._-]`), and the file name must end in `.json`. Never an absolute URL, never `..`,
+  no spaces, `%`, `\` or `?`. A pack whose path breaks these rules is left out. The player's copy is
+  stored under the file name alone, so two packs in different folders need different file names.
+- **`system`** *(required)* — the pack's `system` label (§1). Fieldbook identifies a pack by its
+  **system and file name together**: a newer version replaces the one installed under the same pair.
+- **`version`** *(required)* — the pack's `dataVersion`, `X.Y.Z` or `X.Y.Z-N` (§6.10a). An entry
+  with no readable version is left out. Raise it whenever the file changes: a player is offered an
+  update only for a **newer** version, never an older one or the same.
+- **`category`** — what kind of extension it is. `"rules"`, the default, is a rules pack and the only
+  category this Fieldbook installs. A pack with any other category is listed under **Unsupported**,
+  labelled with the Fieldbook it needs, and never installed; later versions of Fieldbook will add
+  categories.
+- **`minApp`** — the oldest Fieldbook that can use the pack, `X.Y.Z`; it defaults to `builtFor`. An
+  older Fieldbook lists the pack with **requires Fieldbook *X.Y.Z*** and never installs it. Set it
+  when your pack uses something only a newer Fieldbook reads.
+- **`title`** — the name players see (up to 200 characters); defaults to `system`.
+- **`summary`** — one line for the pack's row, plain text, **up to 140 characters**.
+- **`description`** — the pack's details, plain text, **up to 4,000 characters**; a blank line
+  (`\n\n`) starts a new paragraph. No markup: it is shown exactly as written.
+- **`size`** — the file's size in bytes. Fieldbook allows a larger download more time.
+- **`sha256`** — the hex SHA-256 of the file's exact bytes (64 lowercase hex characters; `sha256sum`
+  or `shasum -a 256` prints it). Strongly recommended: with it, a file that was changed or damaged
+  after you wrote the manifest is refused, and nothing is installed. Recompute it whenever the file
+  changes.
+- **`license`** and **`attribution`** — as in §1; shown in the pack's details.
+- **`requires`** — the packs this one needs, each `{ "pack", "file", "url" }` as in §1's
+  `requires`, where `url` is optional (http or https only). When a player installs your pack and a
+  requirement isn't loaded, Fieldbook adds it to the same install if one of their sources offers it;
+  otherwise the pack installs anyway and shows a **requires *pack*** chip, which opens your `url`.
+
+Text over its limit is cut. `fbdata.py validate` (from the data kit) refuses it, along with an unsafe
+path, a wrong `sha256` or `size`, and a pack whose `system` or `dataVersion` disagrees with its
+entry, so check before you publish. It checks a folder whose packs sit beside the manifest, with
+nothing else in it (hidden files whose names start with a dot, such as `.DS_Store`, are ignored):
+
+```
+python3 fbdata.py validate path/to/your/folder
+```
+
+### Limits
+
+- The manifest: at most **64 KB** and **1,000 packs**. A bigger one is refused whole.
+- Each pack file: at most **32 MB**.
+- `summary` 140 characters, `description` 4,000, `title` 200, `attribution` 2,000, `license` 64.
+- `requires`: at most **50** entries per pack; any after the 50th are dropped.
+
+### Hosting
+
+- **Any public web host works, as long as it allows cross-origin reads**: it must answer with an
+  `Access-Control-Allow-Origin: *` header (CORS). Fieldbook is a page opened from a file, so a host
+  that doesn't allow other sites to read its files can't be read at all; adding the source then
+  fails with "it must allow cross-origin reads". GitHub's raw file URLs
+  (`raw.githubusercontent.com`) and GitHub Pages allow it; GitHub *release* downloads do not.
+- Serve the files exactly as they are: a host that re-encodes or reformats JSON changes the bytes,
+  and the sha256 no longer matches.
+- Fieldbook reads your manifest at most once each time it starts, plus whenever the player presses
+  **Check now**, and downloads a pack file only when the player installs or updates it.
+- Private files can't be served this way: there is no login. Share those as files for **Manual
+  install**, which reads the same `fieldbook-data.json` beside your packs, in a folder or a zip, and
+  checks their sha256 the same way.
+- The sha256 proves a file matches its manifest, not who wrote the manifest: players should add
+  sources they trust.

@@ -15,7 +15,7 @@ const SET_PAGES=[
    icon:`<path d="M2.5 12s3.6-6.5 9.5-6.5S21.5 12 21.5 12s-3.6 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>`},
   {k:"carrying",  title:"Carrying",     scope:"char",
    icon:`<path d="M12 4v16M7.5 20h9M5 7.5h14"/><path d="M5 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/><path d="M19 7.5l-2.5 6a2.5 2.5 0 0 0 5 0z"/>`},
-  {k:"rules",     title:"Rules data",   scope:"app",
+  {k:"extensions",title:"Extensions",   scope:"app",
    icon:`<ellipse cx="12" cy="6" rx="7" ry="2.8"/><path d="M5 6v12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V6"/><path d="M5 12c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8"/>`},
   {k:"backup",    title:"Backup",       scope:"app",
    icon:`<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/><path d="M12 8v4l3 2"/>`},
@@ -26,7 +26,8 @@ function setPageDef(k){return SET_PAGES.find(p=>p.k===k)||null;}
 function setPagesFor(hasChar){return SET_PAGES.filter(p=>hasChar||p.scope!=="char");}
 /* the page to open: the remembered one while it is shown, else Appearance — so a
    character page remembered from a sheet never opens with no character */
-function setPageOf(stored,hasChar){const p=setPagesFor(hasChar).find(x=>x.k===stored);return p?p.k:"appearance";}
+/* #102: the Rules data page became Extensions; a stored "rules" opens it */
+function setPageOf(stored,hasChar){const s=stored==="rules"?"extensions":stored;const p=setPagesFor(hasChar).find(x=>x.k===s);return p?p.k:"appearance";}
 /* ↑/↓ wrap, Home/End jump; `keys` are the SHOWN pages, so a hidden character
    page is never stepped onto */
 function setPageStep(keys,cur,key){
@@ -63,7 +64,7 @@ function setRowHTML(name,help,control,inline){
 }
 /* #52: one switch per word tab; on means shown. Sheet is never listed. Final
    review (I1): the group's own help opens the body as a <p class="hint">, the
-   way Sources and Loaded data do (:144, :150), so it isn't read as Spells'
+   way Sources and Loaded data did before #102, so it isn't read as Spells'
    own row help. The Journal row gets its own note (M7): that tab is also
    where the Section Notes card lives (src/html/60-journal.html:20). */
 function tabsGroupHTML(c){
@@ -74,20 +75,24 @@ function tabsGroupHTML(c){
       `<button type="button" class="switch ${shown?"on":""}" id="swTab-${esc(t)}" data-tabsw="${esc(t)}" role="switch" aria-checked="${shown?"true":"false"}" aria-label="${esc("Show the "+TAB_LABELS[t]+" tab")}"></button>`,true);
   }).join(""));
 }
-/* the Rules data tab's count, and a dot while a newer copy of a loaded pack is
-   out; renderRulesData() keeps it current. The tab's aria-label replaces its
+/* the Extensions tab's count, and a dot while a newer copy of a loaded pack is
+   out: the boot data check's, or any update a source offers (extUpdateRows(),
+   #102) — spec §6.2's "shows while updates are pending", so clearing the
+   top-bar pill leaves the dot (Ruling 15); renderRulesData() and renderExtUI()
+   keep it current. The tab's aria-label replaces its
    contents, so the same facts are its description (setNavHTML() points
    aria-describedby here), the way the old section header read them aloud. */
 function rulesNavBadgeHTML(){
-  const n=rulesEntryCount(),up=loadedRulesGroups().some(g=>dataStatus(g).state==="update");
+  const n=rulesEntryCount(),up=rulesUpdatePending();
   return (n?`<span class="set-cnt" title="${esc(rulesBadge())}">${n}</span>`:"")+(up?`<span class="set-dot" title="Newer rules data is out"></span>`:"")+
-    `<span id="setBadgeDesc-rules" hidden>${esc(rulesBadge())}</span>`;
+    `<span id="setBadgeDesc-extensions" hidden>${esc(rulesBadge())}</span>`;
 }
+function rulesUpdatePending(){return loadedRulesGroups().some(g=>dataStatus(g).state==="update")||extUpdateRows().length>0;}
 function rulesEntryCount(){return RULE_CATS.reduce((a,c)=>a+((rules[c]||[]).length),0);}
-/* the "Rules data" header badge; renderRulesData() keeps it current after the modal opens */
+/* the Extensions tab's description; renderRulesData() keeps it current after the modal opens */
 function rulesBadge(){
   const n=rulesEntryCount();
-  const up=loadedRulesGroups().some(g=>dataStatus(g).state==="update");
+  const up=rulesUpdatePending();
   return (n?n+" entries":"none loaded")+(up?" · update":"");
 }
 /* Settings → Credits & licences: each loaded pack's own terms (#83). A pack
@@ -145,15 +150,11 @@ function openSettings(){
       setRowHTML("Coins count as weight","50 coins to the pound, the way the rules have it.",
         `<button type="button" class="switch ${character.coinWeight!==false?"on":""}" id="swCoinWeight" role="switch" aria-checked="${character.coinWeight!==false?"true":"false"}" aria-label="Coins count as weight"></button>`,true)+
       `<p class="hint set-note" id="encHint">${esc(encSettingsHint())}</p>`):"";
-  const secRules=setGroupHTML("Sources",
-      `<p class="hint">Import the rules data zip or JSON files, or add a URL and Fetch all (needs a connection). What is loaded stays saved for offline use.</p>`+
-      `<div id="srcList"></div>`+
-      `<div class="set-addsrc"><input id="newSrc" placeholder="https://…/spells.json" aria-label="Rules source URL" title="A URL can point to one file, or to a manifest that includes others. All sources merge; later ones win on name clashes."><button type="button" class="tbtn" id="addSrc">Add</button></div>`+
-      `<div class="m-actions set-actions"><button type="button" class="tbtn" id="btnFetchRules" title="Each source it reaches replaces what it loaded last time; one it can't reach keeps what it had. Files you imported are never touched.">Fetch all</button><button type="button" class="tbtn" id="btnImportRules" title="The rules data zip, or JSON files split by category.">Import files</button><button type="button" class="tbtn" id="btnRulesTemplate">Get templates</button><button type="button" class="tbtn danger" id="btnClearRules">Clear all</button></div>`+
-      `<div class="status ${((rules.keywords||[]).length+(rules.features||[]).length+(rules.items||[]).length+(rules.spells||[]).length)?"ok":""}" id="rulesStatus">${esc(rulesStatusText())}</div>`+
-      `<input type="file" id="fileRules" accept="application/json,.json,application/zip,application/x-zip-compressed,.zip" multiple class="hidefile">`)+
-    setGroupHTML("Loaded data",
-      `<p class="hint">Everything in your rules pool, by file or source. Remove what you no longer want.</p><div id="rulesData"></div>`)+
+  /* #102: the page itself is 89-extensions.js's, repainted in place by
+     renderExtUI(); the status line (a live region) sits outside it, so a
+     repaint never recreates it. Manual install has its own file inputs. */
+  const secRules=extPageHTML()+
+    `<div class="status" id="rulesStatus" role="status">${esc(rulesStatusText())}</div>`+
     (hasChar?setGroupHTML("This sheet",
       setRowHTML("Rules updates",`Last checked against <b>v${esc(character.appVersion||"—")}</b>; you're on v${esc(APP_VERSION)}. Compares this sheet with your loaded rules; a backup is saved first.`,
         `<button type="button" class="tbtn" id="btnCharUpdate">Check for rules updates</button>`)):"");
@@ -180,10 +181,10 @@ function openSettings(){
     <div class="field"><label class="f">Rules content</label>
       <p class="hint">Rules data comes separately from the app, as the rules data zip or files you supply. Each pack keeps its own terms; the ones you have loaded are listed above.</p></div>`;
   const pages=setPagesFor(hasChar),active=setPageOf(settings.setPage,hasChar);
-  const body={appearance:secAppearance,display:secDisplay,carrying:secCarrying,rules:secRules,backup:secBackup,credits:secCredits};
+  const body={appearance:secAppearance,display:secDisplay,carrying:secCarrying,extensions:secRules,backup:secBackup,credits:secCredits};
   const sub={display:"For "+who,carrying:"For "+who};
   openModal("Settings",`<div class="set-wrap" id="setSections">`+
-    setNavHTML(pages,active,{rules:rulesNavBadgeHTML()})+
+    setNavHTML(pages,active,{extensions:rulesNavBadgeHTML()})+
     `<div class="set-pages">`+pages.map(p=>setPageHTML(p.k,body[p.k],{active:p.k===active,sub:sub[p.k]})).join("")+`</div></div>`,"",{wide:true});
   /* Delegated from a wrapper INSIDE the modal body, not from #mBody itself:
      #mBody survives every open, so a listener bound to it would stack up one
@@ -216,13 +217,7 @@ function openSettings(){
   document.getElementById("swTabIcons").addEventListener("click",e=>{settings.tabIcons=!settings.tabIcons;e.currentTarget.classList.toggle("on",settings.tabIcons);applyTheme();saveSettings();});
   /* #106: app-wide, off by default — read by the backdrop listener in 80-modal-forms.js */
   document.getElementById("swBackdrop").addEventListener("click",e=>{settings.backdropClose=settings.backdropClose!==true;const on=settings.backdropClose;e.currentTarget.classList.toggle("on",on);e.currentTarget.setAttribute("aria-checked",on?"true":"false");saveSettings();});
-  renderSrcRows();renderRulesData();
-  document.getElementById("rulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`))removeRulesGroup(d.dataset.rdDel);});
-  document.getElementById("srcList").addEventListener("input",e=>{const inp=e.target.closest("[data-src-i]");if(!inp)return;settings.rulesSources[num(inp.dataset.srcI)]=inp.value.trim();saveSettings();});
-  document.getElementById("srcList").addEventListener("click",e=>{const d=e.target.closest("[data-src-del]");if(!d)return;settings.rulesSources.splice(num(d.dataset.srcDel),1);saveSettings();renderSrcRows();});
-  document.getElementById("addSrc").addEventListener("click",()=>{const i=document.getElementById("newSrc");const v=i.value.trim();if(!v)return;settings.rulesSources.push(v);i.value="";saveSettings();renderSrcRows();});
-  document.getElementById("btnFetchRules").addEventListener("click",fetchAllRules);
-  document.getElementById("btnClearRules").addEventListener("click",clearAllRules);
+  {const ep=document.getElementById("extPage");if(ep)wireExtPage(ep);}
   /* the size / encumbrance / coin-weight block only exists when a character is
      open, so every one of these is guarded */
   {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
@@ -241,9 +236,6 @@ function openSettings(){
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
   {const s=document.getElementById("setInvLogSize");if(s)s.addEventListener("change",()=>{if(!setInvLogSize(num(s.value)))s.value=String(character.invLogSize);});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
-  document.getElementById("btnRulesTemplate").addEventListener("click",downloadRulesTemplates);
-  document.getElementById("btnImportRules").addEventListener("click",()=>document.getElementById("fileRules").click());
-  document.getElementById("fileRules").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
   document.getElementById("btnExportSettings").addEventListener("click",()=>dl(new Blob([JSON.stringify({_type:"fieldbook-settings",settings,rules},null,2)],{type:"application/json"}),"fieldbook-settings.json"));
   document.getElementById("btnImportSettings").addEventListener("click",()=>document.getElementById("fileSettings").click());
   document.getElementById("fileSettings").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{let p=null;try{p=JSON.parse(r.result);}catch(err){}importSettings(p);};r.readAsText(f);e.target.value="";});
@@ -277,17 +269,12 @@ function encSettingsChanged(){
    cannot say "import the settings but keep my rules" without making Cancel
    import something. Nothing is lost, so nothing is asked, when the file brings
    no rules or none are loaded yet. */
-const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","setCollapse","rulesCat","tabIcons","backdropClose","setPage"];
+const SETTINGS_KEYS=["skin","theme","autoload","rough","rulesSources","rulesUrl","sources","packOrigin","dismissedUpdates","setCollapse","rulesCat","tabIcons","backdropClose","setPage"];
 /* What boot does to settings from an older build, shared with Import settings
-   so an old file arrives in the same shape: the first builds' single `rulesUrl`
-   joins the sources list. True when that changed something worth saving. */
-function foldLegacySettings(){
-  if(!Array.isArray(settings.rulesSources))settings.rulesSources=[];
-  if(!settings.rulesUrl)return false;
-  if(!settings.rulesSources.includes(settings.rulesUrl))settings.rulesSources.push(settings.rulesUrl);
-  delete settings.rulesUrl;
-  return true;
-}
+   so an old file arrives in the same shape: `rulesSources` and the first
+   builds' single `rulesUrl` convert into `settings.sources` (#102), via
+   convertSources(). True when that changed something worth saving. */
+function foldLegacySettings(){return convertSources(settings);}
 /* The parsed file -> {settings, pool, used, skipped}, or null when it is not a
    settings file at all. A bare object must carry some setting, or a rules pack
    or character picked by mistake would be written into settings key by key. */
@@ -474,7 +461,7 @@ function dataStatusHTML(g){
   if(st.state==="stale")
     return ` <span class="chip warn" title="This pack is from v${esc(st.have)}; this version of Fieldbook ships v${esc(st.want)}. Re-import it from the latest release.">update available · v${esc(st.have)}</span>`;
   if(st.state==="update")
-    return ` <span class="rd-src" title="${esc("Rules data "+st.release+" has a newer copy of this pack, v"+st.want+". Download it from the release page and import it.")}">v${esc(st.have)} · v${esc(st.want)} out</span>`;
+    return ` <span class="rd-src" title="${esc("Rules data "+st.release+" has a newer copy of this pack, v"+st.want+". Download it from the release page and install it with Settings → Extensions → Manual install.")}">v${esc(st.have)} · v${esc(st.want)} out</span>`;
   if(st.state==="known")return ` <span class="rd-src" title="This pack's version.">v${esc(st.have)}</span>`;
   if(st.state==="current")return ` <span class="rd-src" title="Up to date with this version of Fieldbook.">v${esc(st.have)}</span>`;
   return "";

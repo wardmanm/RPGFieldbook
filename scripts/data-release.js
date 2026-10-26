@@ -121,6 +121,28 @@ if (DRY) {
   process.exit(0);
 }
 fbdata(["versions", "--bump", next, ...fbArgs]);
+
+// #102: the official source's files at this tag. Bundled from the bumped
+// registry into a scratch folder, then written flat to releases/data/ — what
+// raw.githubusercontent.com serves the app. A private registry has no public
+// raw URL, so it gets none.
+if (!PRIVATE) {
+  const tmp = fs.mkdtempSync(path.join(require("os").tmpdir(), "fb-data-release-"));
+  // fbdata() calls die() on a failure (e.g. release-files refusing a pack with
+  // no public licence, R13), and die() calls process.exit(1), which skips a
+  // surrounding `finally`. Register the cleanup on "exit" instead — it runs on
+  // every exit path, and fs.rmSync is synchronous, so it's safe inside the
+  // handler (#102 fix round 2). A cleanup that fails only warns: an exception
+  // thrown in an "exit" handler would replace the exit code, turning a release
+  // that succeeded into a failure (#102 final review, Ruling 18).
+  process.on("exit", () => {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); }
+    catch (e) { console.error(`data-release: couldn't remove the scratch folder ${tmp}: ${e.message}`); }
+  });
+  fbdata(["bundle", "-o", tmp]);
+  fbdata(["release-files", tmp, "-o", path.join(ROOT, "releases", "data")]);
+}
+
 if (PRIVATE) {
   const regRel = path.relative(REPO, REG_FS);
   console.log(`\nwrote ${regRel}. PUBLISH data ${next} — nothing is public until you do this:\n`);
@@ -129,8 +151,8 @@ if (PRIVATE) {
   console.log(`    git -C ${REPO} tag -a ${tag} -m "Fieldbook data ${next}"`);
   console.log(`    git -C ${REPO} push && git -C ${REPO} push origin ${tag}`);
 } else {
-  console.log(`\nwrote data/packs.json. PUBLISH data ${next} — nothing is public until you do this:\n`);
-  console.log("    git add data/packs.json");
+  console.log(`\nwrote data/packs.json and releases/data. PUBLISH data ${next} — nothing is public until you do this:\n`);
+  console.log("    git add data/packs.json releases/data");
   console.log(`    git commit -m "Data release ${next}"`);
   console.log(`    git tag -a ${tag} -m "Fieldbook data ${next}"`);
   console.log(`    git push && git push origin ${tag}`);

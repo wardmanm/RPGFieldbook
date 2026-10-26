@@ -222,10 +222,11 @@ function readDataArchive(bytes,zipName,budget){
       const f=p&&typeof p.file==="string"?p.file:"";
       const en=f?all.find(x=>x.name===dir+f):null;
       if(!en)throw zipError("damaged","it lists "+(f||"a pack")+" but doesn't hold it");
-      return {name:base(f),en};
+      return {name:base(f),en,meta:p};
     });
     reserve(resolved.map(r=>r.en));
-    const packs=resolved.map(r=>({name:r.name,bytes:zipEntryBytes(bytes,r.en)}));
+    const builtFor=typeof m.builtFor==="string"?m.builtFor:"";
+    const packs=resolved.map(r=>({name:r.name,bytes:zipEntryBytes(bytes,r.en),meta:r.meta,builtFor}));
     return {kind:"data",version:typeof m.version==="string"?m.version:"",packs};
   }
   if(nested)return null;

@@ -104,7 +104,16 @@ of them.** It:
 - snapshots `DATA_VERSIONS` from `data/packs.json`: the versions this build ships with,
 - folds every pending bullet from `src/docs/UNRELEASED.md` into a new `CHANGELOG` entry,
 - empties the notebook,
-- and then `build.sh` rebuilds, revalidates and re-zips, the rules-data archive included.
+- and then `build.sh` rebuilds, revalidates and re-zips, the rules-data archive included,
+- and writes **`releases/data/`** (#102): `fbdata.py release-files` puts the format-2 manifest
+  `fieldbook-data.json` and every public pack there, flat, and validates them `--public`.
+
+`releases/data/` is the **official extension source**. It is committed with the release, so
+`raw.githubusercontent.com/<repo>/v<V>/releases/data/` serves it at the tag, and every running copy
+of Fieldbook that can run this version installs and updates its packs from there (Settings →
+Extensions). `git add -A` takes it. Only a real release writes it: a `+dev` build never does, and
+neither does `./build.sh --release --no-zip`, because it runs in the zip step (CI refuses a tag
+without it).
 
 It refuses to release with an empty notebook, and refuses a version that isn't higher than the
 current one (that would break the in-app update check). **A release needs `python3`** (`python`
@@ -121,6 +130,9 @@ registry bump itself failing — leaves `data/packs.json` and `30-version.js` bo
 | `fieldbook-data-standalone-<V>.zip` | The rules data on its own: the public packs (SRD 5.2 and homebrew), a manifest and `NOTICE.md`. Fieldbook opens it directly. |
 | `fieldbook-data-kit-<V>.zip` | The data kit: `fbdata.py`, `convert.py` and its inputs, flat, for anyone building rules data from their own 5e-tools export (`fbdata.py build`). |
 | GitHub's own `Source code (zip)` / `(tar.gz)` | Attached automatically from the tag — we don't build or upload a source archive. |
+
+`releases/data/` is not an asset: it is in the tagged commit, which is why the app can read it from a
+`file://` page (a release asset redirects to storage that sends no CORS header).
 
 Before publishing, the **"Public assets only"** step runs `fbdata.py validate --public` on the
 rules-data archive, refusing any pack whose licence is missing or not `CC-BY-4.0`, `CC-BY-SA-3.0` or
@@ -189,15 +201,16 @@ node scripts/data-release.js             # bump data/packs.json
 ```
 
 It gives every pack whose content changed since its last release the next `<APP_VERSION>-N`, and
-sets the registry's `release` to it. It touches nothing else: not `fieldbook.html`, not
-`APP_VERSION` or `DATA_VERSIONS`, not the changelog or the notebook. It refuses when `APP_VERSION`
-is older than 1.8.0 (the first release that can open the data zip at all), when `data/` has
-uncommitted changes (the digests must describe what gets tagged), when no pack changed, when the
-registry's `release` belongs to another app version, and when the tag already exists. Then it
-prints, and never runs:
+sets the registry's `release` to it. For the public registry it also bundles and writes
+`releases/data/` (#102) — never `fieldbook.html`, `APP_VERSION`, `DATA_VERSIONS`, the changelog or
+the notebook, and never `releases/data/` for a private registry, which has no public raw URL. It
+refuses when `APP_VERSION` is older than 1.8.0 (the first release that can open the data zip at
+all), when `data/` has uncommitted changes (the digests must describe what gets tagged), when no
+pack changed, when the registry's `release` belongs to another app version, and when the tag
+already exists. Then it prints, and never runs:
 
 ```bash
-git add data/packs.json
+git add data/packs.json releases/data
 git commit -m "Data release 1.8.0-1"
 git tag -a data-v1.8.0-1 -m "Fieldbook data 1.8.0-1"
 git push && git push origin data-v1.8.0-1
@@ -215,7 +228,10 @@ saying what to do:
 5. the tests fail;
 6. `./build.sh --data` fails;
 7. `fbdata.py validate --public` finds a problem with the archive, including a pack whose licence a
-   public release may not carry, or the archive's name contains `private`.
+   public release may not carry, or the archive's name contains `private`;
+8. `releases/data/` fails `validate --public`, holds no packs, holds a pack that differs from this
+   build's, or names another data version than the tag's (run the script again and commit what it
+   writes).
 
 It then writes the release body (`data-release-notes.js <v> --data`: which packs changed, how to
 import, and the unzip fallback for Fieldbook older than 1.8.0) and publishes
@@ -237,8 +253,9 @@ gh release delete data-v1.8.0-1 --yes
 git tag -d data-v1.8.0-1 && git push --delete origin data-v1.8.0-1
 ```
 
-Running copies stop announcing it on their next load. `data/packs.json` keeps the versions it
-recorded, so the next data release is `-2`: a number is never reused. Fix the data and cut that.
+Running copies stop announcing it on their next load, and the official source falls back to the
+previous release's `releases/data/`; packs a player already installed from it stay installed (an
+older version is never offered back). `data/packs.json` keeps the versions it recorded, so the next data release is `-2`: a number is never reused. Fix the data and cut that.
 
 ---
 
@@ -348,6 +365,12 @@ digests no longer match. Without this check the job would die three steps later 
 empty asset" with no explanation, because `build.sh` names the archive `+dev` for any digest it
 can't match to a release. Re-run `./build.sh --release <level>` (or revert the data change), commit,
 re-tag.
+
+**`releases/data/` doesn't match this build** (#102).
+The folder fails `validate --public`, holds no packs, a pack in it differs from the one the build just
+made, or its manifest names another version than the registry's `release`. The release commit
+carries data from another build: re-run `./build.sh --release <level>` (or `data-release.js`),
+commit `releases/data/` with it, re-tag.
 
 **A clean rebuild doesn't reproduce the committed `dist/fieldbook.html`.**
 This is the check that makes a release *provably* the thing the source produces. Either the artifact

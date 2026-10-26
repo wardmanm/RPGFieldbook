@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Fieldbook data kit: versions, digests and archives for rules packs (#83, #85).
+"""Fieldbook data kit: versions, digests and archives for rules packs (#83, #85, #102).
 
     fbdata.py digest   [--registry F] [--data-root D]
     fbdata.py versions (--changed | --check | --bump V | --seed) [--registry F] [--data-root D]
     fbdata.py bundle   -o DIR [--registry F] [--data-root D]
     fbdata.py pack <bundles-dir> -o OUT.zip [--registry F] [--dev] [--built-for X.Y.Z]
-    fbdata.py validate OUT.zip [--public]
+    fbdata.py release-files <bundles-dir> -o DIR [--registry F] [--built-for X.Y.Z]
+    fbdata.py validate <OUT.zip-or-folder> [--public]
     fbdata.py convert <convert.py arguments...>
     fbdata.py build <src> [--srd | --full | --book CODE] -o OUT.zip [--version V]
 
 Python 3.8+, standard library only. Exit status: 0 ok, 1 a check failed,
-2 bad input. Spec: src/docs/specs/2026-10-07-data-archive-design.md §4–§6.
+2 bad input. Spec: src/docs/specs/2026-10-07-data-archive-design.md §4–§6;
+the format-2 manifest and release-files: src/docs/specs/2026-10-26-extensions-manifest-design.md §3.
 """
 import argparse
 import hashlib
@@ -34,6 +36,12 @@ PUBLIC_LICENCES = ("CC-BY-4.0", "CC-BY-SA-3.0", "MIT")
 DATA_VER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([1-9]\d*))?$")
 FILE_NAME = re.compile(r"^[A-Za-z0-9._-]+\.json$")
 DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
+HTTP_URL = re.compile(r"^https?://", re.I)
+SUMMARY_MAX, DESCRIPTION_MAX = 140, 4000
+APP_VER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+# The manifest's per-pack keys, in the order they are written (#102)
+MANIFEST_PACK_KEYS = ("file", "category", "system", "title", "summary", "description", "version",
+                      "minApp", "size", "sha256", "license", "attribution", "requires")
 # The registry fields that reach the bundle, so changing one is a content change.
 META_KEYS = ("system", "title", "license", "attribution")
 # The bundle format: part of every digest, so a bundler change that alters a
@@ -68,6 +76,12 @@ def check_registry(reg, where):
     rel = reg.get("release")
     if rel is not None and not parse_data_ver(rel):
         raise KitError("%s: release %r is not X.Y.Z or X.Y.Z-N" % (where, rel))
+    hp = reg.get("homepage")
+    if hp is not None and not (isinstance(hp, str) and HTTP_URL.match(hp)):
+        raise KitError("%s: homepage must be an http(s) URL" % where)
+    nm = reg.get("name")
+    if nm is not None and not (isinstance(nm, str) and 0 < len(nm) <= 120):
+        raise KitError("%s: name must be text of 1 to 120 characters" % where)
     packs = reg.get("packs")
     if not isinstance(packs, list) or not packs:
         raise KitError(where + ": packs must be a non-empty list")
@@ -101,6 +115,14 @@ def check_registry(reg, where):
         att = p.get("attribution")
         if att is not None and not (isinstance(att, str) and 0 < len(att) <= 2000):
             raise KitError("%s.attribution must be text of 1 to 2,000 characters" % at)
+        for k, cap in (("summary", SUMMARY_MAX), ("description", DESCRIPTION_MAX)):
+            v = p.get(k)
+            if v is not None and not (isinstance(v, str) and 0 < len(v) <= cap):
+                raise KitError("%s.%s must be text of 1 to %s characters" % (at, k, format(cap, ",")))
+        if p.get("minApp") is not None and not (isinstance(p["minApp"], str) and APP_VER.match(p["minApp"])):
+            raise KitError("%s.minApp %r is not X.Y.Z" % (at, p.get("minApp")))
+        if p.get("category") is not None and not (isinstance(p["category"], str) and p["category"].strip()):
+            raise KitError("%s.category must be a non-empty string" % at)
 
 
 def load_registry(path):
@@ -262,18 +284,15 @@ def _zinfo(name):
     return zi
 
 
-def cmd_pack(a):
-    """The archive (spec §6): every registered bundle found in a.bundles, a
-    manifest and NOTICE.md; entries sorted, fixed timestamps, deflate level 9,
-    so two runs with one zlib write the same bytes."""
-    reg = load_registry(a.registry)
+def build_manifest(reg, bundles, built_for, dev):
+    """The format-2 manifest (#102) and the bundles it lists, read from `bundles`.
+    Shared by `pack` (into the zip) and `release-files` (into releases/data/)."""
     if not reg.get("release"):
         raise KitError("the registry has no release to name the archive")
-    version = reg["release"] + ("+dev" if a.dev else "")
-    built_for = a.built_for if a.built_for is not None else app_version()
+    version = reg["release"] + ("+dev" if dev else "")
     entries, mpacks = {}, []
     for p in reg["packs"]:
-        src = os.path.join(a.bundles, p["file"])
+        src = os.path.join(bundles, p["file"])
         if not os.path.isfile(src):
             continue
         with open(src, "rb") as f:
@@ -288,100 +307,185 @@ def cmd_pack(a):
         if obj.get("dataVersion") != p.get("version"):
             raise KitError("%s: dataVersion %r, but the registry says %r — rebuild the bundles"
                            % (src, obj.get("dataVersion"), p.get("version")))
-        m = {"file": p["file"], "system": p["system"]}
-        if p.get("version"):
-            m["version"] = p["version"]
-        if p.get("license"):
-            m["license"] = p["license"]
+        req = []
+        for r in obj.get("requires") or []:
+            if isinstance(r, dict) and isinstance(r.get("pack"), str) and r["pack"].strip():
+                one = {"pack": r["pack"]}
+                if isinstance(r.get("file"), str):
+                    one["file"] = r["file"]
+                if isinstance(r.get("url"), str) and HTTP_URL.match(r["url"]):
+                    one["url"] = r["url"]
+                if one not in req:
+                    req.append(one)
+        m = {"file": p["file"], "category": p.get("category") or "rules", "system": p["system"],
+             "title": p["title"]}
+        for k in ("summary", "description", "version", "minApp"):
+            if p.get(k):
+                m[k] = p[k]
+        m["size"] = len(raw)
         m["sha256"] = hashlib.sha256(raw).hexdigest()
-        mpacks.append(m)
+        for k in ("license", "attribution"):
+            if p.get(k):
+                m[k] = p[k]
+        if req:
+            m["requires"] = req
+        mpacks.append(dict((k, m[k]) for k in MANIFEST_PACK_KEYS if k in m))
         entries[p["file"]] = raw
     if not mpacks:
-        raise KitError("none of the registry's bundles is in %s — bundle first" % a.bundles)
-    manifest = {"_type": "fieldbook-data", "format": 1, "version": version, "builtFor": built_for, "packs": mpacks}
+        raise KitError("none of the registry's bundles is in %s — bundle first" % bundles)
+    manifest = {"_type": "fieldbook-data", "format": 2}
+    for k in ("name", "homepage"):
+        if reg.get(k):
+            manifest[k] = reg[k]
+    manifest.update({"version": version, "builtFor": built_for, "packs": mpacks})
+    return manifest, entries
+
+
+def cmd_pack(a):
+    """The archive (spec §6): every registered bundle found in a.bundles, a
+    manifest and NOTICE.md; entries sorted, fixed timestamps, deflate level 9,
+    so two runs with one zlib write the same bytes."""
+    reg = load_registry(a.registry)
+    built_for = a.built_for if a.built_for is not None else app_version()
+    manifest, entries = build_manifest(reg, a.bundles, built_for, a.dev)
+    version = manifest["version"]
     entries[MANIFEST] = (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
-    entries[NOTICE] = notice_md(reg, mpacks, version, built_for).encode("utf-8")
+    entries[NOTICE] = notice_md(reg, manifest["packs"], version, built_for).encode("utf-8")
     tmp = a.output + ".tmp"
     with zipfile.ZipFile(tmp, "w") as z:
         for name in sorted(entries):
             z.writestr(_zinfo(name), entries[name], compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
     os.replace(tmp, a.output)
-    print("wrote %s (%d pack%s, data %s)" % (a.output, len(mpacks), "" if len(mpacks) == 1 else "s", version),
-          file=sys.stderr)
+    n = len(manifest["packs"])
+    print("wrote %s (%d pack%s, data %s)" % (a.output, n, "" if n == 1 else "s", version), file=sys.stderr)
     return 0
 
 
+def cmd_release_files(a):
+    """The official source's files (#102): the manifest and every bundle, flat,
+    for the release commit — raw.githubusercontent.com serves them at the tag."""
+    reg = load_registry(a.registry)
+    built_for = a.built_for if a.built_for is not None else app_version()
+    manifest, entries = build_manifest(reg, a.bundles, built_for, False)
+    os.makedirs(a.output, exist_ok=True)
+    # the stale bundles of an earlier run go; a dotfile (Finder's .DS_Store)
+    # or a folder is never touched, and validate_archive() ignores dotfiles
+    # (#102 final review M9)
+    for n in os.listdir(a.output):
+        if n.endswith(".json") and not n.startswith(".") and os.path.isfile(os.path.join(a.output, n)):
+            os.remove(os.path.join(a.output, n))
+    for name, raw in entries.items():
+        with open(os.path.join(a.output, name), "wb") as f:
+            f.write(raw)
+    with open(os.path.join(a.output, MANIFEST), "w", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+    errs = validate_archive(a.output, public=True)
+    for e in errs:
+        print("%s: %s" % (a.output, e), file=sys.stderr)
+    if errs:
+        return 1
+    print("wrote %s (%d packs, data %s)" % (a.output, len(manifest["packs"]), manifest["version"]), file=sys.stderr)
+    return 0
+
+
+def _validate_entries(names, read, public):
+    """Problems with an archive's entries (spec §6.3), one line each; []
+    when it is sound. public=True also refuses a pack whose licence a public
+    release may not carry (R13) — missing or not one of PUBLIC_LICENCES."""
+    errs = []
+    if len(set(names)) != len(names):
+        errs.append("an entry name appears twice")
+    for n in names:
+        if n.endswith("/"):
+            errs.append("a directory entry: %s" % n)
+        if n.startswith("/") or "\\" in n or ".." in n.split("/"):
+            errs.append("an unsafe path: %s" % n)
+    if MANIFEST not in names:
+        return errs + ["no %s at the root" % MANIFEST]
+    try:
+        man = json.loads(read(MANIFEST).decode("utf-8"))
+    except (ValueError, zipfile.BadZipFile) as e:
+        return errs + ["%s is unreadable: %s" % (MANIFEST, e)]
+    if not isinstance(man, dict) or man.get("_type") != "fieldbook-data" or man.get("format") not in (1, 2):
+        return errs + ['%s: _type must be "fieldbook-data" and format 1 or 2' % MANIFEST]
+    ver = man.get("version")
+    if not (isinstance(ver, str) and parse_data_ver(ver[:-4] if ver.endswith("+dev") else ver)):
+        errs.append("%s: version %r" % (MANIFEST, ver))
+    packs = man.get("packs")
+    if not isinstance(packs, list) or not packs:
+        return errs + ["%s: packs must be a non-empty list" % MANIFEST]
+    listed = set()
+    for i, m in enumerate(packs):
+        f = m.get("file") if isinstance(m, dict) else None
+        if not isinstance(f, str):
+            errs.append("packs[%d] names no file" % i)
+            continue
+        if f.startswith("/") or "\\" in f or ".." in f.split("/"):
+            errs.append("an unsafe path: %s" % f)
+            continue
+        listed.add(f)
+        if f not in names:
+            errs.append("%s is listed but missing" % f)
+            continue
+        try:
+            raw = read(f)
+        except (zipfile.BadZipFile, OSError) as e:
+            errs.append("%s: %s" % (f, e))
+            continue
+        if hashlib.sha256(raw).hexdigest() != m.get("sha256"):
+            errs.append("%s: its sha256 doesn't match the manifest" % f)
+        try:
+            obj = json.loads(raw.decode("utf-8"))
+        except ValueError:
+            errs.append("%s: not valid JSON" % f)
+            continue
+        if not isinstance(obj, dict):
+            errs.append("%s: not a JSON object" % f)
+            continue
+        if obj.get("system") != m.get("system"):
+            errs.append("%s: system %r, the manifest says %r" % (f, obj.get("system"), m.get("system")))
+        if obj.get("dataVersion") != m.get("version"):
+            errs.append("%s: dataVersion %r, the manifest says %r" % (f, obj.get("dataVersion"), m.get("version")))
+        if man.get("format") == 2:
+            for k, cap in (("summary", SUMMARY_MAX), ("description", DESCRIPTION_MAX)):
+                v = m.get(k)
+                if v is not None and not (isinstance(v, str) and len(v) <= cap):
+                    errs.append("%s: %s is over %s characters" % (f, k, format(cap, ",")))
+            if m.get("minApp") is not None and not (isinstance(m["minApp"], str) and APP_VER.match(m["minApp"])):
+                errs.append("%s: minApp %r is not X.Y.Z" % (f, m.get("minApp")))
+            if m.get("size") is not None and m.get("size") != len(raw):
+                errs.append("%s: size %r, the file is %d bytes" % (f, m.get("size"), len(raw)))
+    extra = [n for n in names if n not in listed and n not in (MANIFEST, NOTICE)]
+    if extra:
+        errs.append("not in the manifest: " + ", ".join(extra))
+    if public:
+        for m in packs:
+            lic = m.get("license") if isinstance(m, dict) else None
+            if lic not in PUBLIC_LICENCES:
+                errs.append("%s: licence %s is not one a public release may carry (%s)"
+                            % (m.get("file"), lic or "(none)", ", ".join(PUBLIC_LICENCES)))
+    return errs
+
+
 def validate_archive(path, public=False):
-    """Problems with an archive (spec §6.3), one line each; [] when it is sound.
-    public=True also refuses a pack whose licence a public release may not
-    carry (R13) — missing or not one of PUBLIC_LICENCES."""
+    """Problems with an archive or a releases/data folder (spec §6.3, #102),
+    one line each; [] when it is sound. In a folder, a dotfile (Finder's
+    .DS_Store, an editor's swap file) is not an entry: no release ships one,
+    and it must not fail a local release (#102 final review M9)."""
+    if os.path.isdir(path):
+        names = sorted(n for n in os.listdir(path)
+                       if not n.startswith(".") and os.path.isfile(os.path.join(path, n)))
+
+        def read(n):
+            with open(os.path.join(path, n), "rb") as f:
+                return f.read()
+        return _validate_entries(names, read, public)
     try:
         z = zipfile.ZipFile(path)
     except (OSError, zipfile.BadZipFile) as e:
         return ["not a readable zip: %s" % e]
-    errs = []
     with z:
-        names = [i.filename for i in z.infolist()]
-        if len(set(names)) != len(names):
-            errs.append("an entry name appears twice")
-        for n in names:
-            if n.endswith("/"):
-                errs.append("a directory entry: %s" % n)
-            if n.startswith("/") or "\\" in n or ".." in n.split("/"):
-                errs.append("an unsafe path: %s" % n)
-        if MANIFEST not in names:
-            return errs + ["no %s at the root" % MANIFEST]
-        try:
-            man = json.loads(z.read(MANIFEST).decode("utf-8"))
-        except (ValueError, zipfile.BadZipFile) as e:
-            return errs + ["%s is unreadable: %s" % (MANIFEST, e)]
-        if not isinstance(man, dict) or man.get("_type") != "fieldbook-data" or man.get("format") != 1:
-            return errs + ['%s: _type must be "fieldbook-data" and format 1' % MANIFEST]
-        ver = man.get("version")
-        if not (isinstance(ver, str) and parse_data_ver(ver[:-4] if ver.endswith("+dev") else ver)):
-            errs.append("%s: version %r" % (MANIFEST, ver))
-        packs = man.get("packs")
-        if not isinstance(packs, list) or not packs:
-            return errs + ["%s: packs must be a non-empty list" % MANIFEST]
-        listed = set()
-        for i, m in enumerate(packs):
-            f = m.get("file") if isinstance(m, dict) else None
-            if not isinstance(f, str):
-                errs.append("packs[%d] names no file" % i)
-                continue
-            listed.add(f)
-            if f not in names:
-                errs.append("%s is listed but missing" % f)
-                continue
-            try:
-                raw = z.read(f)
-            except zipfile.BadZipFile as e:
-                errs.append("%s: %s" % (f, e))
-                continue
-            if hashlib.sha256(raw).hexdigest() != m.get("sha256"):
-                errs.append("%s: its sha256 doesn't match the manifest" % f)
-            try:
-                obj = json.loads(raw.decode("utf-8"))
-            except ValueError:
-                errs.append("%s: not valid JSON" % f)
-                continue
-            if not isinstance(obj, dict):
-                errs.append("%s: not a JSON object" % f)
-                continue
-            if obj.get("system") != m.get("system"):
-                errs.append("%s: system %r, the manifest says %r" % (f, obj.get("system"), m.get("system")))
-            if obj.get("dataVersion") != m.get("version"):
-                errs.append("%s: dataVersion %r, the manifest says %r" % (f, obj.get("dataVersion"), m.get("version")))
-        extra = [n for n in names if n not in listed and n not in (MANIFEST, NOTICE)]
-        if extra:
-            errs.append("not in the manifest: " + ", ".join(extra))
-        if public:
-            for m in packs:
-                lic = m.get("license") if isinstance(m, dict) else None
-                if lic not in PUBLIC_LICENCES:
-                    errs.append("%s: licence %s is not one a public release may carry (%s)"
-                                % (m.get("file"), lic or "(none)", ", ".join(PUBLIC_LICENCES)))
-    return errs
+        return _validate_entries([i.filename for i in z.infolist()], z.read, public)
 
 
 def cmd_validate(a):
@@ -771,7 +875,13 @@ def main(argv=None):
     p.add_argument("--dev", action="store_true", help='version the archive "<release>+dev"')
     p.add_argument("--built-for", default=None, help="the app version it is for (default: APP_VERSION)")
     p.set_defaults(fn=cmd_pack)
-    p = sub.add_parser("validate", help="check an archive; exit 1 with one line per problem")
+    p = sub.add_parser("release-files", help="write releases/data/: the manifest and every bundle (#102)")
+    p.add_argument("bundles", help="the folder holding the bundles (dist/)")
+    p.add_argument("-o", "--output", required=True, help="the folder to write (releases/data)")
+    p.add_argument("--registry", default=DEFAULT_REGISTRY, help="default: data/packs.json")
+    p.add_argument("--built-for", default=None, help="the app version it is for (default: APP_VERSION)")
+    p.set_defaults(fn=cmd_release_files)
+    p = sub.add_parser("validate", help="check an archive or a releases/data folder; exit 1 with one line per problem")
     p.add_argument("zip")
     p.add_argument("--public", action="store_true",
                    help="also refuse a pack whose licence a public release may not carry")

@@ -308,6 +308,18 @@ function wire(){
   /* same target as the version button it replaces — the changelog, which carries
      the download link while an update is pending */
   const _up=document.getElementById("updatePill");if(_up)_up.addEventListener("click",openChangelog);
+  /* #102: each pill's × clears its notice until a newer version arrives
+     (spec decision 9). A save that doesn't land says so (constraint 2). */
+  const _pillSaved=()=>{const err=saveSettings();if(err)toast("Couldn't save that you cleared the notice: "+err,null,{err:true});};
+  {const x=document.getElementById("updatePillX");if(x)x.addEventListener("click",()=>{
+    if(!updateAvailable)return;
+    if(!settings.dismissedUpdates||typeof settings.dismissedUpdates!=="object")settings.dismissedUpdates={};
+    settings.dismissedUpdates.app=updateAvailable.ver;_pillSaved();
+    const p=document.getElementById("updatePill");if(p)p.style.display="none";x.hidden=true;
+    const v=document.getElementById("btnVer");if(v)v.style.display="";extPillFocusBack();});}
+  {const g=document.getElementById("extPillGo");if(g)g.addEventListener("click",()=>{settings.setPage="extensions";openSettings();});}
+  {const x=document.getElementById("extPillX");if(x)x.addEventListener("click",()=>{dismissUpdates();_pillSaved();renderExtPill();extPillFocusBack();});}
+  renderExtPill();
   {const s=document.getElementById("sizeDisp");if(s){s.addEventListener("click",openSizePicker);
     s.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openSizePicker();}});}}
   document.getElementById("btnHome").addEventListener("click",showHome);
@@ -352,8 +364,8 @@ function wire(){
   document.getElementById("homeMode").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeRough").addEventListener("click",()=>{settings.rough=!settings.rough;applyTheme();saveSettings();syncHomeSetupControls();});
   document.getElementById("homeImportBtn").addEventListener("click",()=>document.getElementById("homeRulesFiles").click());
-  document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
-  document.getElementById("rbRulesFiles").addEventListener("change",e=>{if(e.target.files.length)importRulesFiles(e.target.files);e.target.value="";});
+  document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)manualInstallFiles(e.target.files);e.target.value="";});
+  document.getElementById("rbRulesFiles").addEventListener("change",e=>{if(e.target.files.length)manualInstallFiles(e.target.files);e.target.value="";});
   document.getElementById("homeRulesData").addEventListener("click",e=>{const d=e.target.closest("[data-rd-del]");if(!d)return;const g=loadedRulesGroups().find(x=>x.key===d.dataset.rdDel);if(g&&confirm(`Remove “${g.label}” (${g.count} entr${g.count===1?"y":"ies"}) from your loaded rules?`)){removeRulesGroup(d.dataset.rdDel);const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeClearRules").addEventListener("click",()=>{if(clearAllRules()){const s=document.getElementById("homeRulesStatus");if(s)s.textContent=rulesStatusText();}});
   document.getElementById("homeChars").addEventListener("click",e=>{
@@ -398,6 +410,6 @@ function boot(){
      and reading it is async. Everything above already drew with whatever
      localStorage had (usually nothing, once migrated), and this replaces it. */
   loadRulesCacheAsync();
-  checkForUpdate();checkForDataUpdate();
+  checkForUpdate();checkForDataUpdate();checkSources({boot:true}).catch(()=>false);
 }
 boot();

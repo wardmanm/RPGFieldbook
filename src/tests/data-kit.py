@@ -4,8 +4,10 @@ archive — and the release scripts that drive it. Every case runs on a scratch
 copy under a temp dir, never on data/. Prints PASS/FAIL lines and ends with
 "ALL PASSED (n)" or "FAILURES: ...", which is what run.sh reads.
 Spec: src/docs/specs/2026-10-07-data-archive-design.md"""
+import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -264,7 +266,7 @@ ck("entries are sorted by name",
 ck("every entry is deflated and dated 1980-01-01",
    all(i.compress_type == zipfile.ZIP_DEFLATED and i.date_time == (1980, 1, 1, 0, 0, 0) for i in infos))
 ck("the manifest names the release and the app",
-   man["_type"] == "fieldbook-data" and man["format"] == 1 and man["version"] == "1.8.0" and man["builtFor"] == "1.8.0", man)
+   man["_type"] == "fieldbook-data" and man["format"] == 2 and man["version"] == "1.8.0" and man["builtFor"] == "1.8.0", man)
 ck("each manifest pack has file, system, version and sha256",
    [(m["file"], m["system"], m.get("version")) for m in man["packs"]] == [("alpha_full.json", "Alpha", "1.8.0"), ("beta_full.json", "Beta", "1.7.0")]
    and all(len(m["sha256"]) == 64 for m in man["packs"]), man["packs"])
@@ -328,6 +330,10 @@ def checkout(app="1.8.0", release="1.8.0"):
     write(d, "src/docs/UNRELEASED.md", raw="# Notebook\n\n## Pending\n\n- A change a player can see.\n")
     reg = read_json(d, "data/packs.json")
     reg["release"] = release
+    # #102: a public data release now bundles and validates --public (R13),
+    # which refuses any pack with no allowlisted licence.
+    reg["packs"][0]["license"] = "CC-BY-4.0"
+    reg["packs"][1]["license"] = "MIT"
     write(d, "data/packs.json", reg)
     subprocess.run([sys.executable, os.path.join(d, "tools/data-kit/fbdata.py"), "versions", "--seed"], capture_output=True)
     git(d, "init", "-q")
@@ -634,6 +640,43 @@ r = node(d, "scripts/data-release.js")
 ck("the PUBLIC registry still refuses a release from another app version", r.returncode == 1 and "doesn't belong" in r.stderr, r.stderr)
 shutil.rmtree(d)
 
+# ---------- #102 fix round 2: a failing bundle/release-files still cleans up its
+# scratch folder. fbdata()'s die() calls process.exit(1), which skips a surrounding
+# `finally` — only a cleanup registered on "exit" runs on that path. A pack with no
+# public licence is a realistic way to make release-files's --public check fail.
+def fb_data_release_tmp_entries():
+    return set(e for e in os.listdir(tempfile.gettempdir()) if e.startswith("fb-data-release-"))
+
+
+before = fb_data_release_tmp_entries()
+d = checkout()
+reg = read_json(d, "data/packs.json")
+reg["packs"][0]["license"] = "LicenseRef-WotC"   # not public-allowlisted (R13)
+write(d, "data/packs.json", reg)
+git(d, "commit", "-qam", "give Alpha an unlicensed licence")
+r = node(d, "scripts/data-release.js")
+ck("#102 a data release whose bundle fails release-files's --public check still fails",
+   r.returncode == 1, (r.returncode, r.stdout, r.stderr))
+after = fb_data_release_tmp_entries()
+ck("#102 ...and leaves no fb-data-release-* scratch folder behind (fix round 2)",
+   after == before, (before, after))
+shutil.rmtree(d)
+
+# ---------- Ruling 18: an error in data-release.js's exit-handler cleanup never
+# changes its exit code. A preload makes fs.rmSync clean up and then throw, the
+# way a busy or vanished scratch folder would.
+preload = os.path.join(tempfile.mkdtemp(prefix="fb-preload-"), "rmsync-throws.js")
+open(preload, "w").write('const fs = require("fs"), real = fs.rmSync;\n'
+                         'fs.rmSync = (p, o) => { real(p, o); throw new Error("EBUSY: simulated rmSync failure"); };\n')
+d = checkout()
+write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 7}]})
+git(d, "commit", "-qam", "change alpha")
+r = subprocess.run(["node", "--require", preload, "scripts/data-release.js"], cwd=d, capture_output=True, text=True)
+ck("#102 Ruling 18: a cleanup error in the exit handler leaves a good data release exiting 0",
+   r.returncode == 0 and read_json(d, "data/packs.json")["release"] == "1.8.0-1", (r.returncode, r.stderr[-400:]))
+shutil.rmtree(d)
+shutil.rmtree(os.path.dirname(preload))
+
 # ---------- the kit (#85, R12/R13): the example pack builds and passes --public,
 # and the kit zip (once built) works on its own, unzipped anywhere (Review Focus 3)
 EXAMPLE_PACK = os.path.join(ROOT, "tools", "data-kit", "example-pack")
@@ -866,6 +909,127 @@ ck("#90 dev.sh writes the private packs through sync-private.py --write",
    "scripts/sync-private.py --write" in DEVSH, None)
 ck("#90 ...and no longer runs convert.py all or supplement itself",
    "convert.py all" not in DEVSH and "convert.py supplement" not in DEVSH, None)
+
+# ---------- #102: the format-2 manifest and release-files
+# (the registry here is d/data/packs.json, as scratch() lays it out; kit()
+# appends its own --registry after any args, so an explicit override on a
+# kit() call is silently discarded — these use subprocess.run directly instead)
+d = scratch()
+registry_path = os.path.join(d, "data", "packs.json")
+reg = read_json(d, "data/packs.json")
+reg["name"] = "Test data"
+reg["homepage"] = "https://example.com/data"
+reg["packs"][0]["summary"] = "A short line."
+reg["packs"][0]["description"] = "Para one.\n\nPara two."
+reg["packs"][0]["minApp"] = "1.9.0"
+# release-files validates --public, which refuses a pack with no licence (R13)
+reg["packs"][0]["license"] = "CC-BY-4.0"
+reg["packs"][1]["license"] = "MIT"
+write(d, "data/packs.json", reg)
+r = kit(d, "bundle", "-o", os.path.join(d, "dist"))
+ck("#102 bundle still works with the new registry fields", r.returncode == 0, r.stderr)
+z = os.path.join(d, "out.zip")
+r = subprocess.run([sys.executable, FBDATA, "pack", os.path.join(d, "dist"), "-o", z,
+                    "--registry", registry_path, "--built-for", "1.9.0"],
+                   capture_output=True, text=True)
+ck("#102 pack writes the archive", r.returncode == 0, r.stderr)
+with zipfile.ZipFile(z) as zf:
+    man = json.loads(zf.read("fieldbook-data.json").decode("utf-8"))
+    raw0 = zf.read(man["packs"][0]["file"])
+p0 = man["packs"][0]
+ck("#102 the manifest is format 2 with name and homepage",
+   man["format"] == 2 and man["name"] == "Test data" and man["homepage"] == "https://example.com/data", man)
+ck("#102 each pack carries category, title, summary, description, minApp and size",
+   p0["category"] == "rules" and p0["summary"] == "A short line." and p0["description"].startswith("Para one")
+   and p0["minApp"] == "1.9.0" and p0["size"] == len(raw0) and isinstance(p0["title"], str), p0)
+ck("#102 keys are written in a fixed order",
+   list(p0.keys())[:6] == ["file", "category", "system", "title", "summary", "description"], list(p0.keys()))
+ck("#102 a pack with no minApp in the registry carries none (the reader defaults it to builtFor)",
+   all(("minApp" in p) == (p is p0) for p in man["packs"]), [sorted(p.keys()) for p in man["packs"]])
+ck("#102 a format-2 archive validates", subprocess.run([sys.executable, FBDATA, "validate", z],
+   capture_output=True, text=True).returncode == 0)
+
+# requires is copied from the bundle, names and url only
+bundle_path = os.path.join(d, "dist", p0["file"])
+b = json.load(open(bundle_path, encoding="utf-8"))
+b["requires"] = [{"pack": "Other", "file": "other_full.json", "url": "https://example.com/other", "spells": ["Haste"]}]
+open(bundle_path, "w", encoding="utf-8").write(json.dumps(b))
+man2, _ = fbdata.build_manifest(fbdata.load_registry(registry_path), os.path.join(d, "dist"), "1.9.0", False)
+ck("#102 requires carries pack, file and url, never the entry lists",
+   man2["packs"][0]["requires"] == [{"pack": "Other", "file": "other_full.json", "url": "https://example.com/other"}],
+   man2["packs"][0].get("requires"))
+
+# the registry refuses bad new fields
+for field, bad, why in [("summary", "x" * 141, "141 characters"), ("description", "x" * 4001, "4,001 characters"),
+                        ("minApp", "1.9", "not X.Y.Z"), ("category", "", "empty")]:
+    reg_bad = json.loads(json.dumps(reg)); reg_bad["packs"][0][field] = bad
+    bad_path = os.path.join(d, "bad.json")
+    write(d, "bad.json", reg_bad)
+    r = subprocess.run([sys.executable, FBDATA, "digest", "--registry", bad_path,
+                        "--data-root", os.path.join(d, "data")], capture_output=True, text=True)
+    ck("#102 the registry refuses a %s that is %s" % (field, why), r.returncode == 2, r.stdout + r.stderr)
+reg_bad = json.loads(json.dumps(reg)); reg_bad["homepage"] = "javascript:alert(1)"
+write(d, "bad.json", reg_bad)
+r = subprocess.run([sys.executable, FBDATA, "digest", "--registry", os.path.join(d, "bad.json"),
+                    "--data-root", os.path.join(d, "data")], capture_output=True, text=True)
+ck("#102 the registry refuses a homepage that isn't http(s)", r.returncode == 2, r.stdout + r.stderr)
+
+# release-files: a flat folder that raw.githubusercontent.com can serve
+out = os.path.join(d, "releases", "data")
+os.makedirs(out); open(os.path.join(out, "stale_full.json"), "w").write("{}")
+r = subprocess.run([sys.executable, FBDATA, "release-files", os.path.join(d, "dist"), "-o", out,
+                    "--registry", registry_path, "--built-for", "1.9.0"], capture_output=True, text=True)
+ck("#102 release-files succeeds", r.returncode == 0, r.stderr)
+names = sorted(os.listdir(out))
+ck("#102 release-files writes the manifest and every bundle, and removes stale files",
+   "fieldbook-data.json" in names and "stale_full.json" not in names and all(p["file"] in names for p in man["packs"]), names)
+fm = json.load(open(os.path.join(out, "fieldbook-data.json"), encoding="utf-8"))
+ck("#102 the folder's sha256 values match its files",
+   all(hashlib.sha256(open(os.path.join(out, p["file"]), "rb").read()).hexdigest() == p["sha256"] for p in fm["packs"]))
+ck("#102 validate reads a folder", subprocess.run([sys.executable, FBDATA, "validate", out],
+   capture_output=True, text=True).returncode == 0)
+open(os.path.join(out, fm["packs"][0]["file"]), "a").write(" ")
+r = subprocess.run([sys.executable, FBDATA, "validate", out], capture_output=True, text=True)
+ck("#102 validate names a folder file whose sha256 no longer matches", r.returncode == 1 and "sha256" in r.stderr, r.stderr)
+
+# Ruling 18 (M9): Finder's .DS_Store (or any dotfile) in releases/data/ is not a
+# pack, so neither release-files nor validate <folder> trips on it; a stray
+# non-dotfile is still named
+out2 = os.path.join(d, "releases", "data2")
+os.makedirs(out2)
+open(os.path.join(out2, ".DS_Store"), "wb").write(b"\x00\x00\x00\x01Bud1")
+r = subprocess.run([sys.executable, FBDATA, "release-files", os.path.join(d, "dist"), "-o", out2,
+                    "--registry", registry_path, "--built-for", "1.9.0"], capture_output=True, text=True)
+ck("#102 M9: release-files ignores a .DS_Store in the folder", r.returncode == 0, r.stderr)
+ck("#102 M9: ...and leaves it where it is", os.path.isfile(os.path.join(out2, ".DS_Store")), sorted(os.listdir(out2)))
+r = subprocess.run([sys.executable, FBDATA, "validate", out2], capture_output=True, text=True)
+ck("#102 M9: validate <folder> ignores a dotfile", r.returncode == 0, r.stderr)
+open(os.path.join(out2, "stray.txt"), "w").write("x")
+r = subprocess.run([sys.executable, FBDATA, "validate", out2], capture_output=True, text=True)
+ck("#102 M9: ...but still names a stray file that isn't a dotfile",
+   r.returncode == 1 and "not in the manifest: stray.txt" in r.stderr and ".DS_Store" not in r.stderr, r.stderr)
+os.remove(os.path.join(out2, "stray.txt"))
+os.makedirs(os.path.join(out2, "odd_full.json"))
+r = subprocess.run([sys.executable, FBDATA, "release-files", os.path.join(d, "dist"), "-o", out2,
+                    "--registry", registry_path, "--built-for", "1.9.0"], capture_output=True, text=True)
+ck("#102 M9 (T1 deferred): release-files' stale-file sweep never tries to remove a folder named *.json",
+   "IsADirectoryError" not in r.stderr and "PermissionError" not in r.stderr and "Traceback" not in r.stderr, r.stderr)
+
+# ---------- #102: the release paths write releases/data/
+build_sh = open(os.path.join(ROOT, "build.sh"), encoding="utf-8").read()
+ck("#102 build.sh writes releases/data on a release build only",
+   re.search(r'if \[ -n "\$RELEASE" \][^\n]*\n[^\n]*release-files dist -o releases/data', build_sh) is not None)
+dr = open(os.path.join(ROOT, "scripts", "data-release.js"), encoding="utf-8").read()
+ck("#102 data-release.js bundles and writes releases/data for the public registry",
+   '"release-files"' in dr and "releases/data" in dr and "if (!PRIVATE)" in dr)
+ck("#102 data-release.js tells you to commit releases/data", "git add data/packs.json releases/data" in dr)
+ck("#102 data-release.js registers scratch-folder cleanup on exit, not just a finally "
+   "that process.exit() would skip (fix round 2)",
+   re.search(r'process\.on\(\s*"exit"[\s\S]{0,80}?fs\.rmSync\(tmp', dr) is not None)
+for wf in ("release.yml", "data-release.yml"):
+    t = open(os.path.join(ROOT, ".github", "workflows", wf), encoding="utf-8").read()
+    ck("#102 %s checks releases/data against the build" % wf,
+       "fbdata.py validate --public releases/data" in t and 'cmp "releases/data/' in t)
 
 # ---- add new cases above this line ----
 print("")
