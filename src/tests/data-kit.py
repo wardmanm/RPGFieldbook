@@ -963,6 +963,8 @@ dr = open(os.path.join(ROOT, "scripts", "data-release.js"), encoding="utf-8").re
 ck("#102 data-release.js bundles and writes releases/data for the public registry",
    '"release-files"' in dr and "releases/data" in dr and "if (!PRIVATE)" in dr)
 ck("#102 data-release.js tells you to commit releases/data", "git add data/packs.json releases/data" in dr)
+ck("#102 data-release.js cleans up its scratch bundle folder (fix round 1)",
+   re.search(r'finally\s*\{[^{}]*fs\.rmSync\(tmp', dr) is not None)
 for wf in ("release.yml", "data-release.yml"):
     t = open(os.path.join(ROOT, ".github", "workflows", wf), encoding="utf-8").read()
     ck("#102 %s checks releases/data against the build" % wf,

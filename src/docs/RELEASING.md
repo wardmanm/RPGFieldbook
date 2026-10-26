@@ -192,8 +192,10 @@ node scripts/data-release.js             # bump data/packs.json
 ```
 
 It gives every pack whose content changed since its last release the next `<APP_VERSION>-N`, and
-sets the registry's `release` to it. It touches nothing else: not `fieldbook.html`, not
-`APP_VERSION` or `DATA_VERSIONS`, not the changelog or the notebook. It refuses when `APP_VERSION`
+sets the registry's `release` to it. For the public registry it also bundles and writes
+`releases/data/` (#102) — never `fieldbook.html`, `APP_VERSION`, `DATA_VERSIONS`, the changelog or
+the notebook, and never `releases/data/` for a private registry, which has no public raw URL. It
+refuses when `APP_VERSION`
 is older than 1.8.0 (the first release that can open the data zip at all), when `data/` has
 uncommitted changes (the digests must describe what gets tagged), when no pack changed, when the
 registry's `release` belongs to another app version, and when the tag already exists. Then it

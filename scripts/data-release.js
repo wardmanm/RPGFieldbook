@@ -128,8 +128,12 @@ fbdata(["versions", "--bump", next, ...fbArgs]);
 // raw URL, so it gets none.
 if (!PRIVATE) {
   const tmp = fs.mkdtempSync(path.join(require("os").tmpdir(), "fb-data-release-"));
-  fbdata(["bundle", "-o", tmp]);
-  fbdata(["release-files", tmp, "-o", path.join(ROOT, "releases", "data")]);
+  try {
+    fbdata(["bundle", "-o", tmp]);
+    fbdata(["release-files", tmp, "-o", path.join(ROOT, "releases", "data")]);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 if (PRIVATE) {
