@@ -1864,6 +1864,39 @@ section('#102 N1: invisible format characters are stripped, so a bidi override c
   X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {};
 });
 
+section('#102 Ruling 20: a URL shown as text carries no bidi override either', async () => {
+  const RLO = '‮';
+  const realFetch = ctx.fetch;
+  ctx.fetch = extFetch; Object.keys(extRoutes).forEach(k => delete extRoutes[k]);
+  try {
+    X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {}; X.settings.dismissedUpdates = {};
+    // the re-review's live case: a raw U+202E in the path of a URL the player adds
+    const typed = 'https://good.example/' + RLO + 'noj.live-lifedoog';
+    const route = {_type: 'fieldbook-data', name: 'Good Source', builtFor: '1.0.0', homepage: 'https://good.example/' + RLO + 'emoh',
+      packs: [{file: 'g_full.json', system: 'G', version: '1.0.0', sha256: 'a'.repeat(64)}]};
+    extRoutes[typed] = route; extRoutes[new URL(typed).href] = route;
+    const r = await X.addSource(typed);
+    const src = X.settings.sources.find(x => x.kind === 'manifest');
+    ck('#102 R20: the source is added', r.ok === true && !!src, r);
+    ck('#102 R20: the stored url and base are the normalised URL, with no U+202E',
+      src && !src.url.includes(RLO) && !src.base.includes(RLO) && src.url === new URL(typed).href && src.base === src.url, src && [src.url, src.base]);
+    const srcs = X.extSourcesHTML(), det = X.extDetailsHTML('G|g_full.json');
+    ck('#102 R20: the Sources HTML has no U+202E and still shows the host', !srcs.includes(RLO) && /good\.example\//.test(srcs), srcs);
+    ck('#102 R20: the details HTML has no U+202E and still shows the host', !det.includes(RLO) && /Manifest<\/span>good\.example\//.test(det), det);
+    // a URL stored before this fix (raw), and a plain source converted from old settings
+    src.url = typed; src.base = typed;
+    const s2 = X.extSourcesHTML(), d2 = X.extDetailsHTML('G|g_full.json');
+    ck('#102 R20: a raw stored manifest URL displays without U+202E, on Sources and in the details',
+      !s2.includes(RLO) && !d2.includes(RLO) && /good\.example\//.test(s2) && /good\.example\//.test(d2), [s2, d2]);
+    const old = {rulesSources: ['https://plain.example/' + RLO + 'nosj.sllep']};
+    X.convertSources(old);
+    X.settings.sources = old.sources;
+    const s3 = X.extSourcesHTML();
+    ck('#102 R20: a plain source converted from old settings displays without U+202E',
+      old.sources.some(x => x.kind === 'plain' && x.url.includes(RLO)) && !s3.includes(RLO) && /plain\.example\//.test(s3), s3);
+  } finally { ctx.fetch = realFetch; X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {}; }
+});
+
 // ---- add new sections above this line ----
 (async () => {
   for (const [name, fn] of SECTIONS) {

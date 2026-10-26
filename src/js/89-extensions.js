@@ -311,19 +311,22 @@ function addSource(url){
   /* de-duplicate on the NORMALISED url: "HTTPS://Host/m.json" and
      "https://host/m.json" are the same source, differing only in case or a
      default port (#102 fix round 1, Minor 2) */
-  let norm=u;try{norm=new URL(u).href;}catch(e){/* keep norm=u; extUrl() already refused anything new URL() can't parse at all */}
+  let norm=extPlain(u);try{norm=new URL(u).href;}catch(e){/* keep norm; extUrl() already refused anything new URL() can't parse at all */}
   const dup=(settings.sources||[]).some(s=>{let sn=s.url;try{sn=new URL(s.url).href;}catch(e){}return sn===norm;});
   if(dup)return Promise.resolve({ok:false,why:"That source is already in the list."});
   /* capped like a pack file, not like a manifest: a plain source may be a
      whole pack (spec §4), well over 64 KB; a manifest over 64 KB is still
      refused, by readManifest()'s own check below (#102 final review I3) */
-  return extFetchBytes(u,EXT_CHECK_MS,EXT_FILE_MAX).then(bytes=>{
+  /* the normalised URL is what is fetched and stored: new URL() percent-
+     encodes a raw U+202E in the path, which drawn as text reversed the rest
+     of the Sources line (#102 re-review 2, Ruling 20) */
+  return extFetchBytes(norm,EXT_CHECK_MS,EXT_FILE_MAX).then(bytes=>{
     let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){return {ok:false,why:"It didn't answer with JSON."};}
-    const src={id:uid(),kind:"plain",url:u,on:true,checked:Date.now(),error:"",manifest:null,base:""};
+    const src={id:uid(),kind:"plain",url:norm,on:true,checked:Date.now(),error:"",manifest:null,base:""};
     let empty=false;
     if(obj&&obj._type==="fieldbook-data"){
       try{src.manifest=readManifest(obj,bytes.length);}catch(e){return {ok:false,why:"Its manifest can't be used: "+e.message+"."};}
-      src.kind="manifest";src.base=u;empty=!src.manifest.packs.length;
+      src.kind="manifest";src.base=norm;empty=!src.manifest.packs.length;
     }else if(!(obj&&typeof obj==="object"&&(isRulesPack(obj)||Array.isArray(obj.include)))){
       return {ok:false,why:"It isn't a Fieldbook manifest or rules file."};
     }
@@ -666,7 +669,7 @@ function extRowHTML(r){
 function extSourcesHTML(){
   const rows=(settings.sources||[]).map(s=>{
     const name=extSourceName(s),note=s.kind==="plain"?"plain file":(s.error?"couldn't check: "+s.error:extAgo(s.checked));
-    const sub=s.kind==="official"?"built in · "+note:(s.kind==="manifest"?String(s.url).replace(/^https?:\/\//i,"")+" · "+note:note);
+    const sub=s.kind==="official"?"built in · "+note:(s.kind==="manifest"?extPlain(String(s.url)).replace(/^https?:\/\//i,"")+" · "+note:note);
     const ctl=s.kind==="official"
       ?`<button type="button" class="switch ${s.on?"on":""}" data-ext-src-on="${esc(s.id)}" role="switch" aria-checked="${s.on?"true":"false"}" aria-label="Use Fieldbook public data"></button>`
       :(s.kind==="plain"?`<button type="button" class="tbtn ext-act" data-ext-src-fetch="${esc(s.id)}">Fetch</button>`:"")+`<button type="button" class="tbtn ext-act" data-ext-src-del="${esc(s.id)}">Remove</button>`;
@@ -702,11 +705,13 @@ function extDetailsHTML(key){
   const ver=(g&&parseDataVer(g.dataVersion)?g.dataVersion:"")||(e?e.version:"");
   const others=src?extPackRows().filter(x=>x.key!==key&&x.offer&&x.offer.source.id===src.id):[];
   const kv=(k,v)=>v?`<div><span class="ext-k">${esc(k)}</span>${v}</div>`:"";
-  const home=src&&src.manifest&&extUrl(src.manifest.homepage);
+  /* the homepage normalised (a raw U+202E percent-encoded) for the link,
+     and stripped for its text (#102 re-review 2, Ruling 20) */
+  const home=(u=>{if(!u)return "";try{return new URL(u).href;}catch(e){return extPlain(u);}})(src&&src.manifest&&extUrl(src.manifest.homepage));
   const box=src?`<div class="ext-box"><b>Source</b>`+
     kv("Name",esc(extSourceName(src)))+
-    kv("Manifest",esc(src.kind==="official"?"the Fieldbook release":String(src.base||src.url).replace(/^https?:\/\//i,"")))+
-    kv("Homepage",home?`<a href="${esc(home)}" target="_blank" rel="noopener">${esc(home.replace(/^https?:\/\//i,""))}</a>`:"")+
+    kv("Manifest",esc(src.kind==="official"?"the Fieldbook release":extPlain(String(src.base||src.url)).replace(/^https?:\/\//i,"")))+
+    kv("Homepage",home?`<a href="${esc(home)}" target="_blank" rel="noopener">${esc(extPlain(home).replace(/^https?:\/\//i,""))}</a>`:"")+
     kv("Checked",esc(extAgo(src.checked,true)))+
     kv("Licence",esc([e&&e.license,e&&e.attribution].filter(Boolean).join(" · ")))+`</div>`:
     `<div class="ext-box"><b>Source</b><div>${esc(g&&g.isFile?"Imported from a file: "+g.label:"Fetched from a source URL")}</div></div>`;
