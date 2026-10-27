@@ -102,7 +102,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'commitChoices', 'asiFeatListHTML', 'asiPanelHTML', 'commitAsiPick', 'removeClass', 'asiPickConfirmed',
   'featPendingIncreases', 'asiRowHidden',
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
-  'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown',
+  'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -7242,6 +7242,24 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = keep.ch; X.rules = keep.rules;
 }
 
+// ---------- #118 final fix M3, M5: a row's short line (invented fixtures, Skilled-like and boon-like)
+{
+  const handy = {name: 'Handy', description: 'Origin feat\nYou pick up three tricks of the trade of your choice.\nRepeatable: Take it as often as you like.'};
+  ck('#118 fix M3: a "Repeatable:" line is never the short line', X.asiFeatShort(handy) === '', X.asiFeatShort(handy));
+  const gated = {name: 'Gated', description: 'General feat\nprerequisites: Level 4+\nPREREQUISITE: none really\nKeen Eye: You notice things.\nRepeatable: Once only.'};
+  ck('#118 fix M3: ...nor a "Prerequisite(s):" line, in any case; the first real benefit is', X.asiFeatShort(gated) === 'Keen Eye', X.asiFeatShort(gated));
+  const keen = {name: 'Keener', description: 'General feat\nBright Eyes: You see far.\nRepeatable: Yes.', ability: [{choose: ['int', 'wis'], amount: 1}]};
+  ck('#118 fix M3: a benefit line before a Repeatable line still leads', X.asiFeatShort(keen) === '+1 Int or Wis · Bright Eyes', X.asiFeatShort(keen));
+  const boonish = {name: 'Boon of Trying', description: 'Epic Boon feat\nSteady Hand: You never slip.', ability: [{choose: ['str', 'dex', 'con', 'int', 'wis', 'cha'], amount: 1, max: 30}]};
+  ck('#118 fix M5: all six abilities read "+1 any"', X.asiFeatShort(boonish) === '+1 any · Steady Hand', X.asiFeatShort(boonish));
+  const shuffled = {name: 'Boon of Order', description: 'Epic Boon feat\nCalm: You rest.', ability: [{choose: ['cha', 'wis', 'int', 'con', 'dex', 'str'], amount: 1}]};
+  ck('#118 fix M5: ...in any order', X.asiFeatShort(shuffled) === '+1 any · Calm', X.asiFeatShort(shuffled));
+  const five = {name: 'Boon of Five', description: 'Epic Boon feat\nLess: Nearly all.', ability: [{choose: ['str', 'dex', 'con', 'int', 'wis'], amount: 1}]};
+  ck('#118 fix M5: five abilities are still listed', X.asiFeatShort(five) === '+1 Str or Dex or Con or Int or Wis · Less', X.asiFeatShort(five));
+  const fixed = {name: 'Sturdy', description: 'General feat\nTough: You last.', ability: [{con: 1}]};
+  ck('#118 fix M5: a fixed increase is unchanged', X.asiFeatShort(fixed) === '+1 Con · Tough', X.asiFeatShort(fixed));
+}
+
 // ---------- #118 species feats and level 19
 {
   const keep = {ch: X.character, rules: X.rules, conf: state.confirm};
@@ -7406,6 +7424,52 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#118 migrate keeps well-formed records only', Array.isArray(m.levelLog) && m.levelLog.length === 1);
   ck('#118 a fresh character has an empty level log', Array.isArray(X.blankChar().levelLog) && X.blankChar().levelLog.length === 0);
   ck('#118 a sheet saved before the log migrates to []', Array.isArray(X.migrate({abilities: {}}).levelLog) && X.migrate({abilities: {}, levelLog: 'junk'}).levelLog.length === 0);
+  /* final-fix M2: the three malformed shapes the review used, each of which made
+     Level down throw. migrate() normalizes them and keeps the record's other keys. */
+  {
+    const base = () => ({class: 'Fighter', level: 8, hp: 7, abilities: {}, extra: 'kept', features: [{id: 'm1', name: 'Feat: Athlete', mine: 1}]});
+    const shapes = [
+      Object.assign(base(), {features: [{id: 'm1', name: 'Feat: Athlete', grants: 'oops'}]}),
+      Object.assign(base(), {grants: {a: 1}}),
+      Object.assign(base(), {features: [{id: 'm1', name: 'Feat: Athlete', grants: [null, {sid: 'class:Fighter', type: 'skill', key: 'athletics'}]}]}),
+      Object.assign(base(), {hp: 'NaN', subclass: {x: 1}, features: [null, 'x', {name: 'no id'}, {id: 7, name: 'number id'}, {id: 'm1', name: 'Feat: Athlete'}], grants: [null, 3, {sid: 'class:Fighter', type: 'skill', key: 'survival'}]}),
+    ];
+    shapes.forEach((sh, i) => {
+      const m2 = X.migrate(Object.assign(X.blankChar(), {levelLog: [sh]}));
+      const r = m2.levelLog[0];
+      ck('#118 fix M2 shape ' + i + ': migrate keeps the record, normalized', r && r.extra === 'kept' && Array.isArray(r.grants) && r.features.length === 1 && r.features[0].id === 'm1'
+         && Array.isArray(r.features[0].grants) && r.features[0].grants.every(g => g && typeof g.sid === 'string') && r.grants.every(g => g && typeof g.key === 'string')
+         && typeof r.hp === 'number' && typeof r.subclass === 'string', r);
+      const again = X.migrate(JSON.parse(JSON.stringify(m2)));
+      ck('#118 fix M2 shape ' + i + ': the record survives a save→load round trip unchanged', JSON.stringify(again.levelLog) === JSON.stringify(m2.levelLog));
+      if (i === 1) ck('#118 fix M2: unknown keys on a kept feature survive', r.features[0].mine === 1, r.features[0]);
+      // Level down opens and applies, from the migrated record and from the raw one
+      [r, sh].forEach((rec, j) => {
+        X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
+        X.character.hp.max = 68; X.character.hp.cur = 68;
+        X.character.features.push({id: 'm1', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}});
+        X.character.levelLog = [rec];
+        let html = '', ok = true;
+        try { html = X.levelDownHTML(rec, X.character.classes[0]); X.applyLevelDown(0, {hp: true, features: ['m1']}); } catch (e) { ok = false; html = e.message; }
+        ck('#118 fix M2 shape ' + i + (j ? ' (raw, not migrated)' : '') + ': Level down opens and applies without throwing', ok && /Fighter 8 → 7/.test(html)
+           && X.character.classes[0].level === 7 && !X.character.features.some(x => x.id === 'm1') && X.character.levelLog.length === 0, html);
+      });
+    });
+  }
+  /* final-fix M1: a dialog that no longer matches the sheet changes nothing */
+  {
+    X.character = JSON.parse(JSON.stringify(before)); X.character.classes[0].level = 8; X.character.level = 8; X.character.hp.max = 68; X.character.hp.cur = 68;
+    X.character.features.push({id: 'f1', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}});
+    const r8 = Object.assign({}, rec, {features: [{id: 'f1', name: 'Feat: Athlete', grants: []}]});
+    X.character.levelLog = [r8];
+    const shown = {entry: X.character.classes[0], level: 8, rec: r8};
+    X.character = JSON.parse(JSON.stringify(X.character));   /* as undo does: a new object */
+    const was = JSON.stringify(X.character);
+    ck('#118 fix M1: a stale dialog applies nothing', X.applyLevelDown(0, {hp: true, features: ['f1']}, shown) === false && JSON.stringify(X.character) === was);
+    const fresh = {entry: X.character.classes[0], level: 8, rec: X.character.levelLog[0]};
+    ck('#118 fix M1: ...a level that moved under the dialog applies nothing', X.applyLevelDown(0, {hp: true, features: ['f1']}, Object.assign({}, fresh, {level: 9})) === false && JSON.stringify(X.character) === was);
+    ck('#118 fix M1: ...and the matching dialog still applies', X.applyLevelDown(0, {hp: true, features: ['f1']}, fresh) === true && X.character.classes[0].level === 7 && X.character.hp.max === 61 && X.character.levelLog.length === 0);
+  }
   // switching character ends Undo
   X._undo = {copy: '{}', at: 1, sig: null, cls: 'Fighter', level: 8};
   ctx.luAbandon();
@@ -7531,6 +7595,35 @@ async function t118EndToEnd() {
     opened = [];
     ctx.doLevelDown(0);
     ck('#118 level down without a record lowers only the number, with no dialog', X.character.classes[0].level === 6 && opened.length === 0);
+
+    /* final-fix M1: the level-up toast's Undo while Level down is open. Before
+       the fix the dialog stayed open over the restored sheet, and its Level down
+       then removed level 7 (the older record) with level 8's ticks. */
+    fresh(); opened = []; handlers = {}; toasts = [];
+    X.character.levelLog = [{at: 1, class: 'Fighter', level: 7, hp: 6, features: [], abilities: {}, subclass: '', grants: [], slots: {before: {}, after: {}}}];
+    ctx.doLevelUp(0); ctx.luSetHP('7'); ctx.luFinish(); ctx.closeModal();
+    X.commitChoices('Fighter', [{type: 'asi', pick: 'Athlete', plus: ['str']}, {type: 'skill', sid: 'class:Fighter', keys: ['athletics']}], null);
+    await tick();
+    const ut = toasts.find(t => /Fighter is now level 8/.test(t.msg));
+    opened = [];
+    ctx.doLevelDown(0);
+    ck('#118 fix M1: Level down is open over the level-up', open && opened.length === 1 && /Fighter 8 → 7\./.test(opened[0].h) && ut && X.undoLevelUpAvailable() === true);
+    const staleGo = handlers.ldGo;
+    const ft8 = X.character.features.filter(f => f.origin && f.origin.level === 8).map(f => ({dataset: {ldFt: f.id}, checked: true}));
+    toasts = [];
+    ut.action.run();
+    ck('#118 fix M1: the toast\'s Undo closes the dialog and restores level 7', !open && X.character.classes[0].level === 7 && X.num(X.character.hp.max) === 61
+       && X.character.levelLog.length === 1 && X.character.levelLog[0].level === 7 && toasts.some(t => t.msg === 'Level-up undone'), toasts);
+    await tick();
+    ck('#118 fix M1: closing from inside Undo settles nothing and records nothing', X.character.levelLog.length === 1 && !toasts.some(t => /is now level/.test(t.msg)));
+    const snap = JSON.stringify(X.character);
+    toasts = [];
+    ctx.document.querySelector = q => /data-ld-hp/.test(q) ? {checked: true} : keep.qs(q);
+    ctx.document.querySelectorAll = q => /data-ld-ft/.test(q) ? ft8 : keep.qsa(q);
+    staleGo();
+    ctx.document.querySelector = keep.qs; ctx.document.querySelectorAll = keep.qsa;
+    ck('#118 fix M1: a stale Level down click changes nothing, and says why', JSON.stringify(X.character) === snap && X.character.classes[0].level === 7
+       && toasts.some(t => /sheet changed/.test(t.msg)) && !toasts.some(t => /is now level 6/.test(t.msg)), toasts);
   } finally {
     ctx.setTimeout = keep.st; ctx.clearTimeout = keep.ct; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
     ctx.document.getElementById = keep.gid; ctx.document.querySelector = keep.qs; ctx.document.querySelectorAll = keep.qsa;

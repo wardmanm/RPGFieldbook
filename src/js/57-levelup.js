@@ -222,7 +222,14 @@ function undoLevelUp(opts){
   if(!_undo)return false;
   if(!(opts&&opts.force)&&!undoLevelUpAvailable()){toast("Undo is no longer available: the sheet has changed since the level-up.");return false;}
   let c;try{c=JSON.parse(_undo.copy);}catch(e){_undo=null;_luActive=false;return false;}
-  character=c;_undo=null;_luActive=false;
+  _undo=null;_luActive=false;
+  /* Any window still open is about the sheet being replaced: the toast stays
+     reachable over a modal, and a Level down or edit dialog left open would
+     act on the old sheet. Closed after the reset above, so the closeModal()
+     hook into luMaybeSettle finds nothing to settle and records nothing. */
+  const m=document.getElementById("modal");
+  if(m&&m.classList&&m.classList.contains("open")){_lu=null;closeModal();}
+  character=c;
   renderAll();recompute();scheduleSave();toast("Level-up undone");return true;
 }
 /* The card's Undo: the level-up is dropped first, so closing the card neither
@@ -243,7 +250,7 @@ function lvFeatureGrantKeys(f){
   (d.saves||[]).forEach(ab=>out.add("save|"+String(ab).toLowerCase()));
   return out;
 }
-const lvGrantKey=g=>g.sid+"|"+g.type+"|"+g.key;
+const lvGrantKey=g=>g?g.sid+"|"+g.type+"|"+g.key:"";   /* null-safe: a record can come from an imported file */
 /* What one level-up gave, by comparing the character before it (b) with after
    it (a). A grant new at this level is tied to a feature only when exactly one
    of the level's new features grants that proficiency outright; level down

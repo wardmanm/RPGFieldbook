@@ -151,8 +151,16 @@ function migrate(s){
   base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
   base.hiddenTabs=cleanHiddenTabs(s.hiddenTabs);   /* #52 */
   base.featsAllowed=typeof s.featsAllowed==="boolean"?s.featsAllowed:true;   /* #118 */
-  /* #118: well-formed level records only; the rest are dropped */
-  base.levelLog=(Array.isArray(s.levelLog)?s.levelLog:[]).filter(r=>r&&typeof r==="object"&&!Array.isArray(r)&&typeof r.class==="string"&&num(r.level)>0&&Array.isArray(r.features));
+  /* #118: well-formed level records only; the rest are dropped. A kept record
+     keeps every key, and the parts Level down reads are made safe: features
+     objects with a string id (lvRecFeats), each with a grants array; grants
+     objects with string sid/type/key; hp a number; subclass a string. */
+  const lvG=x=>lvRecGrants(x).map(g=>Object.assign({},g,{sid:String(g.sid??""),type:String(g.type??""),key:String(g.key??"")}));
+  base.levelLog=(Array.isArray(s.levelLog)?s.levelLog:[]).filter(r=>r&&typeof r==="object"&&!Array.isArray(r)&&typeof r.class==="string"&&num(r.level)>0&&Array.isArray(r.features))
+    .map(r=>Object.assign({},r,{
+      features:lvRecFeats(r).map(f=>Object.assign({},f,{name:String(f.name??""),grants:lvG(f.grants)})),
+      grants:lvG(r.grants),hp:Math.max(0,num(r.hp)),subclass:typeof r.subclass==="string"?r.subclass:"",
+      abilities:r.abilities&&typeof r.abilities==="object"&&!Array.isArray(r.abilities)?r.abilities:{}}));
   /* #91: the party and the fight; out of a fight there is none */
   base.party=cleanParty(s.party);
   base.combatants=cleanCombatants(s.combatants,base.combatActive===true);

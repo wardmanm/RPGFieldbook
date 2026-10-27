@@ -304,8 +304,10 @@ normal.
   "choose": 1, "from": ["Insight","Perception","Survival"] }`. Put it on the race (or inside a
   trait) rather than baking a fixed `skills` list when the rules let the player pick.
 - **`feat`** *(optional, #118)* — a species that grants a fixed feat the way a background does,
-  e.g. `"feat": "Alert"`. If the name matches a `feats` entry, its effects (and its ability
-  increase, §6.6) are applied.
+  e.g. `"feat": "Alert"`. If the name matches a `feats` entry, its effects are applied. Its
+  `ability` increase (§6.6), if it has one, is not: the app asks for that only when the feat is
+  picked from a list. The player raises the score by hand on the Sheet, or the pack author puts
+  the increase in the feat's `effects` so it is applied with the rest.
 - **A `feat` choice** in `choices[]` offers an open or filtered pick, the same shape backgrounds
   and classes use (§5): `{ "type": "feat", "category": "origin", "label": "An Origin feat of your
   choice" }` (Human's Versatile, from 5etools' `anyFromCategory`) or `{ "type": "feat", "label":

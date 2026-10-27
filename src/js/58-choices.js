@@ -180,12 +180,15 @@ function featBodyLines(f){const l=String((f&&f.description)||"").split("\n");ret
 /* Search hides a row whose name doesn't hold the text — never the pressed
    one, or Done would commit a pick the player can't see. DOM-free. */
 function asiRowHidden(name,q,pressed){q=String(q||"").trim().toLowerCase();return !!q&&!pressed&&String(name||"").toLowerCase().indexOf(q)<0;}
-/* A row's short line: its increase ("+1 Str or Dex") and its first benefit's
-   name, read off the first "Name: …" line after the category line. */
+/* A row's short line: its increase ("+1 Str or Dex", or "+1 any" when all six
+   abilities are allowed, as an Epic Boon's are) and its first benefit's name,
+   read off the first "Name: …" line after the category line. "Repeatable:" and
+   "Prerequisite:" lines are rules about the feat, not a benefit (Skilled). */
 function asiFeatShort(f){
   const ac=featAbilityChoices(f)[0];const ab=k=>featAbilName(k).slice(0,3);
-  const plus=ac?(ac.fixed?Object.keys(ac.fixed).map(k=>"+"+ac.fixed[k]+" "+ab(k)).join(", "):"+"+ac.amount+" "+ac.choose.map(ab).join(" or ")):"";
-  const line=featBodyLines(f).find(l=>/^[^:]{1,40}:/.test(l))||"";
+  const any=ac&&!ac.fixed&&FEAT_ABIL_KEYS.every(k=>ac.choose.includes(k));
+  const plus=ac?(ac.fixed?Object.keys(ac.fixed).map(k=>"+"+ac.fixed[k]+" "+ab(k)).join(", "):"+"+ac.amount+" "+(any?"any":ac.choose.map(ab).join(" or "))):"";
+  const line=featBodyLines(f).find(l=>/^[^:]{1,40}:/.test(l)&&!/^\s*(Repeatable|Prerequisites?)\s*:/i.test(l))||"";
   return [plus,line.split(":")[0].trim()].filter(Boolean).join(" · ");
 }
 /* The rows alone, so Show all can repaint them without rebuilding the search

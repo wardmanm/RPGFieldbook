@@ -322,8 +322,7 @@ function doLevelDown(idx){
       const hpBox=document.querySelector("#mBody [data-ld-hp]");
       const ft=Array.from(document.querySelectorAll("#mBody [data-ld-ft]:checked")).map(b=>b.dataset.ldFt).filter(Boolean);
       closeModal();
-      applyLevelDown(idx,{hp:!!(hpBox&&hpBox.checked),features:ft});
-      toast(`${entry.name} is now level ${newL}`);
+      if(applyLevelDown(idx,{hp:!!(hpBox&&hpBox.checked),features:ft},{entry,level:newL+1,rec}))toast(`${entry.name} is now level ${newL}`);
     });
   };
   if(idx!==undefined){if(character.classes[idx])proceed(idx);return;}
@@ -339,6 +338,12 @@ function doLevelDown(idx){
    names exactly — the hit points and that level's features, with any grant
    tied to a feature — is ticked for removal; what changes by itself is said;
    the rest (the subclass, other grants, spells) is listed to adjust by hand. */
+/* A record's features and grants as the dialog and applyLevelDown use them:
+   migrate() normalizes an imported record (71-char-io.js), and these keep the
+   two tolerant of anything that still gets through. A feature needs a string
+   id, or it would match a sheet feature that has none. */
+function lvRecFeats(rec){return (Array.isArray(rec&&rec.features)?rec.features:[]).filter(f=>f&&typeof f==="object"&&!Array.isArray(f)&&typeof f.id==="string"&&!!f.id);}
+function lvRecGrants(x){return (Array.isArray(x)?x:[]).filter(g=>g&&typeof g==="object"&&!Array.isArray(g));}
 function levelRecordFor(entry){
   const L=num(entry&&entry.level),log=Array.isArray(character.levelLog)?character.levelLog:[];
   for(let i=log.length-1;i>=0;i--)if(log[i]&&log[i].class===entry.name&&num(log[i].level)===L)return log[i];
@@ -351,18 +356,18 @@ function lvGrantLabel(g){
 }
 function levelDownHTML(rec,entry){
   const L=num(entry.level),hpMax=num(character.hp.max);
-  const have=new Set((character.grants||[]).map(lvGrantKey));
-  const feats=(rec.features||[]).filter(f=>f&&(character.features||[]).some(x=>x.id===f.id));
-  const gone=(rec.features||[]).length-feats.length;
-  const tied=new Set();feats.forEach(f=>(f.grants||[]).forEach(g=>tied.add(lvGrantKey(g))));
+  const have=new Set(lvRecGrants(character.grants).map(lvGrantKey));
+  const all=lvRecFeats(rec),feats=all.filter(f=>(character.features||[]).some(x=>x&&x.id===f.id));
+  const gone=all.length-feats.length;
+  const tied=new Set();feats.forEach(f=>lvRecGrants(f.grants).forEach(g=>tied.add(lvGrantKey(g))));
   const row=f=>{
-    const live=(character.features||[]).find(x=>x.id===f.id)||{};
+    const live=(character.features||[]).find(x=>x&&x.id===f.id)||{};
     const ab=(live.effects||[]).map(e=>{const m=/^ability\.(\w+)$/.exec(String((e&&e.target)||""));return m&&num(e.value)?(num(e.value)>0?"+":"")+num(e.value)+" "+featAbilName(m[1]):"";}).filter(Boolean).join(", ");
-    const gr=(f.grants||[]).filter(g=>have.has(lvGrantKey(g))).map(lvGrantLabel).join(", ");
+    const gr=lvRecGrants(f.grants).filter(g=>have.has(lvGrantKey(g))).map(lvGrantLabel).join(", ");
     return `<label class="opt"><input type="checkbox" data-ld-ft="${esc(f.id)}" checked> ${esc(f.name)}${ab?" ("+esc(ab)+")":""}${gr?", and the proficiency it gave: "+esc(gr):""}</label>`;
   };
-  const byHand=[rec.subclass?"the subclass "+rec.subclass:"",
-    ...(rec.grants||[]).filter(g=>g&&have.has(lvGrantKey(g))&&!tied.has(lvGrantKey(g))).map(lvGrantLabel)].filter(Boolean);
+  const byHand=[typeof rec.subclass==="string"&&rec.subclass?"the subclass "+rec.subclass:"",
+    ...lvRecGrants(rec.grants).filter(g=>have.has(lvGrantKey(g))&&!tied.has(lvGrantKey(g))).map(lvGrantLabel)].filter(Boolean);
   return `<p><b>${esc(entry.name)} ${esc(String(L))} → ${esc(String(L-1))}.</b> Level ${esc(String(L))} gave you:</p>`+
     ((num(rec.hp)>0||feats.length)?`<p class="hint">Fieldbook can remove these for you:</p>`:"")+
     (num(rec.hp)>0?`<label class="opt"><input type="checkbox" data-ld-hp checked> +${esc(String(num(rec.hp)))} hit points (max HP ${esc(String(hpMax))} → ${esc(String(Math.max(1,hpMax-num(rec.hp))))})</label>`:"")+
@@ -373,9 +378,18 @@ function levelDownHTML(rec,entry){
     `<div class="m-actions"><button type="button" class="tbtn" id="ldCancel">Cancel</button><button type="button" class="tbtn primary" id="ldGo">Level down</button></div>`;
 }
 /* `remove` is what was ticked: {hp, features:[id]}, or null to lower only the
-   number (a level with no record). A record is deleted once it is acted on. */
-function applyLevelDown(idx,remove){
-  const entry=character.classes[idx];if(!entry)return false;
+   number (a level with no record). A record is deleted once it is acted on.
+   `expect`, from the dialog: the class entry, level and record it showed. The
+   sheet can change under an open dialog (the level-up toast's Undo stays
+   reachable over it and swaps `character`), and acting then would remove an
+   older level with this one's ticks; so on any mismatch nothing changes. */
+function applyLevelDown(idx,remove,expect){
+  const entry=character.classes[idx];
+  if(expect&&(!entry||expect.entry!==entry||num(expect.level)!==num(entry.level)||expect.rec!==levelRecordFor(entry))){
+    toast("The sheet changed while Level down was open, so nothing was changed. Open Level down again.");
+    return false;
+  }
+  if(!entry)return false;
   const L=num(entry.level);if(L<=1)return false;
   const rec=levelRecordFor(entry);
   if(rec&&remove){
@@ -386,7 +400,7 @@ function applyLevelDown(idx,remove){
     const ids=new Set(remove.features||[]);
     if(ids.size){
       const drop=new Set();
-      (rec.features||[]).forEach(f=>{if(f&&ids.has(f.id)&&(character.features||[]).some(x=>x.id===f.id))(f.grants||[]).forEach(g=>drop.add(lvGrantKey(g)));});
+      lvRecFeats(rec).forEach(f=>{if(ids.has(f.id)&&(character.features||[]).some(x=>x&&x.id===f.id))lvRecGrants(f.grants).forEach(g=>drop.add(lvGrantKey(g)));});
       removeFeaturesWhere(f=>ids.has(f.id));
       if(drop.size)removeGrants(g=>drop.has(lvGrantKey(g)));
     }
