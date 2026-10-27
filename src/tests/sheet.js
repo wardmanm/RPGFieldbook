@@ -100,6 +100,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'newTradeDraft', 'tradeBalance', 'tradeHTML', 'completeTrade',
   'featCategory', 'featPrereq', 'featUnmet', 'featAbilityChoices', 'featOfferable', 'featTaken', 'abilFinal',
   'commitChoices', 'asiFeatListHTML', 'asiPanelHTML', 'commitAsiPick', 'removeClass', 'asiPickConfirmed',
+  'featPendingIncreases', 'asiRowHidden',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -7197,6 +7198,46 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.removeClass(0);
   ck('#118 removing the class removes the feat and the ASI', !X.character.features.some(x => /Athlete|Great Weapon|Ability Score Improvement/.test(x.name)));
   X.character = keep.ch; X.rules = keep.rules; state.confirm = keep.conf;
+}
+
+// ---------- #118 Task 3 fix round 1
+{
+  const keep = {ch: X.character, rules: X.rules};
+  X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
+  X.rules = Object.assign({}, X.rules, {feats: [
+    // invented: its own effects already carry the +1 its text names (the Humblewood shape)
+    {name: 'Branch Runner', description: 'You move through canopies with ease.\nIncrease your Dexterity score by 1, to a maximum of 20.\nYou ignore difficult terrain made of branches.', effects: [{target: 'ability.dex', value: 1}]},
+    // invented: a choose where one option is already raised by its effects
+    {name: 'Tidecaller', description: 'General feat\nIncrease your Wisdom or Charisma score by 1.', effects: [{target: 'ability.wis', value: 1}]},
+    // invented: no category line at all
+    {name: 'Hearthward', description: 'Your home fire keeps you steady.\nWarmth: You have advantage against cold.', ability: [{choose: ['con', 'wis'], amount: 1}]}]});
+  ck('#118 fix: an increase the feat\'s own effects already carry is not pending', X.featPendingIncreases(X.rules.feats[0]).length === 0, X.featPendingIncreases(X.rules.feats[0]));
+  ck('#118 fix: a choose with an option already raised counts as satisfied', X.featPendingIncreases(X.rules.feats[1]).length === 0);
+  ck('#118 fix: a pending increase keeps its featAbilityChoices index', X.featPendingIncreases(X.rules.feats[2]).length === 1 && X.featPendingIncreases(X.rules.feats[2])[0].i === 0);
+  const bp = X.asiPanelHTML({type: 'asi'}, 0, 'Branch Runner');
+  ck('#118 fix: no +1 control for an increase the effects already give', !/data-ft-plus/.test(bp), bp);
+  ck('#118 fix: no +1 control for a satisfied choose', !/data-ft-plus/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Tidecaller')));
+  X.commitAsiPick({type: 'asi', pick: 'Branch Runner', plus: []}, {kind: 'class', class: 'Fighter', level: 8}, []);
+  const br = X.character.features.find(x => x.name === 'Feat: Branch Runner');
+  ck('#118 fix: exactly one dex +1 on the feature', br && br.effects.filter(e => e.target === 'ability.dex').length === 1 && br.effects.filter(e => e.target === 'ability.dex')[0].value === 1, br && br.effects);
+  X.commitAsiPick({type: 'asi', pick: 'Tidecaller', plus: ['cha']}, {kind: 'class', class: 'Fighter', level: 8}, []);
+  const tc = X.character.features.find(x => x.name === 'Feat: Tidecaller');
+  ck('#118 fix: a satisfied choose adds nothing more', tc && tc.effects.length === 1 && tc.effects[0].target === 'ability.wis', tc && tc.effects);
+  // 2: the first line is dropped only when it is a category line
+  ck('#118 fix: a feat with no category line keeps its first line in the panel', /Branch Runner|canopies/.test(bp) && /canopies with ease/.test(bp), bp);
+  ck('#118 fix: ...and in the row\'s short line (its first benefit)', /\+1 Con or Wis · Warmth/.test(X.asiFeatListHTML({type: 'asi'}, 0, {showAll: true})));
+  ck('#118 fix: a category line is still dropped', !/General feat/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Tidecaller')));
+  // 3: no pick commits nothing; an ASI with no valid ability is refused
+  const n0 = X.character.features.length;
+  X.commitAsiPick({type: 'asi', pick: null, mode: '2', a: undefined}, {kind: 'race', name: 'Human'}, []);
+  ck('#118 fix: pick null commits nothing', X.character.features.length === n0);
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '2', a: undefined}, {kind: 'class', class: 'Fighter', level: 4}, []);
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '1', a: 'str', b: 'nope'}, {kind: 'class', class: 'Fighter', level: 4}, []);
+  ck('#118 fix: an ASI without a valid ability is refused', X.character.features.length === n0 && !X.character.features.some(f => (f.effects || []).some(e => /undefined|nope/.test(e.target))));
+  // 4: search never hides the pressed row
+  ck('#118 fix: search hides a non-matching row', X.asiRowHidden('Grappler', 'lan', false) === true && X.asiRowHidden('Lantern Bearer', 'lan', false) === false && X.asiRowHidden('Grappler', '', false) === false);
+  ck('#118 fix: ...but never the pressed one', X.asiRowHidden('Grappler', 'lan', true) === false);
+  X.character = keep.ch; X.rules = keep.rules;
 }
 
 ck.done();

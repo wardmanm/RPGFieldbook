@@ -147,12 +147,31 @@ function asiControlsHTML(ci,label){
       <div style="display:flex;gap:14px;margin-bottom:6px"><label class="opt" style="margin:0"><input type="radio" name="asimode-${esc(ci)}" data-asi-mode value="2" checked>+2 to one</label><label class="opt" style="margin:0"><input type="radio" name="asimode-${esc(ci)}" data-asi-mode value="1">+1 to two</label></div>
       <div class="g2"><select data-asi-a aria-label="Ability">${ABIL.map(([k,l])=>`<option value="${esc(k)}">${l}</option>`).join("")}</select><select data-asi-b aria-label="Second ability">${ABIL.map(([k,l])=>`<option value="${esc(k)}">${l}</option>`).join("")}</select></div>`;
 }
+/* The increases the step still has to add: featAbilityChoices() minus what
+   the feat's own `effects` already raise — a pack can carry the +1 there AND
+   name it in the text the fallback reads (Humblewood's Arboreal Acrobat), and
+   adding it again gave +2. A fixed increase loses the abilities already raised;
+   a choose with any of its options already raised counts as made. Each keeps
+   `i`, its featAbilityChoices() index, which is what a "+1 to:" chip answers. */
+function featPendingIncreases(f){
+  const have=new Set(((f&&Array.isArray(f.effects))?f.effects:[]).map(e=>{const m=/^ability\.(\w+)$/.exec(String((e&&e.target)||""));return m&&num(e.value)>0?m[1]:"";}).filter(Boolean));
+  return featAbilityChoices(f).map((a,i)=>{
+    if(a.fixed){const fixed=Object.fromEntries(Object.entries(a.fixed).filter(([k])=>!have.has(k)));return Object.keys(fixed).length?{fixed,i}:null;}
+    return a.choose.some(k=>have.has(k))?null:Object.assign({},a,{i});
+  }).filter(Boolean);
+}
+/* The description below its category line — and all of it when the first
+   line is not one: a feat with no header keeps its opening sentence. */
+function featBodyLines(f){const l=String((f&&f.description)||"").split("\n");return featCategory(f)?l.slice(1):l;}
+/* Search hides a row whose name doesn't hold the text — never the pressed
+   one, or Done would commit a pick the player can't see. DOM-free. */
+function asiRowHidden(name,q,pressed){q=String(q||"").trim().toLowerCase();return !!q&&!pressed&&String(name||"").toLowerCase().indexOf(q)<0;}
 /* A row's short line: its increase ("+1 Str or Dex") and its first benefit's
    name, read off the first "Name: …" line after the category line. */
 function asiFeatShort(f){
   const ac=featAbilityChoices(f)[0];const ab=k=>featAbilName(k).slice(0,3);
   const plus=ac?(ac.fixed?Object.keys(ac.fixed).map(k=>"+"+ac.fixed[k]+" "+ab(k)).join(", "):"+"+ac.amount+" "+ac.choose.map(ab).join(" or ")):"";
-  const line=String(f.description||"").split("\n").slice(1).find(l=>/^[^:]{1,40}:/.test(l))||"";
+  const line=featBodyLines(f).find(l=>/^[^:]{1,40}:/.test(l))||"";
   return [plus,line.split(":")[0].trim()].filter(Boolean).join(" · ");
 }
 /* The rows alone, so Show all can repaint them without rebuilding the search
@@ -173,10 +192,10 @@ function asiFeatListHTML(ch,ci,opts){
 function asiPanelHTML(ch,ci,pick){
   if(pick==="__asi__")return asiControlsHTML(ci,false);
   const f=asiFeatDef(pick);if(!f)return "";
-  const body=String(f.description||"").split("\n").slice(1).join("\n");
-  const plus=featAbilityChoices(f).map((a,i)=>a.fixed
+  const body=featBodyLines(f).join("\n");
+  const plus=featPendingIncreases(f).map(a=>a.fixed
     ?`<p class="hint">${esc(Object.entries(a.fixed).map(([k,v])=>"+"+v+" "+featAbilName(k)).join(", "))}</p>`
-    :`<div class="ft-plus" role="group" aria-label="+${esc(String(a.amount))} to">+${esc(String(a.amount))} to: ${a.choose.map((k,j)=>`<button type="button" class="ft-chip${j===0?" on":""}" data-ft-plus="${esc(String(i))}" data-k="${esc(k)}" aria-pressed="${j===0?"true":"false"}">${esc(featAbilName(k))}</button>`).join("")}</div>`).join("");
+    :`<div class="ft-plus" role="group" aria-label="+${esc(String(a.amount))} to">+${esc(String(a.amount))} to: ${a.choose.map((k,j)=>`<button type="button" class="ft-chip${j===0?" on":""}" data-ft-plus="${esc(String(a.i))}" data-k="${esc(k)}" aria-pressed="${j===0?"true":"false"}">${esc(featAbilName(k))}</button>`).join("")}</div>`).join("");
   return `<div class="ft-desc">${body.split(/\n\s*\n|\n/).filter(s=>s.trim()).map(p=>`<p>${esc(p)}</p>`).join("")}</div>${plus}`;
 }
 /* Binds every ASI step on screen. Delegated to each step's own .choice div,
@@ -193,9 +212,11 @@ function wireAsiFeats(list){
     const pick=key=>{
       rows.querySelectorAll("[data-ft-pick]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.ftPick===key?"true":"false"));
       panel.innerHTML=key?asiPanelHTML(ch,ci,key):"";
+      filter();
     };
-    const filter=()=>{const q=String(search?search.value:"").trim().toLowerCase();
-      rows.querySelectorAll("[data-ft-pick]").forEach(b=>{const nm=b.querySelector(".ft-nm b");b.hidden=!!q&&String(nm?nm.textContent:"").toLowerCase().indexOf(q)<0;});};   /* the name only: a tag's "Fighting Style" is not a match for "st" */
+    /* the name only: a tag's "Fighting Style" is not a match for "st" */
+    function filter(){const q=search?search.value:"";
+      rows.querySelectorAll("[data-ft-pick]").forEach(b=>{const nm=b.querySelector(".ft-nm b");b.hidden=asiRowHidden(nm?nm.textContent:"",q,b.getAttribute("aria-pressed")==="true");});}
     div.addEventListener("click",e=>{
       const r=e.target.closest("[data-ft-pick]");
       if(r&&div.contains(r)){if(r.getAttribute("aria-pressed")!=="true")pick(r.dataset.ftPick);return;}
@@ -228,7 +249,10 @@ function asiPickConfirmed(picks){
    the feat, granted with `origin` so it reverts with whatever gave it — a class
    level here, a species or background (Task 4) through the same path. */
 function commitAsiPick(sel,origin,pending){
-  if(!sel.pick||sel.pick==="__asi__"){
+  if(sel.pick==null||sel.pick==="")return;   /* no row pressed (a category list): nothing to grant */
+  if(sel.pick==="__asi__"){
+    /* never an `ability.undefined` effect */
+    if(!FEAT_ABIL_KEYS.includes(sel.a)||(sel.mode==="1"&&!FEAT_ABIL_KEYS.includes(sel.b)))return;
     const fx=sel.mode==="1"?[{target:"ability."+sel.a,value:1},{target:"ability."+sel.b,value:1}]:[{target:"ability."+sel.a,value:2}];
     addFeatureFromDef({name:"Ability Score Improvement",description:"Gained from leveling "+((origin&&origin.class)||"")+".",effects:fx},origin);return;
   }
@@ -238,9 +262,9 @@ function commitAsiPick(sel,origin,pending){
   const ft=(character.features||[]).slice().reverse().find(x=>x.name==="Feat: "+(fd?fd.name:sel.pick));
   if(!ft)return;
   const fx=[];
-  featAbilityChoices(fd).forEach((a,i)=>{
+  featPendingIncreases(fd).forEach(a=>{
     if(a.fixed)Object.entries(a.fixed).forEach(([k,v])=>fx.push({target:"ability."+k,value:v}));
-    else{const k=(sel.plus||[])[i];const key=a.choose.includes(k)?k:a.choose[0];if(key)fx.push({target:"ability."+key,value:a.amount});}
+    else{const k=(sel.plus||[])[a.i];const key=a.choose.includes(k)?k:a.choose[0];if(key)fx.push({target:"ability."+key,value:a.amount});}
   });
   /* a new array: the feature's effects may still be the rules entry's own */
   if(fx.length)ft.effects=(Array.isArray(ft.effects)?ft.effects:[]).concat(fx);
@@ -451,11 +475,12 @@ function gatherChoices(){
     if(t==="skill")out.push({type:"skill",sid:div.dataset.sid||"",keys:Array.from(div.querySelectorAll('[data-skill-opt]:checked:not(:disabled)')).map(cb=>cb.dataset.skillOpt).filter(Boolean)});
     else if(t==="subclass"){const r=div.querySelector('[data-sub-opt]:checked');out.push({type:"subclass",name:r?r.value:null});}
     else if(t==="asi"){
-      /* #118: the pressed row (none drawn with Feats allowed off: the ASI), the
+      /* #118: the pressed row — with no rows drawn (Feats allowed off) the ASI,
+         with rows but none pressed (a category list) null, no pick — the
          ASI's controls when it is the pick, and each "+1 to:" answer at the index
          of its featAbilityChoices() entry — a fixed increase draws no group, so
          reading the groups in order would shift the ones after it. */
-      const pk=div.querySelector('[data-ft-pick][aria-pressed="true"]');const pick=pk?pk.dataset.ftPick:"__asi__";
+      const pk=div.querySelector('[data-ft-pick][aria-pressed="true"]');const pick=pk?pk.dataset.ftPick:(div.querySelector("[data-ft-pick]")?null:"__asi__");
       const mode=(div.querySelector('[data-asi-mode]:checked')||{}).value||"2";
       const plus=[];div.querySelectorAll('[data-ft-plus][aria-pressed="true"]').forEach(c=>{plus[num(c.dataset.ftPlus)]=c.dataset.k;});
       out.push({type:"asi",pick,mode,a:(div.querySelector('[data-asi-a]')||{}).value,b:(div.querySelector('[data-asi-b]')||{}).value,plus,sid:div.dataset.sid||""});}
