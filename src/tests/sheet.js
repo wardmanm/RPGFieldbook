@@ -7689,7 +7689,7 @@ async function t118Warn() {
       setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
       addEventListener(t, fn) { (this._on[t] = this._on[t] || []).push(fn); },
       /* a click bubbles: each ancestor's listeners see the original target */
-      click() { const e = {target: this}; for (let x = this; x; x = x.parentNode) (x._on.click || []).slice().forEach(fn => fn(e)); },
+      click(extra) { const e = Object.assign({target: this}, extra || {}); for (let x = this; x; x = x.parentNode) (x._on.click || []).slice().forEach(fn => fn(e)); },
       focus() { doc.activeElement = this; },
       closest(sel) { if (sel !== '[inert]') throw new Error('fake closest: ' + sel); for (let x = this; x; x = x.parentNode) if (x.inert) return x; return null; },
       get isConnected() { for (let x = this; x; x = x.parentNode) if (x === body) return true; return false; }};
@@ -7767,6 +7767,23 @@ async function t118Warn() {
       ck('#118 fix1 backdrop: ...but not within 400 ms of opening', got === 'pending' && !!find(body, 'askWin'));
       now += 1; tap(find(body, 'askWin')); await flush();
       ck('#118 fix1 backdrop: ...and from 400 ms it does', got === false);
+      /* fix round 2: the buttons too. A pointer click (detail >= 1) inside the
+         grace does nothing — the second click of a double-click on Done, where
+         Done and the button share a spot on a phone; Enter and Space (a click
+         with detail 0) always work. */
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      now += 399; find(body, 'askYes').click({detail: 2}); await flush();
+      ck('#118 fix2 a pointer click on the ok button at 399 ms is ignored', got === 'pending' && !!find(body, 'askWin'));
+      find(body, 'askNo').click({detail: 1}); await flush();
+      ck('#118 fix2 ...and on the safe button too', got === 'pending' && !!find(body, 'askWin'));
+      now += 1; find(body, 'askYes').click({detail: 1}); await flush();
+      ck('#118 fix2 at 400 ms the ok button accepts', got === true && !find(body, 'askWin'));
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      find(body, 'askYes').click({detail: 0}); await flush();
+      ck('#118 fix2 Enter or Space on the ok button (detail 0) works at once', got === true);
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      find(body, 'askNo').click({detail: 0}); await flush();
+      ck('#118 fix2 ...and on the safe button', got === false);
     } finally { ctx.Date.now = realNow; X.settings.backdropClose = false; }
 
     got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
@@ -7914,6 +7931,7 @@ async function t118Warn() {
       doneC.click();                     // the first click: the warning opens
       const w = find(body, 'askWin');
       now += 150; tapC(w);               // the second, 150 ms later, on its backdrop
+      find(body, 'askYes').click({detail: 2});   // or on a phone, on the ok button under Done (fix round 2)
       doneC.click();                     // and, were it to reach Done, Done again
       await flush();
       ck('#118 fix1 double-click on Done (Tap outside ' + (on ? 'on' : 'off') + '): the warning stays open, nothing committed',

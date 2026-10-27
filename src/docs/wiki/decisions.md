@@ -475,6 +475,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Markup that moves, in `wire()`** — A local `on()` that skips a missing id
 - **A question with two named answers (#118, Mike 2026-10-27)** — The app's own warning window, `askConfirm()`, a second layer over the dialog
 - **A click on the warning's backdrop (#118 fix round 1)** — The dialog's rule: nothing unless Tap outside is on, then a press-and-release on the backdrop after a 400 ms grace
+- **A pointer click on the warning's buttons right after it opens (#118 fix round 2)** — Ignored for 400 ms; Enter and Space always work
 - **A second warning while one is open (#118)** — Answers the open one no, then shows the new one
 - **Where the warning window's markup lives (#118)** — Made on open, removed on close
 - **The modal title's contract (#69)** — Plain text, set as `textContent`; callers never escape it

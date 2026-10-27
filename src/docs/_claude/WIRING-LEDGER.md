@@ -7785,7 +7785,8 @@ Driven live with the SRD pack: a Fighter 7 → 8 with Show all on and Grappler p
   with Grappler and its +1 intact.
 - Escape closed only the warning. Tab cycled between the two buttons, and Space on Take it anyway
   granted Feat: Grappler once and settled the level once.
-- A Fighter added at level 1: Done with no skills asked Picks left. A backdrop click cancelled it,
+- A Fighter added at level 1: Done with no skills asked Picks left. A backdrop click cancelled it
+  (the behaviour before fix round 1: a backdrop click now does nothing unless Tap outside is on),
   Continue anyway went on to the equipment window, and that window's Done committed with no
   warning.
 
@@ -7812,7 +7813,7 @@ tests:
   - With Tap outside to close dialogs off (the default), a click on the warning's backdrop does
     nothing.
   - With it on, only a click pressed and let go on the backdrop counts, and not within
-    `ASK_BACKDROP_GRACE` (400 ms) of opening.
+    `ASK_CLICK_GRACE` (400 ms) of opening (named `ASK_BACKDROP_GRACE` until fix round 2).
   - So the second click of a double-click on Done, which lands on the new warning's backdrop, never
     answers it. Escape and the safe button always cancel.
   - `.ask-back` is `user-select:none`, because that second click otherwise highlighted the nearest
@@ -7840,3 +7841,16 @@ QA:
 - `118-warn-fix1-undo-under-warning-1280.png` and `118-warn-fix1-undo-after-1280.png`: a real click
   on the toast's Undo over the warning. Level 7 was restored, nothing was granted, and there was no
   record.
+
+**Fix round 2 (review minors).**
+- **The buttons get the same 400 ms grace.** At phone width Done and the warning's right-hand
+  button can sit under the same spot, so the second click of a double-click could accept the
+  warning unread. A pointer click on either button (`e.detail > 0`) within `ASK_CLICK_GRACE` of
+  opening now does nothing. Enter and Space (a click with `detail` 0) always work.
+- `featUnmet()` loses a dead `rest.length===1` branch. With one alternative every part is shared,
+  so it already returned above. The output is identical.
+
+Tests (sheet): a pointer click on the ok button at 399 ms is ignored, and on the safe button too;
+at 400 ms ok accepts; keyboard activation works at once on both buttons. The double-click test also
+clicks the ok button. QA: `118-warn-fix2-dblclick-390.png`, a real double-click on Done at 390 px,
+with the warning still open.

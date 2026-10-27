@@ -130,8 +130,9 @@ function featUnmet(f){
   const shared=new Set(alts[0].map(featPartSig).filter(sg=>alts.every(a=>a.some(q=>featPartSig(q)===sg))));
   const out=miss[0].filter(p=>shared.has(featPartSig(p))).map(featPartUnmet);
   const rest=miss.map(m=>m.filter(p=>!shared.has(featPartSig(p))));
-  if(rest.some(r=>!r.length))return out;   /* the shared parts are all that stands in the way */
-  if(rest.length===1)return out.concat(rest[0].map(featPartUnmet));
+  /* the shared parts are all that stands in the way — always so with a single
+     alternative, whose every part is "shared" and so listed one by one above */
+  if(rest.some(r=>!r.length))return out;
   const have=new Map();
   rest.forEach(r=>r.forEach(p=>{const h=featPartHave(p);if(h)have.set(p.kind+"|"+(p.key||""),h);}));
   out.push(rest.map(r=>r.map(featPartNeed).join(" and ")).join(" or ")+(have.size?` (yours: ${[...have.values()].join(", ")})`:""));

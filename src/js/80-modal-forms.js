@@ -136,15 +136,18 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!_ask&&modal.classL
      first. openModal() and closeModal() answer it false as well — the question
      was about a window that is no longer there — and so does Undo level-up,
      which replaces the sheet it was about.
-   - A click on its backdrop follows the dialog's rule (#106): nothing, unless
-     the player turned Tap outside to close dialogs on, and then only a click
-     pressed AND let go on the backdrop, and not within ASK_BACKDROP_GRACE ms
-     of opening — the second click of a double-click on Done lands there, and
-     must not answer the question the first click asked. Escape and the safe
-     button always cancel.
+   - A double-click on Done must not answer the question its first click
+     asked. Its second click lands wherever Done was: on this backdrop, or — on
+     a phone, where Done and the right-hand button can share a spot — on a
+     button. So a POINTER click on either button does nothing for ASK_CLICK_GRACE
+     ms after opening (e.detail is 0 for Enter and Space, which always work),
+     and a click on the backdrop follows the dialog's rule (#106): nothing,
+     unless the player turned Tap outside to close dialogs on, and then only a
+     click pressed AND let go on the backdrop, after the same grace. Escape
+     always cancels.
    The browser's own prompt when a tab closes (beforeunload) cannot be replaced
    and stays. The other confirm() calls are #126's to convert. */
-const ASK_BACKDROP_GRACE=400;
+const ASK_CLICK_GRACE=400;
 function askConfirm(opts){
   const o=opts||{};
   askCancel();
@@ -163,13 +166,14 @@ function askConfirm(opts){
     box.appendChild(head);box.appendChild(body);back.appendChild(box);
     const a=document.activeElement;
     const st={el:back,no,yes,resolve,opener:(a&&a!==document.body)?a:null,inert:[],key:askKey,at:Date.now(),down:false,up:false};
-    no.addEventListener("click",()=>askClose(false));
-    yes.addEventListener("click",()=>askClose(true));
+    const early=e=>e.detail>0&&Date.now()-st.at<ASK_CLICK_GRACE;   /* a pointer click too soon after opening */
+    no.addEventListener("click",e=>{if(!early(e))askClose(false);});
+    yes.addEventListener("click",e=>{if(!early(e))askClose(true);});
     back.addEventListener("pointerdown",e=>{st.down=e.target===back;});
     back.addEventListener("pointerup",e=>{st.up=e.target===back;});
     back.addEventListener("click",e=>{
       const both=st.down&&st.up;st.down=st.up=false;
-      if(e.target===back&&both&&settings.backdropClose===true&&Date.now()-st.at>=ASK_BACKDROP_GRACE)askClose(false);
+      if(e.target===back&&both&&settings.backdropClose===true&&!early({detail:1}))askClose(false);
     });
     [...document.body.children].forEach(el=>{if(el.id==="toast"||el.tagName==="SCRIPT"||el.inert)return;el.inert=true;st.inert.push(el);});
     document.body.appendChild(back);
