@@ -496,13 +496,15 @@ the converter applies — mirroring `overlay.json` for feats.
   "ability": [ { "choose": ["str", "dex"], "amount": 1 } ]
   "ability": [ { "str": 1 } ]
   "ability": [ { "choose": ["str", "dex", "con", "int", "wis", "cha"], "amount": 1, "max": 30 } ]
+  "ability": [ { "cha": 1, "max": 30 } ]
   ```
 
   Each entry is either `{"choose": [abil…], "amount": N}` (the player picks one of `choose`, +N)
-  or a fixed `{abil: N, …}`. `max` is the score cap the feat states; it is shown but not enforced.
-  Ability keys are `str`/`dex`/`con`/`int`/`wis`/`cha`. Omit the field when the feat raises no
-  score; the converter also drops any entry 5etools marks `hidden` (only the Ability Score
-  Improvement feat has one — the app supplies that feat's own increase itself).
+  or a fixed `{abil: N, …}` — either shape may carry its own `max`. `max` is the score cap the
+  feat states; it is shown but not enforced. Ability keys are `str`/`dex`/`con`/`int`/`wis`/`cha`.
+  Omit the field when the feat raises no score; the converter also drops any entry 5etools marks
+  `hidden` (only the Ability Score Improvement feat has one — the app supplies that feat's own
+  increase itself).
 
 ### 6.7 `spells`
 

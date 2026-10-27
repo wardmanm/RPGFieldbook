@@ -697,7 +697,7 @@ CAT_LABEL = {'O':'Origin feat','G':'General feat','FS':'Fighting Style feat','EB
 ABIL_KEYS = ('str', 'dex', 'con', 'int', 'wis', 'cha')
 
 def feat_ability(raw):
-    """5etools' feat `ability` -> Fieldbook's (#118): [{choose:[...], amount, max?} | {abil: n}].
+    """5etools' feat `ability` -> Fieldbook's (#118): [{choose:[...], amount, max?} | {abil: n, max?}].
     Entries marked hidden are dropped (only the Ability Score Improvement feat has them: the app
     supplies that one itself)."""
     out = []
@@ -715,32 +715,82 @@ def feat_ability(raw):
         else:
             fixed = {k: int(v) for k, v in a.items() if k in ABIL_KEYS}
             if fixed:
+                # A fixed increase can still carry its own cap (5etools has this
+                # shape outside XPHB/XGE/TCE, e.g. FRHoF's "Boon of Terror":
+                # {"cha":1,"max":30}) — kept the same way `choose`'s is (#118 fix 1).
+                if a.get('max'):
+                    fixed['max'] = int(a['max'])
                 out.append(fixed)
     return out
 
+# A feat name read off a raw 5etools key (below) has no canonical casing to copy —
+# unlike a background's, which reads the book's own prose. `_title_feat_name` is
+# the best-effort fallback when the name isn't in the loaded feat index either.
+_SMALL_WORDS = frozenset(['of', 'the', 'a', 'an', 'and', 'to', 'for', 'in', 'on'])
+
+def _title_feat_name(nm):
+    """Title-case a feat name with no source to copy casing from: small words stay
+    lowercase except as the first word, and a letter right after an apostrophe stays
+    lowercase ("Durable's", not "Durable'S") (#118 fix 1)."""
+    out = []
+    for i, w in enumerate((nm or '').strip().split(' ')):
+        if not w:
+            continue
+        lw = w.lower()
+        if i > 0 and lw in _SMALL_WORDS:
+            out.append(lw)
+            continue
+        if "'" in w:
+            head, _, tail = w.partition("'")
+            out.append(head[:1].upper() + head[1:].lower() + "'" + tail.lower())
+        else:
+            out.append(w[:1].upper() + w[1:].lower())
+    return ' '.join(out)
+
+# 5etools' feat-category codes (same ones CAT_LABEL renders for a feat's own
+# `category`) -> the app's `choices[].category` key and a display word for the
+# choice's label (#118 fix 4). An "FS:<class>" compound (as optionalfeature
+# featureType has it) is treated the same as plain "FS".
+_FEAT_CAT = {'O': ('origin', 'Origin'), 'G': ('general', 'General'), 'EB': ('boon', 'Epic Boon')}
+
+def _feat_cat(code):
+    if code in _FEAT_CAT:
+        return _FEAT_CAT[code]
+    if code == 'FS' or (isinstance(code, str) and code.startswith('FS:')):
+        return ('style', 'Fighting Style')
+    return None
+
 def race_feats(raw):
-    """5etools' race `feats` -> (fixed feat name or None, [feat choices]) (#118)."""
+    """5etools' race (or subrace) `feats` -> (fixed feat name or None, [feat choices]) (#118)."""
     fixed, choices = None, []
     for f in raw or []:
         if not isinstance(f, dict):
             continue
         if 'anyFromCategory' in f:
             cats = f['anyFromCategory'].get('category') or []
-            if 'O' in cats:
-                choices.append({'type': 'feat', 'category': 'origin', 'label': 'An Origin feat of your choice'})
+            hit = next((c for c in (_feat_cat(c) for c in cats) if c), None)
+            if hit:
+                cat_key, word = hit
+                article = 'An' if word[:1] in 'AEIOU' else 'A'
+                choices.append({'type': 'feat', 'category': cat_key,
+                                 'label': '%s %s feat of your choice' % (article, word)})
             else:
+                # An unknown category code (e.g. a setting book's own, like "DG")
+                # gets the unrestricted choice rather than a made-up label (#118 fix 4).
                 choices.append({'type': 'feat', 'label': 'A feat of your choice'})
         elif 'any' in f:
             choices.append({'type': 'feat', 'label': 'A feat of your choice'})
         else:
             for k, v in f.items():
                 if v is True:
-                    nm = k.split('|')[0]
-                    if ';' in nm:
-                        a, b = nm.split(';', 1)
-                        fixed = '%s (%s)' % (a.strip().title(), b.strip().title())
-                    else:
-                        fixed = nm.title()
+                    nm, _, src = k.partition('|')
+                    src = (src or 'XPHB').strip().upper()
+                    base, _, qual = nm.partition(';')
+                    base = base.strip()
+                    hit = _FEAT_INDEX.get((base.lower(), src))
+                    canon = hit['name'] if hit else _title_feat_name(base)
+                    qual = qual.strip()
+                    fixed = '%s (%s)' % (canon, _title_feat_name(qual)) if qual else canon
     return fixed, choices
 
 # The 2024 Fighting Style menu. Effects (attack/AC etc.) come from the overlay.
@@ -2423,6 +2473,9 @@ def _version_subraces(entry):
                     traits.append({'name': strip_tags(str(it.get('name') or short)),
                                    'description': flatten(it['entries'])})
         sub = {'name': short}
+        sf, sc = race_feats(v.get('feats'))
+        if sf: sub['feat'] = sf
+        if sc: sub['choices'] = sc
         if traits:
             sub['description'] = traits[0]['description']
             sub['traits'] = traits
@@ -2432,7 +2485,8 @@ def _version_subraces(entry):
 def _table_subraces(entry, tables):
     """Fallback for Dragonborn, whose lineages exist only as a table (its
     `_versions` entry is an unnamed template). Build the pick from the table's
-    first column so the damage type stays a real choice, not prose."""
+    first column so the damage type stays a real choice, not prose. The table's
+    rows carry no `feats` field to read (#118), so there is nothing to grant here."""
     for e in entry.get('entries', []):
         if not isinstance(e, dict):
             continue
@@ -2489,10 +2543,14 @@ def convert_races(path, overlay=None, tables=None, book=None, **_):
             if s.get('source') != r.get('source') or not s.get('name'):
                 continue
             with table_ctx(tables, r['name'], 'race'):
-                subs.append({'name': s['name'],
-                             'traits': [{'name': strip_tags(str(x.get('name') or s['name'])),
-                                         'description': flatten(x.get('entries', []))}
-                                        for x in s.get('entries', []) if isinstance(x, dict) and x.get('name')]})
+                subrec = {'name': s['name']}
+                sf, sc = race_feats(s.get('feats'))
+                if sf: subrec['feat'] = sf
+                if sc: subrec['choices'] = sc
+                subrec['traits'] = [{'name': strip_tags(str(x.get('name') or s['name'])),
+                                     'description': flatten(x.get('entries', []))}
+                                    for x in s.get('entries', []) if isinstance(x, dict) and x.get('name')]
+                subs.append(subrec)
         rec['description'] = desc
         if traits: rec['traits'] = traits
         if subs: rec['subraces'] = subs

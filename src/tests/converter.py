@@ -2110,6 +2110,65 @@ semi_fixture = {"race": [{"name": "Semi", "source": "XPHB", "size": ["M"], "spee
 semi_feat, _ = C.race_feats(semi_fixture["race"][0]["feats"])
 ck("#118 a `;`-qualified name becomes 'A (B)'", semi_feat == "Magic Initiate (Cleric)", semi_feat)
 
+# ---------- #118 fix round 1 (review)
+# Important: a named species feat resolves against the loaded feat index (case-insensitive,
+# name|source), falling back to a small-words/apostrophe-aware title-case only when it isn't found.
+_saved_fi = C._FEAT_INDEX
+C._FEAT_INDEX = {('boon of fate', 'XPHB'): {"name": "Boon of Fate", "source": "XPHB"}}
+try:
+    found_feat, _ = C.race_feats([{"boon of fate|xphb": True}])
+    ck("#118 fix1 a found name is taken verbatim from the feat index",
+       found_feat == "Boon of Fate", found_feat)
+finally:
+    C._FEAT_INDEX = _saved_fi
+# with no index entry, the fallback must not mangle small words or apostrophes --
+# .title() alone would give "Boon Of Fate" and "Durable'S Trick"
+fallback_feat, _ = C.race_feats([{"boon of fate|xphb": True}])
+ck("#118 fix1 the fallback keeps small words lowercase", fallback_feat == "Boon of Fate", fallback_feat)
+apos_feat, _ = C.race_feats([{"durable's trick|xphb": True}])
+ck("#118 fix1 the fallback keeps a letter after an apostrophe lowercase",
+   apos_feat == "Durable's Trick", apos_feat)
+
+# Minor: subraces (both the explicit `subrace` records and 2024 `_versions` lineages) go
+# through race_feats() too, the same way the parent race does.
+subrace_fixture = {
+    "race": [{"name": "Lineaged", "source": "XPHB", "size": ["M"], "speed": 30, "entries": [],
+              "_versions": [{"name": "Lineaged; Keen Lineage",
+                              "_mod": {"entries": [{"mode": "replaceArr",
+                                                     "items": [{"name": "Keen Senses", "entries": ["x"]}]}]},
+                              "feats": [{"any": 1}]}]}],
+    "subrace": [{"name": "Variant", "raceName": "Lineaged", "source": "XPHB",
+                 "feats": [{"anyFromCategory": {"category": ["O"], "count": 1}}], "entries": []}]}
+lin = {r["name"]: r for r in run_races(subrace_fixture)}["Lineaged"]
+keen_sub = next((s for s in lin.get("subraces", []) if s["name"] == "Keen"), None)
+ck("#118 fix2 a 2024 lineage's own `feats` becomes a feat choice",
+   keen_sub is not None and {"type": "feat", "label": "A feat of your choice"} in keen_sub.get("choices", []),
+   lin.get("subraces"))
+variant_sub = next((s for s in lin.get("subraces", []) if s["name"] == "Variant"), None)
+ck("#118 fix2 an explicit subrace record's `feats` becomes a feat choice",
+   variant_sub is not None
+   and {"type": "feat", "category": "origin", "label": "An Origin feat of your choice"} in variant_sub.get("choices", []),
+   lin.get("subraces"))
+
+# Minor: a fixed ability increase keeps its own `max` instead of dropping it.
+ck("#118 fix3 a fixed increase keeps max",
+   C.feat_ability([{"cha": 1, "max": 30}]) == [{"cha": 1, "max": 30}], C.feat_ability([{"cha": 1, "max": 30}]))
+
+# Minor: `anyFromCategory` maps every known category code, and an unknown one falls back
+# to the unrestricted choice rather than discarding the restriction silently.
+_, g_ch = C.race_feats([{"anyFromCategory": {"category": ["G"], "count": 1}}])
+_, fs_ch = C.race_feats([{"anyFromCategory": {"category": ["FS"], "count": 1}}])
+_, eb_ch = C.race_feats([{"anyFromCategory": {"category": ["EB"], "count": 1}}])
+_, unk_ch = C.race_feats([{"anyFromCategory": {"category": ["DG"], "count": 1}}])
+ck("#118 fix4 a General category is named, not discarded",
+   g_ch == [{"type": "feat", "category": "general", "label": "A General feat of your choice"}], g_ch)
+ck("#118 fix4 a Fighting Style category is named",
+   fs_ch == [{"type": "feat", "category": "style", "label": "A Fighting Style feat of your choice"}], fs_ch)
+ck("#118 fix4 an Epic Boon category is named",
+   eb_ch == [{"type": "feat", "category": "boon", "label": "An Epic Boon feat of your choice"}], eb_ch)
+ck("#118 fix4 an unknown category code falls back to the unrestricted choice",
+   unk_ch == [{"type": "feat", "label": "A feat of your choice"}], unk_ch)
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)
