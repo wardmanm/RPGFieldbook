@@ -7565,3 +7565,91 @@ Tests (data-archive):
 
 Pages: [settings & updates](../wiki/features/settings-and-updates.md),
 [rules packs](../wiki/architecture/rules-packs.md).
+
+## Feat support (#118, 2026-10-27)
+
+Branch `issue/118-feats`, commits `2bf87c3..be89263`, then this docs commit. Spec:
+`src/docs/specs/2026-10-26-feat-support-design.md`. Its As built section lists every ruling and
+every deferred minor. Plan: `src/docs/plans/2026-10-27-feat-support.md`. Mike decided the nine
+§2 decisions on 2026-10-26 and 2026-10-27.
+
+**What changed:**
+
+- **The converter.**
+  - `convert_feats()` keeps 5etools' structured `ability` field (`feat_ability()`): a
+    `{choose, amount, max?}` or a fixed `{abil: n, max?}` per increase. It drops `hidden` entries.
+  - `convert_races()` writes a race's or subrace's `feats` (`race_feats()`):
+    - `anyFromCategory` becomes `choices:[{type:"feat", category, label}]`;
+    - `any` becomes `{type:"feat", label:"A feat of your choice"}`;
+    - a named feat becomes `feat`, resolved through the feat index, with `_title_feat_name()` as
+      the fallback.
+- **The packs.**
+  - SRD 5.2: 8 of 17 feats gain `ability` (the seven Epic Boons and Grappler), and Human gains
+    `{type:"feat", category:"origin", label:"An Origin feat of your choice"}`.
+  - The private 2024, Xanathar's and Tasha's packs moved the same way (feats 54/77, 11/15 and
+    10/15; races in 2024 and Tasha's). They are committed in the private repo as `999bf63`, which
+    is **not pushed**; push it right after public `main`.
+  - **Each of the four packs needs a data release, which Mike cuts.**
+- **The ASI step (`58-choices.js`).**
+  - An `asi` choice is one list: Ability Score Improvement pinned first, then the feats the
+    character qualifies for (`featOfferable()`), a search box and a Show all switch. Below it is
+    one panel, holding either the +2 / +1+1 controls or the feat's text and its "+1 to:" chips.
+  - Prerequisites are read from the feat's first line (`featPrereq()`, `featUnmet()`).
+  - The +1 comes from the `ability` field, else from the text (`featAbilityChoices()`), minus
+    what the feat's own effects already raise (`featPendingIncreases()`).
+  - `commitAsiPick()` grants the feat with the class-level origin and stores the +1 as an effect
+    on that feature.
+  - A pick with an unmet prerequisite asks through `confirm()` (Ruling 2), which never blocks.
+  - Show all lifts every filter, a species list's category included (Ruling 6).
+- **Species and background feats.**
+  - `applyRace()` grants a fixed `feat`. An array of two or more is a choose-one menu (Ruling 10).
+    Each `{type:"feat"}` choice is queued with the `race:` sid, and `applyBackground()` does the
+    same with the `bg:` sid.
+  - Every such choice without `from` opens the same list with no ASI row (Ruling 9). With a
+    category it is filtered to that category. With none it offers Origin feats, plus General and
+    Fighting Style feats whose readable prerequisites are met. Epic Boons appear only under Show
+    all.
+  - `commitExtraChoices()` grants the pick with the species or background origin.
+- **Level 19.** `applyClassLevel()` adds `{type:"asi", boon:true}` when level 19 has a trait
+  named "Epic Boon" and no `asi` choice. The level-up card reads "Epic Boon — a feat, or an
+  Ability Score Improvement".
+- **Feats allowed.** `character.featsAllowed` is `true` in `blankChar()`, and `migrate()` keeps a
+  boolean. The switch is in Settings → Sheet display → Levels and companions. Off, the ASI step
+  draws today's controls, and species and background feat choices still open.
+- **Undo level-up (`57-levelup.js`).**
+  - `doLevelUp()` takes `_undo` (a JSON copy) before it changes anything (Ruling 1).
+  - Once the last window closes, `luSettle()` writes the `levelLog` record, then takes a
+    signature of the sheet, and toasts "Fighter is now level 8 · Max HP 61 → 68" with Undo.
+  - Undo is offered while the sheet still matches that signature exactly. It is not cleared by
+    the next save, as spec §5a first said.
+  - The card's own **Undo level-up** skips the signature (Ruling 3).
+  - Switching character, going Home or reloading ends it.
+- **Level down with a record (`56-class.js`).**
+  - The record is `{at, class, level, hp, features:[{id, name, grants}], abilities, subclass,
+    grants, slots}`, capped at 200 records.
+  - Level down shows the record's HP and features as ticked boxes. A feature's grants go with it
+    only when they trace to that feature: exactly one of the level's new traits grants that
+    proficiency outright.
+  - Everything else (other grants, the subclass, spells) is listed to adjust by hand.
+  - A level with no record lowers only the number, as before.
+  - `removeClass()` drops that class's records.
+
+**Why:** a player at an ASI level had to add a feat and its +1 by hand. Human's Versatile was
+prose. Level down left the player to remember what the level gave.
+
+**Tests:** converter (`feat_ability`, `race_feats`); sheet (helpers, the step, species and
+background lists, level 19, Undo end to end, the record and level down); rules-data (the switch).
+Browser QA is in `.claude/qa/in-progress/118-feats/` (`118-before-*`, `118-after-*`, `118-t*-*`).
+
+**Left open:**
+- the deferred minors, listed in the spec's As built;
+- three new known issues: fixed feat `skills` not granted, "+1 to two" accepting one ability
+  twice, and choices inside feats staying manual.
+
+Pages: [character building](../wiki/features/character-building.md),
+[abilities & skills](../wiki/features/abilities-and-skills.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[character model](../wiki/architecture/character-model.md),
+[converter](../wiki/data/converter.md), [settings & updates](../wiki/features/settings-and-updates.md),
+[known issues](../wiki/roadmap/known-issues.md), [2.0](../wiki/roadmap/2.0.md),
+[1.9.0](../wiki/roadmap/1.9.0.md), [decisions](../wiki/decisions.md).

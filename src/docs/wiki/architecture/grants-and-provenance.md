@@ -100,8 +100,12 @@ so they stay after a species or background change (a known issue, not a bug). A 
 not know (hand-edited) reads as the player's: `chipSrcLabel()` looks up own keys only, and
 `chipClean()` clears it, so the chip's × and `removeChip()` agree.
 
-**Choices.** Skill choices on a race, a race trait or a feat go into a `pending` list that
-`runExtraChoices()` presents after the add, and each pick is granted to the sid that queued it.
+**Choices.** Skill choices on a race, a race trait or a feat, and feat choices on a species or a
+background (#118), go into a `pending` list that `runExtraChoices()` presents after the add. Each
+pick is granted to the sid that queued it: `commitExtraChoices()` grants a feat with
+`sidToOrigin()`'s `{kind:"race"}` or `{kind:"background"}` origin, so changing or removing the
+species or background reverts it. A feat taken at an ASI carries its class-level origin, and its +1
+is an effect on that same feature.
 Class and subclass level choices go through `runChoices()` → `commitChoices()`: skills to the
 choice's sid, an ASI as a feature, a feat through `grantFeatDef()`, an option through
 `addFeatureFromDef()` with `sidToOrigin()` (so it reverts with its class or subclass) and its
@@ -191,9 +195,13 @@ features and grants before applying the new one.
 
 ## Open
 
-- **Level-down keeps everything.** `doLevelDown()` lowers the number and nothing else: traits,
-  grants, choices and HP stay. The grant model does not key by class level, so a class-level choice
-  reverts when the class is removed but not per level. Race and background choices revert fully.
+- **Level down reverts only what a level's record names.** Since #118 each level-up writes a
+  `levelLog` record, and level down removes its ticked HP and features. A grant goes with a
+  feature only when it traces to that one feature. The grant model still does not key by class
+  level, so a level's skill pick, its subclass and its spells are listed to adjust by hand, and a
+  level with no record (gained before #118) keeps everything. Removing the class reverts all of
+  it, and race and background choices revert fully
+  ([Character building](../features/character-building.md)).
 - **Some grants are not tagged, so they do not revert:** text appended to `proficiencies` (race
   proficiencies, background tools), `speed` and `size` (seeded only when
   empty), `spellAbility` (set by a class or subclass), and the legacy `ancestry` and `background`
@@ -226,3 +234,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-23 — Lifted languages noted as the player's own; an unknown language `src` reads as the player's. → ledger L6729, #103
 - 2026-10-25 — Grants write one inventory-log line per source (`logGrant()`), with no Undo. → ledger L7291, #47
 - 2026-10-25 — Removing a source writes one "Removed with *source*" line; an undone item whose source is gone comes back ordinary. → ledger L7339, #47
+- 2026-10-27 — Species and background feat choices are granted with their origin through `commitExtraChoices()`; a feat at an ASI carries the class-level origin with its +1 on the feature; level down reverts what a level's record names. → ledger L7569, #118

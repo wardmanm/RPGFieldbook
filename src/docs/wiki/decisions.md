@@ -175,6 +175,17 @@ When a page gains a Decisions row, add its line here under that page.
 - **An "animate level-ups" setting (#101)** — None: reduced motion skips the scene, and a tap, click or Esc skips it at any time
 - **What the level card lists (#101)** — What changed on the sheet, from `levelSnapshot()` before and after the level (`levelGains()`)
 - **Which features the card says "don't stack" (#101)** — An allowlist, `LU_NO_STACK`: Extra Attack and Unarmored Defense (SRD 5.2.1 p.26)
+- **Which feats the ASI step offers (#118, decision 1)** — The ones the character qualifies for, with Show all; an unmet prerequisite asks at Done and never blocks
+- **A feat's own +1 (#118, decision 2)** — Asked in the same step and stored on the feat
+- **Level 19's Epic Boon (#118, decision 3)** — An ASI level too, detected in the app from the "Epic Boon" trait; Epic Boons are offered only there
+- **The step's layout (#118, decision 5)** — One list, Ability Score Improvement pinned first
+- **Species feats (#118, decision 7)** — Granted as a background's are: a fixed `feat` or a feat choice through the same list
+- **A species `feat` array (#118, Ruling 10)** — Choose one, as a background's
+- **A species or background feat choice with no category (#118, Ruling 9)** — The list: Origin feats plus General and Fighting Style feats whose readable prerequisites are met; Epic Boons only under Show all
+- **What Show all lifts (#118, Ruling 6)** — Every filter, a species list's category included; a fixed `from` menu stays
+- **The unmet-prerequisite warning (#118, Ruling 2)** — The browser's `confirm` dialog, so its buttons are the browser's OK and Cancel
+- **Undo after a level-up (#118, decision 8)** — A copy from before the level-up, offered while the sheet is exactly as the level-up left it
+- **Level down (#118, decision 9)** — Each level-up records what it gave; level down removes the ticked HP and features and lists the rest
 
 ### [Abilities & skills](features/abilities-and-skills.md)
 
@@ -441,6 +452,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Wording (#102)** — "requires Fieldbook 1.10.0", falling back to "requires a newer Fieldbook" with no `minApp`; "requires SRD 5.2"; "Unsupported"; "Manual install"
 - **Get templates (#102)** — Removed
 - **The plan while it installs (#102, Ruling 14)** — Can't be dismissed; × and Escape say to wait
+- **Feats allowed's default (#118, decision 4)** — On for every character
 
 ## UI
 
@@ -545,6 +557,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The Paladin's and Ranger's own Fighting Style option (#84, R4)** — On the menu beside the styles, from the class feature's `refFeat`, in both packs
 - **A dice roll holding a 5e-tools prompt template (#84)** — Prints its display text; every other dice tag keeps its roll
 - **A class feature's `refFeat` the feat index lacks (#84)** — The option is left off and a `WARNING` names it; `classes` takes `--feats`
+- **Where a feat's +1 comes from (#118, decision 6)** — 5etools' `ability` field, kept by the converter; the feat's text as the fallback
 
 ### [Supplements](data/supplements.md)
 

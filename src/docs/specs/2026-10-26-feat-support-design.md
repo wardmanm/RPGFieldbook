@@ -1,6 +1,7 @@
 # Feat support: design
 
-**Status:** approved in conversation 2026-10-26 and 2026-10-27; waiting for Mike to review this written spec. It is wave 3b of
+**Status:** approved in conversation 2026-10-26 and 2026-10-27; built 2026-10-27 on `issue/118-feats`
+(see As built, at the end). It is wave 3b of
 [1.9.0](../wiki/roadmap/1.9.0.md).
 **Issue:** #118 (Feat Support). One branch, `issue/118-feats`.
 **Mockup:** `.superpowers/brainstorm/32894-1793047656/content/asi-or-feat.html`. Layout B was chosen: one list,
@@ -167,14 +168,16 @@ With Feats allowed off it is an ASI, as the older rules have it. The trait itsel
 
 ## 5a. Undo level-up
 
-- **Saving the copy.** `openLevelUp()` saves `_undo = {copy, at}`, a deep copy of the character, before it
-  applies anything.
+- **Saving the copy.** `doLevelUp()` saves `_undo = {copy, at}`, a deep copy of the character, before it
+  changes anything (corrected as built: `openLevelUp()` runs after the level is applied; see As built,
+  Ruling 1).
 - **Where Undo appears.** The level-up card shows **Undo level-up** next to Done, and the toast after the
   level's choices offers Undo too.
 - **What Undo does.** It restores the copy, re-renders, saves, and says "Level-up undone".
-- **When it goes away.** Undo is offered only while nothing else has changed: `_undo` is cleared by the next
-  `scheduleSave()` that isn't part of the level-up itself, and by switching character. After that the button
-  and the toast action are gone.
+- **When it goes away.** Undo is offered only while the sheet is exactly as the level-up left it. When the
+  level-up's last window closes, the app takes a signature of the sheet. Any later change spends Undo, and a
+  save alone does not. Switching character clears the copy (corrected as built: this sentence first said
+  the next `scheduleSave()` clears it, but the level-up's own saves would have spent it).
 - **Lifetime.** The copy is never saved, so a reload ends it.
 
 ## 5b. Level down with a record
@@ -327,3 +330,134 @@ player.
   mastery. These stay by hand.
 - Automatically reverting a level's skills, subclass or spells on level down. They are listed for the player
   (§5b), because grants are not recorded per level for characters made before this change.
+
+## As built
+
+Built in six tasks on `issue/118-feats` (`2bf87c3..be89263`, then the docs), each reviewed. The code is
+the truth, and the wiki pages in §11 describe it. This section records:
+- the rulings made while building;
+- where the build differs from the text above;
+- what was deferred;
+- what is still open.
+
+### Rulings
+
+1. **The undo copy is taken in `doLevelUp()`,** before `entry.level` changes. §5a named `openLevelUp()`,
+   but that runs after the level is applied. The intent was "before it applies anything".
+2. **The unmet-prerequisite warning uses `confirm()`** with the §4 sentence, because the app has no in-modal
+   two-button dialog. Its buttons are therefore the browser's OK and Cancel, not **Choose another** and
+   **Take it anyway**.
+3. **`undoLevelUp(opts)` takes `opts.force`,** which skips the signature check. The card's Undo uses it,
+   because it comes before the level-up has settled. It still needs the copy.
+4. **The plan's test fixtures use invented feat text.** The plan as first written quoted two 14-word runs
+   of private 2024 feat text, which the leak scan refuses. The controller fixed the plan doc on the branch.
+5. **The converter review's four dormant findings were fixed in one round:**
+   - a named species feat resolves to its canonical name through the feat index, else
+     `_title_feat_name()`;
+   - subraces are read too;
+   - a fixed increase keeps its `max`;
+   - a non-Origin `anyFromCategory` keeps its category.
+
+   No shipped byte moved.
+6. **Show all lifts every filter,** a species or background list's category included (Mike's decision 1,
+   "turn off that filter and see all feats"). A test pins `{category:'origin', showAll:true}` offering a
+   General feat. Only a fixed `from` menu is never widened.
+7. **"Spellcasting feature" is checked with `classCasterKind()`,** which covers subclass casters (Eldritch
+   Knight, Arcane Trickster). A Warlock's `"pact"` counts only for "Spellcasting or Pact Magic feature".
+   Other changes from the same review:
+   - `Repeatable` is matched only as its own line (`/^Repeatable:/m`);
+   - parts split on commas as well as "and";
+   - the choose entry's `max` is asserted.
+8. **No double +1.** `featPendingIncreases()` drops any increase the feat's own `effects` already make.
+   Humblewood's Arboreal Acrobat had gone 14 → 16. Other changes from the same review:
+   - a pressed-nothing list returns `pick:null` and commits nothing;
+   - `commitAsiPick()` refuses an ASI whose ability isn't one of the six;
+   - search never hides the pressed row.
+9. **Every species or background feat choice without `from` uses the list** (§4.1's intent; "origin" was
+   the example). With no category, the qualified filter is Origin feats, plus General and Fighting Style
+   feats whose readable prerequisites are met. Epic Boons appear only under Show all. No such list has an
+   ASI row. A class level's `{type:"feat"}` keeps its select.
+10. **A species `feat` array means choose one,** as a background's does (decision 7, "the same way"). A
+    one-item array or a string is granted outright. The list asks for a pick (`data-choose`) only when it
+    has a row. Epic Boon shown twice on the level-19 card stays as §5 wrote it (Open, below).
+
+### Where the build differs from the text above
+
+- **§5a, when Undo goes away.** The text first said `_undo` is cleared by the next `scheduleSave()`. As built:
+  - when the level-up's last window closes, `luSettle()` writes the record and then takes a signature
+    (`JSON.stringify(character)`);
+  - Undo is offered while the sheet still matches it exactly (`undoLevelUpAvailable()`);
+  - saving alone never spends it, because the level-up's own saves would have;
+  - switching character, going Home or reloading clears the copy.
+
+  After a change, the toast's Undo answers "Undo is no longer available: the sheet has changed since the
+  level-up." §5a above is corrected.
+- **§5a, the toast.** It reads "Fighter is now level 8 · Max HP 61 → 68" with Undo. It replaces the HP
+  step's own toast, so it carries the HP.
+- **§5b, grants.** Grants carry the class sid, not a level or a feature. So a level's new grant is tied to
+  a feature, and removed with it, only when exactly one of the level's new traits grants that proficiency
+  outright: an embedded class or subclass trait's `skills` or `saves`, with a matching sid. Its row reads
+  "…, and the proficiency it gave: Survival". Everything else goes under "adjust by hand": the subclass,
+  untied grants (a level's skill pick, a feat's skill choices) and spells. Feats are never matched by
+  their rules `skills`, which `grantFeatDef()` doesn't grant.
+- **§5b, the record.** It is `{at, class, level, hp, features:[{id, name, grants}], abilities, subclass,
+  grants:[{sid, type, key}], slots:{before, after}}`. The log keeps the newest 200. A record is deleted
+  once level down acts on it, even with nothing ticked. `removeClass()` drops that class's records. The
+  dialog reads a feature's +1 from the live feature, and says how many features were already removed by
+  hand. A level with no record toasts the old notice and opens no dialog.
+- **§3.3, labels.** Human's choice reads "An Origin feat of your choice", not "Versatile: an Origin feat".
+  `any`, or an unknown category code, gets "A feat of your choice".
+- **§4, row keys.** A row is keyed by the feat's `_id` when the merge gave it one (two packs can share a
+  name), else by its name. Search matches the name only.
+- **§4, the panel.** The ASI's controls in the panel drop their own heading, because the list's label
+  names the step. With Feats allowed off the step is exactly the old markup, heading included.
+- **§4, the warning.** It reads "Grappler needs level 4 or higher (yours is 1) and Strength 13 or higher
+  (yours is 10). Take it anyway?" Cancel keeps the step open with the pick.
+- **§8, names.** The helpers live in `58-choices.js` as `featCategory()`, `featPrereq()`, `featUnmet()`,
+  `featOfferable()`, `featAbilityChoices()` and `featPendingIncreases()`. There is no `featQualifies()`:
+  `featUnmet()` returning `[]` is the test.
+- **`rules-data.js`.** Its count of Settings switches moves from 8 to 9, and a check pins `swFeats`
+  between `segAdv` and `swFamiliars`.
+
+### Data releases
+
+The rules packs changed:
+- SRD 5.2: `feats.json` (8 of 17 feats gain `ability`) and `races.json` (Human's Origin-feat choice);
+- the private 2024 pack: feats (54 of 77) and races;
+- Xanathar's: feats (11 of 15);
+- Tasha's: feats (10 of 15) and races.
+
+The three private packs are committed in the private repo as `999bf63`, which is **not pushed**. Push it
+right after public `main`. Each of the four packs needs a data release, which Mike cuts. Until then, a
+player's installed SRD pack has no `ability` fields and no Human feat choice. The step still lists the
+feats, but asks no +1 for them, because the SRD text doesn't carry the sentence the fallback reads. Human's
+Origin feat stays prose.
+
+### Deferred minors
+
+- **Task 1:** `_title_feat_name()` doesn't capitalise after a hyphen ("Fey-touched"). It is dormant: no
+  species uses the named-feat branch.
+- **Task 3:** the dismiss guard doesn't count a feat pick. This predates #118, since the ASI selects
+  worked the same way.
+- **Task 3 → known issue:** `grantFeatDef()` doesn't grant a feat's fixed `skills`.
+- **Task 3 → known issue:** the ASI's "+1 to two" accepts the same ability twice.
+- **Task 4:** `sidLabel()` cuts a colon-named species in its "from …" label. This predates #118.
+- **Task 5, for the final fix wave:**
+  - Undo from the toast while a Level down dialog is open lets `applyLevelDown()` apply an older record;
+  - a malformed imported record (a feature's `grants` not an array) makes level down throw.
+- **Task 5, deferred:**
+  - an error part-way through `doLevelUp()` can leave settle armed for the next unrelated edit;
+  - the toast's Undo stays clickable after a change and answers "no longer available" (§5a says the
+    action is gone);
+  - subclass traits below the reached level, picked late, aren't in the record;
+  - the dialog reads "max HP 0 → 1" when max HP is blank.
+- **Known issue, by §12:** the choices inside a feat (spells, tools, damage types, Resilient's saving
+  throw, Weapon Master's mastery) stay by hand.
+
+### Open for Mike
+
+- **"Epic Boon" appears twice on the level-19 card,** once as the trait ("feature") and once as the
+  choice ("choose next"). §5 asks for both. Dropping the trait row is a one-line change in `levelGains()`.
+- **The warning's buttons can't read "Choose another" / "Take it anyway"** without a custom in-modal
+  dialog, which the app doesn't have (Ruling 2).
+- **The data releases** above, and pushing the private repo's `999bf63` after public `main`.
