@@ -61,6 +61,9 @@ function applyBackground(sel,opts){
     // feat
     const featName=(opts&&opts.feat)||bgFeatList(d)[0];
     if(featName)grantFeatDef(featName,{kind:"background",name},_bgPending);
+    /* #118: a feat CHOICE on a background takes the species' path — queued for
+       runExtraChoices(), granted there with this background's origin */
+    (d.choices||[]).forEach(ch=>{if(ch&&ch.type==="feat")_bgPending.push({ch:Object.assign({},ch,{_sid:"bg:"+name}),sid:"bg:"+name,label:ch.label||name});});
     // background feature
     if(d.feature&&d.feature.name)addFeatureFromDef({name:d.feature.name,description:d.feature.description||""},{kind:"background",name});
     applyEquipGrants(d.equipmentGrants,"bg:"+name,_bgPending);

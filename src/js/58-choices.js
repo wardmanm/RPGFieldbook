@@ -46,8 +46,14 @@ function choiceBlocks(){
     const lab=div.querySelector("label.f");
     return {label:lab?String(lab.textContent).split("—")[0].trim():"Choose",
             target:num(div.dataset.choose),
-            picked:div.querySelectorAll('input[type="checkbox"]:not([data-fixed]):checked').length};
+            picked:choiceBlockPicked(div)};
   });
+}
+/* A block's own picks: its ticked boxes, or — a species or background feat
+   list (#118), which has no boxes — its pressed row. */
+function choiceBlockPicked(div){
+  return div.querySelectorAll('input[type="checkbox"]:not([data-fixed]):checked').length+
+    div.querySelectorAll('[data-ft-pick][aria-pressed="true"]').length;
 }
 /* True when it is safe to close without asking. */
 function choicesSettled(){return choiceShortfall(choiceBlocks())===""}
@@ -234,6 +240,11 @@ function wireAsiFeats(list){
     if(search)search.addEventListener("input",filter);
   });
 }
+/* Every feat pressed in the open window, through the warning below — the one
+   check both choice windows' Done run (runChoices, runExtraChoices). */
+function asiScreenPicksConfirmed(){
+  return asiPickConfirmed(Array.from(document.querySelectorAll('.choice[data-ctype="asi"] [data-ft-pick][aria-pressed="true"]')).map(b=>b.dataset.ftPick));
+}
 /* The unmet-prerequisite warning at Done, one feat at a time; false when the
    player declines, so the step stays open. confirm() because the app has no
    in-modal two-button confirm — its buttons are the browser's OK and Cancel. */
@@ -270,7 +281,7 @@ function commitAsiPick(sel,origin,pending){
   if(fx.length)ft.effects=(Array.isArray(ft.effects)?ft.effects:[]).concat(fx);
 }
 function choiceFieldHTML(ch,ci,d){
-  const t=ch.type;let inner="",chooseAttr="";
+  const t=ch.type;let inner="",chooseAttr="",ctype=t;
   if(t==="skill"){
     const from=ch.from||SKILLS.map(s=>s[1]);
     /* Two passes: the options have to be counted before the heading can say how
@@ -321,6 +332,14 @@ function choiceFieldHTML(ch,ci,d){
   }else if(t==="asi"){
     /* Feats allowed off (#118): exactly today's controls, no list */
     inner=character.featsAllowed===false?asiControlsHTML(ci):asiFeatListHTML(ch,ci,{showAll:false})+`<div class="ft-panel" data-ft-panel="${esc(ci)}">${asiPanelHTML(ch,ci,"__asi__")}</div>`;
+  }else if(t==="feat"&&ch.category&&!ch.from){
+    /* #118 §4.1: a species or background feat choice ("an Origin feat of your
+       choice") is the ASI step's list filtered to its category — no ASI row,
+       nothing pressed, and Feats allowed off does not hide it (it is the
+       species' own feat, not the optional rule). It reads back as an asi
+       selection, and data-choose makes Done ask for the one pick. */
+    ctype="asi";chooseAttr=` data-choose="1"`;
+    inner=asiFeatListHTML(ch,ci,{})+`<div class="ft-panel" data-ft-panel="${esc(ci)}"></div>`;
   }else if(t==="feat"){
     if(ch.from){
       inner=`<label class="f">${esc(ch.label||"Feat")}</label><select data-feat-opt><option value="">— none —</option>${ch.from.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")}</select>`;
@@ -353,7 +372,7 @@ function choiceFieldHTML(ch,ci,d){
   }else{
     inner=`<p class="hint">${esc(ch.label||ch.note||"A choice is available at your table.")}</p>`;
   }
-  return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(t||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
+  return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(ctype||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
 }
 let _activeChoices=[];
 /* ---- a choice window's title (#69) ----
@@ -384,10 +403,12 @@ function choiceWindowTitle(className,choices,notes){
   return s?name+" — "+(s.lo===s.hi?"Level "+s.hi:"Levels "+s.lo+"–"+s.hi):name;
 }
 function sidToOrigin(sid,level){
-  const p=String(sid||"").split(":");
+  const s=String(sid||""),p=s.split(":"),rest=s.slice(s.indexOf(":")+1);
   if(p[0]==="class")return {kind:"class",class:p[1],level};
   if(p[0]==="subclass")return {kind:"class",class:p[1],subclass:p[2],level};
-  if(p[0]==="race")return {kind:"race",name:p[1]};
+  /* the whole rest: a species or background name may hold a colon */
+  if(p[0]==="race")return {kind:"race",name:rest};
+  if(p[0]==="bg")return {kind:"background",name:rest};
   return {kind:"class",class:"",level};
 }
 /* `pending` is what waits behind this window, in runExtraChoices()'s shape: a
@@ -421,7 +442,7 @@ function runChoices(className,choices,notes,pending){
     const warn=choiceShortfall(choiceBlocks());
     if(warn&&!confirm(warn))return;
     /* #118: a feat whose prerequisites aren't met asks first */
-    if(!asiPickConfirmed(Array.from(document.querySelectorAll('.choice[data-ctype="asi"] [data-ft-pick][aria-pressed="true"]')).map(b=>b.dataset.ftPick)))return;
+    if(!asiScreenPicksConfirmed())return;
     const sel=gatherChoices();closeModal();commitChoices(className,sel,pending);
   });
 }
@@ -484,7 +505,7 @@ function gatherChoices(){
       const mode=(div.querySelector('[data-asi-mode]:checked')||{}).value||"2";
       const plus=[];div.querySelectorAll('[data-ft-plus][aria-pressed="true"]').forEach(c=>{plus[num(c.dataset.ftPlus)]=c.dataset.k;});
       out.push({type:"asi",pick,mode,a:(div.querySelector('[data-asi-a]')||{}).value,b:(div.querySelector('[data-asi-b]')||{}).value,plus,sid:div.dataset.sid||""});}
-    else if(t==="feat"){const sel=div.querySelector('[data-feat-opt]');out.push({type:"feat",name:sel?sel.value:""});}
+    else if(t==="feat"){const sel=div.querySelector('[data-feat-opt]');out.push({type:"feat",name:sel?sel.value:"",sid:div.dataset.sid||""});}
     else if(t==="option")out.push({type:"option",ci:num(div.dataset.ci),sid:div.dataset.sid||"",idxs:Array.from(div.querySelectorAll('[data-opt-i]:checked:not(:disabled)')).map(cb=>num(cb.dataset.optI))});
     else if(t==="hp"){const b=div.querySelector('[data-hp-dice]');out.push({type:"hp",ci:num(div.dataset.ci),dice:b?String(b.value).trim():""});}
   });
@@ -512,4 +533,14 @@ function commitChoices(className,selections,pending){
   if(pendingSub)selectSubclass(className,pendingSub,next);
   else runExtraChoices(next);
 }
-
+/* runExtraChoices()'s Done for the picks that grant (#118): skills to their
+   source, and each feat — the category list or a feat select — with the origin
+   its sid names, so removing that species or background takes it back out.
+   A feat's own skill choices go on `pending`, for the next window. */
+function commitExtraChoices(selections,pending){
+  (selections||[]).forEach(s=>{
+    if(s.type==="skill")s.keys.forEach(k=>grantProf(s.sid,"skill",k,1));
+    else if(s.type==="asi"&&s.sid)commitAsiPick(s,sidToOrigin(s.sid),pending);
+    else if(s.type==="feat"&&s.sid&&s.name)grantFeatDef(s.name,sidToOrigin(s.sid),pending);
+  });
+}

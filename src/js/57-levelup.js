@@ -23,7 +23,9 @@ function levelSnapshot(){
 }
 const LU_ORD=["","1st","2nd","3rd","4th","5th","6th","7th","8th","9th"];
 const LU_CHOICE={asi:["Ability Score Improvement","+2 to one ability, or +1 to two"],feat:["Choose a feat",""],
-  subclass:["Choose your subclass",""],skill:["Choose skills",""],option:["Choose an option",""]};
+  subclass:["Choose your subclass",""],skill:["Choose skills",""],option:["Choose an option",""],
+  /* #118: level 19's asi choice; with Feats allowed off it is a plain ASI (§5) */
+  boon:["Epic Boon","a feat, or an Ability Score Improvement"]};
 /* A feature's first sentence as plain text: the card is a summary, and the
    full text stays on the Features card. Escaped where it is rendered. */
 function luSummary(s){
@@ -47,7 +49,7 @@ function levelGains(before,after,choices,notes){
       warn:twin?`You already have this from ${twin.cls}; they don't stack.`:""});
   });
   (choices||[]).filter(ch=>ch&&ch.type!=="hp").forEach(ch=>{
-    const d=LU_CHOICE[ch.type]||["A choice",""];
+    const d=(ch.type==="asi"&&ch.boon&&character.featsAllowed!==false)?LU_CHOICE.boon:(LU_CHOICE[ch.type]||["A choice",""]);
     rows.push({kind:"choice",text:String(ch.label||d[0]),detail:d[1],tag:"choose next",warn:""});
   });
   Object.keys(after.res).forEach(k=>{

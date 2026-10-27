@@ -106,6 +106,12 @@ function applyRace(sel, subrace, opts){
     (obj.saves||[]).forEach(ab=>{if(character.saves[String(ab).toLowerCase()]!==undefined)grantProf("race:"+name,"save",String(ab).toLowerCase(),1);});
     (obj.traits||[]).forEach(t=>{addFeatureFromDef(t,{kind:"race",name});(t.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:(t.name||label)});});});
     (obj.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:label});});
+    /* #118: a species grants feats the way a background does — a fixed `feat`
+       now, or a feat choice (Human's Versatile) queued for runExtraChoices(),
+       where a `category` choice is the ASI step's list without its ASI row.
+       Both carry the race origin, so removeRace() takes them back out. */
+    (Array.isArray(obj.feat)?obj.feat:(obj.feat?[obj.feat]:[])).forEach(f=>grantFeatDef(f,{kind:"race",name},pending));
+    (obj.choices||[]).forEach(ch=>{if(ch&&ch.type==="feat")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:ch.label||label});});
     applyEquipGrants(obj.equipmentGrants,"race:"+name,pending);
     if(obj.speed&&(character.speed===""||character.speed==null))character.speed=obj.speed;
     /* Seeded like speed — only when empty, so a subrace never overrides the base

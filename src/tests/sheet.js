@@ -101,6 +101,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'featCategory', 'featPrereq', 'featUnmet', 'featAbilityChoices', 'featOfferable', 'featTaken', 'abilFinal',
   'commitChoices', 'asiFeatListHTML', 'asiPanelHTML', 'commitAsiPick', 'removeClass', 'asiPickConfirmed',
   'featPendingIncreases', 'asiRowHidden',
+  'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -7238,6 +7239,70 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#118 fix: search hides a non-matching row', X.asiRowHidden('Grappler', 'lan', false) === true && X.asiRowHidden('Lantern Bearer', 'lan', false) === false && X.asiRowHidden('Grappler', '', false) === false);
   ck('#118 fix: ...but never the pressed one', X.asiRowHidden('Grappler', 'lan', true) === false);
   X.character = keep.ch; X.rules = keep.rules;
+}
+
+// ---------- #118 species feats and level 19
+{
+  const keep = {ch: X.character, rules: X.rules, conf: state.confirm};
+  X.character = X.blankChar();
+  // invented feat text: never the private packs' wording
+  X.rules = Object.assign({}, X.rules, {
+    feats: [{name: 'Alert', description: 'Origin feat\nx'}, {name: 'Tough', description: 'Origin feat\nx'}, {name: 'Athlete', description: 'General feat · Prerequisite: Level 4+\nx'}],
+    races: [{name: 'Human', choices: [{type: 'feat', category: 'origin', label: 'An Origin feat of your choice'}], traits: [{name: 'Versatile', description: 'You gain an Origin feat of your choice.'}]},
+            {name: 'Tester', feat: 'Tough'}],
+    backgrounds: [{name: 'Wanderer', abilityScores: ['str', 'dex', 'con'], choices: [{type: 'feat', category: 'origin', label: 'An Origin feat'}]}]});
+  X.reindexRules && X.reindexRules();
+  // applyRace() returns the queue; its caller hands it to runExtraChoices()
+  const pend = X.applyRace('Human');
+  ck('#118 a species feat choice is queued with the race sid', pend && pend.some(x => x.ch && x.ch.type === 'feat' && x.ch.category === 'origin' && x.sid === 'race:Human'), pend);
+  const h = X.asiFeatListHTML({type: 'feat', category: 'origin'}, 0, {});
+  ck('#118 the species list offers Origin feats only, with no ASI row', /data-ft-pick="r\d+"[^>]*><span class="ft-nm"><b>Alert/.test(h) && !/<b>Athlete/.test(h) && !/__asi__/.test(h), h);
+  X.commitAsiPick({type: 'asi', pick: 'Alert', plus: []}, X.sidToOrigin('race:Human'), []);
+  ck('#118 the species feat is granted with the race origin', X.character.features.some(x => x.name === 'Feat: Alert' && x.origin.kind === 'race' && x.origin.name === 'Human'));
+  X.applyRace('Tester');
+  ck('#118 species revert: changing species removes its feat', !X.character.features.some(x => x.name === 'Feat: Alert'));
+  ck('#118 a fixed species feat is granted', X.character.features.some(x => x.name === 'Feat: Tough' && x.origin.kind === 'race'));
+  // the species choice in a window: the same list, no ASI row, nothing pressed, and Done wants a pick
+  const w = X.choiceFieldHTML(Object.assign({}, pend.find(x => x.ch.type === 'feat').ch), 0, null);
+  ck('#118 a category feat choice renders the list as an asi step', /data-ctype="asi"/.test(w) && /data-ft-list/.test(w) && /data-ft-panel/.test(w) && !/__asi__/.test(w), w);
+  ck('#118 ...carrying its race sid', /data-sid="race:Human"/.test(w));
+  ck('#118 ...with no row pressed', !/aria-pressed="true"/.test(w));
+  ck('#118 ...and Done wanting one pick (data-choose)', /data-choose="1"/.test(w));
+  X.character.featsAllowed = false;
+  ck('#118 Feats allowed off: a species feat is still offered', /data-ft-list/.test(X.choiceFieldHTML({type: 'feat', category: 'origin'}, 0, null)));
+  X.character.featsAllowed = true;
+  ck('#118 a feat choice with `from` keeps its select', /data-feat-opt/.test(X.choiceFieldHTML({type: 'feat', from: ['Alert']}, 0, null)));
+  // a pressed row counts as a pick toward data-choose
+  const fakeDiv = sel => ({querySelectorAll: q => /aria-pressed="true"/.test(q) ? sel : []});
+  ck('#118 choiceBlockPicked counts the pressed feat row', X.choiceBlockPicked(fakeDiv([{}])) === 1 && X.choiceBlockPicked(fakeDiv([])) === 0);
+  // background: the same pending path, the background's origin
+  const bp = X.applyBackground('Wanderer', {mode: '1-1-1'});
+  ck('#118 a background feat choice is queued with the bg sid', bp.some(x => x.ch && x.ch.type === 'feat' && x.sid === 'bg:Wanderer'), bp);
+  ck('#118 sidToOrigin maps bg: to the background origin', JSON.stringify(X.sidToOrigin('bg:Wanderer')) === JSON.stringify({kind: 'background', name: 'Wanderer'}));
+  ck('#118 sidToOrigin keeps a name holding a colon', X.sidToOrigin('race:Elf: High').name === 'Elf: High');
+  // the extra-choices window's Done: each pick to its own source
+  const queued = [];
+  X.commitExtraChoices([{type: 'asi', pick: 'Alert', plus: [], sid: 'bg:Wanderer'}, {type: 'asi', pick: null, sid: 'race:Tester'}, {type: 'feat', name: 'Athlete', sid: 'race:Tester'}], queued);
+  ck('#118 Done grants the background feat with the background origin', X.character.features.some(x => x.name === 'Feat: Alert' && x.origin.kind === 'background' && x.origin.name === 'Wanderer'));
+  ck('#118 Done grants a select feat choice with its source', X.character.features.some(x => x.name === 'Feat: Athlete' && x.origin.kind === 'race' && x.origin.name === 'Tester'));
+  X.applyBackground('Wanderer', {mode: '1-1-1'});
+  ck('#118 background revert: re-applying removes the chosen feat', !X.character.features.some(x => x.name === 'Feat: Alert'));
+  // level 19
+  const res = X.applyClassLevel({name: 'Wizard', level: 19}, {name: 'Wizard', levels: {'19': {traits: [{name: 'Epic Boon', description: 'You gain an Epic Boon feat…'}]}}}, 19);
+  ck('#118 level 19 Epic Boon becomes an asi choice with boon', res.choices.some(c => c.type === 'asi' && c.boon === true && c._level === 19 && c._sid === 'class:Wizard'), res.choices);
+  ck('#118 ...and the Epic Boon trait is still added', X.character.features.some(x => x.name === 'Epic Boon'));
+  const res4 = X.applyClassLevel({name: 'Wizard', level: 4}, {name: 'Wizard', levels: {'4': {choices: [{type: 'asi'}]}}}, 4);
+  ck('#118 an existing asi level is unchanged', res4.choices.filter(c => c.type === 'asi').length === 1 && !res4.choices[0].boon);
+  const res19 = X.applyClassLevel({name: 'Wizard', level: 19}, {name: 'Wizard', levels: {'19': {choices: [{type: 'asi'}], traits: [{name: 'Epic Boon', description: 'x'}]}}}, 19);
+  ck('#118 a level 19 that already has an asi choice gets no second one', res19.choices.filter(c => c.type === 'asi').length === 1 && !res19.choices[0].boon, res19.choices);
+  const snap = {feats: [], res: {}, slots: [], pb: 6};
+  const rows = X.levelGains(snap, snap, [{type: 'asi', boon: true}, {type: 'asi'}], []);
+  ck('#118 the level-up card names the Epic Boon row', rows[0].text === 'Epic Boon' && rows[0].detail === 'a feat, or an Ability Score Improvement', rows);
+  ck('#118 ...and a plain ASI row as before', rows[1].text === 'Ability Score Improvement');
+  X.character.featsAllowed = false;
+  ck('#118 Feats allowed off: the level-19 row reads as an ASI', X.levelGains(snap, snap, [{type: 'asi', boon: true}], [])[0].text === 'Ability Score Improvement');
+  X.character.featsAllowed = true;
+  X.character = keep.ch; X.rules = keep.rules; state.confirm = keep.conf;
 }
 
 ck.done();

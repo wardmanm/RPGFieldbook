@@ -27,6 +27,11 @@ function applyClassLevel(entry,d,L){
     const lv=d.levels[String(L)]||{};
     (lv.traits||[]).forEach(t=>addFeatureFromDef(t,{kind:"class",class:entry.name,level:L}));
     (Array.isArray(lv.choices)?lv.choices:[]).forEach(ch=>choices.push({...ch,_level:L,_sid:"class:"+entry.name}));
+    /* #118: level 19's Epic Boon is an Ability Score Improvement level too —
+       "an Epic Boon feat or another feat" — when the data has no asi choice
+       there. The trait itself is still added above. */
+    if(L===19&&!(lv.choices||[]).some(c=>c&&c.type==="asi")&&(lv.traits||[]).some(t=>/^Epic Boon$/i.test(String((t&&t.name)||""))))
+      choices.push({type:"asi",boon:true,_level:L,_sid:"class:"+entry.name});
     if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can now know up to ${lv.spells.known} ${d.name} spell(s). Add them via Spells → Add.`:null);if(n)notes.push({text:n,_level:L});}
     const subs=subclassesFor(d);
     if(entry.subclass&&subs[entry.subclass]&&subs[entry.subclass].levels){
