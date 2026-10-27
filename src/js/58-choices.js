@@ -68,7 +68,7 @@ function featCategory(f){
 function featPrereq(f){
   const m=/Prerequisite:\s*(.+)$/i.exec(featHead(f));if(!m)return [];
   return m[1].split(/\s+or\s+(?=Level|Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma|Spellcasting|Fighting)/i).map(alt=>
-    alt.split(/\s+and\s+/i).map(p=>{
+    alt.split(/\s*,\s*|\s+and\s+/i).map(p=>{
       const s=p.trim();let r;
       if((r=/^Level\s+(\d+)\+$/i.exec(s)))return {kind:"level",n:num(r[1])};
       if((r=/^(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+(\d+)\+$/i.exec(s)))return {kind:"ability",key:FEAT_ABIL[r[1].toLowerCase()],n:num(r[2])};
@@ -81,7 +81,11 @@ function featHasFeature(re){return (character.features||[]).some(x=>x&&x.enabled
 function featPartUnmet(p){
   if(p.kind==="level")return num(character.level)>=p.n?"":`level ${p.n} or higher (yours is ${num(character.level)})`;
   if(p.kind==="ability"){const v=abilFinal(p.key,contributions());const full=Object.keys(FEAT_ABIL).find(k=>FEAT_ABIL[k]===p.key)||p.key;const nm=full.charAt(0).toUpperCase()+full.slice(1);return v>=p.n?"":`${nm} ${p.n} or higher (yours is ${v})`;}
-  if(p.kind==="spellcasting"){const ok=featHasFeature(p.pact?/Spellcasting|Pact Magic/i:/Spellcasting/i)||(character.classes||[]).some(c=>{const d=findClassDef(c.name);return d&&d.spellcasting;});return ok?"":(p.pact?"the Spellcasting or Pact Magic feature":"the Spellcasting feature");}
+  /* hasCasterClass() is the app's own caster check (00-constants.js), and it already
+     covers a subclass-only caster (THIRD_SUB: Eldritch Knight, Arcane Trickster) and a
+     Warlock (its "pact" kind) — reading findClassDef(c.name).spellcasting here instead
+     missed both, because that field lives on the subclass entry, not the base class. */
+  if(p.kind==="spellcasting"){const ok=featHasFeature(p.pact?/Spellcasting|Pact Magic/i:/Spellcasting/i)||hasCasterClass();return ok?"":(p.pact?"the Spellcasting or Pact Magic feature":"the Spellcasting feature");}
   if(p.kind==="style")return featHasFeature(/Fighting Style/i)?"":"the Fighting Style feature";
   return "";   /* unknown: shown on the row, never unmet */
 }
@@ -108,8 +112,11 @@ function featTaken(name){const n=String(name||"").toLowerCase();return (characte
 function featOfferable(f,opts){
   const o=opts||{};const nm=String((f&&f.name)||"");
   if(!nm||/^ability score improvement$/i.test(nm))return false;
+  /* Show all is the escape hatch to see every feat (Mike, 2026-10-27): it lifts every
+     other gate below, including a species/background picker's own `category` filter —
+     not just the taken/prerequisite/boon checks. */
   if(o.showAll)return true;
-  if(featTaken(nm)&&!/Repeatable/i.test(f.description||""))return false;
+  if(featTaken(nm)&&!/^Repeatable:/im.test(f.description||""))return false;
   const cat=featCategory(f);
   if(o.category)return cat===o.category;
   if(cat==="origin")return false;

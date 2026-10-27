@@ -7085,6 +7085,8 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   const org = f('Alert', 'Origin feat\nx');
   const odd = f('Weird', 'General feat · Prerequisite: Membership in the Harpers\nx');
   const spl = f('War Caster', 'General feat · Prerequisite: Level 4+ and Spellcasting or Pact Magic feature\nx');
+  const castOnly = f('Spell Sniper', 'General feat · Prerequisite: Spellcasting feature\nx');
+  const pactF = f('Eldritch Adept', 'General feat · Prerequisite: Spellcasting or Pact Magic feature\nx');
   const hb = f('Moonlit', 'Increase your Dexterity, Wisdom, or Charisma score by 1, up to 20.\nYou gain…');
   ck('#118 featCategory', X.featCategory(ath) === 'general' && X.featCategory(boon) === 'boon' && X.featCategory(sty) === 'style' && X.featCategory(org) === 'origin' && X.featCategory(hb) === '');
   const pr = X.featPrereq(ath);
@@ -7101,19 +7103,33 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#118 Fighting Style needs the feature', X.featUnmet(sty).length === 1);
   X.character.features.push({id: 'b', name: 'Fighting Style', enabled: true});
   ck('#118 ...and is met by it', X.featUnmet(sty).length === 0);
+  ck('#118 a plain Fighter does not meet Spellcasting feature', X.featUnmet(castOnly).length === 1, X.featUnmet(castOnly));
+  X.character.classes = [{name: 'Fighter', level: 3, subclass: 'Eldritch Knight'}]; X.character.level = 3;
+  ck('#118 an Eldritch Knight subclass meets Spellcasting feature (hasCasterClass, not the base class field)', X.featUnmet(castOnly).length === 0, X.featUnmet(castOnly));
+  X.character.classes = [{name: 'Warlock', level: 1}]; X.character.level = 1;
+  ck('#118 a Warlock meets Spellcasting or Pact Magic feature', X.featUnmet(pactF).length === 0, X.featUnmet(pactF));
+  X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
   const ac = X.featAbilityChoices(ath);
   ck('#118 ability from the field', ac.length === 1 && ac[0].choose.join() === 'str,dex' && ac[0].amount === 1);
   const tc = X.featAbilityChoices(hb);
   ck('#118 ability from the text', tc.length === 1 && tc[0].choose.join() === 'dex,wis,cha' && tc[0].amount === 1, tc);
   ck('#118 fixed increase', JSON.stringify(X.featAbilityChoices(f('D', 'x', {ability: [{con: 1}]}))) === JSON.stringify([{fixed: {con: 1}}]));
   ck('#118 no increase', X.featAbilityChoices(org).length === 0);
+  ck('#118 a choose increase\'s max round-trips from the field', X.featAbilityChoices(boon)[0].max === 30, X.featAbilityChoices(boon));
   ck('#118 offered at an ASI: general yes, origin no, boon only at 19, style with the feature',
      X.featOfferable(ath, {}) && !X.featOfferable(org, {}) && !X.featOfferable(boon, {}) && X.featOfferable(boon, {boon: true}) && X.featOfferable(sty, {}));
   ck('#118 Show all offers everything', X.featOfferable(org, {showAll: true}));
   ck('#118 a species Origin choice offers only Origin feats', X.featOfferable(org, {category: 'origin'}) && !X.featOfferable(ath, {category: 'origin'}));
+  ck('#118 Show all lifts the category filter too (the escape hatch, Mike 2026-10-27)', X.featOfferable(ath, {category: 'origin', showAll: true}) === true);
   X.character.features.push({id: 'c', name: 'Feat: Athlete', enabled: true});
   ck('#118 a taken feat is hidden unless Repeatable', X.featTaken('Athlete') && !X.featOfferable(ath, {}) && X.featOfferable(f('Skilled', 'General feat\nRepeatable: You can take this feat more than once.'), {}) );
+  X.character.features.push({id: 'd', name: 'Feat: Notionist', enabled: true});
+  ck('#118 "not Repeatable" in the body is not read as the Repeatable line', !X.featOfferable(f('Notionist', 'General feat\nThis feat is not Repeatable.'), {}));
   ck('#118 the rules feat named Ability Score Improvement is never offered', !X.featOfferable(f('Ability Score Improvement', 'General feat\nx'), {showAll: true}));
+  ck('#118 featPrereq also splits parts joined by a comma', (() => {
+    const pr2 = X.featPrereq(f('Comma', 'General feat · Prerequisite: Level 5+, Strength 13+\nx'));
+    return pr2.length === 1 && pr2[0].length === 2 && pr2[0][0].kind === 'level' && pr2[0][1].kind === 'ability';
+  })());
   X.character = keep;
 }
 
