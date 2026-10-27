@@ -51,6 +51,72 @@ function choiceBlocks(){
 }
 /* True when it is safe to close without asking. */
 function choicesSettled(){return choiceShortfall(choiceBlocks())===""}
+/* ---- feats at an ASI (#118) ----
+   A feat's category and prerequisites are its first description line, written
+   by the converter: "General feat · Prerequisite: Level 4+ and Strength 13+ or
+   Level 4+ and Dexterity 13+". What can't be read is shown, never counted. */
+const FEAT_ABIL={strength:"str",dexterity:"dex",constitution:"con",intelligence:"int",wisdom:"wis",charisma:"cha"};
+function featHead(f){return String((f&&f.description)||"").split("\n")[0];}
+function featCategory(f){
+  const h=featHead(f).toLowerCase();
+  if(/^general feat/.test(h))return "general";
+  if(/^origin feat/.test(h))return "origin";
+  if(/^fighting style feat/.test(h))return "style";
+  if(/^epic boon/.test(h))return "boon";
+  return "";
+}
+function featPrereq(f){
+  const m=/Prerequisite:\s*(.+)$/i.exec(featHead(f));if(!m)return [];
+  return m[1].split(/\s+or\s+(?=Level|Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma|Spellcasting|Fighting)/i).map(alt=>
+    alt.split(/\s+and\s+/i).map(p=>{
+      const s=p.trim();let r;
+      if((r=/^Level\s+(\d+)\+$/i.exec(s)))return {kind:"level",n:num(r[1])};
+      if((r=/^(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)\s+(\d+)\+$/i.exec(s)))return {kind:"ability",key:FEAT_ABIL[r[1].toLowerCase()],n:num(r[2])};
+      if(/^Spellcasting( or Pact Magic)? feature$/i.test(s))return {kind:"spellcasting",pact:/Pact Magic/i.test(s)};
+      if(/^Fighting Style feature$/i.test(s))return {kind:"style"};
+      return {kind:"unknown",text:s};
+    }));
+}
+function featHasFeature(re){return (character.features||[]).some(x=>x&&x.enabled!==false&&re.test(String(x.name||"")));}
+function featPartUnmet(p){
+  if(p.kind==="level")return num(character.level)>=p.n?"":`level ${p.n} or higher (yours is ${num(character.level)})`;
+  if(p.kind==="ability"){const v=abilFinal(p.key,contributions());const full=Object.keys(FEAT_ABIL).find(k=>FEAT_ABIL[k]===p.key)||p.key;const nm=full.charAt(0).toUpperCase()+full.slice(1);return v>=p.n?"":`${nm} ${p.n} or higher (yours is ${v})`;}
+  if(p.kind==="spellcasting"){const ok=featHasFeature(p.pact?/Spellcasting|Pact Magic/i:/Spellcasting/i)||(character.classes||[]).some(c=>{const d=findClassDef(c.name);return d&&d.spellcasting;});return ok?"":(p.pact?"the Spellcasting or Pact Magic feature":"the Spellcasting feature");}
+  if(p.kind==="style")return featHasFeature(/Fighting Style/i)?"":"the Fighting Style feature";
+  return "";   /* unknown: shown on the row, never unmet */
+}
+/* The closest alternative's unmet parts; [] when any alternative is fully met. */
+function featUnmet(f){
+  const alts=featPrereq(f);if(!alts.length)return [];
+  let best=null;
+  for(const alt of alts){const miss=alt.map(featPartUnmet).filter(Boolean);if(!miss.length)return [];if(!best||miss.length<best.length)best=miss;}
+  return best;
+}
+/* A feat's ability increase: its `ability` field (the converter, #118) or, for
+   packs without it, "Increase your A, B, or C score by N" in its text. */
+const FEAT_ABIL_KEYS=["str","dex","con","int","wis","cha"];
+function featAbilityChoices(f){
+  if(f&&Array.isArray(f.ability)&&f.ability.length)return f.ability.map(a=>a&&Array.isArray(a.choose)
+    ?Object.assign({choose:a.choose.filter(k=>FEAT_ABIL_KEYS.includes(k)),amount:Math.max(1,num(a.amount)||1)},a.max?{max:num(a.max)}:{})
+    :{fixed:Object.fromEntries(Object.entries(a||{}).filter(([k])=>FEAT_ABIL_KEYS.includes(k)).map(([k,v])=>[k,num(v)]))}).filter(x=>x.fixed?Object.keys(x.fixed).length:x.choose.length);
+  const m=/Increase your ((?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?:,? (?:or )?(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma))*) score by (\d)/i.exec(String((f&&f.description)||""));
+  if(!m)return [];
+  const keys=m[1].split(/,?\s+or\s+|,\s*/).map(w=>FEAT_ABIL[w.trim().toLowerCase()]).filter(Boolean);
+  return keys.length===1?[{fixed:{[keys[0]]:num(m[2])}}]:[{choose:keys,amount:num(m[2])}];
+}
+function featTaken(name){const n=String(name||"").toLowerCase();return (character.features||[]).some(x=>String(x.name||"").toLowerCase()==="feat: "+n);}
+function featOfferable(f,opts){
+  const o=opts||{};const nm=String((f&&f.name)||"");
+  if(!nm||/^ability score improvement$/i.test(nm))return false;
+  if(o.showAll)return true;
+  if(featTaken(nm)&&!/Repeatable/i.test(f.description||""))return false;
+  const cat=featCategory(f);
+  if(o.category)return cat===o.category;
+  if(cat==="origin")return false;
+  if(cat==="boon")return !!o.boon;
+  if(cat==="style")return featHasFeature(/Fighting Style/i);
+  return featUnmet(f).length===0;
+}
 function choiceFieldHTML(ch,ci,d){
   const t=ch.type;let inner="",chooseAttr="";
   if(t==="skill"){

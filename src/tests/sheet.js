@@ -98,6 +98,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
   'INV_FILTERS', 'invDayLabel', 'invLogHTML', 'openInvLog',
   'newTradeDraft', 'tradeBalance', 'tradeHTML', 'completeTrade',
+  'featCategory', 'featPrereq', 'featUnmet', 'featAbilityChoices', 'featOfferable', 'featTaken', 'abilFinal',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -7072,6 +7073,48 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     Object.assign(ctx, {openModal: keep.open, closeModal: keep.close, scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, recompute: keep.rq, renderCoins: keep.rc});
     ctx.document.getElementById = keep.gid; X.character = keep.ch; X.rules = keep.rules;
   }
+}
+
+// ---------- #118 feat helpers
+{
+  const keep = X.character;
+  const f = (name, desc, extra) => Object.assign({name, description: desc}, extra || {});
+  const ath = f('Athlete', 'General feat · Prerequisite: Level 5+ and Strength 13+ or Level 5+ and Dexterity 13+\nYou gain the following benefits.', {ability: [{choose: ['str', 'dex'], amount: 1}]});
+  const boon = f('Boon of Fate', 'Epic Boon · Prerequisite: Level 19+\nx', {ability: [{choose: ['str','dex','con','int','wis','cha'], amount: 1, max: 30}]});
+  const sty = f('Archery', 'Fighting Style feat · Prerequisite: Fighting Style feature\nx');
+  const org = f('Alert', 'Origin feat\nx');
+  const odd = f('Weird', 'General feat · Prerequisite: Membership in the Harpers\nx');
+  const spl = f('War Caster', 'General feat · Prerequisite: Level 4+ and Spellcasting or Pact Magic feature\nx');
+  const hb = f('Moonlit', 'Increase your Dexterity, Wisdom, or Charisma score by 1, up to 20.\nYou gain…');
+  ck('#118 featCategory', X.featCategory(ath) === 'general' && X.featCategory(boon) === 'boon' && X.featCategory(sty) === 'style' && X.featCategory(org) === 'origin' && X.featCategory(hb) === '');
+  const pr = X.featPrereq(ath);
+  ck('#118 featPrereq reads or-groups of and-parts', pr.length === 2 && pr[0].some(p => p.kind === 'level' && p.n === 5) && pr[0].some(p => p.kind === 'ability' && p.key === 'str' && p.n === 13) && pr[1].some(p => p.key === 'dex'), pr);
+  ck('#118 featPrereq keeps what it can\'t read as unknown', X.featPrereq(odd)[0][0].kind === 'unknown');
+  ck('#118 featPrereq: spellcasting or pact magic', X.featPrereq(spl)[0].some(p => p.kind === 'spellcasting' && p.pact === true));
+  X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
+  X.character.abilities.str = 12; X.character.abilities.dex = 10;
+  ck('#118 featUnmet names the shortfall', /Strength 13 or higher \(yours is 12\)/.test(X.featUnmet(ath).join(' ')), X.featUnmet(ath));
+  X.character.features = [{id: 'a', name: 'Ability Score Improvement', enabled: true, effects: [{target: 'ability.str', value: 1}]}];
+  ck('#118 featQualifies after effects (abilFinal)', X.featUnmet(ath).length === 0, X.featUnmet(ath));
+  ck('#118 an unknown prerequisite never counts as unmet', X.featUnmet(odd).length === 0);
+  ck('#118 level 19 for an Epic Boon', X.featUnmet(boon).length === 1);
+  ck('#118 Fighting Style needs the feature', X.featUnmet(sty).length === 1);
+  X.character.features.push({id: 'b', name: 'Fighting Style', enabled: true});
+  ck('#118 ...and is met by it', X.featUnmet(sty).length === 0);
+  const ac = X.featAbilityChoices(ath);
+  ck('#118 ability from the field', ac.length === 1 && ac[0].choose.join() === 'str,dex' && ac[0].amount === 1);
+  const tc = X.featAbilityChoices(hb);
+  ck('#118 ability from the text', tc.length === 1 && tc[0].choose.join() === 'dex,wis,cha' && tc[0].amount === 1, tc);
+  ck('#118 fixed increase', JSON.stringify(X.featAbilityChoices(f('D', 'x', {ability: [{con: 1}]}))) === JSON.stringify([{fixed: {con: 1}}]));
+  ck('#118 no increase', X.featAbilityChoices(org).length === 0);
+  ck('#118 offered at an ASI: general yes, origin no, boon only at 19, style with the feature',
+     X.featOfferable(ath, {}) && !X.featOfferable(org, {}) && !X.featOfferable(boon, {}) && X.featOfferable(boon, {boon: true}) && X.featOfferable(sty, {}));
+  ck('#118 Show all offers everything', X.featOfferable(org, {showAll: true}));
+  ck('#118 a species Origin choice offers only Origin feats', X.featOfferable(org, {category: 'origin'}) && !X.featOfferable(ath, {category: 'origin'}));
+  X.character.features.push({id: 'c', name: 'Feat: Athlete', enabled: true});
+  ck('#118 a taken feat is hidden unless Repeatable', X.featTaken('Athlete') && !X.featOfferable(ath, {}) && X.featOfferable(f('Skilled', 'General feat\nRepeatable: You can take this feat more than once.'), {}) );
+  ck('#118 the rules feat named Ability Score Improvement is never offered', !X.featOfferable(f('Ability Score Improvement', 'General feat\nx'), {showAll: true}));
+  X.character = keep;
 }
 
 ck.done();
