@@ -28,6 +28,15 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
   font-size:20px;color:var(--ink-soft);display:grid;place-items:center;flex:none}
 .close:hover{color:var(--brick);border-color:var(--brick)}
 .m-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
+/* The warning window (askConfirm, 80-modal-forms.js, #118): a second backdrop
+   and box over the open dialog — the same classes, so it follows every skin and
+   both themes — narrower, with the safe button left of the primary one. */
+.ask-back{z-index:90;padding:16px}
+.modal.ask{width:min(440px,100%)}
+.modal.ask .m-title{font-size:20px;line-height:1.15}
+.modal.ask .m-actions{margin-top:14px}
+.modal.ask .m-actions .tbtn{min-height:44px}
+.modal.ask .tbtn:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
 .drop{position:relative;border:2px dashed var(--hair);border-radius:9px;padding:16px;text-align:center;color:var(--ink-soft);
   font-family:var(--head);font-size:12px;cursor:pointer;background:var(--field)}
 .drop:hover{border-color:var(--accent-2);color:var(--ink)}

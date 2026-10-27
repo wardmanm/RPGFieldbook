@@ -59,7 +59,7 @@ function loadApp(names) {
              scrollTo: noop, print: noop},
     document: {
       getElementById: () => stubEl, querySelector: () => null, querySelectorAll: () => [],
-      createElement: () => stubEl, addEventListener: noop, body: stubEl, documentElement: stubEl,
+      createElement: () => stubEl, addEventListener: noop, removeEventListener: noop, body: stubEl, documentElement: stubEl,
     },
   };
   ctx.globalThis = ctx;

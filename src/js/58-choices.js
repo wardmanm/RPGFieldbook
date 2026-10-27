@@ -264,21 +264,52 @@ function wireAsiFeats(list){
     if(search)search.addEventListener("input",filter);
   });
 }
-/* Every feat pressed in the open window, through the warning below — the one
-   check both choice windows' Done run (runChoices, runExtraChoices). */
-function asiScreenPicksConfirmed(){
-  return asiPickConfirmed(Array.from(document.querySelectorAll('.choice[data-ctype="asi"] [data-ft-pick][aria-pressed="true"]')).map(b=>b.dataset.ftPick));
+/* Every feat pressed in the open window — what the warning below is asked about. */
+function asiScreenPicks(){
+  return Array.from(document.querySelectorAll('.choice[data-ctype="asi"] [data-ft-pick][aria-pressed="true"]')).map(b=>b.dataset.ftPick);
 }
-/* The unmet-prerequisite warning at Done, one feat at a time; false when the
-   player declines, so the step stays open. confirm() because the app has no
-   in-modal two-button confirm — its buttons are the browser's OK and Cancel. */
-function asiPickConfirmed(picks){
+/* The unmet-prerequisite sentence for each pressed feat that needs one, in
+   order — DOM-free, so the wording is testable on its own. */
+function asiPickWarnings(picks){
+  const out=[];
   for(const key of picks||[]){
     if(!key||key==="__asi__")continue;
     const f=asiFeatDef(key);const un=f?featUnmet(f):[];
-    if(un.length&&!confirm(`${f.name} needs ${un.join(" and ")}. Take it anyway?`))return false;
+    if(un.length)out.push(`${f.name} needs ${un.join(" and ")}. Take it anyway?`);
+  }
+  return out;
+}
+/* The two warnings at a choice window's Done, in the app's own warning window
+   (askConfirm), in turn: the picks still to make, then each feat whose
+   prerequisites aren't met (#118), one at a time. Resolves false at the first
+   "no" — Go back, Choose another, Escape — so the window stays open with every
+   pick. */
+async function choiceWarningsConfirmed(shortfall,featWarnings){
+  if(shortfall&&!await askConfirm({title:"Picks left",message:shortfall,cancel:"Go back",ok:"Continue anyway"}))return false;
+  for(const message of featWarnings||[]){
+    if(!await askConfirm({title:"Prerequisite not met",message,cancel:"Choose another",ok:"Take it anyway"}))return false;
   }
   return true;
+}
+/* Both choice windows' Done (runChoices, runExtraChoices) is this handler
+   around their own `commit`, which reads the picks — so the picks are read
+   AFTER the warnings, with the window still open, as before.
+   - Nothing to ask: commit at once, in the same task, exactly as Done always
+     did (the level-up's settle and every flow behind the window keep their
+     timing).
+   - Something to ask: wait for the answers. Done pressed again meanwhile does
+     nothing, so a double press can never commit twice; and if the window went
+     while asking (the button is out of the page), nothing commits. */
+function choiceDoneHandler(btn,commit){
+  let busy=false;
+  return ()=>{
+    if(busy)return;
+    const short=choiceShortfall(choiceBlocks()),feats=asiPickWarnings(asiScreenPicks());
+    if(!short&&!feats.length){commit();return;}
+    busy=true;
+    choiceWarningsConfirmed(short,feats).finally(()=>{busy=false;})
+      .then(ok=>{if(ok&&btn.isConnected!==false)commit();});
+  };
 }
 /* One pick at an ASI (#118): the ASI as today, or a feat with its +1 stored on
    the feat, granted with `origin` so it reverts with whatever gave it — a class
@@ -467,13 +498,11 @@ function runChoices(className,choices,notes,pending){
   armChoiceDismissGuard(pending);
   wireHPChoice();
   wireAsiFeats(_activeChoices);
-  document.getElementById("chDone").addEventListener("click",()=>{
-    const warn=choiceShortfall(choiceBlocks());
-    if(warn&&!confirm(warn))return;
-    /* #118: a feat whose prerequisites aren't met asks first */
-    if(!asiScreenPicksConfirmed())return;
+  /* The warnings first, with the window open; the picks are read after them */
+  const done=document.getElementById("chDone");
+  done.addEventListener("click",choiceDoneHandler(done,()=>{
     const sel=gatherChoices();closeModal();commitChoices(className,sel,pending);
-  });
+  }));
 }
 /* The HP block's live working and its Roll button. */
 function wireHPChoice(){

@@ -99,7 +99,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'INV_FILTERS', 'invDayLabel', 'invLogHTML', 'openInvLog',
   'newTradeDraft', 'tradeBalance', 'tradeHTML', 'completeTrade',
   'featCategory', 'featPrereq', 'featUnmet', 'featAbilityChoices', 'featOfferable', 'featTaken', 'abilFinal',
-  'commitChoices', 'asiFeatListHTML', 'asiPanelHTML', 'commitAsiPick', 'removeClass', 'asiPickConfirmed',
+  'commitChoices', 'asiFeatListHTML', 'asiPanelHTML', 'commitAsiPick', 'removeClass', 'asiPickWarnings',
   'featPendingIncreases', 'asiRowHidden',
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
@@ -7166,14 +7166,11 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   const short = X.asiFeatListHTML({type: 'asi'}, 0, {showAll: true});
   ck('#118 Show all tags an unmet prerequisite in amber', /class="ft-tag warn">needs Strength 13 or higher \(yours is 12\)/.test(short), short);
   ck('#118 ...and Show all off hides it', !/data-ft-pick="Great Weapon Master"/.test(X.asiFeatListHTML({type: 'asi'}, 0, {showAll: false})));
-  // the unmet-prerequisite warning: browser confirm() (no in-modal two-button confirm exists)
-  state.confirm = false; state.lastConfirm = null;
-  ck('#118 declining the warning keeps the step open', X.asiPickConfirmed(['Great Weapon Master']) === false);
-  ck('#118 the warning names the feat and what is missing', state.lastConfirm === 'Great Weapon Master needs Strength 13 or higher (yours is 12). Take it anyway?', state.lastConfirm);
-  state.confirm = true;
-  ck('#118 accepting the warning goes on', X.asiPickConfirmed(['Great Weapon Master']) === true);
-  state.lastConfirm = null;
-  ck('#118 the ASI and a qualified feat never ask', X.asiPickConfirmed(['__asi__', 'Alert']) === true && state.lastConfirm === null);
+  // the unmet-prerequisite warning's sentences (asiPickWarnings, DOM-free); the
+  // window that asks them, and both answers, are t118Warn() at the end
+  const pw = ctx.asiPickWarnings(['Great Weapon Master']);
+  ck('#118 the warning names the feat and what is missing', pw.length === 1 && pw[0] === 'Great Weapon Master needs Strength 13 or higher (yours is 12). Take it anyway?', pw);
+  ck('#118 the ASI and a qualified feat never ask', ctx.asiPickWarnings(['__asi__', 'Alert', '', null]).length === 0);
   X.character.abilities.str = 15;
   X.character.featsAllowed = false;
   const off = X.choiceFieldHTML({type: 'asi'}, 0, null);
@@ -7639,4 +7636,207 @@ async function t118EndToEnd() {
   }
 }
 
-t118EndToEnd().then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+/* ---------- #118 the warning window: askConfirm() and both choice windows' Done
+   (a) The REAL window, in a small fake document: a body holding a stand-in
+   #modal (with its Done button, focused), #toast and the page. Just enough DOM
+   for askConfirm(): createElement, appendChild, remove, attributes, listeners,
+   focus, inert, closest("[inert]"), isConnected. `innerHTML` writes are
+   recorded, so the test can say nothing was ever parsed as markup.
+   (b) The two Done handlers, runChoices' and runExtraChoices', driven for
+   real with askConfirm stubbed: each question is answered by the test. */
+async function t118Warn() {
+  const flush = () => new Promise(r => setImmediate(r));
+  const doc = ctx.document;
+  const keep = {gid: doc.getElementById, ce: doc.createElement, body: doc.body, ae: doc.activeElement, ael: doc.addEventListener,
+    rel: doc.removeEventListener, qsa: doc.querySelectorAll, cm: ctx.closeModal, om: ctx.openModal, settle: ctx.luMaybeSettle,
+    ask: ctx.askConfirm, gc: ctx.gatherChoices, cec: ctx.commitExtraChoices, ch: X.character, rules: X.rules};
+  const htmlWrites = [], docKeys = [];
+  function node(tag) {
+    const n = {tagName: String(tag).toUpperCase(), id: '', className: '', textContent: '', type: '', inert: false, children: [], parentNode: null, attrs: {}, _on: {},
+      set innerHTML(v) { htmlWrites.push(String(v)); },
+      appendChild(c) { if (c.parentNode) c.remove(); c.parentNode = this; this.children.push(c); return c; },
+      remove() { if (this.parentNode) { const sib = this.parentNode.children; sib.splice(sib.indexOf(this), 1); this.parentNode = null; } },
+      setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+      addEventListener(t, fn) { (this._on[t] = this._on[t] || []).push(fn); },
+      /* a click bubbles: each ancestor's listeners see the original target */
+      click() { const e = {target: this}; for (let x = this; x; x = x.parentNode) (x._on.click || []).slice().forEach(fn => fn(e)); },
+      focus() { doc.activeElement = this; },
+      closest(sel) { if (sel !== '[inert]') throw new Error('fake closest: ' + sel); for (let x = this; x; x = x.parentNode) if (x.inert) return x; return null; },
+      get isConnected() { for (let x = this; x; x = x.parentNode) if (x === body) return true; return false; }};
+    return n;
+  }
+  const find = (root, id) => { if (root.id === id) return root; for (const c of root.children) { const f = find(c, id); if (f) return f; } return null; };
+  const body = node('body'), fakeModal = node('div'), done = node('button'), toastEl = node('div'), page = node('div');
+  fakeModal.id = 'modal'; done.id = 'chDone'; toastEl.id = 'toast'; page.id = 'page';
+  fakeModal.appendChild(done); body.appendChild(page); body.appendChild(fakeModal); body.appendChild(toastEl);
+  const key = (k, extra) => { const e = Object.assign({key: k, prevented: 0, stopped: 0, preventDefault() { this.prevented++; }, stopPropagation() { this.stopped++; }}, extra || {}); docKeys.filter(l => l.capture).forEach(l => l.fn(e)); return e; };
+  let closes = 0, settles = 0;
+  try {
+    doc.body = body; doc.createElement = node; doc.getElementById = id => find(body, id);
+    doc.addEventListener = (t, fn, cap) => { if (t === 'keydown') docKeys.push({fn, capture: !!cap}); };
+    doc.removeEventListener = (t, fn, cap) => { const i = docKeys.findIndex(l => l.fn === fn && l.capture === !!cap); if (i > -1) docKeys.splice(i, 1); };
+    ctx.closeModal = () => { closes++; }; ctx.luMaybeSettle = () => { settles++; };
+
+    // ---- (a) the real window
+    done.focus();
+    let got = 'pending';
+    ctx.askConfirm({title: 'Picks left', message: 'You have picks left to make:\n\n  • Skills: 0 of 2\n\nContinue anyway?', cancel: 'Go back', ok: 'Continue anyway'}).then(v => { got = v; });
+    const win = find(body, 'askWin'), box = win && win.children[0];
+    ck('#118 warn: the window opens as a second layer, the dialog beneath still there', win && win.parentNode === body && body.children.indexOf(win) > body.children.indexOf(fakeModal) && fakeModal.parentNode === body && done.parentNode === fakeModal);
+    ck('#118 warn: its own backdrop and box, from the modal classes', win && /\bbackdrop\b/.test(win.className) && /\bask-back\b/.test(win.className) && /\bopen\b/.test(win.className) && box && /\bmodal\b/.test(box.className) && /\bask\b/.test(box.className), win && [win.className, box && box.className]);
+    ck('#118 warn: an alertdialog, modal, labelled by its title and described by its message',
+       box && box.attrs.role === 'alertdialog' && box.attrs['aria-modal'] === 'true' && find(body, box.attrs['aria-labelledby']).textContent === 'Picks left'
+       && find(body, box.attrs['aria-describedby']).textContent === 'You have picks left to make:\n\n  • Skills: 0 of 2\n\nContinue anyway?', box && box.attrs);
+    const no = find(body, 'askNo'), yes = find(body, 'askYes');
+    ck('#118 warn: the safe button left, the primary right, with the given labels',
+       no && yes && no.parentNode === yes.parentNode && no.parentNode.children.indexOf(no) < yes.parentNode.children.indexOf(yes)
+       && no.textContent === 'Go back' && yes.textContent === 'Continue anyway' && /\bprimary\b/.test(yes.className) && !/\bprimary\b/.test(no.className) && no.type === 'button' && yes.type === 'button');
+    ck('#118 warn: focus starts on the safe button', doc.activeElement === no);
+    ck('#118 warn: the dialog beneath and the page go inert; the toast does not', fakeModal.inert === true && page.inert === true && toastEl.inert === false);
+    let e = key('Tab');
+    ck('#118 warn: Tab moves to the other button, and no further', doc.activeElement === yes && e.prevented === 1);
+    key('Tab', {shiftKey: true});
+    ck('#118 warn: ...and back', doc.activeElement === no);
+    e = key('Enter', {repeat: true});
+    ck('#118 warn: a held Enter does not repeat into a button', e.prevented === 1 && got === 'pending');
+    e = key('Enter');
+    ck('#118 warn: a fresh Enter is left to the focused button', e.prevented === 0 && e.stopped === 0 && got === 'pending');
+    e = key('Escape');
+    await flush();
+    ck('#118 warn: Escape answers no', got === false);
+    ck('#118 warn: ...and goes no further, so the dialog beneath never sees it', e.stopped === 1 && e.prevented === 1);
+    ck('#118 warn: closing removes the window, releases inert, and stops listening', !find(body, 'askWin') && fakeModal.inert === false && page.inert === false && docKeys.length === 0);
+    ck('#118 warn: focus goes back to what had it', doc.activeElement === done);
+    ck('#118 warn: the dialog beneath is untouched: never closed, nothing settled', closes === 0 && settles === 0 && fakeModal.parentNode === body);
+
+    got = 'pending'; ctx.askConfirm({message: 'Sure?'}).then(v => { got = v; });
+    ck('#118 warn: defaults — "Are you sure?", OK and Cancel', find(body, 'askTitle').textContent === 'Are you sure?' && find(body, 'askYes').textContent === 'OK' && find(body, 'askNo').textContent === 'Cancel');
+    find(body, 'askYes').click(); await flush();
+    ck('#118 warn: the primary button answers yes, and focus goes back', got === true && !find(body, 'askWin') && doc.activeElement === done);
+
+    got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+    find(body, 'askWin').children[0].click(); await flush();
+    ck('#118 warn: a click inside the box is not the backdrop', got === 'pending' && !!find(body, 'askWin'));
+    find(body, 'askWin').click(); await flush();
+    ck('#118 warn: a click on its backdrop answers no', got === false && !find(body, 'askWin'));
+
+    got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+    find(body, 'askNo').click(); await flush();
+    ck('#118 warn: the safe button answers no', got === false);
+
+    let first = 'pending', second = 'pending';
+    ctx.askConfirm({message: 'one'}).then(v => { first = v; });
+    ctx.askConfirm({message: 'two'}).then(v => { second = v; });
+    await flush();
+    ck('#118 warn: asking again answers the open one no and shows the new one, alone',
+       first === false && second === 'pending' && body.children.filter(c => c.id === 'askWin').length === 1 && find(body, 'askMsg').textContent === 'two' && fakeModal.inert === true);
+    ctx.askCancel(); await flush();
+    ck('#118 warn: askCancel answers no and cleans up', second === false && !find(body, 'askWin') && fakeModal.inert === false && docKeys.length === 0);
+
+    const evil = '<img src=x onerror=alert(1)> & "q"\nline two';
+    ctx.askConfirm({title: '<b>T</b>', message: evil, ok: '<i>y</i>', cancel: '<u>n</u>'});
+    ck('#118 warn: every text is text, never markup',
+       find(body, 'askMsg').textContent === evil && find(body, 'askTitle').textContent === '<b>T</b>' && find(body, 'askYes').textContent === '<i>y</i>' && find(body, 'askNo').textContent === '<u>n</u>' && htmlWrites.length === 0, htmlWrites);
+    ctx.askCancel(); await flush();
+    ck('#118 warn: answering never closes the dialog beneath or settles a level-up', closes === 0 && settles === 0);
+  } catch (err) {
+    ck('#118 warn: the real window ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askCancel();
+    doc.getElementById = keep.gid; doc.createElement = keep.ce; doc.body = keep.body; doc.activeElement = keep.ae;
+    doc.addEventListener = keep.ael; doc.removeEventListener = keep.rel; ctx.closeModal = keep.cm; ctx.luMaybeSettle = keep.settle;
+  }
+  ck('#118 warn: openModal() and closeModal() answer an open warning no',
+     /function openModal\(title,html,icon,opts\)\{_dismissGuard=null;_dismissThen=null;askCancel\(\);/.test(SRC103('js/80-modal-forms.js'))
+     && /function closeModal\(\)\{[^\n]*const was=modal\.classList\.contains\("open"\);if\(was\)askCancel\(\);/.test(SRC103('js/80-modal-forms.js')));
+
+  // ---- (b) the Done handlers, with every question answered by the test
+  const asks = [], log = [];
+  let handler = null, opened = 0, blocks = [], pressed = [];
+  const btn = {isConnected: true, addEventListener: (t, fn) => { if (t === 'click') handler = fn; }};
+  const answer = v => { const a = asks.find(x => !x.done); a.done = true; a.resolve(v); return flush(); };
+  try {
+    ctx.askConfirm = opts => new Promise(resolve => { asks.push({opts, resolve, done: false}); log.push('ask:' + opts.title); });
+    ctx.gatherChoices = () => { log.push('gather'); return [{type: 'asi', pick: 'Great Weapon Master', plus: []}]; };
+    ctx.openModal = () => { opened++; };
+    ctx.closeModal = () => { closes++; log.push('close'); };
+    doc.getElementById = id => (id === 'chDone' || id === 'xchDone') ? btn : keep.gid(id);
+    doc.querySelectorAll = sel => sel === '.choice[data-choose]' ? blocks
+      : /\[data-ft-pick\]\[aria-pressed="true"\]$/.test(sel) ? pressed.map(k => ({dataset: {ftPick: k}})) : [];
+    X.rules = Object.assign({}, keep.rules, {feats: [{name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nx', ability: [{str: 1}]}]});
+    const fresh = () => {
+      X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8; X.character.abilities.str = 12;
+      asks.length = 0; log.length = 0; closes = 0; opened = 0; handler = null;
+    };
+    const gwm = () => X.character.features.filter(f => f.name === 'Feat: Great Weapon Master').length;
+    const short = {dataset: {choose: '2'}, querySelector: q => q === 'label.f' ? {textContent: 'Skills — choose 2'} : null, querySelectorAll: () => []};
+
+    // nothing to ask: Done commits at once, in the same task, as it always did
+    fresh(); blocks = []; pressed = ['__asi__'];
+    ctx.gatherChoices = () => { log.push('gather'); return [{type: 'asi', pick: '__asi__', mode: '2', a: 'str'}]; };
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    handler();
+    ck('#118 Done: with nothing to ask, it commits at once, asking nothing', asks.length === 0 && log.join() === 'gather,close' && closes === 1
+       && X.character.features.some(f => f.name === 'Ability Score Improvement'), log);
+    ctx.gatherChoices = () => { log.push('gather'); return [{type: 'asi', pick: 'Great Weapon Master', plus: []}]; };
+
+    // the shortfall warning: declined, then accepted
+    fresh(); blocks = [short]; pressed = [];
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    ck('#118 Done: the window is wired', opened === 1 && typeof handler === 'function');
+    handler(); await flush();
+    const sw = asks[0] && asks[0].opts;
+    ck('#118 Done: a shortfall asks in the warning window, with its own title and buttons',
+       sw && sw.title === 'Picks left' && sw.cancel === 'Go back' && sw.ok === 'Continue anyway' && /Skills: 0 of 2/.test(sw.message), sw);
+    ck('#118 Done: ...and nothing is read or closed while it is open', log.join() === 'ask:Picks left' && closes === 0);
+    await answer(false);
+    ck('#118 Done: "Go back" leaves the window open, nothing read, nothing granted', closes === 0 && !log.includes('gather') && gwm() === 0 && asks.length === 1);
+    handler(); await flush(); await answer(true);
+    ck('#118 Done: "Continue anyway" goes on: picks read after the warning, window closed, committed',
+       log.join() === 'ask:Picks left,ask:Picks left,gather,close' && closes === 1 && gwm() === 1, log);
+
+    // the feat warning: declined keeps the window and grants nothing; accepted grants once
+    fresh(); blocks = []; pressed = ['Great Weapon Master'];
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    handler(); await flush();
+    const fw = asks[0] && asks[0].opts;
+    ck('#118 Done: the feat warning, one feat, with the spec\'s sentence and buttons',
+       fw && fw.message === 'Great Weapon Master needs Strength 13 or higher (yours is 12). Take it anyway?' && fw.cancel === 'Choose another' && fw.ok === 'Take it anyway' && asks.length === 1, fw);
+    await answer(false);
+    ck('#118 Done: "Choose another" keeps the window open and grants nothing', closes === 0 && !log.includes('gather') && gwm() === 0);
+    handler(); await flush();
+    handler(); handler(); await flush();
+    ck('#118 Done: pressing Done again while a warning is open asks nothing more', asks.length === 2);
+    await answer(true);
+    ck('#118 Done: "Take it anyway" grants the feat once, and closes once', gwm() === 1 && closes === 1 && log.filter(x => x === 'gather').length === 1, log);
+
+    // both warnings in a row, then the window goes while the second is open
+    fresh(); blocks = [short]; pressed = ['Great Weapon Master'];
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    handler(); await flush(); await answer(true);
+    ck('#118 Done: both warnings, the shortfall first', asks.map(a => a.opts.title).join() === 'Picks left,Prerequisite not met');
+    btn.isConnected = false; await answer(true); btn.isConnected = true;
+    ck('#118 Done: a window that went while asking commits nothing', gwm() === 0 && closes === 0 && !log.includes('gather'));
+
+    // runExtraChoices: the same handler
+    let commits = 0;
+    ctx.commitExtraChoices = () => { commits++; };
+    fresh(); blocks = []; pressed = ['Great Weapon Master'];
+    ctx.runExtraChoices([{ch: {type: 'feat'}, sid: 'race:Human', label: 'A feat'}]);
+    ck('#118 Done (species/background): the window is wired', typeof handler === 'function');
+    handler(); await flush();
+    ck('#118 Done (species/background): asks the feat warning', asks.length === 1 && asks[0].opts.ok === 'Take it anyway');
+    await answer(false);
+    ck('#118 Done (species/background): declined, nothing committed, window open', commits === 0 && closes === 0);
+    handler(); await flush(); handler(); await flush();
+    await answer(true);
+    ck('#118 Done (species/background): accepted, committed once, closed once', commits === 1 && closes === 1 && asks.length === 2);
+  } catch (err) {
+    ck('#118 Done: the handlers ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askConfirm = keep.ask; ctx.gatherChoices = keep.gc; ctx.commitExtraChoices = keep.cec; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+    doc.getElementById = keep.gid; doc.querySelectorAll = keep.qsa; X.character = keep.ch; X.rules = keep.rules;
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

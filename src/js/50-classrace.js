@@ -171,10 +171,9 @@ function runExtraChoices(pending){
   armChoiceDismissGuard();
   wireAsiFeats(list);
   const b=document.getElementById("xchDone");
-  if(b)b.addEventListener("click",()=>{
-    const warn=choiceShortfall(choiceBlocks());
-    if(warn&&!confirm(warn))return;
-    if(!asiScreenPicksConfirmed())return;
+  /* The warnings first (choiceDoneHandler, 58-choices.js), with the window
+     open; the picks are read after them */
+  if(b)b.addEventListener("click",choiceDoneHandler(b,()=>{
     const next=[];
     commitExtraChoices(gatherChoices(),next);
     document.querySelectorAll('[data-ctype="equip"]').forEach(div=>{
@@ -184,7 +183,7 @@ function runExtraChoices(pending){
     closeModal();renderInventory();renderAttacks();renderFeatures();renderAllRT();recompute();scheduleSave();
     /* a picked feat's own skill choices: the next window, one at a time (#63) */
     if(next.length)runExtraChoices(next);
-  });
+  }));
 }
 
 /* Every class, species and background change ends here. The Class and

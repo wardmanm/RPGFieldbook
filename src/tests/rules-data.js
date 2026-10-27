@@ -2013,10 +2013,17 @@ function block(html, needle, tag) {
      /function syncChoiceLimits\([\s\S]*?disabled=\(picked>=target&&!cb\.checked\)/.test(js));
   // both Done buttons, not just the class one: the race/background modal never
   // populates _activeChoices, so data-choose on the wrapper is its only target
+  // #118: both Done buttons ask through choiceDoneHandler(), which runs the
+  // shortfall warning in the app's own window before the feat warning
   ck('the class chooser warns before committing too few',
-     /chDone[\s\S]{0,240}choiceShortfall\(choiceBlocks\(\)\)[\s\S]{0,120}confirm\(warn\)\)return;/.test(js));
+     /chDone[\s\S]{0,160}addEventListener\("click",choiceDoneHandler\(done,\(\)=>\{\s*const sel=gatherChoices\(\)/.test(js));
   ck('the race/background chooser warns as well',
-     /xchDone[\s\S]{0,260}choiceShortfall\(choiceBlocks\(\)\)[\s\S]{0,120}confirm\(warn\)\)return;/.test(js));
+     /xchDone[\s\S]{0,260}addEventListener\("click",choiceDoneHandler\(b,\(\)=>\{/.test(js));
+  ck('...and the shortfall is asked first, then the feats, both in the warning window',
+     /function choiceDoneHandler\(btn,commit\)\{[\s\S]{0,120}const short=choiceShortfall\(choiceBlocks\(\)\),feats=asiPickWarnings\(asiScreenPicks\(\)\);/.test(js) &&
+     /async function choiceWarningsConfirmed\(shortfall,featWarnings\)\{\s*if\(shortfall&&!await askConfirm\(\{[^}]*message:shortfall[^}]*\}\)\)return false;\s*for\(const message of featWarnings/.test(js));
+  ck('...and neither Done uses the browser\'s confirm() any more',
+     !/chDone[\s\S]{0,400}confirm\(warn\)/.test(js) && !/function choiceWarningsConfirmed[\s\S]{0,400}[^.\w]confirm\(/.test(js));
   ck('choiceBlocks reads the target from the DOM, not from _activeChoices',
      /function choiceBlocks\(\)\{[\s\S]*?\.choice\[data-choose\]/.test(js));
 
@@ -2025,7 +2032,7 @@ function block(html, needle, tag) {
   ck('the three dismissals go through dismissModal, not closeModal',
      /getElementById\("mClose"\)\.addEventListener\("click",dismissModal\)/.test(js) &&
      /if\(e\.target===modal&&both&&settings\.backdropClose===true\)dismissModal\(\)/.test(js) &&
-     /Escape"&&modal\.classList\.contains\("open"\)\)dismissModal\(\)/.test(js));
+     /Escape"&&!_ask&&modal\.classList\.contains\("open"\)\)dismissModal\(\)/.test(js));
   /* #106: a click outside closes a dialog only when Settings says so, off by
      default — a stray click, or a tap to hide a phone's keyboard, lost the
      form. × and Escape are untouched above. And only a click that began on the
