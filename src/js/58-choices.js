@@ -81,11 +81,17 @@ function featHasFeature(re){return (character.features||[]).some(x=>x&&x.enabled
 function featPartUnmet(p){
   if(p.kind==="level")return num(character.level)>=p.n?"":`level ${p.n} or higher (yours is ${num(character.level)})`;
   if(p.kind==="ability"){const v=abilFinal(p.key,contributions());const full=Object.keys(FEAT_ABIL).find(k=>FEAT_ABIL[k]===p.key)||p.key;const nm=full.charAt(0).toUpperCase()+full.slice(1);return v>=p.n?"":`${nm} ${p.n} or higher (yours is ${v})`;}
-  /* hasCasterClass() is the app's own caster check (00-constants.js), and it already
-     covers a subclass-only caster (THIRD_SUB: Eldritch Knight, Arcane Trickster) and a
-     Warlock (its "pact" kind) — reading findClassDef(c.name).spellcasting here instead
-     missed both, because that field lives on the subclass entry, not the base class. */
-  if(p.kind==="spellcasting"){const ok=featHasFeature(p.pact?/Spellcasting|Pact Magic/i:/Spellcasting/i)||hasCasterClass();return ok?"":(p.pact?"the Spellcasting or Pact Magic feature":"the Spellcasting feature");}
+  /* classCasterKind() (00-constants.js) is the app's own per-class caster check, and it
+     already covers a subclass-only caster (THIRD_SUB: Eldritch Knight, Arcane Trickster) —
+     reading findClassDef(c.name).spellcasting here instead missed that, because that field
+     lives on the subclass entry, not the base class. But its "pact" kind (Warlock) is a
+     caster for "Spellcasting or Pact Magic", not for a PLAIN "Spellcasting feature" — so the
+     class check is gated by kind, not just by whether classCasterKind() returned one. */
+  if(p.kind==="spellcasting"){
+    const hasClass=(character.classes||[]).some(c=>{const k=classCasterKind(c);return p.pact?!!k:(!!k&&k!=="pact");});
+    const ok=featHasFeature(p.pact?/Spellcasting|Pact Magic/i:/Spellcasting/i)||hasClass;
+    return ok?"":(p.pact?"the Spellcasting or Pact Magic feature":"the Spellcasting feature");
+  }
   if(p.kind==="style")return featHasFeature(/Fighting Style/i)?"":"the Fighting Style feature";
   return "";   /* unknown: shown on the row, never unmet */
 }

@@ -7108,6 +7108,7 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#118 an Eldritch Knight subclass meets Spellcasting feature (hasCasterClass, not the base class field)', X.featUnmet(castOnly).length === 0, X.featUnmet(castOnly));
   X.character.classes = [{name: 'Warlock', level: 1}]; X.character.level = 1;
   ck('#118 a Warlock meets Spellcasting or Pact Magic feature', X.featUnmet(pactF).length === 0, X.featUnmet(pactF));
+  ck('#118 a Warlock does NOT meet a plain Spellcasting feature (pact is not spellcasting)', X.featUnmet(castOnly).length === 1, X.featUnmet(castOnly));
   X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
   const ac = X.featAbilityChoices(ath);
   ck('#118 ability from the field', ac.length === 1 && ac[0].choose.join() === 'str,dex' && ac[0].amount === 1);
