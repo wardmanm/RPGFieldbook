@@ -7305,4 +7305,57 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = keep.ch; X.rules = keep.rules; state.confirm = keep.conf;
 }
 
+// ---------- #118 Task 4 fix round 1
+{
+  const keep = {ch: X.character, rules: X.rules};
+  X.character = X.blankChar(); X.character.level = 1;
+  // invented feat text: never the private packs' wording
+  const base = [
+    {name: 'Lamplighter', description: 'Origin feat\nGlow: You shed a little light.', ability: [{choose: ['int', 'wis'], amount: 1}]},
+    {name: 'Brawler', description: 'General feat · Prerequisite: Level 4+\nx'},
+    {name: 'Wayfarer', description: 'General feat\nRoads: You know the way.'},
+    {name: 'Boon of Testing', description: 'Epic Boon · Prerequisite: Level 19+\nx'},
+    {name: 'Shieldwall', description: 'Fighting Style feat · Prerequisite: Fighting Style feature\nx'}];
+  X.rules = Object.assign({}, X.rules, {feats: base,
+    races: [{name: 'Lineage', choices: [{type: 'feat', label: 'A feat of your choice'}]},
+            {name: 'Menu', feat: ['Lamplighter', 'Brawler']},
+            {name: 'Solo', feat: 'Wayfarer'}]});
+  X.reindexRules();
+  // I1: a species feat choice with no category is the list too
+  const lp = X.applyRace('Lineage');
+  const lc = (lp.find(x => x.ch && x.ch.type === 'feat') || {}).ch;
+  ck('#118 fix1: a no-category species feat choice is queued', !!lc, lp);
+  const lw = X.choiceFieldHTML(lc, 0, null);
+  ck('#118 fix1: ...and renders the list, not the select', /data-ctype="asi"/.test(lw) && /data-ft-list/.test(lw) && !/data-feat-opt/.test(lw), lw);
+  ck('#118 fix1: ...with no pinned ASI row', !/__asi__/.test(lw));
+  ck('#118 fix1: at level 1 it offers Origin feats and met General feats', /<b>Lamplighter/.test(lw) && /<b>Wayfarer/.test(lw) && !/<b>Brawler/.test(lw), lw);
+  ck('#118 fix1: Epic Boons and Fighting Style feats wait for Show all', !/<b>Boon of Testing/.test(lw) && !/<b>Shieldwall/.test(lw));
+  ck('#118 fix1: ...and Show all lists them', /<b>Boon of Testing/.test(X.asiFeatListHTML(lc, 0, {showAll: true})));
+  ck('#118 fix1: featOfferable anyCategory: Origin yes, boon no', X.featOfferable(base[0], {anyCategory: true}) && !X.featOfferable(base[3], {anyCategory: true}) && !X.featOfferable(base[1], {anyCategory: true}));
+  X.character.features.push({id: 'fs', name: 'Fighting Style', enabled: true, effects: []});
+  ck('#118 fix1: ...a Fighting Style feat with the feature', X.featOfferable(base[4], {anyCategory: true}));
+  X.character.features = X.character.features.filter(f => f.id !== 'fs');
+  ck('#118 fix1: the list wants its pick (data-choose)', /data-choose="1"/.test(lw));
+  X.commitExtraChoices([{type: 'asi', pick: 'Lamplighter', plus: ['wis'], sid: 'race:Lineage'}], []);
+  const lf = X.character.features.find(x => x.name === 'Feat: Lamplighter');
+  ck('#118 fix1: the feat is granted with the race origin and its +1', lf && lf.origin.kind === 'race' && lf.origin.name === 'Lineage' && lf.effects.some(e => e.target === 'ability.wis' && e.value === 1), lf);
+  ck('#118 fix1: a class-level feat choice keeps its select', /data-feat-opt/.test(X.choiceFieldHTML({type: 'feat', _sid: 'class:Fighter'}, 0, null)) && /data-feat-opt/.test(X.choiceFieldHTML({type: 'feat', from: ['Wayfarer'], _sid: 'class:Fighter'}, 0, null)));
+  ck('#118 fix1: a background feat choice with no category is the list', /data-ft-list/.test(X.choiceFieldHTML({type: 'feat', _sid: 'bg:Wanderer'}, 0, null)));
+  // M1: a species feat array is a choice of one, through the same list
+  const mp = X.applyRace('Menu');
+  ck('#118 fix1: a species feat array grants nothing outright', !X.character.features.some(x => /^Feat: (Lamplighter|Brawler)$/.test(x.name)));
+  const mc = (mp.find(x => x.ch && x.ch.type === 'feat') || {}).ch;
+  ck('#118 fix1: ...it is queued as a choice from the array', mc && JSON.stringify(mc.from) === JSON.stringify(['Lamplighter', 'Brawler']) && mp.find(x => x.ch === mc).sid === 'race:Menu', mp);
+  const mw = mc ? X.choiceFieldHTML(mc, 0, null) : '';
+  ck('#118 fix1: ...rendered as the list of exactly its feats', /data-ft-list/.test(mw) && /<b>Lamplighter/.test(mw) && /<b>Brawler/.test(mw) && !/<b>Wayfarer/.test(mw) && !/__asi__/.test(mw), mw);
+  ck('#118 fix1: ...and Show all does not widen a fixed menu', mc && !/<b>Wayfarer/.test(X.asiFeatListHTML(mc, 0, {showAll: true})));
+  X.applyRace('Solo');
+  ck('#118 fix1: a species feat string still grants directly', X.character.features.some(x => x.name === 'Feat: Wayfarer' && x.origin.kind === 'race'));
+  // M2: no pickable row, no data-choose
+  X.rules = Object.assign({}, X.rules, {feats: [base[1]]});
+  const ew = X.choiceFieldHTML({type: 'feat', category: 'origin', _sid: 'race:Solo'}, 0, null);
+  ck('#118 fix1: an empty list does not ask for a pick', /data-ft-list/.test(ew) && !/data-choose/.test(ew), ew);
+  X.character = keep.ch; X.rules = keep.rules;
+}
+
 ck.done();

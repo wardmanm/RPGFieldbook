@@ -125,15 +125,23 @@ function featTaken(name){const n=String(name||"").toLowerCase();return (characte
 function featOfferable(f,opts){
   const o=opts||{};const nm=String((f&&f.name)||"");
   if(!nm||/^ability score improvement$/i.test(nm))return false;
+  /* `from`: a fixed menu (a species' feat array, #118) — only its feats, and
+     Show all never widens it; the menu IS the qualification. */
+  if(Array.isArray(o.from)&&!o.from.some(n=>String(n).toLowerCase()===nm.toLowerCase()))return false;
   /* Show all is the escape hatch to see every feat (Mike, 2026-10-27): it lifts every
      other gate below, including a species/background picker's own `category` filter —
      not just the taken/prerequisite/boon checks. */
   if(o.showAll)return true;
   if(featTaken(nm)&&!/^Repeatable:/im.test(f.description||""))return false;
+  if(Array.isArray(o.from))return true;
   const cat=featCategory(f);
   if(o.category)return cat===o.category;
+  /* `anyCategory`: a species or background "feat of your choice" with no
+     category (Tasha's Custom Lineage) — Origin feats too, since that is what a
+     level-1 character qualifies for; Epic Boons only behind Show all. */
+  if(o.anyCategory&&cat==="origin")return true;
   if(cat==="origin")return false;
-  if(cat==="boon")return !!o.boon;
+  if(cat==="boon")return !!o.boon&&!o.anyCategory;
   if(cat==="style")return featHasFeature(/Fighting Style/i);
   return featUnmet(f).length===0;
 }
@@ -182,16 +190,29 @@ function asiFeatShort(f){
 }
 /* The rows alone, so Show all can repaint them without rebuilding the search
    box the player is typing in. `o.pick` is the pressed row. */
+/* A species or background feat choice (#118): no pinned ASI row, nothing
+   pressed to start — keyed on the type, so a choice with no category is one too. */
+function asiIsFeatChoice(ch){return !!(ch&&(ch.type==="feat"||ch.category));}
+/* The list's own options, from the choice: what the first draw and Show all's
+   redraw both start from, so the switch can't drop a filter. */
+function asiListOpts(ch){
+  return {boon:!!ch.boon,category:ch.category||null,anyCategory:ch.type==="feat"&&!ch.category&&!Array.isArray(ch.from),
+    from:Array.isArray(ch.from)?ch.from:null};
+}
+function asiOfferedFeats(o){return (rules.feats||[]).filter(f=>featOfferable(f,o)).sort((a,b)=>String(a.name).localeCompare(String(b.name)));}
+/* a fixed menu's names with no loaded feat: still a row, granted by name */
+function asiMissingFrom(o){return Array.isArray(o.from)?o.from.filter(n=>!(rules.feats||[]).some(f=>String(f.name||"").toLowerCase()===String(n).toLowerCase())):[];}
 function asiFeatRowsHTML(ch,o){
-  const feats=(rules.feats||[]).filter(f=>featOfferable(f,o)).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  const feats=asiOfferedFeats(o);
   const catTag={general:"General",origin:"Origin",style:"Fighting Style",boon:"Epic Boon"};
   const row=(key,name,sub,tag,warn)=>`<button type="button" class="ft-row" data-ft-pick="${esc(key)}" aria-pressed="${key===o.pick?"true":"false"}"><span class="ft-nm"><b>${esc(name)}</b>${sub?`<small>${esc(sub)}</small>`:""}</span>${tag?`<span class="ft-tag${warn?" warn":""}">${esc(tag)}</span>`:""}</button>`;
-  return (ch.category?"":row("__asi__","Ability Score Improvement","+2 to one score, or +1 to two","General",false))+
-    feats.map(f=>{const un=featUnmet(f);return row(asiFeatKey(f),dispName(f,"feats"),asiFeatShort(f),un.length?"needs "+un[0]:(catTag[featCategory(f)]||""),un.length>0);}).join("");
+  return (asiIsFeatChoice(ch)?"":row("__asi__","Ability Score Improvement","+2 to one score, or +1 to two","General",false))+
+    feats.map(f=>{const un=featUnmet(f);return row(asiFeatKey(f),dispName(f,"feats"),asiFeatShort(f),un.length?"needs "+un[0]:(catTag[featCategory(f)]||""),un.length>0);}).join("")+
+    asiMissingFrom(o).map(n=>row(String(n),String(n),"not in the loaded rules","",false)).join("");
 }
 function asiFeatListHTML(ch,ci,opts){
-  const o=Object.assign({boon:!!ch.boon,category:ch.category||null,pick:ch.category?"":"__asi__"},opts||{});
-  return `<label class="f">${esc(ch.label||(ch.boon?"Epic Boon — a feat, or an Ability Score Improvement":"Ability Score Improvement — or a feat instead"))}</label>`+
+  const o=Object.assign(asiListOpts(ch),{pick:asiIsFeatChoice(ch)?"":"__asi__"},opts||{});
+  return `<label class="f">${esc(ch.label||(ch.boon?"Epic Boon — a feat, or an Ability Score Improvement":asiIsFeatChoice(ch)?"A feat of your choice":"Ability Score Improvement — or a feat instead"))}</label>`+
     `<div class="ft-tools"><input type="search" data-ft-search placeholder="Search feats…" aria-label="Search feats"><label class="ft-all">Show all <button type="button" class="switch${o.showAll?" on":""}" data-ft-all role="switch" aria-checked="${o.showAll?"true":"false"}" aria-label="Show all feats"></button></label></div>`+
     `<div class="ft-list" data-ft-list="${esc(ci)}">${asiFeatRowsHTML(ch,o)}</div>`;
 }
@@ -231,9 +252,9 @@ function wireAsiFeats(list){
       if(sw&&e.target.closest("[data-ft-all]")===sw){
         const on=!sw.classList.contains("on");sw.classList.toggle("on",on);sw.setAttribute("aria-checked",on?"true":"false");
         const was=pressed();
-        rows.innerHTML=asiFeatRowsHTML(ch,{boon:!!ch.boon,category:ch.category||null,showAll:on,pick:was});
+        rows.innerHTML=asiFeatRowsHTML(ch,Object.assign(asiListOpts(ch),{showAll:on,pick:was}));
         /* a pick Show all no longer lists falls back to the ASI (or to nothing) */
-        if(was&&!rows.querySelector('[data-ft-pick][aria-pressed="true"]'))pick(ch.category?"":"__asi__");
+        if(was&&!rows.querySelector('[data-ft-pick][aria-pressed="true"]'))pick(asiIsFeatChoice(ch)?"":"__asi__");
         filter();
       }
     });
@@ -332,13 +353,18 @@ function choiceFieldHTML(ch,ci,d){
   }else if(t==="asi"){
     /* Feats allowed off (#118): exactly today's controls, no list */
     inner=character.featsAllowed===false?asiControlsHTML(ci):asiFeatListHTML(ch,ci,{showAll:false})+`<div class="ft-panel" data-ft-panel="${esc(ci)}">${asiPanelHTML(ch,ci,"__asi__")}</div>`;
-  }else if(t==="feat"&&ch.category&&!ch.from){
-    /* #118 §4.1: a species or background feat choice ("an Origin feat of your
-       choice") is the ASI step's list filtered to its category — no ASI row,
-       nothing pressed, and Feats allowed off does not hide it (it is the
-       species' own feat, not the optional rule). It reads back as an asi
-       selection, and data-choose makes Done ask for the one pick. */
-    ctype="asi";chooseAttr=` data-choose="1"`;
+  }else if(t==="feat"&&((ch.category&&!ch.from)||/^(race|bg):/.test(String(ch._sid||"")))){
+    /* #118 §4.1: a species or background feat choice is the ASI step's list —
+       filtered to its category ("an Origin feat of your choice"), to its
+       `from` menu (a species' feat array), or, with neither, to what the
+       character qualifies for (Custom Lineage). No ASI row, nothing pressed,
+       and Feats allowed off does not hide it (it is the species' own feat, not
+       the optional rule). It reads back as an asi selection; data-choose makes
+       Done ask for the one pick — only when there is a row to pick. A class
+       level's feat choice keeps its select below. */
+    ctype="asi";
+    const o=asiListOpts(ch);
+    if(asiOfferedFeats(o).length+asiMissingFrom(o).length)chooseAttr=` data-choose="1"`;
     inner=asiFeatListHTML(ch,ci,{})+`<div class="ft-panel" data-ft-panel="${esc(ci)}"></div>`;
   }else if(t==="feat"){
     if(ch.from){

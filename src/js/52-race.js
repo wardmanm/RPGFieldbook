@@ -110,7 +110,11 @@ function applyRace(sel, subrace, opts){
        now, or a feat choice (Human's Versatile) queued for runExtraChoices(),
        where a `category` choice is the ASI step's list without its ASI row.
        Both carry the race origin, so removeRace() takes them back out. */
-    (Array.isArray(obj.feat)?obj.feat:(obj.feat?[obj.feat]:[])).forEach(f=>grantFeatDef(f,{kind:"race",name},pending));
+    /* An array is "choose one", as a background's is (bgFeatList): a choice
+       from that menu, through the same list; a one-item menu is just granted. */
+    const fl=Array.isArray(obj.feat)?obj.feat.filter(Boolean):(obj.feat?[obj.feat]:[]);
+    if(fl.length===1)grantFeatDef(fl[0],{kind:"race",name},pending);
+    else if(fl.length>1)pending.push({ch:{type:"feat",from:fl.slice(),label:"A feat of your choice",_sid:"race:"+name},sid:"race:"+name,label});
     (obj.choices||[]).forEach(ch=>{if(ch&&ch.type==="feat")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:ch.label||label});});
     applyEquipGrants(obj.equipmentGrants,"race:"+name,pending);
     if(obj.speed&&(character.speed===""||character.speed==null))character.speed=obj.speed;
