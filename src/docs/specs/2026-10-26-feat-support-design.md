@@ -34,6 +34,11 @@ The converter keeps each feat's structured ability increase (5etools' `ability` 
 lets the app ask for a feat's +1 without reading its text. The rules packs that carry feats change as a result:
 SRD 5.2, and the private 2024, Xanathar's and Tasha's packs. Each needs a data release, which Mike cuts.
 
+Three more pieces were added on 2026-10-27:
+- a species grants feats the way a background does, so Human's Versatile asks for its Origin feat;
+- **Undo level-up**, straight after a level-up;
+- a record of what each level gave, which level down shows and can partly revert.
+
 ## 2. Decisions
 
 All made by Mike in conversation on 2026-10-26.
@@ -308,7 +313,8 @@ player.
 - **Player docs:** `docs/rules-schema.md`.
 - **Release notes:** `UNRELEASED.md` gets "At an Ability Score Improvement, take a feat instead — with only the
   feats you qualify for listed, and its +1 asked for", and "A new Feats allowed setting turns feats off for tables
-  that don't use them".
+  that don't use them", "Human's Versatile asks for your Origin feat", and "Undo a level-up straight after it,
+  and level down shows what the level gave you, removing the hit points and features for you".
 - **Ledger:** one entry.
 
 ## 12. Out of scope
