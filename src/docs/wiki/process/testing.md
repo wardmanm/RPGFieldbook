@@ -81,6 +81,11 @@ its extractor.
   To assert what a renderer writes, swap `ctx.document.getElementById` and `createElement` for
   recording elements that log every innerHTML / outerHTML / insertAdjacentHTML write, and restore
   them after; `sheet.js`'s hostile-file block does this.
+  The stub `document` has `addEventListener` and `removeEventListener`, both no-ops. To drive
+  something that builds its own elements and listens on `document`, such as the warning window
+  (`askConfirm()`), give it a small fake tree: `sheet.js`'s warning-window block (`t118Warn`) swaps `body`,
+  `createElement`, `getElementById` and the two listener methods, and calls the captured `keydown`
+  listener itself. An async block like that one goes on the promise chain before `ck.done()`.
 - **`loadHTML`** assembles the page body the way the build does: `src/html` fragments joined with
   `""` and **spliced** into the template at `<!--@@HTML@@-->`.
 - **`makeCheck`** is the whole assertion library. It prints `PASS`/`FAIL` per check, and `done`
@@ -252,3 +257,4 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-10-09 — Ten suites still: `humblewood-verbatim` moves to the private repo and `private-data` takes its slot; the public suites test SRD 5.2, homebrew and invented fixtures, with the four packs' checks moved private; `docs.js` fails on any public test reading a private pack; `converter.py`'s inputs are invented text. → ledger L5426, #85
 - 2026-10-09 — `data-kit.py` pins `convert`'s `--flag=PATH` handling and `build`'s 5e-tools-root refusal, and CI re-runs it after the build; `docs.js` checks the app zip's guard bans `scripts/`. → ledger L5592, #85
 - 2026-10-13 — `run.sh` shows a passing suite's `NOTE` lines and a failing one's indented `FAIL` lines; `private-data` relays the private repo's status; `data-kit.py` tests `sync-private.py`. → ledger L5724, #90
+- 2026-10-27 — The harness `document` gains a no-op `removeEventListener`; `sheet.js` drives the warning window in a fake tree. → ledger L7710, #118

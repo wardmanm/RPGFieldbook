@@ -141,7 +141,8 @@ It applies to every `asi` choice, and to level 19 when §5 makes it one.
   - **Nothing chosen:** the ASI is selected by default, so the step always has a valid pick.
 - **Continue.** If the chosen feat has unmet prerequisites the app could read, it asks: "*Feat* needs
   *what's missing* (yours is *value*). Take it anyway?", with **Choose another** and **Take it anyway**. The
-  wording lists every unmet part.
+  wording lists every unmet part. It asks in the app's own warning window (`askConfirm()`), over the open
+  window, which stays open with every pick on Choose another (as built, Mike 2026-10-27).
 - **Feats allowed off.** The list and the switch aren't drawn. The step is the ASI controls, exactly as today.
 - A feat's own skill choices still follow, behind the step, when a pack carries them in structured form.
   No 2024 or SRD feat does today, so in practice the choices inside a feat, such as spells, tools, damage types,
@@ -161,7 +162,9 @@ background's feat does now.
 
 `applyClassLevel()` reads a class level's `choices`. When the class's level 19 has no `asi` choice but carries a
 trait named "Epic Boon", that level is treated as having `{type:"asi", boon:true}`:
-- The level-up card's choice row says "Epic Boon — a feat, or an Ability Score Improvement".
+- The level-up card's choice row says "Epic Boon — a feat, or an Ability Score Improvement". While feats are
+  allowed it is the only Epic Boon row: the trait's own feature row is left off the card (corrected as built,
+  Mike 2026-10-27; it was listed twice).
 - The step offers Epic Boon feats as qualified.
 
 With Feats allowed off it is an ASI, as the older rules have it. The trait itself is still added as today.
@@ -285,7 +288,7 @@ player.
     - an ASI is stored as today;
     - a feat is stored with its class-level origin and its +1 effect;
     - removing the class removes both;
-  - the unmet-prerequisite confirm, both answers;
+  - the unmet-prerequisite warning, both answers;
   - Feats allowed off draws today's controls;
   - the level-19 Epic Boon detection;
   - `migrate` defaults `featsAllowed` and cleans `levelLog`;
@@ -344,9 +347,11 @@ the truth, and the wiki pages in §11 describe it. This section records:
 
 1. **The undo copy is taken in `doLevelUp()`,** before `entry.level` changes. §5a named `openLevelUp()`,
    but that runs after the level is applied. The intent was "before it applies anything".
-2. **The unmet-prerequisite warning uses `confirm()`** with the §4 sentence, because the app has no in-modal
-   two-button dialog. Its buttons are therefore the browser's OK and Cancel, not **Choose another** and
-   **Take it anyway**.
+2. **The unmet-prerequisite warning** has the §4 sentence and the §4 buttons, **Choose another** and **Take it
+   anyway**, in the app's own warning window (`askConfirm()`, a second layer over the open window). The
+   shortfall warning before it moved into the same window ("Picks left": Go back / Continue anyway). It
+   first shipped as the browser's `confirm()`, whose buttons could only read OK and Cancel; Mike approved the
+   window on 2026-10-27 (ledger "#118 the warning window, and Epic Boon once").
 3. **`undoLevelUp(opts)` takes `opts.force`,** which skips the signature check. The card's Undo uses it,
    because it comes before the level-up has settled. It still needs the copy.
 4. **The plan's test fixtures use invented feat text.** The plan as first written quoted two 14-word runs
@@ -379,7 +384,7 @@ the truth, and the wiki pages in §11 describe it. This section records:
    ASI row. A class level's `{type:"feat"}` keeps its select.
 10. **A species `feat` array means choose one,** as a background's does (decision 7, "the same way"). A
     one-item array or a string is granted outright. The list asks for a pick (`data-choose`) only when it
-    has a row. Epic Boon shown twice on the level-19 card stays as §5 wrote it (Open, below).
+    has a row. Epic Boon now shows once on the level-19 card (§5, decided by Mike 2026-10-27).
 
 ### Where the build differs from the text above
 
@@ -412,7 +417,7 @@ the truth, and the wiki pages in §11 describe it. This section records:
 - **§4, the panel.** The ASI's controls in the panel drop their own heading, because the list's label
   names the step. With Feats allowed off the step is exactly the old markup, heading included.
 - **§4, the warning.** It reads "Grappler needs level 4 or higher (yours is 1) and Strength 13 or higher
-  (yours is 10). Take it anyway?" Cancel keeps the step open with the pick.
+  (yours is 10). Take it anyway?" Choose another keeps the step open with the pick.
 - **§8, names.** The helpers live in `58-choices.js` as `featCategory()`, `featPrereq()`, `featUnmet()`,
   `featOfferable()`, `featAbilityChoices()` and `featPendingIncreases()`. There is no `featQualifies()`:
   `featUnmet()` returning `[]` is the test.
@@ -470,10 +475,6 @@ The final whole-branch review found five minors, all fixed (ledger "#118 final f
 
 ### Open for Mike
 
-- **"Epic Boon" appears twice on the level-19 card,** once as the trait ("feature") and once as the
-  choice ("choose next"). §5 asks for both. Dropping the trait row is a one-line change in `levelGains()`.
-- **The warning's buttons can't read "Choose another" / "Take it anyway"** without a custom in-modal
-  dialog, which the app doesn't have (Ruling 2).
 - **The data releases** above, and pushing the private repo's `999bf63` after public `main`.
 - **A fixed species or background feat's `ability` increase** (M4) is not applied or asked. The
   alternative is to route a fixed grant that has `ability` through the +1 step. It is dormant for

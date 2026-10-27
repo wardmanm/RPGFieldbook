@@ -183,7 +183,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **A species `feat` array (#118, Ruling 10)** — Choose one, as a background's
 - **A species or background feat choice with no category (#118, Ruling 9)** — The list: Origin feats plus General and Fighting Style feats whose readable prerequisites are met; Epic Boons only under Show all
 - **What Show all lifts (#118, Ruling 6)** — Every filter, a species list's category included; a fixed `from` menu stays
-- **The unmet-prerequisite warning (#118, Ruling 2)** — The browser's `confirm` dialog, so its buttons are the browser's OK and Cancel
+- **The unmet-prerequisite warning (#118, Ruling 2; Mike 2026-10-27)** — The app's warning window, with Choose another / Take it anyway; the shortfall warning moves into it too
+- **The Epic Boon rows on the level-19 card (#118, Mike 2026-10-27)** — One: the choice row while feats are allowed
+- **When Done commits with nothing to ask (#118)** — At once, in the same task
 - **Undo after a level-up (#118, decision 8)** — A copy from before the level-up, offered while the sheet is exactly as the level-up left it
 - **Level down (#118, decision 9)** — Each level-up records what it gave; level down removes the ticked HP and features and lists the rest
 
@@ -471,6 +473,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **A tap on a finder row** — Updates that row and the footer in place
 - **The off-screen Add button** — `width:auto` on the origin select, `flex-wrap` as a safety net
 - **Markup that moves, in `wire()`** — A local `on()` that skips a missing id
+- **A question with two named answers (#118, Mike 2026-10-27)** — The app's own warning window, `askConfirm()`, a second layer over the dialog
+- **A second warning while one is open (#118)** — Answers the open one no, then shows the new one
+- **Where the warning window's markup lives (#118)** — Made on open, removed on close
 - **The modal title's contract (#69)** — Plain text, set as `textContent`; callers never escape it
 - **An index of a tab's sections (#103)** — None: ☰ section flyout retired (Mike, 2026-10-24): the tabs are organised well enough to need no index
 - **Where focus goes after Back to top (#103)** — The active tab, or the swords in the combat view

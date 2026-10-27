@@ -13,15 +13,16 @@ so removing the source takes it back out; that mechanism is
 `seedLevel1HP()`, `grantClassSaves()`, `multiclassChoices()`, `multiclassNote()`,
 `levelRecordFor()`, `levelDownHTML()`, `applyLevelDown()` in
 `56-class.js`; `choiceFieldHTML()`, `runChoices()`, `gatherChoices()`, `commitChoices()`,
-`effectiveChoose()`, `choiceShortfall()`, `armChoiceDismissGuard()`, `choiceWindowTitle()`,
+`effectiveChoose()`, `choiceShortfall()`, `choiceDoneHandler()`, `choiceWarningsConfirmed()`,
+`armChoiceDismissGuard()`, `choiceWindowTitle()`,
 `choiceLevelSpan()`, `choiceNoteText()`, and for feats (#118) `featCategory()`, `featPrereq()`,
 `featUnmet()`, `featOfferable()`, `featAbilityChoices()`, `featPendingIncreases()`,
-`asiFeatListHTML()`, `asiPanelHTML()`, `wireAsiFeats()`, `asiPickConfirmed()`,
-`asiScreenPicksConfirmed()`, `commitAsiPick()`, `commitExtraChoices()` in `58-choices.js`;
+`asiFeatListHTML()`, `asiPanelHTML()`, `wireAsiFeats()`, `asiPickWarnings()`,
+`asiScreenPicks()`, `commitAsiPick()`, `commitExtraChoices()` in `58-choices.js`;
 `openAddRace()`, `applyRace()`, `racesForCharacter()` in `52-race.js`; `openAddBackground()`,
 `applyBackground()` in `54-background.js`; `subclassesFor()`, `addFeatureFromDef()`,
 `grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
-`setDismissGuard()` in `80-modal-forms.js`; `classLineHTML()`, `classFlyHTML()`, `openShFly()` in
+`setDismissGuard()`, `askConfirm()` in `80-modal-forms.js`; `classLineHTML()`, `classFlyHTML()`, `openShFly()` in
 `40-sheet.js`; `raceInfoFoot()` in `52-race.js`, `bgInfoFoot()` in `54-background.js`;
 `grantLanguages()`, `dropLanguages()` in `41-chips.js` · `levelSnapshot()`, `levelGains()`,
 `luHPCheck()`, `openLevelUp()`, `levelUpCardHTML()`, `levelUpHPHTML()`, `luSetHP()`, `luFinish()`,
@@ -240,8 +241,19 @@ pack is keyed "Name (PACK)" and offered alongside, and `subSourceTag()` tags the
 budget, but it never asks for more than remain. The target is written as `data-choose` on the
 `.choice` wrapper; a `change` listener on the modal calls `syncChoiceLimits()`, which disables the
 unticked boxes once the block is full and re-enables them off `data-fixed`, never off `checked`. On
-Done, `choiceShortfall(choiceBlocks())` warns about unmade picks; `gatherChoices()` reads only
-checked, **enabled** boxes; `commitChoices()` grants, renders, then opens the next window.
+Done is `choiceDoneHandler(btn, commit)`, in both choice windows (`runChoices()`,
+`runExtraChoices()`). It asks its warnings in the app's warning window (`askConfirm()`,
+[Shell](../ui/shell.md)), over the choice window, which stays open while it asks:
+- **Picks left** (Go back / Continue anyway), with `choiceShortfall(choiceBlocks())`'s text;
+- then, one feat at a time, the prerequisite warning below.
+
+`choiceWarningsConfirmed()` asks them in turn and stops at the first "no", which leaves the window
+open with every pick. Only then does `commit` read the picks: `gatherChoices()` reads only checked,
+**enabled** boxes, and `commitChoices()` grants, renders, then opens the next window.
+- **Nothing to ask:** Done commits at once, in the same task, as it always has.
+- **Something to ask:** pressing Done again while a warning is open does nothing, so a double press
+  can't commit twice. If the window went while the question was open (its Done is out of the page),
+  nothing commits.
 
 **The ASI step (#118).** At an `asi` choice the player takes the Ability Score Improvement or a feat,
 in one list (`asiFeatListHTML()`).
@@ -284,11 +296,11 @@ in one list (`asiFeatListHTML()`).
     score by N" in its text (`featAbilityChoices()`). `featPendingIncreases()` drops anything the
     feat's own `effects` already raise, so a pack that carries both never gives +2.
 - **Done.**
-  - **The warning.** `asiScreenPicksConfirmed()` asks, for each pressed feat with unmet readable
-    prerequisites: "Grappler needs level 4 or higher (yours is 1) and Strength 13 or higher (yours
-    is 10). Take it anyway?" It never blocks. It is the browser's `confirm` dialog (Ruling 2), because the app has no
-    in-modal two-button dialog, so the buttons are the browser's OK and Cancel. Cancel keeps the
-    step open with the pick.
+  - **The warning.** For each pressed feat (`asiScreenPicks()`) with unmet readable prerequisites,
+    `asiPickWarnings()` writes the sentence: "Grappler needs level 4 or higher (yours is 1) and
+    Strength 13 or higher (yours is 10). Take it anyway?" Done asks it in the warning window, titled
+    "Prerequisite not met", with **Choose another** and **Take it anyway**, one feat at a time. It
+    never blocks. Choose another keeps the step open with the pick.
   - **The grant.** `commitAsiPick()` stores the ASI as before. A feat goes through `grantFeatDef()`
     with the class-level origin `{kind:"class", class, level}`, and its +1 is added as an
     `ability.<k>` effect on that same feature, so removing the class removes both.
@@ -298,7 +310,9 @@ in one list (`asiFeatListHTML()`).
 - **Level 19.** `applyClassLevel()` adds `{type:"asi", boon:true}` at level 19 when the level has a
   trait named exactly "Epic Boon" and no `asi` choice of its own. The trait is still added. The
   card's row reads "Epic Boon — a feat, or an Ability Score Improvement" (`LU_CHOICE.boon`), and the
-  step offers Epic Boons as qualified. With Feats allowed off it is a plain ASI.
+  step offers Epic Boons as qualified. While feats are allowed, that choice row is the card's only
+  Epic Boon row: `levelGains()` leaves the trait's feature row off, and the trait is still on the
+  Features card. With Feats allowed off it is a plain ASI, and the feature row stays.
 - **Species and background feat choices** use the same list with no ASI row and nothing pressed to
   start (Ruling 9). This applies to every `{type:"feat"}` queued with a `race:` or `bg:` sid, and
   any with a `category` and no `from`.
@@ -397,9 +411,12 @@ they are built: [Converter](../data/converter.md).
   which `grantFeatDef()` doesn't grant, could take away a skill the player picked.
 - **A feat's +1 lives on the feat's own feature,** so it reverts with whatever granted the feat.
   It is never a separate ASI feature.
-- **The feat helpers stay DOM-free:** `featOfferable()`, `featUnmet()`, `asiPickConfirmed()`,
-  `asiRowHidden()` and the HTML builders. Only `wireAsiFeats()` and `asiScreenPicksConfirmed()`
-  read the document.
+- **The feat helpers stay DOM-free:** `featOfferable()`, `featUnmet()`, `asiPickWarnings()`,
+  `asiRowHidden()` and the HTML builders. Only `wireAsiFeats()` and `asiScreenPicks()` read the
+  document.
+- **Done reads the picks after the warnings,** in its `commit`, with the window still open, and
+  commits at once when there is nothing to ask. The synchronous flow tests in `char-update.js`
+  depend on that.
 - **`character.classes[].subclass` stores the `subclassesFor()` key**, so a supplement must never be
   allowed to take an existing key from another pack.
 - **The first class is `character.classes[0]`**, the one added while the list was empty. Classes
@@ -495,16 +512,14 @@ they are built: [Converter](../data/converter.md).
 | A species `feat` array (#118, Ruling 10) | Choose one, as a background's array | Granting every entry: backgrounds already read an array as a menu |
 | A species or background feat choice with no category (#118, Ruling 9) | The list: Origin feats plus General and Fighting Style feats whose readable prerequisites are met; Epic Boons only under Show all | The old full select: no text, no warning, no +1 (Tasha's Custom Lineage) |
 | What Show all lifts (#118, Ruling 6) | Every filter, a species list's category included; a fixed `from` menu stays | Keeping the category: Show all is the house-rule escape hatch |
-| The unmet-prerequisite warning (#118, Ruling 2) | The browser's `confirm` dialog with the spec's sentence; its buttons are the browser's OK and Cancel | "Choose another" / "Take it anyway" buttons: the app has no in-modal two-button dialog, and building one was out of scope |
+| The unmet-prerequisite warning (#118, Ruling 2; Mike 2026-10-27) | The app's warning window with the spec's sentence and its buttons, Choose another / Take it anyway; the shortfall warning moves into it too (Go back / Continue anyway) | The browser's `confirm` (as first built): its buttons can only say OK and Cancel |
+| The Epic Boon rows on the level-19 card (#118, Mike 2026-10-27) | One: the choice row while feats are allowed; the feature row only with Feats allowed off | Both, as §5 first read: the same thing listed twice |
+| When Done commits with nothing to ask (#118) | At once, in the same task | Always after a promise: every flow behind the window would change timing for no question asked |
 | Undo after a level-up (#118, decision 8) | A copy taken before the level-up; the card and its toast offer Undo while the sheet is exactly as the level-up left it (a signature) | A general per-level revert: too much isn't recorded per level. Cleared by the next save (spec §5a as first written): the level-up's own saves would spend it |
 | Level down (#118, decision 9) | Every level-up records what it gave; level down removes the ticked HP and features (with grants traced to one feature) and lists the rest; a level with no record lowers only the number | Number only: the player has to remember what the level gave |
 
 ## Open
 
-- **Epic Boon appears twice on the level-19 card,** once as the trait and once as the choice. That
-  is spec §5 as written, and dropping the trait row is a one-line change. Mike's call.
-- **The prerequisite warning's buttons** are the browser's OK and Cancel. "Choose another" / "Take
-  it anyway" needs a custom dialog. Mike's call.
 - **A feat's fixed `skills` are not granted** by `grantFeatDef()`, and the ASI's "+1 to two" accepts
   the same ability twice. Both predate #118 ([Known issues](../roadmap/known-issues.md)).
 - **The choices inside a feat stay by hand:** its spells, tools, damage types, Resilient's saving
@@ -577,3 +592,6 @@ they are built: [Converter](../data/converter.md).
   dialog changes nothing. A malformed level record can't make Level down throw. A feat's short
   line skips `Repeatable:` and `Prerequisite:` lines, and reads "+1 any" for all six abilities.
   → ledger L7657, #118
+- 2026-10-27 — The choice windows' two warnings (picks left, a feat's unmet prerequisite) ask in the
+  app's own warning window with named buttons; Done reads the picks after them and commits once.
+  Epic Boon shows once on the level-19 card. → ledger L7710, #118

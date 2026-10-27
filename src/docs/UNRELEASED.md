@@ -92,6 +92,9 @@ Bullets below this line — leave the heading in place.
 - At an Ability Score Improvement you can take a feat instead. The list shows the feats you
   qualify for, Show all lists the rest, and a feat that raises a score asks for its +1. At level
   19 the same list offers the Epic Boons.
+- When you press Done with picks still to make, or with a feat whose prerequisites you don't
+  meet, Fieldbook asks in its own window over the choices, with buttons that say what they do
+  ("Go back", "Choose another", "Take it anyway"). Your picks stay as they were if you go back.
 - A new Feats allowed setting (Settings → Sheet display) turns feats off for tables that don't use
   them. Feats you already have stay.
 - Human's Versatile asks for your Origin feat, and a species or background that grants a feat of

@@ -7706,3 +7706,93 @@ Pages: [character building](../wiki/features/character-building.md),
 [character model](../wiki/architecture/character-model.md),
 [known issues](../wiki/roadmap/known-issues.md) (the fixed feat's `ability`, M4), and the spec's
 As built.
+
+## #118 the warning window, and Epic Boon once (2026-10-27)
+
+Two changes Mike approved on 2026-10-27, which settle the spec's last two Open items.
+
+**The app's own warning window.** `askConfirm({title, message, ok, cancel})` in
+`80-modal-forms.js` returns a Promise of true or false. It replaces the browser's `confirm()` at the
+two choice windows' Done.
+- **A second layer.** Its own backdrop and box (`#askWin.backdrop.ask-back`, z-index 90, between
+  the modal's 80 and the toast's 9999), built on demand and removed on close. The dialog under it
+  stays open and untouched. It uses the modal's own classes, so both skins and both themes come
+  free. `50-modal.css` adds only a narrower box, a 16px gutter and 44px buttons.
+- **Text only.** The title, message and labels are `textContent`, and the message's `\n` are line
+  breaks (`.m-body p` is pre-wrap). Defaults are "Are you sure?", OK and Cancel.
+- **Keyboard.** `role="alertdialog"`, `aria-modal`, labelled by its title and described by its
+  message. Focus starts on the safe button and Tab stays between the two. Escape, or a click on its
+  backdrop, answers no. A capture-phase `keydown` on `document` (`askKey()`) stops Escape there, so
+  the dialog's own Escape never sees it, and that handler also checks `!_ask`. A held Enter or
+  Space is ignored, so a key held on Done can't repeat into the warning. Every other `<body>`
+  child goes inert, the dialog included and the toast excepted. On close, focus returns to what
+  had it.
+- **Never `closeModal()`.** Answering it doesn't settle a level-up (`luMaybeSettle()`) or run a
+  dismissal guard.
+- **Rulings.** Asking again while one is open answers the open one no, then shows the new one; no
+  queue. `openModal()`, and `closeModal()` of an open dialog, answer it no through `askCancel()`,
+  because the question was about a window that is no longer there. A backdrop click always
+  cancels, whatever `settings.backdropClose` says, since cancel loses nothing. It is created on
+  demand rather than in the template, so `modalTakeFocus()` can never find it hidden and make it
+  inert. This is the first `async`/`await` in `src/js`.
+
+**Done.** Both choice windows' Done (`runChoices()`, `runExtraChoices()`) is now
+`choiceDoneHandler(btn, commit)` in `58-choices.js`.
+- It asks "Picks left" (Go back / Continue anyway) with `choiceShortfall()`'s text. Then, one feat
+  at a time, "Prerequisite not met" with the spec's sentence (Choose another / Take it anyway). Both
+  go through `choiceWarningsConfirmed()`.
+- The picks are read in `commit`, after the answers, with the window still open, as before.
+- **With nothing to ask, it commits at once, in the same task.** So every flow behind the window,
+  and the level-up's settle, keep their timing, and `char-update`'s synchronous flow tests pass
+  unchanged.
+- With something to ask, a second press while waiting is ignored. A window that went while the
+  question was open (its button is out of the page) commits nothing.
+- `asiPickConfirmed()` and `asiScreenPicksConfirmed()` are gone. Their parts are `asiScreenPicks()`
+  (the DOM read) and `asiPickWarnings()` (the sentences, DOM-free).
+- `dismissModal()`'s `confirm()` and the app's other `confirm()` calls are #126's to convert. The
+  browser's prompt when a tab closes stays.
+
+**Epic Boon once (`301442e`).** The level-19 card listed Epic Boon twice: the class feature and
+the choice. `levelGains()` now leaves the feature row off while feats are allowed and the level
+has a `boon` ASI choice, so the choice row is the one shown. The feature itself is still added to
+the Features card. With Feats allowed off the choice reads as a plain ASI, and the feature row
+stays.
+
+**Tests:** sheet drives the real window in a small fake document:
+- it opens over a stand-in dialog that stays, with the roles and labels;
+- the safe button is focused, Tab cycles, and a held Enter is ignored;
+- Escape answers no and goes no further, and inert is released, the listener removed and focus
+  returned;
+- the primary button, the backdrop (but not the box) and the safe button each answer;
+- a second ask cancels the first;
+- nothing is ever parsed as markup, and nothing calls `closeModal()` or settles.
+
+Both Done handlers are driven too, with `askConfirm` stubbed:
+- with nothing to ask, they commit in the same task;
+- the shortfall, declined then accepted, reads the picks only afterwards;
+- the feat warning declined keeps the window open and grants nothing, and accepted grants once;
+- a double press asks and commits once, and a window gone mid-question commits nothing;
+- `runExtraChoices()` declines and accepts the same way.
+
+rules-data's source checks follow the new Done.
+
+**QA:** shots are in `.claude/qa/in-progress/118-feats/118-warn-*`:
+- the feat warning over the level-up window, in both skins, light and dark, at 1280 and 390;
+- the window after Choose another, the sheet after Take it anyway, and the shortfall warning in the
+  Humblewood skin.
+
+Driven live with the SRD pack: a Fighter 7 → 8 with Show all on and Grappler picked.
+- Enter on Done opened the warning with focus on Choose another. Clicking it left the window open
+  with Grappler and its +1 intact.
+- Escape closed only the warning. Tab cycled between the two buttons, and Space on Take it anyway
+  granted Feat: Grappler once and settled the level once.
+- A Fighter added at level 1: Done with no skills asked Picks left. A backdrop click cancelled it,
+  Continue anyway went on to the equipment window, and that window's Done committed with no
+  warning.
+
+The other skin's 1280 shots swap `data-skin`/`data-theme` with the warning open. The shortfall
+shot is a real Humblewood character. The console showed nothing new.
+
+Pages: [shell](../wiki/ui/shell.md),
+[character building](../wiki/features/character-building.md), [decisions](../wiki/decisions.md),
+and the spec's §5, §6 and As built.
