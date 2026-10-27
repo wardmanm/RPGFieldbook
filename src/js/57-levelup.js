@@ -42,7 +42,12 @@ function luSummary(s){
 const LU_NO_STACK=["extra attack","unarmored defense"];
 function levelGains(before,after,choices,notes){
   const rows=[],had=new Set(before.feats.map(f=>f.id));
-  after.feats.filter(f=>!had.has(f.id)).forEach(f=>{
+  /* #118: level 19's Epic Boon shows once — as the choice row, which is what
+     the player acts on. Its feature row is left off the card (the feature is
+     still on the Features card); with Feats allowed off the choice reads as a
+     plain ASI, so the feature row stays. */
+  const boonRow=character.featsAllowed!==false&&(choices||[]).some(ch=>ch&&ch.type==="asi"&&ch.boon);
+  after.feats.filter(f=>!had.has(f.id)&&!(boonRow&&/^epic boon$/i.test(String(f.name||"").trim()))).forEach(f=>{
     const nm=f.name.toLowerCase();
     const twin=LU_NO_STACK.includes(nm)&&before.feats.find(b=>b.cls&&f.cls&&b.cls!==f.cls&&b.name.toLowerCase()===nm);
     rows.push({kind:"feature",text:f.name,detail:luSummary(f.desc),tag:f.sub||"feature",
