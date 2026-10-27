@@ -34,7 +34,7 @@ function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
    emblem, the class is set or cleared on EVERY open, so a dialog opened from a
    wide one comes up at the normal width. */
 function openModal(title,html,icon,opts){_dismissGuard=null;_dismissThen=null;askCancel();const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";const box=modal.querySelector(".modal");if(box)box.classList.toggle("wide",!!(opts&&opts.wide));document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
-function closeModal(){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");if(was)askCancel();modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();if(typeof luMaybeSettle==="function")luMaybeSettle();}
+function closeModal(){_dismissGuard=null;_dismissThen=null;askCancel();const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();if(typeof luMaybeSettle==="function")luMaybeSettle();}
 /* ---- focus ----
    A dialog takes the keyboard with it. On open, every other child of <body> goes
    inert (the toast stays reachable) and focus moves in: to the first field with a
@@ -133,10 +133,18 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!_ask&&modal.classL
    - It never calls closeModal(): answering it must not settle a level-up
      (luMaybeSettle) or run a dismissal guard.
    - One at a time: asking again while one is open answers the open one false
-     first. Opening or closing the dialog beneath answers it false as well — the
-     question was about a window that is no longer there.
+     first. openModal() and closeModal() answer it false as well — the question
+     was about a window that is no longer there — and so does Undo level-up,
+     which replaces the sheet it was about.
+   - A click on its backdrop follows the dialog's rule (#106): nothing, unless
+     the player turned Tap outside to close dialogs on, and then only a click
+     pressed AND let go on the backdrop, and not within ASK_BACKDROP_GRACE ms
+     of opening — the second click of a double-click on Done lands there, and
+     must not answer the question the first click asked. Escape and the safe
+     button always cancel.
    The browser's own prompt when a tab closes (beforeunload) cannot be replaced
    and stays. The other confirm() calls are #126's to convert. */
+const ASK_BACKDROP_GRACE=400;
 function askConfirm(opts){
   const o=opts||{};
   askCancel();
@@ -154,10 +162,15 @@ function askConfirm(opts){
     acts.appendChild(no);acts.appendChild(yes);body.appendChild(acts);
     box.appendChild(head);box.appendChild(body);back.appendChild(box);
     const a=document.activeElement;
-    const st={el:back,no,yes,resolve,opener:(a&&a!==document.body)?a:null,inert:[],key:askKey};
+    const st={el:back,no,yes,resolve,opener:(a&&a!==document.body)?a:null,inert:[],key:askKey,at:Date.now(),down:false,up:false};
     no.addEventListener("click",()=>askClose(false));
     yes.addEventListener("click",()=>askClose(true));
-    back.addEventListener("click",e=>{if(e.target===back)askClose(false);});
+    back.addEventListener("pointerdown",e=>{st.down=e.target===back;});
+    back.addEventListener("pointerup",e=>{st.up=e.target===back;});
+    back.addEventListener("click",e=>{
+      const both=st.down&&st.up;st.down=st.up=false;
+      if(e.target===back&&both&&settings.backdropClose===true&&Date.now()-st.at>=ASK_BACKDROP_GRACE)askClose(false);
+    });
     [...document.body.children].forEach(el=>{if(el.id==="toast"||el.tagName==="SCRIPT"||el.inert)return;el.inert=true;st.inert.push(el);});
     document.body.appendChild(back);
     /* capture, on document: ahead of the dialog's own Escape (above) and every

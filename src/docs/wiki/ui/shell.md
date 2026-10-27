@@ -194,13 +194,18 @@ can only say OK and Cancel. Callers `await` it.
 - **Escape stops there.** `askKey()` is a capture-phase `keydown` on `document`, added on open and
   removed on close. It runs before the dialog's Escape handler and stops the event, and that handler
   also checks `!_ask`.
-- **A click on its backdrop** answers `false`, whatever `settings.backdropClose` says: cancel loses
-  nothing.
+- **A click on its backdrop** follows the dialog's rule (#106). With `settings.backdropClose` off,
+  the default, it does nothing. With it on, only a click pressed and let go on the backdrop answers
+  `false`, and not within `ASK_BACKDROP_GRACE` (400 ms) of opening. A double-click on Done lands its
+  second click on the new warning's backdrop, and that must not answer the question the first click
+  asked. `.ask-back` is `user-select:none` for the same click, which would otherwise select the
+  nearest word in the box. Escape and the safe button always cancel.
 - **It never calls `closeModal()`,** so answering never settles a level-up (`luMaybeSettle()`) or
   runs a dismissal guard.
 - **One at a time.** `askConfirm()` while one is open answers the open one `false`, then shows the
-  new one. `openModal()`, and `closeModal()` of an open dialog, answer it `false` through
-  `askCancel()`, because the window it asked about is gone.
+  new one. `openModal()`, `closeModal()` and `undoLevelUp()` answer it `false` through
+  `askCancel()`, because the window or sheet it asked about is gone. The toast stays reachable over
+  a warning, so its Undo is the live case.
 
 The choice windows' Done uses it for its two warnings
 ([Character building](../features/character-building.md)). The other `confirm` calls, including
@@ -402,6 +407,7 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 | The off-screen Add button | `width:auto` on the origin select, `flex-wrap` as a safety net | `overflow-x:hidden` on `.browse`: hides a recurrence instead of preventing one |
 | Markup that moves, in `wire()` | A local `on()` that skips a missing id | — (reason: one dead button is a far better failure than every later listener unbound) |
 | A question with two named answers (#118, Mike 2026-10-27) | The app's own warning window, `askConfirm()`, a second layer over the dialog | The browser's `confirm`: its buttons can only say OK and Cancel. Swapping the dialog's content: the window beneath, and its picks, would be lost |
+| A click on the warning's backdrop (#118 fix round 1) | The dialog's rule: nothing unless Tap outside is on, then a click pressed and let go on the backdrop, after a 400 ms grace | Always cancel: the second click of a double-click on Done answered the warning at once, a flash and no question |
 | A second warning while one is open (#118) | Answers the open one no, then shows the new one | A queue: the earlier question is stale by then, and a queued promise could wait forever |
 | Where the warning window's markup lives (#118) | Made on open, removed on close | In the template: `modalTakeFocus()` would make the hidden window inert, and it would then open inert over the dialog |
 | The modal title's contract (#69) | Plain text, set as `textContent`; callers never escape it | `innerHTML` with callers escaping: 51 of 52 calls already passed plain text and a header needs no markup, so every call would change and any one that forgot would be an injection point |
@@ -457,3 +463,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-26 — The top bar gains the Extensions pill and a × on both pills, one auto margin on the save state, and a notice row after the buttons up to 560px; a dismissal guard returning `true` refuses outright; boot ends with the source check. → ledger L7428, #102
 - 2026-10-26 — The ≤560px notice row is decided (Mike): it stays; one combined pill was rejected. → ledger L7513, #102
 - 2026-10-27 — The warning window: `askConfirm()`, a second layer over the dialog with named buttons, Escape that stops there, and focus back; `openModal()` and `closeModal()` answer it no. → ledger L7710, #118
+- 2026-10-27 — Fix round 1: the warning's backdrop follows the dialog's rule (off by default; with it on, a 400 ms grace after opening), and `undoLevelUp()` and every `closeModal()` answer an open warning no. → ledger L7710, #118

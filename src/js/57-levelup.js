@@ -228,6 +228,9 @@ function undoLevelUp(opts){
   if(!(opts&&opts.force)&&!undoLevelUpAvailable()){toast("Undo is no longer available: the sheet has changed since the level-up.");return false;}
   let c;try{c=JSON.parse(_undo.copy);}catch(e){_undo=null;_luActive=false;return false;}
   _undo=null;_luActive=false;
+  /* A warning open over a window (askConfirm) is answered no first: its
+     question is about the sheet being replaced (#118 fix round 1). */
+  askCancel();
   /* Any window still open is about the sheet being replaced: the toast stays
      reachable over a modal, and a Level down or edit dialog left open would
      act on the old sheet. Closed after the reset above, so the closeModal()

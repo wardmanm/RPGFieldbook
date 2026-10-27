@@ -216,8 +216,10 @@ with no record shows today's notice and lowers only the number.
 - `Fighting Style feature` means the character has a feature whose name contains "Fighting Style".
 - Anything else is unknown. It is shown on the row and never counts as unmet.
 
-A feat qualifies when any alternative has every known part met. The mismatch text names the closest
-alternative's unmet parts.
+A feat qualifies when any alternative has every known part met. The mismatch text names a part every
+alternative shares on its own, then the rest of the alternatives as one "or" entry: "Strength 13 or
+Dexterity 13 (yours: Strength 10, Dexterity 10)" (corrected as built, #118 fix round 1: it first named
+only the closest alternative, which told a Grappler candidate they needed Strength when Dexterity would do).
 
 ## 7. Settings
 
@@ -416,8 +418,8 @@ the truth, and the wiki pages in §11 describe it. This section records:
   name), else by its name. Search matches the name only.
 - **§4, the panel.** The ASI's controls in the panel drop their own heading, because the list's label
   names the step. With Feats allowed off the step is exactly the old markup, heading included.
-- **§4, the warning.** It reads "Grappler needs level 4 or higher (yours is 1) and Strength 13 or higher
-  (yours is 10). Take it anyway?" Choose another keeps the step open with the pick.
+- **§4, the warning.** It reads "Grappler needs level 4 or higher (yours is 1) and Strength 13 or Dexterity
+  13 (yours: Strength 10, Dexterity 10). Take it anyway?" Choose another keeps the step open with the pick.
 - **§8, names.** The helpers live in `58-choices.js` as `featCategory()`, `featPrereq()`, `featUnmet()`,
   `featOfferable()`, `featAbilityChoices()` and `featPendingIncreases()`. There is no `featQualifies()`:
   `featUnmet()` returning `[]` is the test.

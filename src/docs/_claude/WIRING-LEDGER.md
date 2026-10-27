@@ -7721,8 +7721,8 @@ two choice windows' Done.
 - **Text only.** The title, message and labels are `textContent`, and the message's `\n` are line
   breaks (`.m-body p` is pre-wrap). Defaults are "Are you sure?", OK and Cancel.
 - **Keyboard.** `role="alertdialog"`, `aria-modal`, labelled by its title and described by its
-  message. Focus starts on the safe button and Tab stays between the two. Escape, or a click on its
-  backdrop, answers no. A capture-phase `keydown` on `document` (`askKey()`) stops Escape there, so
+  message. Focus starts on the safe button and Tab stays between the two. Escape answers no, and
+  so does a backdrop click under the dialog's own rule (fix round 1, below). A capture-phase `keydown` on `document` (`askKey()`) stops Escape there, so
   the dialog's own Escape never sees it, and that handler also checks `!_ask`. A held Enter or
   Space is ignored, so a key held on Done can't repeat into the warning. Every other `<body>`
   child goes inert, the dialog included and the toast excepted. On close, focus returns to what
@@ -7730,9 +7730,8 @@ two choice windows' Done.
 - **Never `closeModal()`.** Answering it doesn't settle a level-up (`luMaybeSettle()`) or run a
   dismissal guard.
 - **Rulings.** Asking again while one is open answers the open one no, then shows the new one; no
-  queue. `openModal()`, and `closeModal()` of an open dialog, answer it no through `askCancel()`,
-  because the question was about a window that is no longer there. A backdrop click always
-  cancels, whatever `settings.backdropClose` says, since cancel loses nothing. It is created on
+  queue. `openModal()` and `closeModal()` answer it no through `askCancel()`,
+  because the question was about a window that is no longer there. It is created on
   demand rather than in the template, so `modalTakeFocus()` can never find it hidden and make it
   inert. This is the first `async`/`await` in `src/js`.
 
@@ -7796,3 +7795,48 @@ shot is a real Humblewood character. The console showed nothing new.
 Pages: [shell](../wiki/ui/shell.md),
 [character building](../wiki/features/character-building.md), [decisions](../wiki/decisions.md),
 and the spec's §5, §6 and As built.
+
+**Fix round 1 (the same day, before review).** Three concerns from the first report, settled with
+tests:
+- **An "or" prerequisite is named whole.** `featUnmet()` used to name only the closest alternative,
+  so Grappler (Str 13 or Dex 13) told a character with 10 in both "needs Strength 13 or higher".
+  - A part every alternative shares (its "Level 4+") is now listed on its own.
+  - What is left of the alternatives is one entry: "Strength 13 or Dexterity 13 (yours: Strength
+    10, Dexterity 10)".
+  - A single alternative (an and-group) still lists each unmet part with its "or higher (yours
+    is N)".
+
+  The row's amber tag and the warning both read it. This uses `featPartNeed()`, `featPartHave()`
+  and `featPartSig()`.
+- **A backdrop click follows the dialog's rule (#106).**
+  - With Tap outside to close dialogs off (the default), a click on the warning's backdrop does
+    nothing.
+  - With it on, only a click pressed and let go on the backdrop counts, and not within
+    `ASK_BACKDROP_GRACE` (400 ms) of opening.
+  - So the second click of a double-click on Done, which lands on the new warning's backdrop, never
+    answers it. Escape and the safe button always cancel.
+  - `.ask-back` is `user-select:none`, because that second click otherwise highlighted the nearest
+    word in the box.
+- **Undo replaces the sheet the warning asked about.** `undoLevelUp()` calls `askCancel()` first,
+  and `closeModal()` now calls it unconditionally.
+  - It used to be gated on the dialog being open, so the harness, whose `modal` is a stub, could
+    never reach it.
+  - The toast's Undo over an open warning now answers it no, closes the window and restores the
+    sheet, and nothing commits after.
+
+Tests (sheet):
+- seven invented prerequisite fixtures (shared and-part, one alternative met, an and-group, an
+  unequal or-group, three alternatives) and the warning's sentence;
+- the backdrop with the setting off, on, a press that began in the box, inside the grace, and after
+  it;
+- a double-click on Done with the real window, under both settings: the warning stays and nothing
+  commits;
+- the toast's Undo while a warning is open, driven end to end with the real `askConfirm`.
+
+QA:
+- `118-warn-fix1-orgroup-dblclick-1280.png` and `118-warn-fix1-orgroup-390.png`: the or-group
+  warning, after a real double-click, with no selection.
+- `118-warn-fix1-orgroup-tag-390.png`: the longer amber tag, which wraps inside its pill.
+- `118-warn-fix1-undo-under-warning-1280.png` and `118-warn-fix1-undo-after-1280.png`: a real click
+  on the toast's Undo over the warning. Level 7 was restored, nothing was granted, and there was no
+  record.

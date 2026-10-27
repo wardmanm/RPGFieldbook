@@ -282,7 +282,11 @@ in one list (`asiFeatListHTML()`).
     (a caster class by `classCasterKind()`, Pact Magic excluded, or a feature named Spellcasting),
     "Spellcasting or Pact Magic feature" and "Fighting Style feature". The text can hold "or"
     groups and parts joined by "and" or commas. An unknown part is shown and never counts as unmet.
-    `featUnmet()` names the closest alternative's unmet parts.
+    `featUnmet()` says what is missing. A part every alternative shares (Grappler's "Level 4+")
+    is listed on its own. What is left of the alternatives is one entry naming them all: "Strength
+    13 or Dexterity 13 (yours: Strength 10, Dexterity 10)". With a single alternative each unmet
+    part is its own entry, "Strength 13 or higher (yours is 12)". The amber tag shows the first
+    entry, and the warning joins them with "and".
   - **A feat already taken** is hidden unless its text has a `Repeatable:` line. The rules entry
     named "Ability Score Improvement" is never listed.
 - **Show all** lists every loaded feat. It lifts every filter, a species list's category included
@@ -298,7 +302,7 @@ in one list (`asiFeatListHTML()`).
 - **Done.**
   - **The warning.** For each pressed feat (`asiScreenPicks()`) with unmet readable prerequisites,
     `asiPickWarnings()` writes the sentence: "Grappler needs level 4 or higher (yours is 1) and
-    Strength 13 or higher (yours is 10). Take it anyway?" Done asks it in the warning window, titled
+    Strength 13 or Dexterity 13 (yours: Strength 10, Dexterity 10). Take it anyway?" Done asks it in the warning window, titled
     "Prerequisite not met", with **Choose another** and **Take it anyway**, one feat at a time. It
     never blocks. Choose another keeps the step open with the pick.
   - **The grant.** `commitAsiPick()` stores the ASI as before. A feat goes through `grantFeatDef()`
@@ -595,3 +599,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-10-27 — The choice windows' two warnings (picks left, a feat's unmet prerequisite) ask in the
   app's own warning window with named buttons; Done reads the picks after them and commits once.
   Epic Boon shows once on the level-19 card. → ledger L7710, #118
+- 2026-10-27 — Fix round 1: an "or" prerequisite is named whole ("Strength 13 or Dexterity 13"), not just its closest alternative. → ledger L7710, #118

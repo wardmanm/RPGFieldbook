@@ -31,7 +31,10 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 /* The warning window (askConfirm, 80-modal-forms.js, #118): a second backdrop
    and box over the open dialog — the same classes, so it follows every skin and
    both themes — narrower, with the safe button left of the primary one. */
-.ask-back{z-index:90;padding:16px}
+/* No text selection: the second click of a double-click on Done lands on this
+   backdrop, and its word-selection would otherwise grab the nearest text in
+   the box (a stray "?" or half a button label, highlighted). */
+.ask-back{z-index:90;padding:16px;-webkit-user-select:none;user-select:none}
 .modal.ask{width:min(440px,100%)}
 .modal.ask .m-title{font-size:20px;line-height:1.15}
 .modal.ask .m-actions{margin-top:14px}

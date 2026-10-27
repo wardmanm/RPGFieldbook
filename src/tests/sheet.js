@@ -7099,7 +7099,37 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#118 featPrereq: spellcasting or pact magic', X.featPrereq(spl)[0].some(p => p.kind === 'spellcasting' && p.pact === true));
   X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
   X.character.abilities.str = 12; X.character.abilities.dex = 10;
-  ck('#118 featUnmet names the shortfall', /Strength 13 or higher \(yours is 12\)/.test(X.featUnmet(ath).join(' ')), X.featUnmet(ath));
+  ck('#118 featUnmet names the shortfall: an or-group missed entirely is named whole',
+     JSON.stringify(X.featUnmet(ath)) === JSON.stringify(['Strength 13 or Dexterity 13 (yours: Strength 12, Dexterity 10)']), X.featUnmet(ath));
+  /* fix round 1: invented fixtures for the or- and and-groups */
+  {
+    const lvl = X.character.level;
+    const grp = f('Tumbler', 'General feat · Prerequisite: Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\nx');
+    X.character.level = 1;
+    ck('#118 fix1 a shared and-part is listed on its own, then the or-group whole',
+       JSON.stringify(X.featUnmet(grp)) === JSON.stringify(['level 4 or higher (yours is 1)', 'Strength 13 or Dexterity 13 (yours: Strength 12, Dexterity 10)']), X.featUnmet(grp));
+    X.character.abilities.dex = 14;
+    ck('#118 fix1 one alternative\'s own part met: only the shared part is missing', JSON.stringify(X.featUnmet(grp)) === JSON.stringify(['level 4 or higher (yours is 1)']), X.featUnmet(grp));
+    X.character.level = lvl;
+    ck('#118 fix1 ...and with it met too, nothing', X.featUnmet(grp).length === 0);
+    X.character.abilities.dex = 10;
+    const both = f('Bulwark', 'General feat · Prerequisite: Strength 13+ and Constitution 13+\nx');
+    ck('#118 fix1 an and-group lists each unmet part',
+       JSON.stringify(X.featUnmet(both)) === JSON.stringify(['Strength 13 or higher (yours is 12)', 'Constitution 13 or higher (yours is 10)']), X.featUnmet(both));
+    X.character.abilities.con = 13;
+    ck('#118 fix1 ...and only the parts not met', JSON.stringify(X.featUnmet(both)) === JSON.stringify(['Strength 13 or higher (yours is 12)']), X.featUnmet(both));
+    X.character.abilities.con = 10;
+    const mixed = f('Hedge Mage', 'General feat · Prerequisite: Spellcasting feature or Intelligence 15+ and Wisdom 13+\nx');
+    ck('#118 fix1 an or-group of unequal alternatives: each alternative\'s unmet parts, joined',
+       JSON.stringify(X.featUnmet(mixed)) === JSON.stringify(['the Spellcasting feature or Intelligence 15 and Wisdom 13 (yours: Intelligence 10, Wisdom 10)']), X.featUnmet(mixed));
+    const three = f('Nimble', 'General feat · Prerequisite: Strength 13+ or Dexterity 13+ or Charisma 13+\nx');
+    ck('#118 fix1 three alternatives, all named', /^Strength 13 or Dexterity 13 or Charisma 13 \(yours: Strength 12, Dexterity 10, Charisma 10\)$/.test(X.featUnmet(three)[0] || ''), X.featUnmet(three));
+    const keepRules = X.rules; X.rules = Object.assign({}, X.rules, {feats: [grp]});
+    X.character.level = 1;
+    ck('#118 fix1 the warning reads the group whole',
+       ctx.asiPickWarnings(['Tumbler'])[0] === 'Tumbler needs level 4 or higher (yours is 1) and Strength 13 or Dexterity 13 (yours: Strength 12, Dexterity 10). Take it anyway?', ctx.asiPickWarnings(['Tumbler']));
+    X.character.level = lvl; X.rules = keepRules;
+  }
   X.character.features = [{id: 'a', name: 'Ability Score Improvement', enabled: true, effects: [{target: 'ability.str', value: 1}]}];
   ck('#118 featQualifies after effects (abilFinal)', X.featUnmet(ath).length === 0, X.featUnmet(ath));
   ck('#118 an unknown prerequisite never counts as unmet', X.featUnmet(odd).length === 0);
@@ -7714,11 +7744,30 @@ async function t118Warn() {
     find(body, 'askYes').click(); await flush();
     ck('#118 warn: the primary button answers yes, and focus goes back', got === true && !find(body, 'askWin') && doc.activeElement === done);
 
-    got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
-    find(body, 'askWin').children[0].click(); await flush();
-    ck('#118 warn: a click inside the box is not the backdrop', got === 'pending' && !!find(body, 'askWin'));
-    find(body, 'askWin').click(); await flush();
-    ck('#118 warn: a click on its backdrop answers no', got === false && !find(body, 'askWin'));
+    /* the backdrop follows the dialog's rule (#106; fix round 1): nothing with
+       the setting off; with it on, only a click pressed and let go on the
+       backdrop, and not within the grace after opening */
+    const tap = (el, target) => { const t = target || el; (el._on.pointerdown || []).forEach(fn => fn({target: t})); (el._on.pointerup || []).forEach(fn => fn({target: t})); el.click(); };
+    const realNow = ctx.Date.now; let now = 1e6; ctx.Date.now = () => now;
+    try {
+      X.settings.backdropClose = false;
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      now += 5000; tap(find(body, 'askWin')); await flush();
+      ck('#118 fix1 backdrop: with Tap outside off (the default), a backdrop click does nothing', got === 'pending' && !!find(body, 'askWin'));
+      X.settings.backdropClose = true;
+      find(body, 'askWin').children[0].click(); await flush();
+      ck('#118 warn: a click inside the box is not the backdrop', got === 'pending' && !!find(body, 'askWin'));
+      const w = find(body, 'askWin'), bx = w.children[0];
+      (w._on.pointerdown || []).forEach(fn => fn({target: bx})); (w._on.pointerup || []).forEach(fn => fn({target: w})); w.click(); await flush();
+      ck('#118 fix1 backdrop: with it on, a press that began in the box does nothing', got === 'pending');
+      tap(w); await flush();
+      ck('#118 fix1 backdrop: with it on, a click pressed and let go on the backdrop answers no', got === false && !find(body, 'askWin'));
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      now += 399; tap(find(body, 'askWin')); await flush();
+      ck('#118 fix1 backdrop: ...but not within 400 ms of opening', got === 'pending' && !!find(body, 'askWin'));
+      now += 1; tap(find(body, 'askWin')); await flush();
+      ck('#118 fix1 backdrop: ...and from 400 ms it does', got === false);
+    } finally { ctx.Date.now = realNow; X.settings.backdropClose = false; }
 
     got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
     find(body, 'askNo').click(); await flush();
@@ -7748,7 +7797,7 @@ async function t118Warn() {
   }
   ck('#118 warn: openModal() and closeModal() answer an open warning no',
      /function openModal\(title,html,icon,opts\)\{_dismissGuard=null;_dismissThen=null;askCancel\(\);/.test(SRC103('js/80-modal-forms.js'))
-     && /function closeModal\(\)\{[^\n]*const was=modal\.classList\.contains\("open"\);if\(was\)askCancel\(\);/.test(SRC103('js/80-modal-forms.js')));
+     && /function closeModal\(\)\{_dismissGuard=null;_dismissThen=null;askCancel\(\);/.test(SRC103('js/80-modal-forms.js')));
 
   // ---- (b) the Done handlers, with every question answered by the test
   const asks = [], log = [];
@@ -7837,6 +7886,115 @@ async function t118Warn() {
     ctx.askConfirm = keep.ask; ctx.gatherChoices = keep.gc; ctx.commitExtraChoices = keep.cec; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
     doc.getElementById = keep.gid; doc.querySelectorAll = keep.qsa; X.character = keep.ch; X.rules = keep.rules;
   }
+
+  // ---- (c) fix round 1: a double-click on Done, with the REAL window in the fake tree.
+  // The first click opens the warning; the second lands on its backdrop (Done
+  // is under it, inert). Neither setting may let that second click answer it.
+  const realNow = ctx.Date.now;
+  let gathers = 0, closesC = 0;
+  try {
+    doc.body = body; doc.createElement = node;
+    done.remove();   /* (a)'s Done, so #chDone is this one */
+    const doneC = node('button'); doneC.id = 'chDone'; fakeModal.appendChild(doneC);
+    doc.getElementById = id => find(body, id) || keep.gid(id);
+    doc.addEventListener = (t, fn, cap) => { if (t === 'keydown') docKeys.push({fn, capture: !!cap}); };
+    doc.removeEventListener = (t, fn, cap) => { const i = docKeys.findIndex(l => l.fn === fn && l.capture === !!cap); if (i > -1) docKeys.splice(i, 1); };
+    doc.querySelectorAll = sel => /\[data-ft-pick\]\[aria-pressed="true"\]$/.test(sel) ? [{dataset: {ftPick: 'Great Weapon Master'}}] : [];
+    ctx.openModal = () => {}; ctx.closeModal = () => { closesC++; };
+    ctx.gatherChoices = () => { gathers++; return [{type: 'asi', pick: 'Great Weapon Master', plus: []}]; };
+    X.rules = Object.assign({}, keep.rules, {feats: [{name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nx', ability: [{str: 1}]}]});
+    const tapC = el => { (el._on.pointerdown || []).forEach(fn => fn({target: el})); (el._on.pointerup || []).forEach(fn => fn({target: el})); el.click(); };
+    for (const on of [false, true]) {
+      X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8; X.character.abilities.str = 12;
+      X.settings.backdropClose = on; gathers = 0; closesC = 0;
+      let now = 5e6; ctx.Date.now = () => now;
+      doneC._on = {};
+      ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+      doneC.focus();
+      doneC.click();                     // the first click: the warning opens
+      const w = find(body, 'askWin');
+      now += 150; tapC(w);               // the second, 150 ms later, on its backdrop
+      doneC.click();                     // and, were it to reach Done, Done again
+      await flush();
+      ck('#118 fix1 double-click on Done (Tap outside ' + (on ? 'on' : 'off') + '): the warning stays open, nothing committed',
+         !!w && find(body, 'askWin') === w && gathers === 0 && closesC === 0 && !X.character.features.some(f => /Great Weapon/.test(f.name)));
+      ctx.askCancel(); await flush();
+      ck('#118 fix1 ...and answering it no afterwards commits nothing either', gathers === 0 && closesC === 0 && !find(body, 'askWin'));
+    }
+  } catch (err) {
+    ck('#118 fix1 the double-click check ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askCancel(); ctx.Date.now = realNow; X.settings.backdropClose = false;
+    doc.getElementById = keep.gid; doc.createElement = keep.ce; doc.body = keep.body; doc.activeElement = keep.ae; doc.querySelectorAll = keep.qsa;
+    doc.addEventListener = keep.ael; doc.removeEventListener = keep.rel; ctx.closeModal = keep.cm; ctx.openModal = keep.om; ctx.gatherChoices = keep.gc;
+    X.character = keep.ch; X.rules = keep.rules;
+  }
 }
 
-t118EndToEnd().then(t118Warn).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+/* ---------- #118 fix round 1: the level-up toast's Undo while a warning is open.
+   The toast stays reachable over the dialog and the warning. Undo replaces the
+   sheet the question was about, so the warning is answered no, the window
+   closes, the sheet is restored, and nothing commits afterwards. Driven like
+   t118EndToEnd (a real timer, the modal's open state tracked by wrapping
+   openModal/closeModal), with the REAL askConfirm over the harness's stub DOM. */
+async function t118UndoUnderWarning() {
+  const keep = {ch: X.character, rules: X.rules, st: ctx.setTimeout, ct: ctx.clearTimeout, om: ctx.openModal, cm: ctx.closeModal,
+    gid: ctx.document.getElementById, qsa: ctx.document.querySelectorAll, toast: ctx.toast, mm: ctx.window.matchMedia, id: X.activeId,
+    gc: ctx.gatherChoices, ask: ctx.askConfirm};
+  const tick = ms => new Promise(r => setTimeout(r, ms || 0));
+  let open = false, toasts = [], doneFn = null, pressed = [], gathers = 0;
+  const asked = [], answers = [];
+  const fakeModal = {classList: {contains: c => c === 'open' && open}};
+  ctx.setTimeout = setTimeout; ctx.clearTimeout = clearTimeout;
+  ctx.openModal = function () { keep.om.apply(null, arguments); open = true; };
+  ctx.closeModal = function () { open = false; return keep.cm.apply(null, arguments); };
+  ctx.document.getElementById = id => id === 'modal' ? fakeModal
+    : id === 'chDone' ? {isConnected: true, addEventListener: (e, fn) => { if (e === 'click') doneFn = fn; }} : keep.gid(id);
+  ctx.document.querySelectorAll = sel => /\[data-ft-pick\]\[aria-pressed="true"\]$/.test(sel) ? pressed.map(k => ({dataset: {ftPick: k}})) : keep.qsa(sel);
+  ctx.toast = (msg, action) => { toasts.push({msg: String(msg), action}); };
+  ctx.window.matchMedia = () => ({matches: true, addEventListener() {}});
+  ctx.askConfirm = o => { asked.push(o); const p = keep.ask(o); p.then(v => answers.push(v)); return p; };
+  try {
+    X.resetRules();
+    X.mergeRules({system: 'T6', classes: [{name: 'Fighter', hitDie: 'd10', levels: {'8': {choices: [{type: 'asi'}]}}}],
+      feats: [{name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nx', ability: [{str: 1}]}]}, 'test-118-undo');
+    X.character = X.blankChar(); X.character.name = 'Tess'; X.character.classes = [{name: 'Fighter', level: 7}]; X.character.level = 7;
+    X.character.hp.max = 61; X.character.hp.cur = 61; X.character.abilities.str = 10;
+    ctx.renderAll(); ctx.recompute(); X.activeId = 'T6'; X._undo = null;
+    const start = JSON.stringify(X.character);
+    ctx.doLevelUp(0); ctx.luSetHP('7'); ctx.luFinish();
+    ck('#118 fix1 undo: the level-up\'s choice window is open', open && typeof doneFn === 'function');
+    // the ASI, no warning: Done commits, the level-up settles, the toast offers Undo
+    pressed = ['__asi__'];
+    ctx.gatherChoices = () => { gathers++; return [{type: 'asi', pick: '__asi__', mode: '2', a: 'con'}]; };
+    doneFn(); await tick();
+    const tt = toasts.find(t => /Fighter is now level 8/.test(t.msg));
+    ck('#118 fix1 undo: settled, and the toast offers Undo', !open && tt && tt.action && X.undoLevelUpAvailable() === true, toasts.map(t => t.msg));
+    // a choice window opens over the unchanged sheet, and its Done asks the feat warning
+    doneFn = null; gathers = 0;
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    pressed = ['Great Weapon Master'];
+    ctx.gatherChoices = () => { gathers++; return [{type: 'asi', pick: 'Great Weapon Master', plus: []}]; };
+    doneFn(); await tick();
+    ck('#118 fix1 undo: the warning is open over the window, Undo still on offer',
+       open && asked.length === 1 && asked[0].ok === 'Take it anyway' && answers.length === 0 && X.undoLevelUpAvailable() === true, {asked: asked.length, answers});
+    tt.action.run();
+    await tick();
+    ck('#118 fix1 undo: the toast\'s Undo answers the warning no', answers.length === 1 && answers[0] === false, answers);
+    ck('#118 fix1 undo: ...closes the choice window', !open);
+    ck('#118 fix1 undo: ...and restores the sheet exactly', JSON.stringify(X.character) === start && X.character.classes[0].level === 7, X.character.classes);
+    await tick(50);
+    ck('#118 fix1 undo: nothing commits afterwards: no picks read, no feat, no record',
+       gathers === 0 && !X.character.features.some(f => /Great Weapon/.test(f.name)) && (X.character.levelLog || []).length === 0 && JSON.stringify(X.character) === start);
+  } catch (err) {
+    ck('#118 fix1 undo ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askCancel();
+    ctx.setTimeout = keep.st; ctx.clearTimeout = keep.ct; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+    ctx.document.getElementById = keep.gid; ctx.document.querySelectorAll = keep.qsa; ctx.toast = keep.toast; ctx.window.matchMedia = keep.mm;
+    ctx.gatherChoices = keep.gc; ctx.askConfirm = keep.ask; X.activeId = keep.id;
+    X.character = keep.ch; X.rules = keep.rules; X._undo = null; X.resetRules();
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
