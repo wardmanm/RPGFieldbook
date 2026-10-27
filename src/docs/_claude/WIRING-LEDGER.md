@@ -7653,3 +7653,56 @@ Pages: [character building](../wiki/features/character-building.md),
 [converter](../wiki/data/converter.md), [settings & updates](../wiki/features/settings-and-updates.md),
 [known issues](../wiki/roadmap/known-issues.md), [2.0](../wiki/roadmap/2.0.md),
 [1.9.0](../wiki/roadmap/1.9.0.md), [decisions](../wiki/decisions.md).
+
+## #118 final fix wave (2026-10-27)
+
+**What:** the five minors from #118's final whole-branch review.
+
+- **Undo closes the open window.** The level-up toast stays reachable over a modal. Before, its
+  Undo swapped `character` under whatever dialog was open. In a Level down dialog, that dialog's
+  Level down then removed the *older* record (Fighter 8 → toast Undo → Fighter 6).
+  - `undoLevelUp()` now clears `_undo` and the in-progress flag first, then closes an open modal
+    with `closeModal()`, then restores. Its `luMaybeSettle()` hook finds nothing to settle.
+  - `applyLevelDown(idx, remove, expect)` takes what the dialog showed: the class entry, the level
+    and the record. On any mismatch it toasts "The sheet changed while Level down was open, so
+    nothing was changed. Open Level down again." and changes nothing. An undo makes a new
+    `character`, so the identity check fails.
+- **A malformed imported level record no longer breaks Level down.** `migrate()` still drops
+  records that aren't objects or lack `class`, `level` or a `features` array. A kept record now
+  keeps every key, with the parts Level down reads made safe:
+  - features: objects with a non-empty string `id` (`lvRecFeats()`), each with a `grants` array;
+  - grants: objects (`lvRecGrants()`), with string `sid`/`type`/`key`;
+  - `hp` a number ≥ 0, `subclass` a string, `abilities` an object.
+
+  `levelDownHTML()` and `applyLevelDown()` read through the same two helpers, and `lvGrantKey` is
+  null-safe, so a record that bypasses `migrate()` can't throw either.
+- **A feat row's short line skips `Repeatable:` and `Prerequisite(s):` lines** (`asiFeatShort()`).
+  SRD Skilled read "Repeatable". It now has no short line, like Savage Attacker.
+- **"+1 any".** A feat whose +1 allows all six abilities reads "+1 any · Peerless Aim", not "+1 Str
+  or Dex or Con or Int or Wis or Cha · …". Any other set is listed as before.
+- **rules-schema §6.2.** A species' fixed `feat` gets its effects, not its `ability` increase:
+  that is asked only when the feat is picked from a list. The player raises the score by hand, or
+  the pack author puts the increase in `effects`. This is a doc fix only. Routing a fixed feat's
+  `ability` through the +1 step would change behaviour, and that is Mike's call.
+
+**Why:** M1 lost a second level and its record. M2 made Level down do nothing on a bad import. M3
+and M5 were misleading or long sublines. M4 promised players something the app doesn't do.
+
+**Tests:** sheet: the toast's Undo while Level down is open closes the dialog and records
+nothing, and the stale click changes nothing; a stale or moved `expect` applies nothing, and a
+matching one applies. Four malformed record shapes each load, round-trip unchanged, and open and
+apply Level down, raw as well as migrated. The short-line fixtures are invented: Repeatable,
+Prerequisite in any case, "+1 any" in any order, five abilities, and a fixed increase.
+
+**QA:** `.claude/qa/in-progress/118-feats/118-fix-*` holds the shots:
+- before and after of Skilled under Show all at Fighter 8;
+- before and after of the level-19 boons, at 1280 and 390;
+- the M1 sequence before (the dialog stays open over Fighter 7) and after (the dialog closes).
+
+The toast's Undo was a real click. Live, a malformed record migrated and leveled down, and a normal
+Level down was clicked through.
+
+Pages: [character building](../wiki/features/character-building.md),
+[character model](../wiki/architecture/character-model.md),
+[known issues](../wiki/roadmap/known-issues.md) (the fixed feat's `ability`, M4), and the spec's
+As built.

@@ -442,9 +442,9 @@ Origin feat stays prose.
 - **Task 3 → known issue:** `grantFeatDef()` doesn't grant a feat's fixed `skills`.
 - **Task 3 → known issue:** the ASI's "+1 to two" accepts the same ability twice.
 - **Task 4:** `sidLabel()` cuts a colon-named species in its "from …" label. This predates #118.
-- **Task 5, for the final fix wave:**
-  - Undo from the toast while a Level down dialog is open lets `applyLevelDown()` apply an older record;
-  - a malformed imported record (a feature's `grants` not an array) makes level down throw.
+- **Task 5, for the final fix wave:** both fixed there (below).
+  - Undo from the toast while a Level down dialog is open let `applyLevelDown()` apply an older record.
+  - A malformed imported record (a feature's `grants` not an array) made level down throw.
 - **Task 5, deferred:**
   - an error part-way through `doLevelUp()` can leave settle armed for the next unrelated edit;
   - the toast's Undo stays clickable after a change and answers "no longer available" (§5a says the
@@ -454,6 +454,20 @@ Origin feat stays prose.
 - **Known issue, by §12:** the choices inside a feat (spells, tools, damage types, Resilient's saving
   throw, Weapon Master's mastery) stay by hand.
 
+### The final fix wave
+
+The final whole-branch review found five minors, all fixed (ledger "#118 final fix wave"):
+
+- **M1.** `undoLevelUp()` closes any open window before it restores. `applyLevelDown(idx, remove,
+  expect)` changes nothing, and says so, when the class entry, level or record differ from what the
+  dialog showed.
+- **M2.** `migrate()` normalizes the inside of each kept `levelLog` record without dropping its other
+  keys. `levelDownHTML()` and `applyLevelDown()` read records through `lvRecFeats()` and `lvRecGrants()`.
+- **M3.** A row's short line skips `Repeatable:` and `Prerequisite:` lines. Skilled now has none.
+- **M5.** A +1 that allows all six abilities reads "+1 any".
+- **M4.** A doc fix in `docs/rules-schema.md`. A species' fixed `feat` gets its `effects` but not its
+  `ability` increase, which is asked only when the feat is picked from a list.
+
 ### Open for Mike
 
 - **"Epic Boon" appears twice on the level-19 card,** once as the trait ("feature") and once as the
@@ -461,3 +475,6 @@ Origin feat stays prose.
 - **The warning's buttons can't read "Choose another" / "Take it anyway"** without a custom in-modal
   dialog, which the app doesn't have (Ruling 2).
 - **The data releases** above, and pushing the private repo's `999bf63` after public `main`.
+- **A fixed species or background feat's `ability` increase** (M4) is not applied or asked. The
+  alternative is to route a fixed grant that has `ability` through the +1 step. It is dormant for
+  shipped data: no shipped species uses a fixed `feat`, and Origin feats carry no `ability`.

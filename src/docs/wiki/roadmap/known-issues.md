@@ -27,6 +27,12 @@ Known behaviour that is accepted for now.
   cost and skill *choices*, but not a fixed `skills` list, so such a skill is added by hand. It
   predates #118, and level down deliberately never matches a feat by its rules `skills`. → ledger
   L7569, and [Grants & provenance](../architecture/grants-and-provenance.md)
+- **A fixed species or background feat's `ability` increase is not applied.** `grantFeatDef()`
+  applies a feat's `effects` only. The +1 is asked only when the feat is picked from a list
+  (`commitAsiPick()`), so for a fixed `feat` the player raises the score by hand. It is dormant for
+  shipped data: no shipped species uses a fixed `feat`, and Origin feats carry no `ability`.
+  `docs/rules-schema.md` says so. → ledger L7657, and
+  [Character building](../features/character-building.md)
 - **The ASI's "+1 to two" accepts the same ability twice,** for +2 to one score. The 2024 rule
   says two different scores. It predates #118. → ledger L7569, and
   [Abilities & skills](../features/abilities-and-skills.md)
@@ -538,3 +544,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-26 — Fixed and removed: a data update announced, never installed (#102 installs and updates packs from a manifest). Added: #102's deferred minors, its release-tooling minors and the ≤560px notice row. → ledger L7428, #102
 - 2026-10-26 — Removed: the ≤560px notice row (decided: it stays) and two release-tooling minors fixed in #102's final wave (`release-files`' `isfile` guard, `data-release.js`'s exit cleanup). → ledger L7513, #102
 - 2026-10-27 — Narrowed: level down lowers only the number for a level with no record. Fixed and removed: rules-schema §5's "a feat instead", which the app now offers. Added: a feat's fixed `skills` not granted, "+1 to two" accepting one ability twice, and the choices inside feats staying manual. → ledger L7569, #118
+- 2026-10-27 — Added: a fixed species or background feat's `ability` increase is not applied (the final review's M4; the player docs now say so). → ledger L7657, #118

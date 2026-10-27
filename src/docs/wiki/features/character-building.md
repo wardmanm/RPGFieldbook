@@ -171,7 +171,10 @@ added above level 1 still gets its `{type:"hp"}` block inside the choice window 
   the level-up spends it, and saving alone does not. The toast's Undo after a change answers "Undo is no longer
   available: the sheet has changed since the level-up." and changes nothing.
 - **Restoring.** `undoLevelUp()` restores the copy exactly (`JSON.parse`, no `migrate()`),
-  re-renders, saves, and says "Level-up undone".
+  re-renders, saves, and says "Level-up undone". The toast stays reachable over a modal, so first
+  it closes any open window, which is about the sheet being replaced: a Level down dialog left open
+  would act on the restored sheet. It clears `_undo` before that `closeModal()`, so the close's
+  settle hook records nothing.
 - **When it ends.** `luAbandon()` clears the copy, so loading, importing or starting a character,
   or going Home, ends it. A reload ends it too.
 
@@ -188,8 +191,11 @@ added above level 1 still gets its `{type:"hp"}` block inside the choice window 
   of the level's new features is an embedded class or subclass trait whose rules entry grants that
   proficiency outright (`lvFeatureGrantKeys()`). A level's skill pick, a feat's skill choices and
   anything ambiguous stay untied, in `grants` only.
-- The log keeps the newest 200 records. `removeClass()` drops that class's records, and `migrate()`
-  keeps only well-formed ones.
+- The log keeps the newest 200 records. `removeClass()` drops that class's records.
+- `migrate()` keeps only well-formed records, and normalizes the inside of each without dropping
+  its other keys ([Character model](../architecture/character-model.md)). `levelDownHTML()` and
+  `applyLevelDown()` read a record's features and grants through `lvRecFeats()` and
+  `lvRecGrants()`, so a malformed one can't make Level down throw.
 
 **Level down** (`doLevelDown(idx)`). From a class's menu it lowers that class, and at level 1 says
 to use Remove in the class's menu. With no index it lowers the one class above level 1, or asks
@@ -205,7 +211,9 @@ newest record for that class at its current level:
 
   **Level down** calls `applyLevelDown()`, which removes what is ticked, lowers the level, and
   deletes the record whatever was ticked. A feature removed by hand since is skipped, and the dialog
-  says how many.
+  says how many. The button passes what the dialog showed: the class entry, its level and the
+  record. If the sheet has changed under the dialog, `applyLevelDown()` changes nothing and toasts
+  "The sheet changed while Level down was open, so nothing was changed. Open Level down again."
 - **With no record** (a level gained before #118), it lowers only the number and toasts "Only the
   level is lowered: traits, proficiencies and choices you've gained are kept."
 
@@ -243,9 +251,13 @@ in one list (`asiFeatListHTML()`).
     **Show all** switch.
   - **Ability Score Improvement** is pinned first and pressed to start, with the subline "+2 to one
     score, or +1 to two" and the tag General.
-  - Then come the offered feats, by name. Each shows a short line (its increase, "+1 Str or Dex",
-    and its first benefit's name) and a tag: its category, or, under Show all, the first unmet
-    prerequisite in amber ("needs the Fighting Style feature").
+  - Then come the offered feats, by name. Each shows a short line and a tag.
+    - The short line (`asiFeatShort()`) is its increase and its first benefit's name. The increase
+      reads "+1 Str or Dex", or "+1 any" when all six abilities are allowed, as most Epic Boons'
+      are. The first benefit is the first "Name: …" line that isn't a `Repeatable:` or
+      `Prerequisite:` line, so Skilled has none.
+    - The tag is its category, or, under Show all, the first unmet prerequisite in amber ("needs
+      the Fighting Style feature").
   - A row's key is the feat's `_id` when the merge gave it one, else its name, because two packs
     can share a name.
 - **What is offered** (`featOfferable()`, Show all off):
@@ -498,9 +510,6 @@ they are built: [Converter](../data/converter.md).
 - **The choices inside a feat stay by hand:** its spells, tools, damage types, Resilient's saving
   throw and Weapon Master's mastery. Only its +1 is asked.
 - **Deferred from #118's review.** None blocks a level-up:
-  - Undo from the toast while a Level down dialog is open can apply an older record.
-  - A malformed imported `levelLog` record (a feature's `grants` not an array) makes level down
-    throw.
   - An error part-way through `doLevelUp()` can leave a settle armed for the next unrelated edit.
   - The toast's Undo stays clickable after a change. It answers "no longer available" instead of
     disappearing.
@@ -564,3 +573,7 @@ they are built: [Converter](../data/converter.md).
   background feat choices through the same list; Undo level-up while the sheet is unchanged; each
   level-up records what it gave, and level down shows it and removes the ticked HP and features.
   → ledger L7569, #118
+- 2026-10-27 — The final review's fixes: Undo closes an open window, and a stale Level down
+  dialog changes nothing. A malformed level record can't make Level down throw. A feat's short
+  line skips `Repeatable:` and `Prerequisite:` lines, and reads "+1 any" for all six abilities.
+  → ledger L7657, #118
