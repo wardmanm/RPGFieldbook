@@ -2065,6 +2065,51 @@ with tempfile.TemporaryDirectory() as t:
     ck('SRD mode writes no class one-liner', r.returncode == 0 and all(c.get('description', '') == '' for c in classes),
        [c.get('description') for c in classes])
 
+# ---------- #118: feat ability increases and species feats
+def run_feats(fixture):
+    return C.convert_feats(_tmpjson(fixture))['feats']
+def run_races(fixture):
+    return C.convert_races(_tmpjson(fixture))['races']
+
+feats_fixture = {"feat": [
+    {"name": "Athlete", "source": "XPHB", "category": "G", "prerequisite": [{"level": 4, "ability": [{"str": 13}]}],
+     "ability": [{"choose": {"from": ["str", "dex"]}}], "entries": ["You gain the following benefits."]},
+    {"name": "Durable", "source": "XPHB", "category": "G", "ability": [{"con": 1}], "entries": ["x"]},
+    {"name": "Boon of Fate", "source": "XPHB", "category": "EB",
+     "ability": [{"choose": {"from": ["str", "dex", "con", "int", "wis", "cha"]}, "max": 30}], "entries": ["x"]},
+    {"name": "Ability Score Improvement", "source": "XPHB", "category": "G", "repeatable": True,
+     "ability": [{"choose": {"from": ["str", "dex"], "amount": 2}, "hidden": True}], "entries": ["x"]},
+    {"name": "Alert", "source": "XPHB", "category": "O", "entries": ["x"]}]}
+recs = {r["name"]: r for r in run_feats(feats_fixture)}
+ck("#118 a choose increase becomes {choose, amount}",
+   recs["Athlete"].get("ability") == [{"choose": ["str", "dex"], "amount": 1}], recs["Athlete"].get("ability"))
+ck("#118 a fixed increase is kept", recs["Durable"].get("ability") == [{"con": 1}], recs["Durable"].get("ability"))
+ck("#118 max is kept",
+   recs["Boon of Fate"].get("ability") == [{"choose": ["str", "dex", "con", "int", "wis", "cha"], "amount": 1, "max": 30}],
+   recs["Boon of Fate"].get("ability"))
+ck("#118 hidden entries are skipped", "ability" not in recs["Ability Score Improvement"],
+   recs["Ability Score Improvement"].get("ability"))
+ck("#118 a feat with no increase has no field", "ability" not in recs["Alert"], recs["Alert"].get("ability"))
+
+races_fixture = {"race": [
+    {"name": "Human", "source": "XPHB", "size": ["M"], "speed": 30, "feats": [{"anyFromCategory": {"category": ["O"], "count": 1}}], "entries": []},
+    {"name": "Custom Lineage", "source": "XPHB", "size": ["M"], "speed": 30, "feats": [{"any": 1}], "entries": []},
+    {"name": "Tester", "source": "XPHB", "size": ["M"], "speed": 30, "feats": [{"alert|xphb": True}], "entries": []}]}
+rr = {r["name"]: r for r in run_races(races_fixture)}
+ck("#118 an Origin-feat choice becomes a feat choice",
+   {"type": "feat", "category": "origin", "label": "An Origin feat of your choice"} in rr["Human"].get("choices", []),
+   rr["Human"].get("choices"))
+ck("#118 any feat becomes an unrestricted feat choice",
+   {"type": "feat", "label": "A feat of your choice"} in rr["Custom Lineage"].get("choices", []),
+   rr["Custom Lineage"].get("choices"))
+ck("#118 a named feat becomes feat", rr["Tester"].get("feat") == "Alert", rr["Tester"].get("feat"))
+
+# a `;`-qualified species feat name maps the way a background's feat text already reads
+semi_fixture = {"race": [{"name": "Semi", "source": "XPHB", "size": ["M"], "speed": 30,
+                           "feats": [{"magic initiate; cleric|xphb": True}], "entries": []}]}
+semi_feat, _ = C.race_feats(semi_fixture["race"][0]["feats"])
+ck("#118 a `;`-qualified name becomes 'A (B)'", semi_feat == "Magic Initiate (Cleric)", semi_feat)
+
 print()
 print('FAILURES: ' + ', '.join(fail) if fail else 'ALL PASSED (%d)' % total[0])
 sys.exit(1 if fail else 0)

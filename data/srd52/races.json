@@ -361,6 +361,11 @@
             "Stealth",
             "Survival"
           ]
+        },
+        {
+          "type": "feat",
+          "category": "origin",
+          "label": "An Origin feat of your choice"
         }
       ],
       "description": "",

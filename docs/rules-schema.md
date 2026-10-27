@@ -228,7 +228,9 @@ reach that level.
 
 - **`skill`** — `choose` N from `from` (display names). Already-proficient options are disabled.
 - **`asi`** — Ability Score Improvement (+2 one / +1 two) or a feat instead.
-- **`feat`** — pick any feat; optional `from: [names]` restricts the list.
+- **`feat`** — pick any feat; optional `from: [names]` restricts the list. On a species or
+  background (#118), `category: "origin"` filters the picker to Origin feats, and `label` is the
+  text shown for the choice (e.g. `"An Origin feat of your choice"`).
 - **`subclass`** — pick the class's subclass (see §6.5). `label` optional.
 - **`option`** — generic pick where each option can carry its own `effects` (fighting styles,
   signature choices, maneuvers, invocations, etc.). `from` is a list of `{name, description,
@@ -301,6 +303,14 @@ normal.
 - `choices[]` offers a player-chosen skill, same shape as a class's: `{ "type": "skill",
   "choose": 1, "from": ["Insight","Perception","Survival"] }`. Put it on the race (or inside a
   trait) rather than baking a fixed `skills` list when the rules let the player pick.
+- **`feat`** *(optional, #118)* — a species that grants a fixed feat the way a background does,
+  e.g. `"feat": "Alert"`. If the name matches a `feats` entry, its effects (and its ability
+  increase, §6.6) are applied.
+- **A `feat` choice** in `choices[]` offers an open or filtered pick, the same shape backgrounds
+  and classes use (§5): `{ "type": "feat", "category": "origin", "label": "An Origin feat of your
+  choice" }` (Human's Versatile, from 5etools' `anyFromCategory`) or `{ "type": "feat", "label":
+  "A feat of your choice" }` (an unrestricted pick, from 5etools' `any`). The feat is granted with
+  the species' own provenance, so removing the species reverts it.
 - **Species are filtered by system.** The ancestry picker only offers races whose `system` matches
   the character's (`"XPHB"` or `"SRD 5.2"` → a D&D character, `"Humblewood"` → a Humblewood one);
   any other label is treated as setting-agnostic and shown to both, so homebrew is never hidden.
@@ -478,6 +488,21 @@ the converter applies — mirroring `overlay.json` for feats.
 
 - `effects` optional — include them when the feat has a clean numeric effect; otherwise the
   mechanics live in `description`.
+- **`ability`** *(optional, #118)* — the feat's structured ability-score increase, kept from
+  5etools' own `feat.ability` field so the app can ask for it without reading `description`. It is
+  an array, one entry per increase:
+
+  ```json
+  "ability": [ { "choose": ["str", "dex"], "amount": 1 } ]
+  "ability": [ { "str": 1 } ]
+  "ability": [ { "choose": ["str", "dex", "con", "int", "wis", "cha"], "amount": 1, "max": 30 } ]
+  ```
+
+  Each entry is either `{"choose": [abil…], "amount": N}` (the player picks one of `choose`, +N)
+  or a fixed `{abil: N, …}`. `max` is the score cap the feat states; it is shown but not enforced.
+  Ability keys are `str`/`dex`/`con`/`int`/`wis`/`cha`. Omit the field when the feat raises no
+  score; the converter also drops any entry 5etools marks `hidden` (only the Ability Score
+  Improvement feat has one — the app supplies that feat's own increase itself).
 
 ### 6.7 `spells`
 

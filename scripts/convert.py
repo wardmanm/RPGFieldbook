@@ -694,6 +694,55 @@ SHAPE = {'cone':'Cone','sphere':'Sphere','cube':'Cube','line':'Line','emanation'
 ABIL_FULL = {'str':'Strength','dex':'Dexterity','con':'Constitution','int':'Intelligence','wis':'Wisdom','cha':'Charisma'}
 CAT_LABEL = {'O':'Origin feat','G':'General feat','FS':'Fighting Style feat','EB':'Epic Boon'}
 
+ABIL_KEYS = ('str', 'dex', 'con', 'int', 'wis', 'cha')
+
+def feat_ability(raw):
+    """5etools' feat `ability` -> Fieldbook's (#118): [{choose:[...], amount, max?} | {abil: n}].
+    Entries marked hidden are dropped (only the Ability Score Improvement feat has them: the app
+    supplies that one itself)."""
+    out = []
+    for a in raw or []:
+        if not isinstance(a, dict) or a.get('hidden'):
+            continue
+        if isinstance(a.get('choose'), dict):
+            frm = [k for k in a['choose'].get('from', []) if k in ABIL_KEYS]
+            if not frm:
+                continue
+            e = {'choose': frm, 'amount': int(a['choose'].get('amount', 1))}
+            if a.get('max'):
+                e['max'] = int(a['max'])
+            out.append(e)
+        else:
+            fixed = {k: int(v) for k, v in a.items() if k in ABIL_KEYS}
+            if fixed:
+                out.append(fixed)
+    return out
+
+def race_feats(raw):
+    """5etools' race `feats` -> (fixed feat name or None, [feat choices]) (#118)."""
+    fixed, choices = None, []
+    for f in raw or []:
+        if not isinstance(f, dict):
+            continue
+        if 'anyFromCategory' in f:
+            cats = f['anyFromCategory'].get('category') or []
+            if 'O' in cats:
+                choices.append({'type': 'feat', 'category': 'origin', 'label': 'An Origin feat of your choice'})
+            else:
+                choices.append({'type': 'feat', 'label': 'A feat of your choice'})
+        elif 'any' in f:
+            choices.append({'type': 'feat', 'label': 'A feat of your choice'})
+        else:
+            for k, v in f.items():
+                if v is True:
+                    nm = k.split('|')[0]
+                    if ';' in nm:
+                        a, b = nm.split(';', 1)
+                        fixed = '%s (%s)' % (a.strip().title(), b.strip().title())
+                    else:
+                        fixed = nm.title()
+    return fixed, choices
+
 # The 2024 Fighting Style menu. Effects (attack/AC etc.) come from the overlay.
 FIGHTING_STYLES = [
     {"name":"Archery","description":"+2 bonus to ranged weapon attack rolls."},
@@ -1542,6 +1591,9 @@ def convert_feats(path, overlay=None, tables=None, book=None, **_):
         if f.get('repeatable') and 'more than once' not in body:
             body = (body + '\n' if body else '') + 'Repeatable: You can take this feat more than once.'
         rec = {'name': f['name'], 'description': ((lead + '\n' if lead else '') + body).strip()}
+        ab = feat_ability(f.get('ability'))
+        if ab:
+            rec['ability'] = ab
         apply_overlay(f['name'], rec, overlay)
         out.append(rec)
     return _pack(book, 'feats', out, stem='feats')
@@ -2419,6 +2471,9 @@ def convert_races(path, overlay=None, tables=None, book=None, **_):
         fixed, choices = _race_skills(r.get('skillProficiencies'))
         if fixed: rec['skills'] = fixed
         if choices: rec['choices'] = choices
+        fixed_feat, feat_choices = race_feats(r.get('feats'))
+        if fixed_feat: rec['feat'] = fixed_feat
+        if choices or feat_choices: rec['choices'] = (choices or []) + feat_choices
         traits, desc = [], ''
         with table_ctx(tables, r['name'], 'race'):
             for e in r.get('entries', []):
