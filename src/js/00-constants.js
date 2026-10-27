@@ -86,6 +86,8 @@ function blankChar(){
     advancement:"xp", showFamiliars:false, hiddenTabs:[],
     /* #118: offer a feat instead of an Ability Score Improvement (Settings → Sheet display) */
     featsAllowed:true,
+    /* #118: one record per level-up, what it gave, for level down (57-levelup.js) */
+    levelLog:[],
     /* Cards whose edit/delete buttons the player has hidden (87-notes.js, #97):
        card key -> true. Read only through editHidden(). */
     editHide:{},

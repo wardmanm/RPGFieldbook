@@ -102,6 +102,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'commitChoices', 'asiFeatListHTML', 'asiPanelHTML', 'commitAsiPick', 'removeClass', 'asiPickConfirmed',
   'featPendingIncreases', 'asiRowHidden',
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
+  'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -7358,4 +7359,184 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = keep.ch; X.rules = keep.rules;
 }
 
-ck.done();
+// ---------- #118 undo level-up and the level log
+{
+  const keep = X.character;
+  X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 7}]; X.character.level = 7;
+  X.character.hp.max = 61; X.character.hp.cur = 61;
+  const before = JSON.parse(JSON.stringify(X.character));
+  // simulate a level-up's effect on the character, as doLevelUp + the HP step + a feat pick do
+  X.character.classes[0].level = 8; X.character.level = 8; X.character.hp.max = 68;
+  X.character.features.push({id: 'f1', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}, effects: [{target: 'ability.str', value: 1}]});
+  const rec = X.levelLogRecord(before, X.character, 'Fighter', 8);
+  ck('#118 the record holds HP, features and ability changes', rec.hp === 7 && rec.features.length === 1 && rec.features[0].name === 'Feat: Athlete' && rec.abilities.str === 1 && rec.class === 'Fighter' && rec.level === 8, rec);
+  // undo signature: available only while the sheet is unchanged
+  X._undo = {copy: JSON.stringify(before), at: 1, sig: JSON.stringify(X.character), cls: 'Fighter', level: 8};
+  ck('#118 undo is available right after', X.undoLevelUpAvailable() === true);
+  X.character.name = 'Renamed';
+  ck('#118 undo is gone after another change', X.undoLevelUpAvailable() === false);
+  X.character.name = before.name;
+  X.undoLevelUp();
+  ck('#118 undo restores the exact character', JSON.stringify(X.character) === JSON.stringify(before), X.character.classes);
+  ck('#118 ...and is spent', X._undo === null && X.undoLevelUpAvailable() === false);
+  // level down with a record
+  X.character = JSON.parse(JSON.stringify(before)); X.character.classes[0].level = 8; X.character.level = 8; X.character.hp.max = 68; X.character.hp.cur = 68;
+  X.character.features.push({id: 'f1', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}, effects: [{target: 'ability.str', value: 1}]});
+  X.character.levelLog = [Object.assign({at: 2}, rec)];
+  const html = X.levelDownHTML(X.character.levelLog[0], X.character.classes[0]);
+  ck('#118 the dialog lists HP and features, ticked', /\+7 hit points/.test(html) && /Feat: Athlete/.test(html) && (html.match(/checked/g) || []).length >= 2, html);
+  ck('#118 the dialog: heading, max HP working, the feat\'s +1, and its two buttons',
+     /Fighter 8 → 7\./.test(html) && /max HP 68 → 61/.test(html) && /Feat: Athlete \(\+1 Strength\)/.test(html) && /id="ldGo"/.test(html) && /id="ldCancel"/.test(html), html);
+  X.applyLevelDown(0, {hp: true, features: ['f1']});
+  ck('#118 level down removes ticked HP and features and deletes the record', X.character.classes[0].level === 7 && X.character.hp.max === 61 && !X.character.features.some(x => x.id === 'f1') && X.character.levelLog.length === 0);
+  X.character.classes[0].level = 7;
+  X.applyLevelDown(0, null);
+  ck('#118 a level without a record only lowers the number', X.character.classes[0].level === 6 && X.character.hp.max === 61);
+  // unticked: the record still goes, and what was left unticked stays
+  X.character.classes[0].level = 8; X.character.hp.max = 68; X.character.hp.cur = 68;
+  X.character.features.push({id: 'f2', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}});
+  X.character.levelLog = [Object.assign({}, rec, {features: [{id: 'f2', name: 'Feat: Athlete'}]})];
+  X.applyLevelDown(0, {hp: false, features: []});
+  ck('#118 level down with nothing ticked keeps HP and the feature, and still deletes the record', X.character.classes[0].level === 7 && X.character.hp.max === 68 && X.character.features.some(x => x.id === 'f2') && X.character.levelLog.length === 0);
+  const evil = Object.assign({}, rec, {features: [{id: 'e"1', name: '<img src=x onerror=alert(1)>'}], subclass: '<b>x</b>', grants: [{sid: 'class:Fighter', type: 'skill', key: '<i>'}]});
+  X.character.features.push({id: 'e"1', name: '<img src=x onerror=alert(1)>', origin: {kind: 'class', class: 'Fighter', level: 7}});
+  const eh = X.levelDownHTML(evil, {name: '<script>', level: 7});
+  ck('#118 the level-down dialog escapes names, ids, subclass and grants', !/<img src=x/.test(eh) && !/<script>/.test(eh) && !/<b>x/.test(eh) && !/<i>/.test(eh) && /data-ld-ft="e&quot;1"/.test(eh), eh);
+  const m = X.migrate(Object.assign(X.blankChar(), {levelLog: [{bad: 1}, {class: 'Fighter', level: 3, hp: 5, features: [], abilities: {}}]}));
+  ck('#118 migrate keeps well-formed records only', Array.isArray(m.levelLog) && m.levelLog.length === 1);
+  ck('#118 a fresh character has an empty level log', Array.isArray(X.blankChar().levelLog) && X.blankChar().levelLog.length === 0);
+  ck('#118 a sheet saved before the log migrates to []', Array.isArray(X.migrate({abilities: {}}).levelLog) && X.migrate({abilities: {}, levelLog: 'junk'}).levelLog.length === 0);
+  // switching character ends Undo
+  X._undo = {copy: '{}', at: 1, sig: null, cls: 'Fighter', level: 8};
+  ctx.luAbandon();
+  ck('#118 switching character (luAbandon) ends Undo', X._undo === null);
+  X.character = keep;
+}
+
+/* ---------- #118 the whole level-up, end to end: settle once, after the last window
+   A real timer (Node's), borrowed for this block only: the harness's setTimeout
+   never fires, and settling is a setTimeout(0). The modal's open state is
+   tracked by wrapping the real openModal/closeModal, and read through
+   getElementById("modal"), which is what the settle step reads. */
+async function t118EndToEnd() {
+  const keep = {ch: X.character, rules: X.rules, st: ctx.setTimeout, ct: ctx.clearTimeout, om: ctx.openModal, cm: ctx.closeModal,
+    gid: ctx.document.getElementById, qs: ctx.document.querySelector, qsa: ctx.document.querySelectorAll, toast: ctx.toast, mm: ctx.window.matchMedia, id: X.activeId, conf: state.confirm};
+  const tick = ms => new Promise(r => setTimeout(r, ms || 0));
+  let open = false, opened = [], toasts = [], handlers = {};
+  const fakeModal = {classList: {contains: c => c === 'open' && open}};
+  ctx.setTimeout = setTimeout; ctx.clearTimeout = clearTimeout;
+  ctx.openModal = function (t, h) { opened.push({t: String(t), h: String(h)}); keep.om.apply(null, arguments); open = true; };
+  ctx.closeModal = function () { open = false; return keep.cm.apply(null, arguments); };
+  ctx.document.getElementById = id => id === 'modal' ? fakeModal
+    : (id === 'ldGo' || id === 'ldCancel' || id === 'luUndo') ? {addEventListener: (e, fn) => { handlers[id] = fn; }} : keep.gid(id);
+  ctx.toast = (msg, action) => { toasts.push({msg: String(msg), action}); };
+  ctx.window.matchMedia = () => ({matches: true, addEventListener() {}});   /* reduced motion: no scene */
+  try {
+    X.resetRules();
+    X.mergeRules({system: 'T5', classes: [{name: 'Fighter', hitDie: 'd10', levels: {'8': {
+      traits: [{name: 'Know Your Ground', description: 'You know the land.', skills: ['Survival']}],
+      choices: [{type: 'asi'}, {type: 'skill', from: ['Athletics', 'Acrobatics'], choose: 1}]}}}],
+      feats: [{name: 'Athlete', description: 'General feat\nClimb: You climb well.', ability: [{choose: ['str', 'dex'], amount: 1}]}]}, 'test-118-5');
+    const fresh = () => {
+      X.character = X.blankChar(); X.character.name = 'Tess'; X.character.classes = [{name: 'Fighter', level: 7}]; X.character.level = 7;
+      X.character.hp.max = 61; X.character.hp.cur = 61; X.character.abilities.con = 10;
+      X.character.grants = [{sid: 'class:Fighter', type: 'save', key: 'str', level: 1}];
+      ctx.renderAll(); ctx.recompute();   /* the sheet as it stands on screen: derived fields (hit dice) filled in */
+    };
+    fresh(); X.activeId = 'T5'; X._undo = null;
+    const start = JSON.stringify(X.character);
+    opened = []; toasts = [];
+    ctx.doLevelUp(0);
+    ck('#118 e2e: the card opens and nothing has settled yet', opened.length === 1 && open && X.character.levelLog.length === 0 && X.undoLevelUpAvailable() === false, opened.map(o => o.t));
+    ck('#118 e2e: the card carries Undo level-up next to Done', /id="luUndo"[^>]*>Undo level-up</.test(opened[0].h) && /id="luGo"/.test(opened[0].h), opened[0].h);
+    ck('#118 e2e: the copy was taken before the level changed', X._undo && JSON.parse(X._undo.copy).classes[0].level === 7 && X._undo.copy === start);
+    await tick();
+    ck('#118 e2e: no settle while the card is open', X.character.levelLog.length === 0);
+    ctx.luSetHP('7'); ctx.luFinish();
+    ck('#118 e2e: Done on the card opens the choice window', open && opened.length === 2);
+    await tick();
+    ck('#118 e2e: no settle while the choice window is open', X.character.levelLog.length === 0 && X.undoLevelUpAvailable() === false);
+    // the window's Done: gatherChoices, closeModal, commitChoices — as runChoices' handler does
+    ctx.closeModal(); X.commitChoices('Fighter', [{type: 'asi', pick: 'Athlete', plus: ['str']}, {type: 'skill', sid: 'class:Fighter', keys: ['athletics']}], null);
+    ck('#118 e2e: still unsettled in the same task', X.character.levelLog.length === 0);
+    await tick();
+    const rec = X.character.levelLog[0];
+    ck('#118 e2e: settled once, after the last window', X.character.levelLog.length === 1, X.character.levelLog);
+    ck('#118 e2e: the record holds the HP, the trait and the feat with its +1',
+       rec && rec.hp === 7 && rec.class === 'Fighter' && rec.level === 8 && rec.features.map(f => f.name).sort().join() === 'Feat: Athlete,Know Your Ground' && rec.abilities.str === 1, rec);
+    const kyg = rec && rec.features.find(f => f.name === 'Know Your Ground');
+    ck('#118 e2e: the trait\'s own skill grant is tied to it; the level\'s skill pick is not',
+       kyg && kyg.grants.length === 1 && kyg.grants[0].key === 'survival' && rec.grants.some(g => g.key === 'athletics') && !rec.features.some(f => (f.grants || []).some(g => g.key === 'athletics')), rec);
+    ck('#118 e2e: Undo is available straight after', X.undoLevelUpAvailable() === true);
+    const tt = toasts.find(t => /Fighter is now level 8/.test(t.msg));
+    ck('#118 e2e: the toast says so and offers Undo', tt && tt.action && tt.action.label === 'Undo', toasts.map(t => t.msg));
+    ck('#118 e2e: one toast, not one per closed window', toasts.filter(t => /is now level/.test(t.msg)).length === 1);
+    await tick(600);
+    const saved = JSON.parse(ctx.localStorage.getItem('hw-fb-c-T5') || 'null');
+    ck('#118 e2e: the save lands, with the record', saved && saved.levelLog.length === 1 && saved.classes[0].level === 8);
+    ck('#118 e2e: ...and Undo survives the save', X.undoLevelUpAvailable() === true);
+    ck('#118 e2e: _undo is never saved', saved && !('_undo' in saved) && !JSON.stringify(saved).includes('"copy"'));
+    ctx.renderAll(); ctx.recompute();
+    ck('#118 e2e: ...and a re-render', X.undoLevelUpAvailable() === true);
+    tt.action.run();
+    ck('#118 e2e: the toast\'s Undo restores the sheet exactly', JSON.stringify(X.character) === start && X.character.classes[0].level === 7 && X._undo === null);
+    ck('#118 e2e: ...and says so', toasts.some(t => t.msg === 'Level-up undone'));
+
+    // Escape all the way: the card (HP set) and then the choice window
+    fresh(); toasts = []; opened = [];
+    ctx.doLevelUp(0); ctx.luSetHP('7');
+    ctx.dismissModal();
+    ck('#118 e2e Esc: dismissing the card still opens the choices', open && opened.length === 2);
+    await tick();
+    ck('#118 e2e Esc: not settled behind the choice window', X.character.levelLog.length === 0);
+    state.confirm = true; ctx.dismissModal();
+    await tick();
+    ck('#118 e2e Esc: settled once, HP recorded, nothing picked', X.character.levelLog.length === 1 && X.character.levelLog[0].hp === 7 && X.character.levelLog[0].features.length === 1, X.character.levelLog);
+    ck('#118 e2e Esc: Undo is available', X.undoLevelUpAvailable() === true);
+    const et = toasts.find(t => /is now level 8/.test(t.msg));
+    X.character.name = 'Renamed';
+    toasts = [];
+    ck('#118 e2e: after another change the toast\'s Undo does nothing, and says why', et.action.run() === false && X.character.classes[0].level === 8 && toasts.some(t => /changed since/.test(t.msg)), toasts);
+
+    // the card's Undo, before anything settles
+    fresh(); toasts = []; opened = []; handlers = {};
+    const s2 = JSON.stringify(X.character);
+    ctx.doLevelUp(0);
+    ck('#118 e2e card: the Undo button is wired', typeof handlers.luUndo === 'function');
+    handlers.luUndo();
+    ck('#118 e2e card: Undo on the card restores the sheet, closes the card, drops the level-up', JSON.stringify(X.character) === s2 && !open && ctx.luState() === null && X._undo === null);
+    await tick();
+    ck('#118 e2e card: nothing settles afterwards', X.character.levelLog.length === 0 && !toasts.some(t => /is now level/.test(t.msg)));
+
+    // level down through doLevelDown's dialog
+    fresh(); opened = []; handlers = {};
+    ctx.doLevelUp(0); ctx.luSetHP('7'); ctx.luFinish(); ctx.closeModal();
+    X.commitChoices('Fighter', [{type: 'asi', pick: 'Athlete', plus: ['str']}, {type: 'skill', sid: 'class:Fighter', keys: ['athletics']}], null);
+    await tick();
+    opened = [];
+    ctx.doLevelDown(0);
+    const dlg = opened[0];
+    ck('#118 level down opens the record\'s dialog', dlg && /Fighter 8 → 7\./.test(dlg.h) && /\+7 hit points/.test(dlg.h) && /Know Your Ground/.test(dlg.h) && /Feat: Athlete/.test(dlg.h), dlg);
+    ck('#118 ...the trait row says it takes its skill with it', dlg && /Know Your Ground[^<]*Survival/.test(dlg.h), dlg && dlg.h);
+    ck('#118 ...and the level\'s skill pick is left to adjust by hand', dlg && /Adjust these by hand[^<]*Athletics/.test(dlg.h) && !/Adjust these by hand[^<]*Survival/.test(dlg.h), dlg && dlg.h);
+    const ft = X.character.features.filter(f => f.origin && f.origin.level === 8).map(f => ({dataset: {ldFt: f.id}, checked: true}));
+    ctx.document.querySelector = q => /data-ld-hp/.test(q) ? {checked: true} : keep.qs(q);
+    ctx.document.querySelectorAll = q => /data-ld-ft/.test(q) ? ft : keep.qsa(q);
+    handlers.ldGo();
+    ck('#118 Level down: the level, HP, both features and the trait\'s skill go; the pick and the save stay',
+       X.character.classes[0].level === 7 && X.num(X.character.hp.max) === 61 && !X.character.features.some(f => f.origin && f.origin.level === 8)
+       && !X.character.grants.some(g => g.key === 'survival') && X.character.grants.some(g => g.key === 'athletics') && X.character.grants.some(g => g.key === 'str')
+       && X.character.levelLog.length === 0 && !open, {lv: X.character.classes[0].level, hp: X.character.hp.max, g: X.character.grants});
+    ctx.document.querySelector = keep.qs; ctx.document.querySelectorAll = keep.qsa;
+    opened = [];
+    ctx.doLevelDown(0);
+    ck('#118 level down without a record lowers only the number, with no dialog', X.character.classes[0].level === 6 && opened.length === 0);
+  } finally {
+    ctx.setTimeout = keep.st; ctx.clearTimeout = keep.ct; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+    ctx.document.getElementById = keep.gid; ctx.document.querySelector = keep.qs; ctx.document.querySelectorAll = keep.qsa;
+    ctx.toast = keep.toast; ctx.window.matchMedia = keep.mm; X.activeId = keep.id; state.confirm = keep.conf;
+    X.character = keep.ch; X.rules = keep.rules; X._undo = null; X.resetRules();
+  }
+}
+
+t118EndToEnd().then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

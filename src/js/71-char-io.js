@@ -151,6 +151,8 @@ function migrate(s){
   base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
   base.hiddenTabs=cleanHiddenTabs(s.hiddenTabs);   /* #52 */
   base.featsAllowed=typeof s.featsAllowed==="boolean"?s.featsAllowed:true;   /* #118 */
+  /* #118: well-formed level records only; the rest are dropped */
+  base.levelLog=(Array.isArray(s.levelLog)?s.levelLog:[]).filter(r=>r&&typeof r==="object"&&!Array.isArray(r)&&typeof r.class==="string"&&num(r.level)>0&&Array.isArray(r.features));
   /* #91: the party and the fight; out of a fight there is none */
   base.party=cleanParty(s.party);
   base.combatants=cleanCombatants(s.combatants,base.combatActive===true);

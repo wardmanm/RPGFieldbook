@@ -31,7 +31,7 @@ function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
    emblem, the class is set or cleared on EVERY open, so a dialog opened from a
    wide one comes up at the normal width. */
 function openModal(title,html,icon,opts){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";const box=modal.querySelector(".modal");if(box)box.classList.toggle("wide",!!(opts&&opts.wide));document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
-function closeModal(){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
+function closeModal(){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();if(typeof luMaybeSettle==="function")luMaybeSettle();}
 /* ---- focus ----
    A dialog takes the keyboard with it. On open, every other child of <body> goes
    inert (the toast stays reachable) and focus moves in: to the first field with a

@@ -253,6 +253,9 @@ function removeClass(idx){
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="class"&&f.origin.class===c.name);
   removeGrants(g=>g.sid==="class:"+c.name||g.sid.indexOf("subclass:"+c.name+":")===0);
   revertEquipmentGrants("class:"+c.name);
+  /* #118: its level records go with it, or a class added again later would be
+     offered hit points and features this run never gave */
+  if(Array.isArray(character.levelLog))character.levelLog=character.levelLog.filter(r=>!(r&&r.class===c.name));
   character.classes.splice(idx,1);
   /* Saving throws came from the class just removed if it was the first. The
      one now first takes its own, tagged to it so they leave with it — without
@@ -276,6 +279,8 @@ function doLevelUp(idx){
     const entry=character.classes[idx],d=findClassDef(entry.name);
     const newL=num(entry.level)+1;if(newL>20){alert(entry.name+" is already level 20.");return;}
     const before=levelSnapshot();   /* #101: what the card compares against */
+    /* #118: the copy Undo restores, taken before anything changes (57-levelup.js) */
+    _undo={copy:JSON.stringify(character),at:Date.now(),sig:null,cls:entry.name,level:newL};_luActive=true;
     entry.level=newL;
     const res=applyClassLevel(entry,d,newL);
     const hp=hpChoice(d,1,newL,entry.name);   /* before the unlock below: it remembers the lock */
@@ -301,12 +306,25 @@ function doLevelUp(idx){
 function doLevelDown(idx){
   if(!character.classes.length){alert("No classes to reduce.");return;}
   const proceed=idx=>{
-    const entry=character.classes[idx],d=findClassDef(entry.name);
+    const entry=character.classes[idx];
     const newL=num(entry.level)-1;
     if(newL<1){alert(entry.name+" is already at level 1. To remove it entirely, use Remove in the class's menu.");return;}
-    entry.level=newL;                       // only lower the number; keep all traits, grants, and choices
-    character.level=totalLevel();
-    renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
+    const rec=levelRecordFor(entry);
+    if(!rec){
+      applyLevelDown(idx,null);   // only lower the number; keep all traits, grants, and choices
+      toast(`${entry.name} is now level ${newL}. Only the level is lowered: traits, proficiencies and choices you've gained are kept.`,null,{long:true});
+      return;
+    }
+    openModal("Level down",levelDownHTML(rec,entry));
+    const no=document.getElementById("ldCancel");if(no)no.addEventListener("click",closeModal);
+    const go=document.getElementById("ldGo");
+    if(go)go.addEventListener("click",()=>{
+      const hpBox=document.querySelector("#mBody [data-ld-hp]");
+      const ft=Array.from(document.querySelectorAll("#mBody [data-ld-ft]:checked")).map(b=>b.dataset.ldFt).filter(Boolean);
+      closeModal();
+      applyLevelDown(idx,{hp:!!(hpBox&&hpBox.checked),features:ft});
+      toast(`${entry.name} is now level ${newL}`);
+    });
   };
   if(idx!==undefined){if(character.classes[idx])proceed(idx);return;}
   const eligible=character.classes.map((c,i)=>({c,i})).filter(o=>num(o.c.level)>1);
@@ -315,6 +333,70 @@ function doLevelDown(idx){
   openModal("Level down — which class?",eligible.map(o=>`<button class="tbtn" style="width:100%;margin-bottom:8px" data-lvldown="${esc(o.i)}">${esc(o.c.name)} ${num(o.c.level)} → ${num(o.c.level)-1}</button>`).join("")+`<p class="hint">This only reduces the class's level. Traits, proficiencies, and choices you've already gained are kept.</p><div class="m-actions"><button class="tbtn" id="ldCancel">Cancel</button></div>`);
   document.getElementById("ldCancel").addEventListener("click",closeModal);
   document.querySelectorAll("[data-lvldown]").forEach(b=>b.addEventListener("click",()=>{const i=num(b.dataset.lvldown);closeModal();proceed(i);}));
+}
+/* ---- #118 level down with a record (spec §5b, §10) ----
+   The newest levelLog record for this class at its current level. What it
+   names exactly — the hit points and that level's features, with any grant
+   tied to a feature — is ticked for removal; what changes by itself is said;
+   the rest (the subclass, other grants, spells) is listed to adjust by hand. */
+function levelRecordFor(entry){
+  const L=num(entry&&entry.level),log=Array.isArray(character.levelLog)?character.levelLog:[];
+  for(let i=log.length-1;i>=0;i--)if(log[i]&&log[i].class===entry.name&&num(log[i].level)===L)return log[i];
+  return null;
+}
+function lvGrantLabel(g){
+  if(g.type==="skill"){const s=SKILLS.find(x=>x[0]===g.key);return s?s[1]:String(g.key);}
+  if(g.type==="save")return featAbilName(g.key)+" saving throw";
+  return String(g.type)+" "+String(g.key);
+}
+function levelDownHTML(rec,entry){
+  const L=num(entry.level),hpMax=num(character.hp.max);
+  const have=new Set((character.grants||[]).map(lvGrantKey));
+  const feats=(rec.features||[]).filter(f=>f&&(character.features||[]).some(x=>x.id===f.id));
+  const gone=(rec.features||[]).length-feats.length;
+  const tied=new Set();feats.forEach(f=>(f.grants||[]).forEach(g=>tied.add(lvGrantKey(g))));
+  const row=f=>{
+    const live=(character.features||[]).find(x=>x.id===f.id)||{};
+    const ab=(live.effects||[]).map(e=>{const m=/^ability\.(\w+)$/.exec(String((e&&e.target)||""));return m&&num(e.value)?(num(e.value)>0?"+":"")+num(e.value)+" "+featAbilName(m[1]):"";}).filter(Boolean).join(", ");
+    const gr=(f.grants||[]).filter(g=>have.has(lvGrantKey(g))).map(lvGrantLabel).join(", ");
+    return `<label class="opt"><input type="checkbox" data-ld-ft="${esc(f.id)}" checked> ${esc(f.name)}${ab?" ("+esc(ab)+")":""}${gr?", and the proficiency it gave: "+esc(gr):""}</label>`;
+  };
+  const byHand=[rec.subclass?"the subclass "+rec.subclass:"",
+    ...(rec.grants||[]).filter(g=>g&&have.has(lvGrantKey(g))&&!tied.has(lvGrantKey(g))).map(lvGrantLabel)].filter(Boolean);
+  return `<p><b>${esc(entry.name)} ${esc(String(L))} → ${esc(String(L-1))}.</b> Level ${esc(String(L))} gave you:</p>`+
+    ((num(rec.hp)>0||feats.length)?`<p class="hint">Fieldbook can remove these for you:</p>`:"")+
+    (num(rec.hp)>0?`<label class="opt"><input type="checkbox" data-ld-hp checked> +${esc(String(num(rec.hp)))} hit points (max HP ${esc(String(hpMax))} → ${esc(String(Math.max(1,hpMax-num(rec.hp))))})</label>`:"")+
+    feats.map(row).join("")+
+    (gone>0?`<p class="hint">${esc(String(gone))} feature${gone===1?" was":"s were"} already removed by hand.</p>`:"")+
+    `<p class="hint">These change by themselves: proficiency bonus, spell slots and class resources.</p>`+
+    `<p class="hint">${byHand.length?"Adjust these by hand if you need to: "+esc(byHand.join(", "))+", and any spells you learned.":"Adjust by hand any spells you learned."}</p>`+
+    `<div class="m-actions"><button type="button" class="tbtn" id="ldCancel">Cancel</button><button type="button" class="tbtn primary" id="ldGo">Level down</button></div>`;
+}
+/* `remove` is what was ticked: {hp, features:[id]}, or null to lower only the
+   number (a level with no record). A record is deleted once it is acted on. */
+function applyLevelDown(idx,remove){
+  const entry=character.classes[idx];if(!entry)return false;
+  const L=num(entry.level);if(L<=1)return false;
+  const rec=levelRecordFor(entry);
+  if(rec&&remove){
+    if(remove.hp&&num(rec.hp)>0&&num(character.hp.max)>0){
+      character.hp.max=Math.max(1,num(character.hp.max)-num(rec.hp));
+      if(num(character.hp.cur)>character.hp.max)character.hp.cur=character.hp.max;
+    }
+    const ids=new Set(remove.features||[]);
+    if(ids.size){
+      const drop=new Set();
+      (rec.features||[]).forEach(f=>{if(f&&ids.has(f.id)&&(character.features||[]).some(x=>x.id===f.id))(f.grants||[]).forEach(g=>drop.add(lvGrantKey(g)));});
+      removeFeaturesWhere(f=>ids.has(f.id));
+      if(drop.size)removeGrants(g=>drop.has(lvGrantKey(g)));
+    }
+    character.levelLog.splice(character.levelLog.indexOf(rec),1);
+  }
+  entry.level=L-1;
+  character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
+  clampHP();
+  renderClassRace();renderFeatures();renderAllRT();recompute();renderHP();scheduleSave();
+  return true;
 }
 /* ---- subclasses ----
    `pending` is what waits behind the subclass's own window (the class window's
