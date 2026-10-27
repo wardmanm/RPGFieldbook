@@ -150,6 +150,7 @@ function migrate(s){
      sheet from before gets the icon only if it has a familiar. */
   base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
   base.hiddenTabs=cleanHiddenTabs(s.hiddenTabs);   /* #52 */
+  base.featsAllowed=typeof s.featsAllowed==="boolean"?s.featsAllowed:true;   /* #118 */
   /* #91: the party and the fight; out of a fight there is none */
   base.party=cleanParty(s.party);
   base.combatants=cleanCombatants(s.combatants,base.combatActive===true);

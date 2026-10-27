@@ -84,6 +84,8 @@ function blankChar(){
        languages are added at runtime (ensureDefaultLanguages), never here. */
     resists:[], immunes:[], senses:[], languages:[],
     advancement:"xp", showFamiliars:false, hiddenTabs:[],
+    /* #118: offer a feat instead of an Ability Score Improvement (Settings → Sheet display) */
+    featsAllowed:true,
     /* Cards whose edit/delete buttons the player has hidden (87-notes.js, #97):
        card key -> true. Read only through editHidden(). */
     editHide:{},

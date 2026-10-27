@@ -99,6 +99,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'INV_FILTERS', 'invDayLabel', 'invLogHTML', 'openInvLog',
   'newTradeDraft', 'tradeBalance', 'tradeHTML', 'completeTrade',
   'featCategory', 'featPrereq', 'featUnmet', 'featAbilityChoices', 'featOfferable', 'featTaken', 'abilFinal',
+  'commitChoices', 'asiFeatListHTML', 'asiPanelHTML', 'commitAsiPick', 'removeClass', 'asiPickConfirmed',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -7132,6 +7133,70 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     return pr2.length === 1 && pr2[0].length === 2 && pr2[0][0].kind === 'level' && pr2[0][1].kind === 'ability';
   })());
   X.character = keep;
+}
+
+// ---------- #118 the ASI-or-feat step
+{
+  const keep = {ch: X.character, rules: X.rules, conf: state.confirm};
+  X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
+  X.character.abilities.str = 15;
+  const evil = '<img src=x onerror=alert(1)>';
+  X.rules = Object.assign({}, X.rules, {feats: [
+    {name: 'Athlete', description: 'General feat · Prerequisite: Level 5+ and Strength 13+ or Level 5+ and Dexterity 13+\nYou gain the following benefits.\nClimb Speed: …', ability: [{choose: ['str', 'dex'], amount: 1}]},
+    {name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nx', ability: [{str: 1}]},
+    {name: 'Alert', description: 'Origin feat\nx'},
+    {name: evil, description: 'General feat\n' + evil}]});
+  ck('#118 a fresh character has featsAllowed', X.blankChar().featsAllowed === true);
+  ck('#118 migrate keeps a boolean featsAllowed and defaults the rest to true',
+     X.migrate({featsAllowed: false}).featsAllowed === false && X.migrate({}).featsAllowed === true && X.migrate({featsAllowed: 'no'}).featsAllowed === true);
+  const h = X.choiceFieldHTML({type: 'asi'}, 0, null);
+  ck('#118 the ASI row is pinned first', h.indexOf('data-ft-pick="__asi__"') > -1 && h.indexOf('data-ft-pick="__asi__"') < h.indexOf('data-ft-pick="Athlete"'));
+  ck('#118 qualified feats listed, Origin hidden', /data-ft-pick="Athlete"/.test(h) && !/data-ft-pick="Alert"/.test(h));
+  ck('#118 the ASI is selected by default, showing today\'s controls', /data-asi-mode/.test(h));
+  ck('#118 ...and its row is the pressed one', /data-ft-pick="__asi__" aria-pressed="true"/.test(h) && !/data-ft-pick="Athlete" aria-pressed="true"/.test(h));
+  ck('#118 the step carries the search box and the Show all switch', /data-ft-search/.test(h) && /data-ft-all/.test(h) && /data-ctype="asi"/.test(h));
+  ck('#118 escaping', !h.includes('<img src=x') && h.includes('&lt;img src=x'));
+  ck('#118 a row\'s short line: its +1 and its first benefit', /\+1 Str or Dex · Climb Speed/.test(h), h);
+  const all = X.asiFeatListHTML({type: 'asi'}, 0, {showAll: true});
+  ck('#118 Show all lists the Origin feat too', /data-ft-pick="Alert"/.test(all));
+  X.character.abilities.str = 12;
+  const short = X.asiFeatListHTML({type: 'asi'}, 0, {showAll: true});
+  ck('#118 Show all tags an unmet prerequisite in amber', /class="ft-tag warn">needs Strength 13 or higher \(yours is 12\)/.test(short), short);
+  ck('#118 ...and Show all off hides it', !/data-ft-pick="Great Weapon Master"/.test(X.asiFeatListHTML({type: 'asi'}, 0, {showAll: false})));
+  // the unmet-prerequisite warning: browser confirm() (no in-modal two-button confirm exists)
+  state.confirm = false; state.lastConfirm = null;
+  ck('#118 declining the warning keeps the step open', X.asiPickConfirmed(['Great Weapon Master']) === false);
+  ck('#118 the warning names the feat and what is missing', state.lastConfirm === 'Great Weapon Master needs Strength 13 or higher (yours is 12). Take it anyway?', state.lastConfirm);
+  state.confirm = true;
+  ck('#118 accepting the warning goes on', X.asiPickConfirmed(['Great Weapon Master']) === true);
+  state.lastConfirm = null;
+  ck('#118 the ASI and a qualified feat never ask', X.asiPickConfirmed(['__asi__', 'Alert']) === true && state.lastConfirm === null);
+  X.character.abilities.str = 15;
+  X.character.featsAllowed = false;
+  const off = X.choiceFieldHTML({type: 'asi'}, 0, null);
+  ck('#118 Feats allowed off: no list, today\'s controls', !/data-ft-pick/.test(off) && /data-asi-mode/.test(off));
+  X.character.featsAllowed = true;
+  const p = X.asiPanelHTML({type: 'asi'}, 0, 'Athlete');
+  ck('#118 the panel asks the +1 from the field', /data-ft-plus="0"/.test(p) && /Strength/.test(p) && /Dexterity/.test(p));
+  ck('#118 the panel shows the feat\'s text, not its category line', /Climb Speed/.test(p) && !/General feat/.test(p));
+  ck('#118 a fixed increase is text, not a control', !/data-ft-plus/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master')) && /\+1 Strength/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master')));
+  ck('#118 the panel escapes the feat text', !X.asiPanelHTML({type: 'asi'}, 0, evil).includes('<img src=x'));
+  // commit: a feat with its +1, tied to the class level; then removing the class reverts both
+  X.commitAsiPick({type: 'asi', pick: 'Athlete', plus: ['dex']}, {kind: 'class', class: 'Fighter', level: 8}, []);
+  const ft = X.character.features.find(x => x.name === 'Feat: Athlete');
+  ck('#118 the feat is granted with its class-level origin', ft && ft.origin.kind === 'class' && ft.origin.class === 'Fighter' && ft.origin.level === 8, ft);
+  ck('#118 its +1 is an effect on the feat', ft && ft.effects.some(e => e.target === 'ability.dex' && e.value === 1), ft && ft.effects);
+  ck('#118 the +1 does not leak into the rules entry', !(X.rules.feats[0].effects || []).length);
+  X.commitAsiPick({type: 'asi', pick: 'Great Weapon Master', plus: []}, {kind: 'class', class: 'Fighter', level: 4}, []);
+  const gwm = X.character.features.find(x => x.name === 'Feat: Great Weapon Master');
+  ck('#118 a fixed increase is stored on the feat', gwm && gwm.effects.some(e => e.target === 'ability.str' && e.value === 1), gwm && gwm.effects);
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '2', a: 'str'}, {kind: 'class', class: 'Fighter', level: 4}, []);
+  ck('#118 an ASI is stored as today', X.character.features.some(x => x.name === 'Ability Score Improvement' && x.effects[0].target === 'ability.str' && x.effects[0].value === 2));
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '1', a: 'con', b: 'wis'}, {kind: 'class', class: 'Fighter', level: 6}, []);
+  ck('#118 +1 to two is stored as today', X.character.features.some(x => x.name === 'Ability Score Improvement' && x.effects.length === 2 && x.effects[1].target === 'ability.wis'));
+  X.removeClass(0);
+  ck('#118 removing the class removes the feat and the ASI', !X.character.features.some(x => /Athlete|Great Weapon|Ability Score Improvement/.test(x.name)));
+  X.character = keep.ch; X.rules = keep.rules; state.confirm = keep.conf;
 }
 
 ck.done();

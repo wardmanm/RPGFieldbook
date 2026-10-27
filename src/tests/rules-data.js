@@ -2319,6 +2319,7 @@ function block(html, needle, tag) {
   ck('Appearance holds the look and the interface switches', on('secAppearance', ['segSkin', 'segTheme', 'swRough', 'swTabIcons', 'swBackdrop']));
   ck('Sheet display holds the card choices', on('secDisplay', ['swHpColor', 'swTrackers']));
   ck('#103 ...and the advancement choice and the familiars icon', on('secDisplay', ['segAdv', 'swFamiliars']));
+  ck('#118 ...and Feats allowed, beside Advancement', on('secDisplay', ['swFeats']) && sec('secDisplay').indexOf('id="segAdv"') < sec('secDisplay').indexOf('id="swFeats"') && sec('secDisplay').indexOf('id="swFeats"') < sec('secDisplay').indexOf('id="swFamiliars"'));
   ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
   ck('#102 Extensions is the extensions page, its status line and the sheet check (no #fileRules)',
      /const secRules=extPageHTML\(\)\+/.test(sec('secRules')) && on('secRules', ['rulesStatus', 'btnCharUpdate']) && !/fileRules/.test(src));
@@ -2328,8 +2329,8 @@ function block(html, needle, tag) {
   ck('encumbrance is a segmented choice now, not a dropdown', !/id="setEnc"/.test(src) &&
      /character\.encumbrance=b\.dataset\.enc;/.test(src) && ['none', 'standard', 'variant'].every(v => sec('secCarrying').includes('["' + v + '",')));
   ck('every switch on the dialog says its state to a screen reader',
-     // 8 since #52 added the per-character tabs switch (one literal occurrence in tabsGroupHTML)
-     (src.match(/class="switch /g) || []).length === 8 && (src.match(/role="switch" aria-checked=/g) || []).length === 8 &&
+     // 8 since #52 added the per-character tabs switch (one literal occurrence in tabsGroupHTML); 9 since #118's Feats allowed
+     (src.match(/class="switch /g) || []).length === 9 && (src.match(/role="switch" aria-checked=/g) || []).length === 9 &&
      /const s=e\.target\.closest\("\.switch"\);if\(s\)s\.setAttribute\("aria-checked",s\.classList\.contains\("on"\)\?"true":"false"\);/.test(src));
   ck('Settings opens wide, on the remembered page; a dialog opened from it does not',
      /openModal\("Settings",[\s\S]*?\{wide:true\}\);/.test(src) && /setPageOf\(settings\.setPage,hasChar\)/.test(src) &&
