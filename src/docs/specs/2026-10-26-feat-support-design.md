@@ -1,6 +1,6 @@
 # Feat support: design
 
-**Status:** approved in conversation 2026-10-26; waiting for Mike to review this written spec. It is wave 3b of
+**Status:** approved in conversation 2026-10-26 and 2026-10-27; waiting for Mike to review this written spec. It is wave 3b of
 [1.9.0](../wiki/roadmap/1.9.0.md).
 **Issue:** #118 (Feat Support). One branch, `issue/118-feats`.
 **Mockup:** `.superpowers/brainstorm/32894-1793047656/content/asi-or-feat.html`. Layout B was chosen: one list,
@@ -45,6 +45,9 @@ All made by Mike in conversation on 2026-10-26.
 | 3 | Level 19's Epic Boon | **An ASI level too, detected in the app** from the class's level-19 Epic Boon trait. Epic Boon feats appear only there. Rules data is not changed for this | In the converter: every pack's class data would move for something the app can see. Left manual: nothing prompts the player |
 | 4 | The setting's default | **"Feats allowed" is on for every character.** Feats are core in 2024 and SRD 5.2, and Humblewood's own text offers them | Off for Humblewood: its text says otherwise. Asked once: one more dialog |
 | 5 | The layout | **One list with Ability Score Improvement pinned first** (mockup B), as the 2024 book frames ASI as a General feat | Two tabs, ASI and Feat: one more control, and the book doesn't separate them |
+| 7 | Species feats | **A species grants feats the same way a background does:** a fixed `feat`, or a feat choice. The converter writes 5etools' race `feats` as `choices:[{type:"feat", category:"origin"}]` (Human's Versatile) or a fixed `feat`. The same list opens, filtered to Origin feats, and the feat reverts with the species | Leaving Versatile as prose: the player adds the feat by hand (2026-10-27) |
+| 8 | Undo | **Undo level-up**: a copy of the character is saved just before a level-up. The level-up card and its toast offer Undo, which restores it exactly. Undo goes away at the next change to the sheet | A general per-level revert: too much is not recorded per level (§10) |
+| 9 | Level down | **Every level-up records what it gave.** Level down shows that record, removes the HP and that level's features and feats where the player leaves the boxes ticked, and lists the rest to adjust by hand. Levels with no record (from before this) keep today's number-only behaviour | Number only (today): the player has to remember what the level gave (2026-10-27) |
 | 6 | Where a feat's +1 comes from | **The converter keeps 5etools' structured `ability` field on each feat.** The app reads it first, then falls back to the feat's text ("Increase your X, Y, or Z score by 1") for packs without it, which covers Humblewood and homebrew | Text only: the 2024 and SRD packs don't carry the sentence (the converter drops it), so 55 of 77 2024 feats would get nothing |
 
 ## 3. Data
@@ -84,6 +87,21 @@ The field is optional. The converter writes it from 5etools' `feat.ability`:
   +1 is stored as an effect on that same feature: `{target:"ability.<k>", value:N}`. Fixed increases are stored
   the same way.
 - An ASI taken is stored exactly as today.
+- `character.levelLog`: an array, default `[]`. One record per level-up from now on:
+  `{at, class, level, hp, features:[{id, name}], abilities:{k:+n}, subclass, grants:[{type, key}], slots:{before, after}}`.
+  `migrate()` keeps well-formed records and drops the rest.
+- `character._undo` is never saved. It is an in-memory copy of the character from just before the last
+  level-up, with the time of that level-up.
+
+### 3.3 Species data
+
+The converter writes 5etools' race `feats` on the species, using the same shapes a background's feat already uses:
+- `[{"anyFromCategory":{"category":["O"],"count":1}}]` (Human, XPHB) becomes
+  `"choices":[{"type":"feat","category":"origin","label":"Versatile: an Origin feat"}]`;
+- `[{"any":1}]` becomes `"choices":[{"type":"feat"}]`;
+- a named feat (`{"alert|xphb":true}`) becomes `"feat":"Alert"`, as backgrounds have it.
+
+The species' `traits` are unchanged. The SRD and private gates (§3.1) now show this field on `races.json` too.
 
 ## 4. The choice step
 
@@ -119,8 +137,19 @@ It applies to every `asi` choice, and to level 19 when §5 makes it one.
   *what's missing* (yours is *value*). Take it anyway?", with **Choose another** and **Take it anyway**. The
   wording lists every unmet part.
 - **Feats allowed off.** The list and the switch aren't drawn. The step is the ASI controls, exactly as today.
-- A feat's own pending choices still follow, behind the step, as now. One example is a feat that grants a skill
-  choice.
+- A feat's own skill choices still follow, behind the step, when a pack carries them in structured form.
+  No 2024 or SRD feat does today, so in practice the choices inside a feat, such as spells, tools, damage types,
+  a saving throw or a weapon mastery, remain by hand (§12).
+
+### 4.1 Species and backgrounds
+
+A `feat` choice on a species or a background (`{type:"feat", category:"origin"}`) opens the same list:
+- It is filtered to that category, with Show all available, and the same panel and the same +1 question appear.
+- It has no pinned Ability Score Improvement row.
+- With Feats allowed off it is still offered, because a species' feat isn't the optional ASI-or-feat rule.
+
+The feat is granted with the species or background origin, so changing or removing the species reverts it, as a
+background's feat does now.
 
 ## 5. Level 19
 
@@ -130,6 +159,40 @@ trait named "Epic Boon", that level is treated as having `{type:"asi", boon:true
 - The step offers Epic Boon feats as qualified.
 
 With Feats allowed off it is an ASI, as the older rules have it. The trait itself is still added as today.
+
+## 5a. Undo level-up
+
+- **Saving the copy.** `openLevelUp()` saves `_undo = {copy, at}`, a deep copy of the character, before it
+  applies anything.
+- **Where Undo appears.** The level-up card shows **Undo level-up** next to Done, and the toast after the
+  level's choices offers Undo too.
+- **What Undo does.** It restores the copy, re-renders, saves, and says "Level-up undone".
+- **When it goes away.** Undo is offered only while nothing else has changed: `_undo` is cleared by the next
+  `scheduleSave()` that isn't part of the level-up itself, and by switching character. After that the button
+  and the toast action are gone.
+- **Lifetime.** The copy is never saved, so a reload ends it.
+
+## 5b. Level down with a record
+
+At the end of a level-up, after its choices are committed, the app writes one `levelLog` record. It holds:
+- the HP added;
+- the ids and names of features whose origin is that class and level, which includes an ASI or a feat;
+- the ability changes from those features' effects;
+- the subclass, if it was chosen at that level;
+- the skill and other grants added during the level-up;
+- spell slots before and after.
+
+`doLevelDown()` finds the newest record for that class and level and shows a dialog:
+- **A heading:** "Fighter 8 → 7. Level 8 gave you:".
+- **Two ticked boxes, for what Fieldbook can remove exactly:**
+  - "+7 hit points (max HP 68 → 61)";
+  - "Feat: Athlete (+1 Strength)" and each other feature by name.
+- **A list of what changes by itself:** proficiency bonus, spell slots and class resources.
+- **A list to adjust by hand:** granted skills, the subclass, and spells you learned.
+- **Buttons:** **Level down** and Cancel.
+
+On Level down it lowers the level, removes what was ticked, deletes the record, re-renders and saves. A level
+with no record shows today's notice and lowers only the number.
 
 ## 6. Reading prerequisites
 
@@ -163,7 +226,10 @@ help text is: "Offer a feat instead of an Ability Score Improvement. Turning it 
   - `featPrereq()` and `featQualifies()`;
   - `featAbilityChoice()`, which uses the field first and the text second;
   - `featOffered()`.
-- `00-constants.js` `blankChar()` and `71-char-io.js` `migrate()`: `featsAllowed`.
+- `00-constants.js` `blankChar()` and `71-char-io.js` `migrate()`: `featsAllowed`, `levelLog`.
+- `src/js/52-race.js`: a species' `feat` and `choices` handled the way `54-background.js` handles a background's.
+- `src/js/57-levelup.js` and `56-class.js`: the undo copy and button, the level log record, and the level-down
+  dialog.
 - `88-settings.js`: the switch.
 - `src/css/50-modal.css`: the list and the panel, with 44px targets and no sideways scroll at 390px.
 - `docs/rules-schema.md`: the feat `ability` field.
@@ -176,10 +242,24 @@ help text is: "Offer a feat instead of an Ability Score Improvement. Turning it 
 - **No feats loaded:** the list is just the pinned ASI row.
 - **A feat that gives +1 to a fixed score** (`{"str":1}`): applied with no control.
 - **A feat with two increases:** one control per choose entry.
+- **Undo after another change:** not offered (§5a).
+- **Level down twice in a row:** each step uses its own level's record. A record is deleted once it is used.
+- **A record whose feature was deleted by hand since:** that box is skipped, and the dialog says so.
 - **Re-opening the step after Back:** selections are kept where the modal already keeps them.
 - **Hostile feat text from a pack:** every string is escaped, as everywhere.
 
-## 10. Testing
+## 10. Why level down doesn't revert everything
+
+- **Features, and the ASI or feat:** can be reverted exactly, because they carry their class and level.
+- **Skill and proficiency grants:** recorded against the class as level 1, so a level's own grants can't be told
+  apart in older characters.
+- **HP gained:** not recorded per level before this change.
+- **Edits made by hand afterwards:** a blind revert could delete them.
+
+The record (§5b) covers everything levelled from now on. Anything it can't remove exactly is listed for the
+player.
+
+## 10a. Testing
 
 - **converter suite:**
   - `ability` is written for choose, fixed and max entries;
@@ -200,7 +280,11 @@ help text is: "Offer a feat instead of an Ability Score Improvement. Turning it 
   - the unmet-prerequisite confirm, both answers;
   - Feats allowed off draws today's controls;
   - the level-19 Epic Boon detection;
-  - `migrate` defaults `featsAllowed`;
+  - `migrate` defaults `featsAllowed` and cleans `levelLog`;
+  - species: Human's Versatile opens an Origin-filtered list, and removing the species removes the feat;
+  - undo restores the exact pre-level-up character, and is gone after the next change;
+  - level-up writes a record, level down removes ticked HP and features, and a level without a record keeps
+    today's behaviour;
   - escaping of feat names and descriptions.
 - **Screenshots**, saved in `.claude/qa/in-progress/118-feats/`:
   - the step at level 8 and level 19;
@@ -232,5 +316,8 @@ help text is: "Offer a feat instead of an Ability Score Improvement. Turning it 
 - Enforcing the 20 (or a feat's 30) maximum.
 - Structured prerequisites in rules data. The text is regular enough to read; see §6.
 - Feats from backgrounds or species: Origin feats keep their current path.
-- Prompting a feat's choices beyond skills and its +1, such as Magic Initiate's spells. Those stay as they are.
-- Level-down undoing a level's pick.
+- Prompting the choices inside a feat beyond its +1: spells (Magic Initiate, Fey-Touched, Ritual Caster…), tools and
+  instruments (Crafter, Musician), damage types (Elemental Adept), Resilient's saving throw, and Weapon Master's
+  mastery. These stay by hand.
+- Automatically reverting a level's skills, subclass or spells on level down. They are listed for the player
+  (§5b), because grants are not recorded per level for characters made before this change.
