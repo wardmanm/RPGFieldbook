@@ -98,6 +98,11 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
   'INV_FILTERS', 'invDayLabel', 'invLogHTML', 'openInvLog',
   'newTradeDraft', 'tradeBalance', 'tradeHTML', 'completeTrade',
+  'featCategory', 'featPrereq', 'featUnmet', 'featAbilityChoices', 'featOfferable', 'featTaken', 'abilFinal',
+  'commitChoices', 'asiFeatListHTML', 'asiPanelHTML', 'commitAsiPick', 'removeClass', 'asiPickWarnings',
+  'featPendingIncreases', 'asiRowHidden',
+  'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
+  'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -7074,4 +7079,940 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   }
 }
 
-ck.done();
+// ---------- #118 feat helpers
+{
+  const keep = X.character;
+  const f = (name, desc, extra) => Object.assign({name, description: desc}, extra || {});
+  const ath = f('Athlete', 'General feat · Prerequisite: Level 5+ and Strength 13+ or Level 5+ and Dexterity 13+\nYou gain the following benefits.', {ability: [{choose: ['str', 'dex'], amount: 1}]});
+  const boon = f('Boon of Fate', 'Epic Boon · Prerequisite: Level 19+\nx', {ability: [{choose: ['str','dex','con','int','wis','cha'], amount: 1, max: 30}]});
+  const sty = f('Archery', 'Fighting Style feat · Prerequisite: Fighting Style feature\nx');
+  const org = f('Alert', 'Origin feat\nx');
+  const odd = f('Weird', 'General feat · Prerequisite: Membership in the Harpers\nx');
+  const spl = f('War Caster', 'General feat · Prerequisite: Level 4+ and Spellcasting or Pact Magic feature\nx');
+  const castOnly = f('Spell Sniper', 'General feat · Prerequisite: Spellcasting feature\nx');
+  const pactF = f('Eldritch Adept', 'General feat · Prerequisite: Spellcasting or Pact Magic feature\nx');
+  const hb = f('Moonlit', 'Increase your Dexterity, Wisdom, or Charisma score by 1, up to 20.\nYou gain…');
+  ck('#118 featCategory', X.featCategory(ath) === 'general' && X.featCategory(boon) === 'boon' && X.featCategory(sty) === 'style' && X.featCategory(org) === 'origin' && X.featCategory(hb) === '');
+  const pr = X.featPrereq(ath);
+  ck('#118 featPrereq reads or-groups of and-parts', pr.length === 2 && pr[0].some(p => p.kind === 'level' && p.n === 5) && pr[0].some(p => p.kind === 'ability' && p.key === 'str' && p.n === 13) && pr[1].some(p => p.key === 'dex'), pr);
+  ck('#118 featPrereq keeps what it can\'t read as unknown', X.featPrereq(odd)[0][0].kind === 'unknown');
+  ck('#118 featPrereq: spellcasting or pact magic', X.featPrereq(spl)[0].some(p => p.kind === 'spellcasting' && p.pact === true));
+  X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
+  X.character.abilities.str = 12; X.character.abilities.dex = 10;
+  ck('#118 featUnmet names the shortfall: an or-group missed entirely is named whole',
+     JSON.stringify(X.featUnmet(ath)) === JSON.stringify(['Strength 13 or Dexterity 13 (yours: Strength 12, Dexterity 10)']), X.featUnmet(ath));
+  /* fix round 1: invented fixtures for the or- and and-groups */
+  {
+    const lvl = X.character.level;
+    const grp = f('Tumbler', 'General feat · Prerequisite: Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\nx');
+    X.character.level = 1;
+    ck('#118 fix1 a shared and-part is listed on its own, then the or-group whole',
+       JSON.stringify(X.featUnmet(grp)) === JSON.stringify(['level 4 or higher (yours is 1)', 'Strength 13 or Dexterity 13 (yours: Strength 12, Dexterity 10)']), X.featUnmet(grp));
+    X.character.abilities.dex = 14;
+    ck('#118 fix1 one alternative\'s own part met: only the shared part is missing', JSON.stringify(X.featUnmet(grp)) === JSON.stringify(['level 4 or higher (yours is 1)']), X.featUnmet(grp));
+    X.character.level = lvl;
+    ck('#118 fix1 ...and with it met too, nothing', X.featUnmet(grp).length === 0);
+    X.character.abilities.dex = 10;
+    const both = f('Bulwark', 'General feat · Prerequisite: Strength 13+ and Constitution 13+\nx');
+    ck('#118 fix1 an and-group lists each unmet part',
+       JSON.stringify(X.featUnmet(both)) === JSON.stringify(['Strength 13 or higher (yours is 12)', 'Constitution 13 or higher (yours is 10)']), X.featUnmet(both));
+    X.character.abilities.con = 13;
+    ck('#118 fix1 ...and only the parts not met', JSON.stringify(X.featUnmet(both)) === JSON.stringify(['Strength 13 or higher (yours is 12)']), X.featUnmet(both));
+    X.character.abilities.con = 10;
+    const mixed = f('Hedge Mage', 'General feat · Prerequisite: Spellcasting feature or Intelligence 15+ and Wisdom 13+\nx');
+    ck('#118 fix1 an or-group of unequal alternatives: each alternative\'s unmet parts, joined',
+       JSON.stringify(X.featUnmet(mixed)) === JSON.stringify(['the Spellcasting feature or Intelligence 15 and Wisdom 13 (yours: Intelligence 10, Wisdom 10)']), X.featUnmet(mixed));
+    const three = f('Nimble', 'General feat · Prerequisite: Strength 13+ or Dexterity 13+ or Charisma 13+\nx');
+    ck('#118 fix1 three alternatives, all named', /^Strength 13 or Dexterity 13 or Charisma 13 \(yours: Strength 12, Dexterity 10, Charisma 10\)$/.test(X.featUnmet(three)[0] || ''), X.featUnmet(three));
+    const keepRules = X.rules; X.rules = Object.assign({}, X.rules, {feats: [grp]});
+    X.character.level = 1;
+    ck('#118 fix1 the warning reads the group whole',
+       ctx.asiPickWarnings(['Tumbler'])[0] === 'Tumbler needs level 4 or higher (yours is 1) and Strength 13 or Dexterity 13 (yours: Strength 12, Dexterity 10). Take it anyway?', ctx.asiPickWarnings(['Tumbler']));
+    X.character.level = lvl; X.rules = keepRules;
+  }
+  X.character.features = [{id: 'a', name: 'Ability Score Improvement', enabled: true, effects: [{target: 'ability.str', value: 1}]}];
+  ck('#118 featQualifies after effects (abilFinal)', X.featUnmet(ath).length === 0, X.featUnmet(ath));
+  ck('#118 an unknown prerequisite never counts as unmet', X.featUnmet(odd).length === 0);
+  ck('#118 level 19 for an Epic Boon', X.featUnmet(boon).length === 1);
+  ck('#118 Fighting Style needs the feature', X.featUnmet(sty).length === 1);
+  X.character.features.push({id: 'b', name: 'Fighting Style', enabled: true});
+  ck('#118 ...and is met by it', X.featUnmet(sty).length === 0);
+  ck('#118 a plain Fighter does not meet Spellcasting feature', X.featUnmet(castOnly).length === 1, X.featUnmet(castOnly));
+  X.character.classes = [{name: 'Fighter', level: 3, subclass: 'Eldritch Knight'}]; X.character.level = 3;
+  ck('#118 an Eldritch Knight subclass meets Spellcasting feature (hasCasterClass, not the base class field)', X.featUnmet(castOnly).length === 0, X.featUnmet(castOnly));
+  X.character.classes = [{name: 'Warlock', level: 1}]; X.character.level = 1;
+  ck('#118 a Warlock meets Spellcasting or Pact Magic feature', X.featUnmet(pactF).length === 0, X.featUnmet(pactF));
+  ck('#118 a Warlock does NOT meet a plain Spellcasting feature (pact is not spellcasting)', X.featUnmet(castOnly).length === 1, X.featUnmet(castOnly));
+  X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
+  const ac = X.featAbilityChoices(ath);
+  ck('#118 ability from the field', ac.length === 1 && ac[0].choose.join() === 'str,dex' && ac[0].amount === 1);
+  const tc = X.featAbilityChoices(hb);
+  ck('#118 ability from the text', tc.length === 1 && tc[0].choose.join() === 'dex,wis,cha' && tc[0].amount === 1, tc);
+  ck('#118 fixed increase', JSON.stringify(X.featAbilityChoices(f('D', 'x', {ability: [{con: 1}]}))) === JSON.stringify([{fixed: {con: 1}}]));
+  ck('#118 no increase', X.featAbilityChoices(org).length === 0);
+  ck('#118 a choose increase\'s max round-trips from the field', X.featAbilityChoices(boon)[0].max === 30, X.featAbilityChoices(boon));
+  ck('#118 offered at an ASI: general yes, origin no, boon only at 19, style with the feature',
+     X.featOfferable(ath, {}) && !X.featOfferable(org, {}) && !X.featOfferable(boon, {}) && X.featOfferable(boon, {boon: true}) && X.featOfferable(sty, {}));
+  ck('#118 Show all offers everything', X.featOfferable(org, {showAll: true}));
+  ck('#118 a species Origin choice offers only Origin feats', X.featOfferable(org, {category: 'origin'}) && !X.featOfferable(ath, {category: 'origin'}));
+  ck('#118 Show all lifts the category filter too (the escape hatch, Mike 2026-10-27)', X.featOfferable(ath, {category: 'origin', showAll: true}) === true);
+  X.character.features.push({id: 'c', name: 'Feat: Athlete', enabled: true});
+  ck('#118 a taken feat is hidden unless Repeatable', X.featTaken('Athlete') && !X.featOfferable(ath, {}) && X.featOfferable(f('Skilled', 'General feat\nRepeatable: You can take this feat more than once.'), {}) );
+  X.character.features.push({id: 'd', name: 'Feat: Notionist', enabled: true});
+  ck('#118 "not Repeatable" in the body is not read as the Repeatable line', !X.featOfferable(f('Notionist', 'General feat\nThis feat is not Repeatable.'), {}));
+  ck('#118 the rules feat named Ability Score Improvement is never offered', !X.featOfferable(f('Ability Score Improvement', 'General feat\nx'), {showAll: true}));
+  ck('#118 featPrereq also splits parts joined by a comma', (() => {
+    const pr2 = X.featPrereq(f('Comma', 'General feat · Prerequisite: Level 5+, Strength 13+\nx'));
+    return pr2.length === 1 && pr2[0].length === 2 && pr2[0][0].kind === 'level' && pr2[0][1].kind === 'ability';
+  })());
+  X.character = keep;
+}
+
+// ---------- #118 the ASI-or-feat step
+{
+  const keep = {ch: X.character, rules: X.rules, conf: state.confirm};
+  X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
+  X.character.abilities.str = 15;
+  const evil = '<img src=x onerror=alert(1)>';
+  X.rules = Object.assign({}, X.rules, {feats: [
+    {name: 'Athlete', description: 'General feat · Prerequisite: Level 5+ and Strength 13+ or Level 5+ and Dexterity 13+\nYou gain the following benefits.\nClimb Speed: …', ability: [{choose: ['str', 'dex'], amount: 1}]},
+    {name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nx', ability: [{str: 1}]},
+    {name: 'Alert', description: 'Origin feat\nx'},
+    {name: evil, description: 'General feat\n' + evil}]});
+  ck('#118 a fresh character has featsAllowed', X.blankChar().featsAllowed === true);
+  ck('#118 migrate keeps a boolean featsAllowed and defaults the rest to true',
+     X.migrate({featsAllowed: false}).featsAllowed === false && X.migrate({}).featsAllowed === true && X.migrate({featsAllowed: 'no'}).featsAllowed === true);
+  const h = X.choiceFieldHTML({type: 'asi'}, 0, null);
+  ck('#118 the ASI row is pinned first', h.indexOf('data-ft-pick="__asi__"') > -1 && h.indexOf('data-ft-pick="__asi__"') < h.indexOf('data-ft-pick="Athlete"'));
+  ck('#118 qualified feats listed, Origin hidden', /data-ft-pick="Athlete"/.test(h) && !/data-ft-pick="Alert"/.test(h));
+  ck('#118 the ASI is selected by default, showing today\'s controls', /data-asi-mode/.test(h));
+  ck('#118 ...and its row is the pressed one', /data-ft-pick="__asi__" aria-pressed="true"/.test(h) && !/data-ft-pick="Athlete" aria-pressed="true"/.test(h));
+  ck('#118 the step carries the search box and the Show all switch', /data-ft-search/.test(h) && /data-ft-all/.test(h) && /data-ctype="asi"/.test(h));
+  ck('#118 escaping', !h.includes('<img src=x') && h.includes('&lt;img src=x'));
+  ck('#118 a row\'s short line: its +1 and its first benefit', /\+1 Str or Dex · Climb Speed/.test(h), h);
+  const all = X.asiFeatListHTML({type: 'asi'}, 0, {showAll: true});
+  ck('#118 Show all lists the Origin feat too', /data-ft-pick="Alert"/.test(all));
+  X.character.abilities.str = 12;
+  const short = X.asiFeatListHTML({type: 'asi'}, 0, {showAll: true});
+  ck('#118 Show all tags an unmet prerequisite in amber', /class="ft-tag warn">needs Strength 13 or higher \(yours is 12\)/.test(short), short);
+  ck('#118 ...and Show all off hides it', !/data-ft-pick="Great Weapon Master"/.test(X.asiFeatListHTML({type: 'asi'}, 0, {showAll: false})));
+  // the unmet-prerequisite warning's sentences (asiPickWarnings, DOM-free); the
+  // window that asks them, and both answers, are t118Warn() at the end
+  const pw = ctx.asiPickWarnings(['Great Weapon Master']);
+  ck('#118 the warning names the feat and what is missing', pw.length === 1 && pw[0] === 'Great Weapon Master needs Strength 13 or higher (yours is 12). Take it anyway?', pw);
+  ck('#118 the ASI and a qualified feat never ask', ctx.asiPickWarnings(['__asi__', 'Alert', '', null]).length === 0);
+  X.character.abilities.str = 15;
+  X.character.featsAllowed = false;
+  const off = X.choiceFieldHTML({type: 'asi'}, 0, null);
+  ck('#118 Feats allowed off: no list, today\'s controls', !/data-ft-pick/.test(off) && /data-asi-mode/.test(off));
+  X.character.featsAllowed = true;
+  const p = X.asiPanelHTML({type: 'asi'}, 0, 'Athlete');
+  ck('#118 the panel asks the +1 from the field', /data-ft-plus="0"/.test(p) && /Strength/.test(p) && /Dexterity/.test(p));
+  ck('#118 the panel shows the feat\'s text, not its category line', /Climb Speed/.test(p) && !/General feat/.test(p));
+  ck('#118 a fixed increase is text, not a control', !/data-ft-plus/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master')) && /\+1 Strength/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master')));
+  ck('#118 the panel escapes the feat text', !X.asiPanelHTML({type: 'asi'}, 0, evil).includes('<img src=x'));
+  // commit: a feat with its +1, tied to the class level; then removing the class reverts both
+  X.commitAsiPick({type: 'asi', pick: 'Athlete', plus: ['dex']}, {kind: 'class', class: 'Fighter', level: 8}, []);
+  const ft = X.character.features.find(x => x.name === 'Feat: Athlete');
+  ck('#118 the feat is granted with its class-level origin', ft && ft.origin.kind === 'class' && ft.origin.class === 'Fighter' && ft.origin.level === 8, ft);
+  ck('#118 its +1 is an effect on the feat', ft && ft.effects.some(e => e.target === 'ability.dex' && e.value === 1), ft && ft.effects);
+  ck('#118 the +1 does not leak into the rules entry', !(X.rules.feats[0].effects || []).length);
+  X.commitAsiPick({type: 'asi', pick: 'Great Weapon Master', plus: []}, {kind: 'class', class: 'Fighter', level: 4}, []);
+  const gwm = X.character.features.find(x => x.name === 'Feat: Great Weapon Master');
+  ck('#118 a fixed increase is stored on the feat', gwm && gwm.effects.some(e => e.target === 'ability.str' && e.value === 1), gwm && gwm.effects);
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '2', a: 'str'}, {kind: 'class', class: 'Fighter', level: 4}, []);
+  ck('#118 an ASI is stored as today', X.character.features.some(x => x.name === 'Ability Score Improvement' && x.effects[0].target === 'ability.str' && x.effects[0].value === 2));
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '1', a: 'con', b: 'wis'}, {kind: 'class', class: 'Fighter', level: 6}, []);
+  ck('#118 +1 to two is stored as today', X.character.features.some(x => x.name === 'Ability Score Improvement' && x.effects.length === 2 && x.effects[1].target === 'ability.wis'));
+  X.removeClass(0);
+  ck('#118 removing the class removes the feat and the ASI', !X.character.features.some(x => /Athlete|Great Weapon|Ability Score Improvement/.test(x.name)));
+  X.character = keep.ch; X.rules = keep.rules; state.confirm = keep.conf;
+}
+
+// ---------- #118 Task 3 fix round 1
+{
+  const keep = {ch: X.character, rules: X.rules};
+  X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
+  X.rules = Object.assign({}, X.rules, {feats: [
+    // invented: its own effects already carry the +1 its text names (the Humblewood shape)
+    {name: 'Branch Runner', description: 'You move through canopies with ease.\nIncrease your Dexterity score by 1, to a maximum of 20.\nYou ignore difficult terrain made of branches.', effects: [{target: 'ability.dex', value: 1}]},
+    // invented: a choose where one option is already raised by its effects
+    {name: 'Tidecaller', description: 'General feat\nIncrease your Wisdom or Charisma score by 1.', effects: [{target: 'ability.wis', value: 1}]},
+    // invented: no category line at all
+    {name: 'Hearthward', description: 'Your home fire keeps you steady.\nWarmth: You have advantage against cold.', ability: [{choose: ['con', 'wis'], amount: 1}]}]});
+  ck('#118 fix: an increase the feat\'s own effects already carry is not pending', X.featPendingIncreases(X.rules.feats[0]).length === 0, X.featPendingIncreases(X.rules.feats[0]));
+  ck('#118 fix: a choose with an option already raised counts as satisfied', X.featPendingIncreases(X.rules.feats[1]).length === 0);
+  ck('#118 fix: a pending increase keeps its featAbilityChoices index', X.featPendingIncreases(X.rules.feats[2]).length === 1 && X.featPendingIncreases(X.rules.feats[2])[0].i === 0);
+  const bp = X.asiPanelHTML({type: 'asi'}, 0, 'Branch Runner');
+  ck('#118 fix: no +1 control for an increase the effects already give', !/data-ft-plus/.test(bp), bp);
+  ck('#118 fix: no +1 control for a satisfied choose', !/data-ft-plus/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Tidecaller')));
+  X.commitAsiPick({type: 'asi', pick: 'Branch Runner', plus: []}, {kind: 'class', class: 'Fighter', level: 8}, []);
+  const br = X.character.features.find(x => x.name === 'Feat: Branch Runner');
+  ck('#118 fix: exactly one dex +1 on the feature', br && br.effects.filter(e => e.target === 'ability.dex').length === 1 && br.effects.filter(e => e.target === 'ability.dex')[0].value === 1, br && br.effects);
+  X.commitAsiPick({type: 'asi', pick: 'Tidecaller', plus: ['cha']}, {kind: 'class', class: 'Fighter', level: 8}, []);
+  const tc = X.character.features.find(x => x.name === 'Feat: Tidecaller');
+  ck('#118 fix: a satisfied choose adds nothing more', tc && tc.effects.length === 1 && tc.effects[0].target === 'ability.wis', tc && tc.effects);
+  // 2: the first line is dropped only when it is a category line
+  ck('#118 fix: a feat with no category line keeps its first line in the panel', /Branch Runner|canopies/.test(bp) && /canopies with ease/.test(bp), bp);
+  ck('#118 fix: ...and in the row\'s short line (its first benefit)', /\+1 Con or Wis · Warmth/.test(X.asiFeatListHTML({type: 'asi'}, 0, {showAll: true})));
+  ck('#118 fix: a category line is still dropped', !/General feat/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Tidecaller')));
+  // 3: no pick commits nothing; an ASI with no valid ability is refused
+  const n0 = X.character.features.length;
+  X.commitAsiPick({type: 'asi', pick: null, mode: '2', a: undefined}, {kind: 'race', name: 'Human'}, []);
+  ck('#118 fix: pick null commits nothing', X.character.features.length === n0);
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '2', a: undefined}, {kind: 'class', class: 'Fighter', level: 4}, []);
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '1', a: 'str', b: 'nope'}, {kind: 'class', class: 'Fighter', level: 4}, []);
+  ck('#118 fix: an ASI without a valid ability is refused', X.character.features.length === n0 && !X.character.features.some(f => (f.effects || []).some(e => /undefined|nope/.test(e.target))));
+  // 4: search never hides the pressed row
+  ck('#118 fix: search hides a non-matching row', X.asiRowHidden('Grappler', 'lan', false) === true && X.asiRowHidden('Lantern Bearer', 'lan', false) === false && X.asiRowHidden('Grappler', '', false) === false);
+  ck('#118 fix: ...but never the pressed one', X.asiRowHidden('Grappler', 'lan', true) === false);
+  X.character = keep.ch; X.rules = keep.rules;
+}
+
+// ---------- #118 final fix M3, M5: a row's short line (invented fixtures, Skilled-like and boon-like)
+{
+  const handy = {name: 'Handy', description: 'Origin feat\nYou pick up three tricks of the trade of your choice.\nRepeatable: Take it as often as you like.'};
+  ck('#118 fix M3: a "Repeatable:" line is never the short line', X.asiFeatShort(handy) === '', X.asiFeatShort(handy));
+  const gated = {name: 'Gated', description: 'General feat\nprerequisites: Level 4+\nPREREQUISITE: none really\nKeen Eye: You notice things.\nRepeatable: Once only.'};
+  ck('#118 fix M3: ...nor a "Prerequisite(s):" line, in any case; the first real benefit is', X.asiFeatShort(gated) === 'Keen Eye', X.asiFeatShort(gated));
+  const keen = {name: 'Keener', description: 'General feat\nBright Eyes: You see far.\nRepeatable: Yes.', ability: [{choose: ['int', 'wis'], amount: 1}]};
+  ck('#118 fix M3: a benefit line before a Repeatable line still leads', X.asiFeatShort(keen) === '+1 Int or Wis · Bright Eyes', X.asiFeatShort(keen));
+  const boonish = {name: 'Boon of Trying', description: 'Epic Boon feat\nSteady Hand: You never slip.', ability: [{choose: ['str', 'dex', 'con', 'int', 'wis', 'cha'], amount: 1, max: 30}]};
+  ck('#118 fix M5: all six abilities read "+1 any"', X.asiFeatShort(boonish) === '+1 any · Steady Hand', X.asiFeatShort(boonish));
+  const shuffled = {name: 'Boon of Order', description: 'Epic Boon feat\nCalm: You rest.', ability: [{choose: ['cha', 'wis', 'int', 'con', 'dex', 'str'], amount: 1}]};
+  ck('#118 fix M5: ...in any order', X.asiFeatShort(shuffled) === '+1 any · Calm', X.asiFeatShort(shuffled));
+  const five = {name: 'Boon of Five', description: 'Epic Boon feat\nLess: Nearly all.', ability: [{choose: ['str', 'dex', 'con', 'int', 'wis'], amount: 1}]};
+  ck('#118 fix M5: five abilities are still listed', X.asiFeatShort(five) === '+1 Str or Dex or Con or Int or Wis · Less', X.asiFeatShort(five));
+  const fixed = {name: 'Sturdy', description: 'General feat\nTough: You last.', ability: [{con: 1}]};
+  ck('#118 fix M5: a fixed increase is unchanged', X.asiFeatShort(fixed) === '+1 Con · Tough', X.asiFeatShort(fixed));
+}
+
+// ---------- #118 species feats and level 19
+{
+  const keep = {ch: X.character, rules: X.rules, conf: state.confirm};
+  X.character = X.blankChar();
+  // invented feat text: never the private packs' wording
+  X.rules = Object.assign({}, X.rules, {
+    feats: [{name: 'Alert', description: 'Origin feat\nx'}, {name: 'Tough', description: 'Origin feat\nx'}, {name: 'Athlete', description: 'General feat · Prerequisite: Level 4+\nx'}],
+    races: [{name: 'Human', choices: [{type: 'feat', category: 'origin', label: 'An Origin feat of your choice'}], traits: [{name: 'Versatile', description: 'You gain an Origin feat of your choice.'}]},
+            {name: 'Tester', feat: 'Tough'}],
+    backgrounds: [{name: 'Wanderer', abilityScores: ['str', 'dex', 'con'], choices: [{type: 'feat', category: 'origin', label: 'An Origin feat'}]}]});
+  X.reindexRules && X.reindexRules();
+  // applyRace() returns the queue; its caller hands it to runExtraChoices()
+  const pend = X.applyRace('Human');
+  ck('#118 a species feat choice is queued with the race sid', pend && pend.some(x => x.ch && x.ch.type === 'feat' && x.ch.category === 'origin' && x.sid === 'race:Human'), pend);
+  const h = X.asiFeatListHTML({type: 'feat', category: 'origin'}, 0, {});
+  ck('#118 the species list offers Origin feats only, with no ASI row', /data-ft-pick="r\d+"[^>]*><span class="ft-nm"><b>Alert/.test(h) && !/<b>Athlete/.test(h) && !/__asi__/.test(h), h);
+  X.commitAsiPick({type: 'asi', pick: 'Alert', plus: []}, X.sidToOrigin('race:Human'), []);
+  ck('#118 the species feat is granted with the race origin', X.character.features.some(x => x.name === 'Feat: Alert' && x.origin.kind === 'race' && x.origin.name === 'Human'));
+  X.applyRace('Tester');
+  ck('#118 species revert: changing species removes its feat', !X.character.features.some(x => x.name === 'Feat: Alert'));
+  ck('#118 a fixed species feat is granted', X.character.features.some(x => x.name === 'Feat: Tough' && x.origin.kind === 'race'));
+  // the species choice in a window: the same list, no ASI row, nothing pressed, and Done wants a pick
+  const w = X.choiceFieldHTML(Object.assign({}, pend.find(x => x.ch.type === 'feat').ch), 0, null);
+  ck('#118 a category feat choice renders the list as an asi step', /data-ctype="asi"/.test(w) && /data-ft-list/.test(w) && /data-ft-panel/.test(w) && !/__asi__/.test(w), w);
+  ck('#118 ...carrying its race sid', /data-sid="race:Human"/.test(w));
+  ck('#118 ...with no row pressed', !/aria-pressed="true"/.test(w));
+  ck('#118 ...and Done wanting one pick (data-choose)', /data-choose="1"/.test(w));
+  X.character.featsAllowed = false;
+  ck('#118 Feats allowed off: a species feat is still offered', /data-ft-list/.test(X.choiceFieldHTML({type: 'feat', category: 'origin'}, 0, null)));
+  X.character.featsAllowed = true;
+  ck('#118 a feat choice with `from` keeps its select', /data-feat-opt/.test(X.choiceFieldHTML({type: 'feat', from: ['Alert']}, 0, null)));
+  // a pressed row counts as a pick toward data-choose
+  const fakeDiv = sel => ({querySelectorAll: q => /aria-pressed="true"/.test(q) ? sel : []});
+  ck('#118 choiceBlockPicked counts the pressed feat row', X.choiceBlockPicked(fakeDiv([{}])) === 1 && X.choiceBlockPicked(fakeDiv([])) === 0);
+  // background: the same pending path, the background's origin
+  const bp = X.applyBackground('Wanderer', {mode: '1-1-1'});
+  ck('#118 a background feat choice is queued with the bg sid', bp.some(x => x.ch && x.ch.type === 'feat' && x.sid === 'bg:Wanderer'), bp);
+  ck('#118 sidToOrigin maps bg: to the background origin', JSON.stringify(X.sidToOrigin('bg:Wanderer')) === JSON.stringify({kind: 'background', name: 'Wanderer'}));
+  ck('#118 sidToOrigin keeps a name holding a colon', X.sidToOrigin('race:Elf: High').name === 'Elf: High');
+  // the extra-choices window's Done: each pick to its own source
+  const queued = [];
+  X.commitExtraChoices([{type: 'asi', pick: 'Alert', plus: [], sid: 'bg:Wanderer'}, {type: 'asi', pick: null, sid: 'race:Tester'}, {type: 'feat', name: 'Athlete', sid: 'race:Tester'}], queued);
+  ck('#118 Done grants the background feat with the background origin', X.character.features.some(x => x.name === 'Feat: Alert' && x.origin.kind === 'background' && x.origin.name === 'Wanderer'));
+  ck('#118 Done grants a select feat choice with its source', X.character.features.some(x => x.name === 'Feat: Athlete' && x.origin.kind === 'race' && x.origin.name === 'Tester'));
+  X.applyBackground('Wanderer', {mode: '1-1-1'});
+  ck('#118 background revert: re-applying removes the chosen feat', !X.character.features.some(x => x.name === 'Feat: Alert'));
+  // level 19
+  const res = X.applyClassLevel({name: 'Wizard', level: 19}, {name: 'Wizard', levels: {'19': {traits: [{name: 'Epic Boon', description: 'You gain an Epic Boon feat…'}]}}}, 19);
+  ck('#118 level 19 Epic Boon becomes an asi choice with boon', res.choices.some(c => c.type === 'asi' && c.boon === true && c._level === 19 && c._sid === 'class:Wizard'), res.choices);
+  ck('#118 ...and the Epic Boon trait is still added', X.character.features.some(x => x.name === 'Epic Boon'));
+  const res4 = X.applyClassLevel({name: 'Wizard', level: 4}, {name: 'Wizard', levels: {'4': {choices: [{type: 'asi'}]}}}, 4);
+  ck('#118 an existing asi level is unchanged', res4.choices.filter(c => c.type === 'asi').length === 1 && !res4.choices[0].boon);
+  const res19 = X.applyClassLevel({name: 'Wizard', level: 19}, {name: 'Wizard', levels: {'19': {choices: [{type: 'asi'}], traits: [{name: 'Epic Boon', description: 'x'}]}}}, 19);
+  ck('#118 a level 19 that already has an asi choice gets no second one', res19.choices.filter(c => c.type === 'asi').length === 1 && !res19.choices[0].boon, res19.choices);
+  const snap = {feats: [], res: {}, slots: [], pb: 6};
+  const rows = X.levelGains(snap, snap, [{type: 'asi', boon: true}, {type: 'asi'}], []);
+  ck('#118 the level-up card names the Epic Boon row', rows[0].text === 'Epic Boon' && rows[0].detail === 'a feat, or an Ability Score Improvement', rows);
+  ck('#118 ...and a plain ASI row as before', rows[1].text === 'Ability Score Improvement');
+  const withTrait = {feats: [{id: 'eb', name: 'Epic Boon', desc: 'You gain an Epic Boon feat.', cls: 'Wizard', sub: ''}], res: {}, slots: [], pb: 6};
+  const once = X.levelGains(snap, withTrait, [{type: 'asi', boon: true}], []);
+  ck('#118 Epic Boon shows once on the card: the choice row, not the feature row', once.filter(r => /Epic Boon/.test(r.text)).length === 1 && once.find(r => /Epic Boon/.test(r.text)).kind === 'choice', once);
+  ck('#118 ...other new features still show beside it', X.levelGains(snap, {feats: withTrait.feats.concat([{id: 'x', name: 'Signature Spells', desc: 'x', cls: 'Wizard', sub: ''}]), res: {}, slots: [], pb: 6}, [{type: 'asi', boon: true}], []).some(r => r.kind === 'feature' && r.text === 'Signature Spells'));
+  ck('#118 ...and with no boon choice the Epic Boon feature row stays', X.levelGains(snap, withTrait, [], []).some(r => r.kind === 'feature' && r.text === 'Epic Boon'));
+  X.character.featsAllowed = false;
+  const off = X.levelGains(snap, withTrait, [{type: 'asi', boon: true}], []);
+  ck('#118 Feats allowed off: the Epic Boon feature row stays beside the ASI row', off.some(r => r.kind === 'feature' && r.text === 'Epic Boon') && off.some(r => r.kind === 'choice' && r.text === 'Ability Score Improvement'), off);
+  ck('#118 Feats allowed off: the level-19 row reads as an ASI', X.levelGains(snap, snap, [{type: 'asi', boon: true}], [])[0].text === 'Ability Score Improvement');
+  X.character.featsAllowed = true;
+  X.character = keep.ch; X.rules = keep.rules; state.confirm = keep.conf;
+}
+
+// ---------- #118 Task 4 fix round 1
+{
+  const keep = {ch: X.character, rules: X.rules};
+  X.character = X.blankChar(); X.character.level = 1;
+  // invented feat text: never the private packs' wording
+  const base = [
+    {name: 'Lamplighter', description: 'Origin feat\nGlow: You shed a little light.', ability: [{choose: ['int', 'wis'], amount: 1}]},
+    {name: 'Brawler', description: 'General feat · Prerequisite: Level 4+\nx'},
+    {name: 'Wayfarer', description: 'General feat\nRoads: You know the way.'},
+    {name: 'Boon of Testing', description: 'Epic Boon · Prerequisite: Level 19+\nx'},
+    {name: 'Shieldwall', description: 'Fighting Style feat · Prerequisite: Fighting Style feature\nx'}];
+  X.rules = Object.assign({}, X.rules, {feats: base,
+    races: [{name: 'Lineage', choices: [{type: 'feat', label: 'A feat of your choice'}]},
+            {name: 'Menu', feat: ['Lamplighter', 'Brawler']},
+            {name: 'Solo', feat: 'Wayfarer'}]});
+  X.reindexRules();
+  // I1: a species feat choice with no category is the list too
+  const lp = X.applyRace('Lineage');
+  const lc = (lp.find(x => x.ch && x.ch.type === 'feat') || {}).ch;
+  ck('#118 fix1: a no-category species feat choice is queued', !!lc, lp);
+  const lw = X.choiceFieldHTML(lc, 0, null);
+  ck('#118 fix1: ...and renders the list, not the select', /data-ctype="asi"/.test(lw) && /data-ft-list/.test(lw) && !/data-feat-opt/.test(lw), lw);
+  ck('#118 fix1: ...with no pinned ASI row', !/__asi__/.test(lw));
+  ck('#118 fix1: at level 1 it offers Origin feats and met General feats', /<b>Lamplighter/.test(lw) && /<b>Wayfarer/.test(lw) && !/<b>Brawler/.test(lw), lw);
+  ck('#118 fix1: Epic Boons and Fighting Style feats wait for Show all', !/<b>Boon of Testing/.test(lw) && !/<b>Shieldwall/.test(lw));
+  ck('#118 fix1: ...and Show all lists them', /<b>Boon of Testing/.test(X.asiFeatListHTML(lc, 0, {showAll: true})));
+  ck('#118 fix1: featOfferable anyCategory: Origin yes, boon no', X.featOfferable(base[0], {anyCategory: true}) && !X.featOfferable(base[3], {anyCategory: true}) && !X.featOfferable(base[1], {anyCategory: true}));
+  X.character.features.push({id: 'fs', name: 'Fighting Style', enabled: true, effects: []});
+  ck('#118 fix1: ...a Fighting Style feat with the feature', X.featOfferable(base[4], {anyCategory: true}));
+  X.character.features = X.character.features.filter(f => f.id !== 'fs');
+  ck('#118 fix1: the list wants its pick (data-choose)', /data-choose="1"/.test(lw));
+  X.commitExtraChoices([{type: 'asi', pick: 'Lamplighter', plus: ['wis'], sid: 'race:Lineage'}], []);
+  const lf = X.character.features.find(x => x.name === 'Feat: Lamplighter');
+  ck('#118 fix1: the feat is granted with the race origin and its +1', lf && lf.origin.kind === 'race' && lf.origin.name === 'Lineage' && lf.effects.some(e => e.target === 'ability.wis' && e.value === 1), lf);
+  ck('#118 fix1: a class-level feat choice keeps its select', /data-feat-opt/.test(X.choiceFieldHTML({type: 'feat', _sid: 'class:Fighter'}, 0, null)) && /data-feat-opt/.test(X.choiceFieldHTML({type: 'feat', from: ['Wayfarer'], _sid: 'class:Fighter'}, 0, null)));
+  ck('#118 fix1: a background feat choice with no category is the list', /data-ft-list/.test(X.choiceFieldHTML({type: 'feat', _sid: 'bg:Wanderer'}, 0, null)));
+  // M1: a species feat array is a choice of one, through the same list
+  const mp = X.applyRace('Menu');
+  ck('#118 fix1: a species feat array grants nothing outright', !X.character.features.some(x => /^Feat: (Lamplighter|Brawler)$/.test(x.name)));
+  const mc = (mp.find(x => x.ch && x.ch.type === 'feat') || {}).ch;
+  ck('#118 fix1: ...it is queued as a choice from the array', mc && JSON.stringify(mc.from) === JSON.stringify(['Lamplighter', 'Brawler']) && mp.find(x => x.ch === mc).sid === 'race:Menu', mp);
+  const mw = mc ? X.choiceFieldHTML(mc, 0, null) : '';
+  ck('#118 fix1: ...rendered as the list of exactly its feats', /data-ft-list/.test(mw) && /<b>Lamplighter/.test(mw) && /<b>Brawler/.test(mw) && !/<b>Wayfarer/.test(mw) && !/__asi__/.test(mw), mw);
+  ck('#118 fix1: ...and Show all does not widen a fixed menu', mc && !/<b>Wayfarer/.test(X.asiFeatListHTML(mc, 0, {showAll: true})));
+  X.applyRace('Solo');
+  ck('#118 fix1: a species feat string still grants directly', X.character.features.some(x => x.name === 'Feat: Wayfarer' && x.origin.kind === 'race'));
+  // M2: no pickable row, no data-choose
+  X.rules = Object.assign({}, X.rules, {feats: [base[1]]});
+  const ew = X.choiceFieldHTML({type: 'feat', category: 'origin', _sid: 'race:Solo'}, 0, null);
+  ck('#118 fix1: an empty list does not ask for a pick', /data-ft-list/.test(ew) && !/data-choose/.test(ew), ew);
+  X.character = keep.ch; X.rules = keep.rules;
+}
+
+// ---------- #118 undo level-up and the level log
+{
+  const keep = X.character;
+  X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 7}]; X.character.level = 7;
+  X.character.hp.max = 61; X.character.hp.cur = 61;
+  const before = JSON.parse(JSON.stringify(X.character));
+  // simulate a level-up's effect on the character, as doLevelUp + the HP step + a feat pick do
+  X.character.classes[0].level = 8; X.character.level = 8; X.character.hp.max = 68;
+  X.character.features.push({id: 'f1', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}, effects: [{target: 'ability.str', value: 1}]});
+  const rec = X.levelLogRecord(before, X.character, 'Fighter', 8);
+  ck('#118 the record holds HP, features and ability changes', rec.hp === 7 && rec.features.length === 1 && rec.features[0].name === 'Feat: Athlete' && rec.abilities.str === 1 && rec.class === 'Fighter' && rec.level === 8, rec);
+  // undo signature: available only while the sheet is unchanged
+  X._undo = {copy: JSON.stringify(before), at: 1, sig: JSON.stringify(X.character), cls: 'Fighter', level: 8};
+  ck('#118 undo is available right after', X.undoLevelUpAvailable() === true);
+  X.character.name = 'Renamed';
+  ck('#118 undo is gone after another change', X.undoLevelUpAvailable() === false);
+  X.character.name = before.name;
+  X.undoLevelUp();
+  ck('#118 undo restores the exact character', JSON.stringify(X.character) === JSON.stringify(before), X.character.classes);
+  ck('#118 ...and is spent', X._undo === null && X.undoLevelUpAvailable() === false);
+  // level down with a record
+  X.character = JSON.parse(JSON.stringify(before)); X.character.classes[0].level = 8; X.character.level = 8; X.character.hp.max = 68; X.character.hp.cur = 68;
+  X.character.features.push({id: 'f1', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}, effects: [{target: 'ability.str', value: 1}]});
+  X.character.levelLog = [Object.assign({at: 2}, rec)];
+  const html = X.levelDownHTML(X.character.levelLog[0], X.character.classes[0]);
+  ck('#118 the dialog lists HP and features, ticked', /\+7 hit points/.test(html) && /Feat: Athlete/.test(html) && (html.match(/checked/g) || []).length >= 2, html);
+  ck('#118 the dialog: heading, max HP working, the feat\'s +1, and its two buttons',
+     /Fighter 8 → 7\./.test(html) && /max HP 68 → 61/.test(html) && /Feat: Athlete \(\+1 Strength\)/.test(html) && /id="ldGo"/.test(html) && /id="ldCancel"/.test(html), html);
+  X.applyLevelDown(0, {hp: true, features: ['f1']});
+  ck('#118 level down removes ticked HP and features and deletes the record', X.character.classes[0].level === 7 && X.character.hp.max === 61 && !X.character.features.some(x => x.id === 'f1') && X.character.levelLog.length === 0);
+  X.character.classes[0].level = 7;
+  X.applyLevelDown(0, null);
+  ck('#118 a level without a record only lowers the number', X.character.classes[0].level === 6 && X.character.hp.max === 61);
+  // unticked: the record still goes, and what was left unticked stays
+  X.character.classes[0].level = 8; X.character.hp.max = 68; X.character.hp.cur = 68;
+  X.character.features.push({id: 'f2', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}});
+  X.character.levelLog = [Object.assign({}, rec, {features: [{id: 'f2', name: 'Feat: Athlete'}]})];
+  X.applyLevelDown(0, {hp: false, features: []});
+  ck('#118 level down with nothing ticked keeps HP and the feature, and still deletes the record', X.character.classes[0].level === 7 && X.character.hp.max === 68 && X.character.features.some(x => x.id === 'f2') && X.character.levelLog.length === 0);
+  const evil = Object.assign({}, rec, {features: [{id: 'e"1', name: '<img src=x onerror=alert(1)>'}], subclass: '<b>x</b>', grants: [{sid: 'class:Fighter', type: 'skill', key: '<i>'}]});
+  X.character.features.push({id: 'e"1', name: '<img src=x onerror=alert(1)>', origin: {kind: 'class', class: 'Fighter', level: 7}});
+  const eh = X.levelDownHTML(evil, {name: '<script>', level: 7});
+  ck('#118 the level-down dialog escapes names, ids, subclass and grants', !/<img src=x/.test(eh) && !/<script>/.test(eh) && !/<b>x/.test(eh) && !/<i>/.test(eh) && /data-ld-ft="e&quot;1"/.test(eh), eh);
+  const m = X.migrate(Object.assign(X.blankChar(), {levelLog: [{bad: 1}, {class: 'Fighter', level: 3, hp: 5, features: [], abilities: {}}]}));
+  ck('#118 migrate keeps well-formed records only', Array.isArray(m.levelLog) && m.levelLog.length === 1);
+  ck('#118 a fresh character has an empty level log', Array.isArray(X.blankChar().levelLog) && X.blankChar().levelLog.length === 0);
+  ck('#118 a sheet saved before the log migrates to []', Array.isArray(X.migrate({abilities: {}}).levelLog) && X.migrate({abilities: {}, levelLog: 'junk'}).levelLog.length === 0);
+  /* final-fix M2: the three malformed shapes the review used, each of which made
+     Level down throw. migrate() normalizes them and keeps the record's other keys. */
+  {
+    const base = () => ({class: 'Fighter', level: 8, hp: 7, abilities: {}, extra: 'kept', features: [{id: 'm1', name: 'Feat: Athlete', mine: 1}]});
+    const shapes = [
+      Object.assign(base(), {features: [{id: 'm1', name: 'Feat: Athlete', grants: 'oops'}]}),
+      Object.assign(base(), {grants: {a: 1}}),
+      Object.assign(base(), {features: [{id: 'm1', name: 'Feat: Athlete', grants: [null, {sid: 'class:Fighter', type: 'skill', key: 'athletics'}]}]}),
+      Object.assign(base(), {hp: 'NaN', subclass: {x: 1}, features: [null, 'x', {name: 'no id'}, {id: 7, name: 'number id'}, {id: 'm1', name: 'Feat: Athlete'}], grants: [null, 3, {sid: 'class:Fighter', type: 'skill', key: 'survival'}]}),
+    ];
+    shapes.forEach((sh, i) => {
+      const m2 = X.migrate(Object.assign(X.blankChar(), {levelLog: [sh]}));
+      const r = m2.levelLog[0];
+      ck('#118 fix M2 shape ' + i + ': migrate keeps the record, normalized', r && r.extra === 'kept' && Array.isArray(r.grants) && r.features.length === 1 && r.features[0].id === 'm1'
+         && Array.isArray(r.features[0].grants) && r.features[0].grants.every(g => g && typeof g.sid === 'string') && r.grants.every(g => g && typeof g.key === 'string')
+         && typeof r.hp === 'number' && typeof r.subclass === 'string', r);
+      const again = X.migrate(JSON.parse(JSON.stringify(m2)));
+      ck('#118 fix M2 shape ' + i + ': the record survives a save→load round trip unchanged', JSON.stringify(again.levelLog) === JSON.stringify(m2.levelLog));
+      if (i === 1) ck('#118 fix M2: unknown keys on a kept feature survive', r.features[0].mine === 1, r.features[0]);
+      // Level down opens and applies, from the migrated record and from the raw one
+      [r, sh].forEach((rec, j) => {
+        X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
+        X.character.hp.max = 68; X.character.hp.cur = 68;
+        X.character.features.push({id: 'm1', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}});
+        X.character.levelLog = [rec];
+        let html = '', ok = true;
+        try { html = X.levelDownHTML(rec, X.character.classes[0]); X.applyLevelDown(0, {hp: true, features: ['m1']}); } catch (e) { ok = false; html = e.message; }
+        ck('#118 fix M2 shape ' + i + (j ? ' (raw, not migrated)' : '') + ': Level down opens and applies without throwing', ok && /Fighter 8 → 7/.test(html)
+           && X.character.classes[0].level === 7 && !X.character.features.some(x => x.id === 'm1') && X.character.levelLog.length === 0, html);
+      });
+    });
+  }
+  /* final-fix M1: a dialog that no longer matches the sheet changes nothing */
+  {
+    X.character = JSON.parse(JSON.stringify(before)); X.character.classes[0].level = 8; X.character.level = 8; X.character.hp.max = 68; X.character.hp.cur = 68;
+    X.character.features.push({id: 'f1', name: 'Feat: Athlete', enabled: true, origin: {kind: 'class', class: 'Fighter', level: 8}});
+    const r8 = Object.assign({}, rec, {features: [{id: 'f1', name: 'Feat: Athlete', grants: []}]});
+    X.character.levelLog = [r8];
+    const shown = {entry: X.character.classes[0], level: 8, rec: r8};
+    X.character = JSON.parse(JSON.stringify(X.character));   /* as undo does: a new object */
+    const was = JSON.stringify(X.character);
+    ck('#118 fix M1: a stale dialog applies nothing', X.applyLevelDown(0, {hp: true, features: ['f1']}, shown) === false && JSON.stringify(X.character) === was);
+    const fresh = {entry: X.character.classes[0], level: 8, rec: X.character.levelLog[0]};
+    ck('#118 fix M1: ...a level that moved under the dialog applies nothing', X.applyLevelDown(0, {hp: true, features: ['f1']}, Object.assign({}, fresh, {level: 9})) === false && JSON.stringify(X.character) === was);
+    ck('#118 fix M1: ...and the matching dialog still applies', X.applyLevelDown(0, {hp: true, features: ['f1']}, fresh) === true && X.character.classes[0].level === 7 && X.character.hp.max === 61 && X.character.levelLog.length === 0);
+  }
+  // switching character ends Undo
+  X._undo = {copy: '{}', at: 1, sig: null, cls: 'Fighter', level: 8};
+  ctx.luAbandon();
+  ck('#118 switching character (luAbandon) ends Undo', X._undo === null);
+  X.character = keep;
+}
+
+/* ---------- #118 the whole level-up, end to end: settle once, after the last window
+   A real timer (Node's), borrowed for this block only: the harness's setTimeout
+   never fires, and settling is a setTimeout(0). The modal's open state is
+   tracked by wrapping the real openModal/closeModal, and read through
+   getElementById("modal"), which is what the settle step reads. */
+async function t118EndToEnd() {
+  const keep = {ch: X.character, rules: X.rules, st: ctx.setTimeout, ct: ctx.clearTimeout, om: ctx.openModal, cm: ctx.closeModal,
+    gid: ctx.document.getElementById, qs: ctx.document.querySelector, qsa: ctx.document.querySelectorAll, toast: ctx.toast, mm: ctx.window.matchMedia, id: X.activeId, conf: state.confirm};
+  const tick = ms => new Promise(r => setTimeout(r, ms || 0));
+  let open = false, opened = [], toasts = [], handlers = {};
+  const fakeModal = {classList: {contains: c => c === 'open' && open}};
+  ctx.setTimeout = setTimeout; ctx.clearTimeout = clearTimeout;
+  ctx.openModal = function (t, h) { opened.push({t: String(t), h: String(h)}); keep.om.apply(null, arguments); open = true; };
+  ctx.closeModal = function () { open = false; return keep.cm.apply(null, arguments); };
+  ctx.document.getElementById = id => id === 'modal' ? fakeModal
+    : (id === 'ldGo' || id === 'ldCancel' || id === 'luUndo') ? {addEventListener: (e, fn) => { handlers[id] = fn; }} : keep.gid(id);
+  ctx.toast = (msg, action) => { toasts.push({msg: String(msg), action}); };
+  ctx.window.matchMedia = () => ({matches: true, addEventListener() {}});   /* reduced motion: no scene */
+  try {
+    X.resetRules();
+    X.mergeRules({system: 'T5', classes: [{name: 'Fighter', hitDie: 'd10', levels: {'8': {
+      traits: [{name: 'Know Your Ground', description: 'You know the land.', skills: ['Survival']}],
+      choices: [{type: 'asi'}, {type: 'skill', from: ['Athletics', 'Acrobatics'], choose: 1}]}}}],
+      feats: [{name: 'Athlete', description: 'General feat\nClimb: You climb well.', ability: [{choose: ['str', 'dex'], amount: 1}]}]}, 'test-118-5');
+    const fresh = () => {
+      X.character = X.blankChar(); X.character.name = 'Tess'; X.character.classes = [{name: 'Fighter', level: 7}]; X.character.level = 7;
+      X.character.hp.max = 61; X.character.hp.cur = 61; X.character.abilities.con = 10;
+      X.character.grants = [{sid: 'class:Fighter', type: 'save', key: 'str', level: 1}];
+      ctx.renderAll(); ctx.recompute();   /* the sheet as it stands on screen: derived fields (hit dice) filled in */
+    };
+    fresh(); X.activeId = 'T5'; X._undo = null;
+    const start = JSON.stringify(X.character);
+    opened = []; toasts = [];
+    ctx.doLevelUp(0);
+    ck('#118 e2e: the card opens and nothing has settled yet', opened.length === 1 && open && X.character.levelLog.length === 0 && X.undoLevelUpAvailable() === false, opened.map(o => o.t));
+    ck('#118 e2e: the card carries Undo level-up next to Done', /id="luUndo"[^>]*>Undo level-up</.test(opened[0].h) && /id="luGo"/.test(opened[0].h), opened[0].h);
+    ck('#118 e2e: the copy was taken before the level changed', X._undo && JSON.parse(X._undo.copy).classes[0].level === 7 && X._undo.copy === start);
+    await tick();
+    ck('#118 e2e: no settle while the card is open', X.character.levelLog.length === 0);
+    ctx.luSetHP('7'); ctx.luFinish();
+    ck('#118 e2e: Done on the card opens the choice window', open && opened.length === 2);
+    await tick();
+    ck('#118 e2e: no settle while the choice window is open', X.character.levelLog.length === 0 && X.undoLevelUpAvailable() === false);
+    // the window's Done: gatherChoices, closeModal, commitChoices — as runChoices' handler does
+    ctx.closeModal(); X.commitChoices('Fighter', [{type: 'asi', pick: 'Athlete', plus: ['str']}, {type: 'skill', sid: 'class:Fighter', keys: ['athletics']}], null);
+    ck('#118 e2e: still unsettled in the same task', X.character.levelLog.length === 0);
+    await tick();
+    const rec = X.character.levelLog[0];
+    ck('#118 e2e: settled once, after the last window', X.character.levelLog.length === 1, X.character.levelLog);
+    ck('#118 e2e: the record holds the HP, the trait and the feat with its +1',
+       rec && rec.hp === 7 && rec.class === 'Fighter' && rec.level === 8 && rec.features.map(f => f.name).sort().join() === 'Feat: Athlete,Know Your Ground' && rec.abilities.str === 1, rec);
+    const kyg = rec && rec.features.find(f => f.name === 'Know Your Ground');
+    ck('#118 e2e: the trait\'s own skill grant is tied to it; the level\'s skill pick is not',
+       kyg && kyg.grants.length === 1 && kyg.grants[0].key === 'survival' && rec.grants.some(g => g.key === 'athletics') && !rec.features.some(f => (f.grants || []).some(g => g.key === 'athletics')), rec);
+    ck('#118 e2e: Undo is available straight after', X.undoLevelUpAvailable() === true);
+    const tt = toasts.find(t => /Fighter is now level 8/.test(t.msg));
+    ck('#118 e2e: the toast says so and offers Undo', tt && tt.action && tt.action.label === 'Undo', toasts.map(t => t.msg));
+    ck('#118 e2e: one toast, not one per closed window', toasts.filter(t => /is now level/.test(t.msg)).length === 1);
+    await tick(600);
+    const saved = JSON.parse(ctx.localStorage.getItem('hw-fb-c-T5') || 'null');
+    ck('#118 e2e: the save lands, with the record', saved && saved.levelLog.length === 1 && saved.classes[0].level === 8);
+    ck('#118 e2e: ...and Undo survives the save', X.undoLevelUpAvailable() === true);
+    ck('#118 e2e: _undo is never saved', saved && !('_undo' in saved) && !JSON.stringify(saved).includes('"copy"'));
+    ctx.renderAll(); ctx.recompute();
+    ck('#118 e2e: ...and a re-render', X.undoLevelUpAvailable() === true);
+    tt.action.run();
+    ck('#118 e2e: the toast\'s Undo restores the sheet exactly', JSON.stringify(X.character) === start && X.character.classes[0].level === 7 && X._undo === null);
+    ck('#118 e2e: ...and says so', toasts.some(t => t.msg === 'Level-up undone'));
+
+    // Escape all the way: the card (HP set) and then the choice window
+    fresh(); toasts = []; opened = [];
+    ctx.doLevelUp(0); ctx.luSetHP('7');
+    ctx.dismissModal();
+    ck('#118 e2e Esc: dismissing the card still opens the choices', open && opened.length === 2);
+    await tick();
+    ck('#118 e2e Esc: not settled behind the choice window', X.character.levelLog.length === 0);
+    state.confirm = true; ctx.dismissModal();
+    await tick();
+    ck('#118 e2e Esc: settled once, HP recorded, nothing picked', X.character.levelLog.length === 1 && X.character.levelLog[0].hp === 7 && X.character.levelLog[0].features.length === 1, X.character.levelLog);
+    ck('#118 e2e Esc: Undo is available', X.undoLevelUpAvailable() === true);
+    const et = toasts.find(t => /is now level 8/.test(t.msg));
+    X.character.name = 'Renamed';
+    toasts = [];
+    ck('#118 e2e: after another change the toast\'s Undo does nothing, and says why', et.action.run() === false && X.character.classes[0].level === 8 && toasts.some(t => /changed since/.test(t.msg)), toasts);
+
+    // the card's Undo, before anything settles
+    fresh(); toasts = []; opened = []; handlers = {};
+    const s2 = JSON.stringify(X.character);
+    ctx.doLevelUp(0);
+    ck('#118 e2e card: the Undo button is wired', typeof handlers.luUndo === 'function');
+    handlers.luUndo();
+    ck('#118 e2e card: Undo on the card restores the sheet, closes the card, drops the level-up', JSON.stringify(X.character) === s2 && !open && ctx.luState() === null && X._undo === null);
+    await tick();
+    ck('#118 e2e card: nothing settles afterwards', X.character.levelLog.length === 0 && !toasts.some(t => /is now level/.test(t.msg)));
+
+    // level down through doLevelDown's dialog
+    fresh(); opened = []; handlers = {};
+    ctx.doLevelUp(0); ctx.luSetHP('7'); ctx.luFinish(); ctx.closeModal();
+    X.commitChoices('Fighter', [{type: 'asi', pick: 'Athlete', plus: ['str']}, {type: 'skill', sid: 'class:Fighter', keys: ['athletics']}], null);
+    await tick();
+    opened = [];
+    ctx.doLevelDown(0);
+    const dlg = opened[0];
+    ck('#118 level down opens the record\'s dialog', dlg && /Fighter 8 → 7\./.test(dlg.h) && /\+7 hit points/.test(dlg.h) && /Know Your Ground/.test(dlg.h) && /Feat: Athlete/.test(dlg.h), dlg);
+    ck('#118 ...the trait row says it takes its skill with it', dlg && /Know Your Ground[^<]*Survival/.test(dlg.h), dlg && dlg.h);
+    ck('#118 ...and the level\'s skill pick is left to adjust by hand', dlg && /Adjust these by hand[^<]*Athletics/.test(dlg.h) && !/Adjust these by hand[^<]*Survival/.test(dlg.h), dlg && dlg.h);
+    const ft = X.character.features.filter(f => f.origin && f.origin.level === 8).map(f => ({dataset: {ldFt: f.id}, checked: true}));
+    ctx.document.querySelector = q => /data-ld-hp/.test(q) ? {checked: true} : keep.qs(q);
+    ctx.document.querySelectorAll = q => /data-ld-ft/.test(q) ? ft : keep.qsa(q);
+    handlers.ldGo();
+    ck('#118 Level down: the level, HP, both features and the trait\'s skill go; the pick and the save stay',
+       X.character.classes[0].level === 7 && X.num(X.character.hp.max) === 61 && !X.character.features.some(f => f.origin && f.origin.level === 8)
+       && !X.character.grants.some(g => g.key === 'survival') && X.character.grants.some(g => g.key === 'athletics') && X.character.grants.some(g => g.key === 'str')
+       && X.character.levelLog.length === 0 && !open, {lv: X.character.classes[0].level, hp: X.character.hp.max, g: X.character.grants});
+    ctx.document.querySelector = keep.qs; ctx.document.querySelectorAll = keep.qsa;
+    opened = [];
+    ctx.doLevelDown(0);
+    ck('#118 level down without a record lowers only the number, with no dialog', X.character.classes[0].level === 6 && opened.length === 0);
+
+    /* final-fix M1: the level-up toast's Undo while Level down is open. Before
+       the fix the dialog stayed open over the restored sheet, and its Level down
+       then removed level 7 (the older record) with level 8's ticks. */
+    fresh(); opened = []; handlers = {}; toasts = [];
+    X.character.levelLog = [{at: 1, class: 'Fighter', level: 7, hp: 6, features: [], abilities: {}, subclass: '', grants: [], slots: {before: {}, after: {}}}];
+    ctx.doLevelUp(0); ctx.luSetHP('7'); ctx.luFinish(); ctx.closeModal();
+    X.commitChoices('Fighter', [{type: 'asi', pick: 'Athlete', plus: ['str']}, {type: 'skill', sid: 'class:Fighter', keys: ['athletics']}], null);
+    await tick();
+    const ut = toasts.find(t => /Fighter is now level 8/.test(t.msg));
+    opened = [];
+    ctx.doLevelDown(0);
+    ck('#118 fix M1: Level down is open over the level-up', open && opened.length === 1 && /Fighter 8 → 7\./.test(opened[0].h) && ut && X.undoLevelUpAvailable() === true);
+    const staleGo = handlers.ldGo;
+    const ft8 = X.character.features.filter(f => f.origin && f.origin.level === 8).map(f => ({dataset: {ldFt: f.id}, checked: true}));
+    toasts = [];
+    ut.action.run();
+    ck('#118 fix M1: the toast\'s Undo closes the dialog and restores level 7', !open && X.character.classes[0].level === 7 && X.num(X.character.hp.max) === 61
+       && X.character.levelLog.length === 1 && X.character.levelLog[0].level === 7 && toasts.some(t => t.msg === 'Level-up undone'), toasts);
+    await tick();
+    ck('#118 fix M1: closing from inside Undo settles nothing and records nothing', X.character.levelLog.length === 1 && !toasts.some(t => /is now level/.test(t.msg)));
+    const snap = JSON.stringify(X.character);
+    toasts = [];
+    ctx.document.querySelector = q => /data-ld-hp/.test(q) ? {checked: true} : keep.qs(q);
+    ctx.document.querySelectorAll = q => /data-ld-ft/.test(q) ? ft8 : keep.qsa(q);
+    staleGo();
+    ctx.document.querySelector = keep.qs; ctx.document.querySelectorAll = keep.qsa;
+    ck('#118 fix M1: a stale Level down click changes nothing, and says why', JSON.stringify(X.character) === snap && X.character.classes[0].level === 7
+       && toasts.some(t => /sheet changed/.test(t.msg)) && !toasts.some(t => /is now level 6/.test(t.msg)), toasts);
+  } finally {
+    ctx.setTimeout = keep.st; ctx.clearTimeout = keep.ct; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+    ctx.document.getElementById = keep.gid; ctx.document.querySelector = keep.qs; ctx.document.querySelectorAll = keep.qsa;
+    ctx.toast = keep.toast; ctx.window.matchMedia = keep.mm; X.activeId = keep.id; state.confirm = keep.conf;
+    X.character = keep.ch; X.rules = keep.rules; X._undo = null; X.resetRules();
+  }
+}
+
+/* ---------- #118 the warning window: askConfirm() and both choice windows' Done
+   (a) The REAL window, in a small fake document: a body holding a stand-in
+   #modal (with its Done button, focused), #toast and the page. Just enough DOM
+   for askConfirm(): createElement, appendChild, remove, attributes, listeners,
+   focus, inert, closest("[inert]"), isConnected. `innerHTML` writes are
+   recorded, so the test can say nothing was ever parsed as markup.
+   (b) The two Done handlers, runChoices' and runExtraChoices', driven for
+   real with askConfirm stubbed: each question is answered by the test. */
+async function t118Warn() {
+  const flush = () => new Promise(r => setImmediate(r));
+  const doc = ctx.document;
+  const keep = {gid: doc.getElementById, ce: doc.createElement, body: doc.body, ae: doc.activeElement, ael: doc.addEventListener,
+    rel: doc.removeEventListener, qsa: doc.querySelectorAll, cm: ctx.closeModal, om: ctx.openModal, settle: ctx.luMaybeSettle,
+    ask: ctx.askConfirm, gc: ctx.gatherChoices, cec: ctx.commitExtraChoices, ch: X.character, rules: X.rules};
+  const htmlWrites = [], docKeys = [];
+  function node(tag) {
+    const n = {tagName: String(tag).toUpperCase(), id: '', className: '', textContent: '', type: '', inert: false, children: [], parentNode: null, attrs: {}, _on: {},
+      set innerHTML(v) { htmlWrites.push(String(v)); },
+      appendChild(c) { if (c.parentNode) c.remove(); c.parentNode = this; this.children.push(c); return c; },
+      remove() { if (this.parentNode) { const sib = this.parentNode.children; sib.splice(sib.indexOf(this), 1); this.parentNode = null; } },
+      setAttribute(k, v) { this.attrs[k] = String(v); }, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+      addEventListener(t, fn) { (this._on[t] = this._on[t] || []).push(fn); },
+      /* a click bubbles: each ancestor's listeners see the original target */
+      click(extra) { const e = Object.assign({target: this}, extra || {}); for (let x = this; x; x = x.parentNode) (x._on.click || []).slice().forEach(fn => fn(e)); },
+      focus() { doc.activeElement = this; },
+      closest(sel) { if (sel !== '[inert]') throw new Error('fake closest: ' + sel); for (let x = this; x; x = x.parentNode) if (x.inert) return x; return null; },
+      get isConnected() { for (let x = this; x; x = x.parentNode) if (x === body) return true; return false; }};
+    return n;
+  }
+  const find = (root, id) => { if (root.id === id) return root; for (const c of root.children) { const f = find(c, id); if (f) return f; } return null; };
+  const body = node('body'), fakeModal = node('div'), done = node('button'), toastEl = node('div'), page = node('div');
+  fakeModal.id = 'modal'; done.id = 'chDone'; toastEl.id = 'toast'; page.id = 'page';
+  fakeModal.appendChild(done); body.appendChild(page); body.appendChild(fakeModal); body.appendChild(toastEl);
+  const key = (k, extra) => { const e = Object.assign({key: k, prevented: 0, stopped: 0, preventDefault() { this.prevented++; }, stopPropagation() { this.stopped++; }}, extra || {}); docKeys.filter(l => l.capture).forEach(l => l.fn(e)); return e; };
+  let closes = 0, settles = 0;
+  try {
+    doc.body = body; doc.createElement = node; doc.getElementById = id => find(body, id);
+    doc.addEventListener = (t, fn, cap) => { if (t === 'keydown') docKeys.push({fn, capture: !!cap}); };
+    doc.removeEventListener = (t, fn, cap) => { const i = docKeys.findIndex(l => l.fn === fn && l.capture === !!cap); if (i > -1) docKeys.splice(i, 1); };
+    ctx.closeModal = () => { closes++; }; ctx.luMaybeSettle = () => { settles++; };
+
+    // ---- (a) the real window
+    done.focus();
+    let got = 'pending';
+    ctx.askConfirm({title: 'Picks left', message: 'You have picks left to make:\n\n  • Skills: 0 of 2\n\nContinue anyway?', cancel: 'Go back', ok: 'Continue anyway'}).then(v => { got = v; });
+    const win = find(body, 'askWin'), box = win && win.children[0];
+    ck('#118 warn: the window opens as a second layer, the dialog beneath still there', win && win.parentNode === body && body.children.indexOf(win) > body.children.indexOf(fakeModal) && fakeModal.parentNode === body && done.parentNode === fakeModal);
+    ck('#118 warn: its own backdrop and box, from the modal classes', win && /\bbackdrop\b/.test(win.className) && /\bask-back\b/.test(win.className) && /\bopen\b/.test(win.className) && box && /\bmodal\b/.test(box.className) && /\bask\b/.test(box.className), win && [win.className, box && box.className]);
+    ck('#118 warn: an alertdialog, modal, labelled by its title and described by its message',
+       box && box.attrs.role === 'alertdialog' && box.attrs['aria-modal'] === 'true' && find(body, box.attrs['aria-labelledby']).textContent === 'Picks left'
+       && find(body, box.attrs['aria-describedby']).textContent === 'You have picks left to make:\n\n  • Skills: 0 of 2\n\nContinue anyway?', box && box.attrs);
+    const no = find(body, 'askNo'), yes = find(body, 'askYes');
+    ck('#118 warn: the safe button left, the primary right, with the given labels',
+       no && yes && no.parentNode === yes.parentNode && no.parentNode.children.indexOf(no) < yes.parentNode.children.indexOf(yes)
+       && no.textContent === 'Go back' && yes.textContent === 'Continue anyway' && /\bprimary\b/.test(yes.className) && !/\bprimary\b/.test(no.className) && no.type === 'button' && yes.type === 'button');
+    ck('#118 warn: focus starts on the safe button', doc.activeElement === no);
+    ck('#118 warn: the dialog beneath and the page go inert; the toast does not', fakeModal.inert === true && page.inert === true && toastEl.inert === false);
+    let e = key('Tab');
+    ck('#118 warn: Tab moves to the other button, and no further', doc.activeElement === yes && e.prevented === 1);
+    key('Tab', {shiftKey: true});
+    ck('#118 warn: ...and back', doc.activeElement === no);
+    e = key('Enter', {repeat: true});
+    ck('#118 warn: a held Enter does not repeat into a button', e.prevented === 1 && got === 'pending');
+    e = key('Enter');
+    ck('#118 warn: a fresh Enter is left to the focused button', e.prevented === 0 && e.stopped === 0 && got === 'pending');
+    e = key('Escape');
+    await flush();
+    ck('#118 warn: Escape answers no', got === false);
+    ck('#118 warn: ...and goes no further, so the dialog beneath never sees it', e.stopped === 1 && e.prevented === 1);
+    ck('#118 warn: closing removes the window, releases inert, and stops listening', !find(body, 'askWin') && fakeModal.inert === false && page.inert === false && docKeys.length === 0);
+    ck('#118 warn: focus goes back to what had it', doc.activeElement === done);
+    ck('#118 warn: the dialog beneath is untouched: never closed, nothing settled', closes === 0 && settles === 0 && fakeModal.parentNode === body);
+
+    got = 'pending'; ctx.askConfirm({message: 'Sure?'}).then(v => { got = v; });
+    ck('#118 warn: defaults — "Are you sure?", OK and Cancel', find(body, 'askTitle').textContent === 'Are you sure?' && find(body, 'askYes').textContent === 'OK' && find(body, 'askNo').textContent === 'Cancel');
+    find(body, 'askYes').click(); await flush();
+    ck('#118 warn: the primary button answers yes, and focus goes back', got === true && !find(body, 'askWin') && doc.activeElement === done);
+
+    /* the backdrop follows the dialog's rule (#106; fix round 1): nothing with
+       the setting off; with it on, only a click pressed and let go on the
+       backdrop, and not within the grace after opening */
+    const tap = (el, target) => { const t = target || el; (el._on.pointerdown || []).forEach(fn => fn({target: t})); (el._on.pointerup || []).forEach(fn => fn({target: t})); el.click(); };
+    const realNow = ctx.Date.now; let now = 1e6; ctx.Date.now = () => now;
+    try {
+      X.settings.backdropClose = false;
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      now += 5000; tap(find(body, 'askWin')); await flush();
+      ck('#118 fix1 backdrop: with Tap outside off (the default), a backdrop click does nothing', got === 'pending' && !!find(body, 'askWin'));
+      X.settings.backdropClose = true;
+      find(body, 'askWin').children[0].click(); await flush();
+      ck('#118 warn: a click inside the box is not the backdrop', got === 'pending' && !!find(body, 'askWin'));
+      const w = find(body, 'askWin'), bx = w.children[0];
+      (w._on.pointerdown || []).forEach(fn => fn({target: bx})); (w._on.pointerup || []).forEach(fn => fn({target: w})); w.click(); await flush();
+      ck('#118 fix1 backdrop: with it on, a press that began in the box does nothing', got === 'pending');
+      tap(w); await flush();
+      ck('#118 fix1 backdrop: with it on, a click pressed and let go on the backdrop answers no', got === false && !find(body, 'askWin'));
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      now += 399; tap(find(body, 'askWin')); await flush();
+      ck('#118 fix1 backdrop: ...but not within 400 ms of opening', got === 'pending' && !!find(body, 'askWin'));
+      now += 1; tap(find(body, 'askWin')); await flush();
+      ck('#118 fix1 backdrop: ...and from 400 ms it does', got === false);
+      /* fix round 2: the buttons too. A pointer click (detail >= 1) inside the
+         grace does nothing — the second click of a double-click on Done, where
+         Done and the button share a spot on a phone; Enter and Space (a click
+         with detail 0) always work. */
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      now += 399; find(body, 'askYes').click({detail: 2}); await flush();
+      ck('#118 fix2 a pointer click on the ok button at 399 ms is ignored', got === 'pending' && !!find(body, 'askWin'));
+      find(body, 'askNo').click({detail: 1}); await flush();
+      ck('#118 fix2 ...and on the safe button too', got === 'pending' && !!find(body, 'askWin'));
+      now += 1; find(body, 'askYes').click({detail: 1}); await flush();
+      ck('#118 fix2 at 400 ms the ok button accepts', got === true && !find(body, 'askWin'));
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      find(body, 'askYes').click({detail: 0}); await flush();
+      ck('#118 fix2 Enter or Space on the ok button (detail 0) works at once', got === true);
+      got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+      find(body, 'askNo').click({detail: 0}); await flush();
+      ck('#118 fix2 ...and on the safe button', got === false);
+    } finally { ctx.Date.now = realNow; X.settings.backdropClose = false; }
+
+    got = 'pending'; ctx.askConfirm({message: 'x'}).then(v => { got = v; });
+    find(body, 'askNo').click(); await flush();
+    ck('#118 warn: the safe button answers no', got === false);
+
+    let first = 'pending', second = 'pending';
+    ctx.askConfirm({message: 'one'}).then(v => { first = v; });
+    ctx.askConfirm({message: 'two'}).then(v => { second = v; });
+    await flush();
+    ck('#118 warn: asking again answers the open one no and shows the new one, alone',
+       first === false && second === 'pending' && body.children.filter(c => c.id === 'askWin').length === 1 && find(body, 'askMsg').textContent === 'two' && fakeModal.inert === true);
+    ctx.askCancel(); await flush();
+    ck('#118 warn: askCancel answers no and cleans up', second === false && !find(body, 'askWin') && fakeModal.inert === false && docKeys.length === 0);
+
+    const evil = '<img src=x onerror=alert(1)> & "q"\nline two';
+    ctx.askConfirm({title: '<b>T</b>', message: evil, ok: '<i>y</i>', cancel: '<u>n</u>'});
+    ck('#118 warn: every text is text, never markup',
+       find(body, 'askMsg').textContent === evil && find(body, 'askTitle').textContent === '<b>T</b>' && find(body, 'askYes').textContent === '<i>y</i>' && find(body, 'askNo').textContent === '<u>n</u>' && htmlWrites.length === 0, htmlWrites);
+    ctx.askCancel(); await flush();
+    ck('#118 warn: answering never closes the dialog beneath or settles a level-up', closes === 0 && settles === 0);
+  } catch (err) {
+    ck('#118 warn: the real window ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askCancel();
+    doc.getElementById = keep.gid; doc.createElement = keep.ce; doc.body = keep.body; doc.activeElement = keep.ae;
+    doc.addEventListener = keep.ael; doc.removeEventListener = keep.rel; ctx.closeModal = keep.cm; ctx.luMaybeSettle = keep.settle;
+  }
+  ck('#118 warn: openModal() and closeModal() answer an open warning no',
+     /function openModal\(title,html,icon,opts\)\{_dismissGuard=null;_dismissThen=null;askCancel\(\);/.test(SRC103('js/80-modal-forms.js'))
+     && /function closeModal\(\)\{_dismissGuard=null;_dismissThen=null;askCancel\(\);/.test(SRC103('js/80-modal-forms.js')));
+
+  // ---- (b) the Done handlers, with every question answered by the test
+  const asks = [], log = [];
+  let handler = null, opened = 0, blocks = [], pressed = [];
+  const btn = {isConnected: true, addEventListener: (t, fn) => { if (t === 'click') handler = fn; }};
+  const answer = v => { const a = asks.find(x => !x.done); a.done = true; a.resolve(v); return flush(); };
+  try {
+    ctx.askConfirm = opts => new Promise(resolve => { asks.push({opts, resolve, done: false}); log.push('ask:' + opts.title); });
+    ctx.gatherChoices = () => { log.push('gather'); return [{type: 'asi', pick: 'Great Weapon Master', plus: []}]; };
+    ctx.openModal = () => { opened++; };
+    ctx.closeModal = () => { closes++; log.push('close'); };
+    doc.getElementById = id => (id === 'chDone' || id === 'xchDone') ? btn : keep.gid(id);
+    doc.querySelectorAll = sel => sel === '.choice[data-choose]' ? blocks
+      : /\[data-ft-pick\]\[aria-pressed="true"\]$/.test(sel) ? pressed.map(k => ({dataset: {ftPick: k}})) : [];
+    X.rules = Object.assign({}, keep.rules, {feats: [{name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nx', ability: [{str: 1}]}]});
+    const fresh = () => {
+      X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8; X.character.abilities.str = 12;
+      asks.length = 0; log.length = 0; closes = 0; opened = 0; handler = null;
+    };
+    const gwm = () => X.character.features.filter(f => f.name === 'Feat: Great Weapon Master').length;
+    const short = {dataset: {choose: '2'}, querySelector: q => q === 'label.f' ? {textContent: 'Skills — choose 2'} : null, querySelectorAll: () => []};
+
+    // nothing to ask: Done commits at once, in the same task, as it always did
+    fresh(); blocks = []; pressed = ['__asi__'];
+    ctx.gatherChoices = () => { log.push('gather'); return [{type: 'asi', pick: '__asi__', mode: '2', a: 'str'}]; };
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    handler();
+    ck('#118 Done: with nothing to ask, it commits at once, asking nothing', asks.length === 0 && log.join() === 'gather,close' && closes === 1
+       && X.character.features.some(f => f.name === 'Ability Score Improvement'), log);
+    ctx.gatherChoices = () => { log.push('gather'); return [{type: 'asi', pick: 'Great Weapon Master', plus: []}]; };
+
+    // the shortfall warning: declined, then accepted
+    fresh(); blocks = [short]; pressed = [];
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    ck('#118 Done: the window is wired', opened === 1 && typeof handler === 'function');
+    handler(); await flush();
+    const sw = asks[0] && asks[0].opts;
+    ck('#118 Done: a shortfall asks in the warning window, with its own title and buttons',
+       sw && sw.title === 'Picks left' && sw.cancel === 'Go back' && sw.ok === 'Continue anyway' && /Skills: 0 of 2/.test(sw.message), sw);
+    ck('#118 Done: ...and nothing is read or closed while it is open', log.join() === 'ask:Picks left' && closes === 0);
+    await answer(false);
+    ck('#118 Done: "Go back" leaves the window open, nothing read, nothing granted', closes === 0 && !log.includes('gather') && gwm() === 0 && asks.length === 1);
+    handler(); await flush(); await answer(true);
+    ck('#118 Done: "Continue anyway" goes on: picks read after the warning, window closed, committed',
+       log.join() === 'ask:Picks left,ask:Picks left,gather,close' && closes === 1 && gwm() === 1, log);
+
+    // the feat warning: declined keeps the window and grants nothing; accepted grants once
+    fresh(); blocks = []; pressed = ['Great Weapon Master'];
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    handler(); await flush();
+    const fw = asks[0] && asks[0].opts;
+    ck('#118 Done: the feat warning, one feat, with the spec\'s sentence and buttons',
+       fw && fw.message === 'Great Weapon Master needs Strength 13 or higher (yours is 12). Take it anyway?' && fw.cancel === 'Choose another' && fw.ok === 'Take it anyway' && asks.length === 1, fw);
+    await answer(false);
+    ck('#118 Done: "Choose another" keeps the window open and grants nothing', closes === 0 && !log.includes('gather') && gwm() === 0);
+    handler(); await flush();
+    handler(); handler(); await flush();
+    ck('#118 Done: pressing Done again while a warning is open asks nothing more', asks.length === 2);
+    await answer(true);
+    ck('#118 Done: "Take it anyway" grants the feat once, and closes once', gwm() === 1 && closes === 1 && log.filter(x => x === 'gather').length === 1, log);
+
+    // both warnings in a row, then the window goes while the second is open
+    fresh(); blocks = [short]; pressed = ['Great Weapon Master'];
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    handler(); await flush(); await answer(true);
+    ck('#118 Done: both warnings, the shortfall first', asks.map(a => a.opts.title).join() === 'Picks left,Prerequisite not met');
+    btn.isConnected = false; await answer(true); btn.isConnected = true;
+    ck('#118 Done: a window that went while asking commits nothing', gwm() === 0 && closes === 0 && !log.includes('gather'));
+
+    // runExtraChoices: the same handler
+    let commits = 0;
+    ctx.commitExtraChoices = () => { commits++; };
+    fresh(); blocks = []; pressed = ['Great Weapon Master'];
+    ctx.runExtraChoices([{ch: {type: 'feat'}, sid: 'race:Human', label: 'A feat'}]);
+    ck('#118 Done (species/background): the window is wired', typeof handler === 'function');
+    handler(); await flush();
+    ck('#118 Done (species/background): asks the feat warning', asks.length === 1 && asks[0].opts.ok === 'Take it anyway');
+    await answer(false);
+    ck('#118 Done (species/background): declined, nothing committed, window open', commits === 0 && closes === 0);
+    handler(); await flush(); handler(); await flush();
+    await answer(true);
+    ck('#118 Done (species/background): accepted, committed once, closed once', commits === 1 && closes === 1 && asks.length === 2);
+  } catch (err) {
+    ck('#118 Done: the handlers ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askConfirm = keep.ask; ctx.gatherChoices = keep.gc; ctx.commitExtraChoices = keep.cec; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+    doc.getElementById = keep.gid; doc.querySelectorAll = keep.qsa; X.character = keep.ch; X.rules = keep.rules;
+  }
+
+  // ---- (c) fix round 1: a double-click on Done, with the REAL window in the fake tree.
+  // The first click opens the warning; the second lands on its backdrop (Done
+  // is under it, inert). Neither setting may let that second click answer it.
+  const realNow = ctx.Date.now;
+  let gathers = 0, closesC = 0;
+  try {
+    doc.body = body; doc.createElement = node;
+    done.remove();   /* (a)'s Done, so #chDone is this one */
+    const doneC = node('button'); doneC.id = 'chDone'; fakeModal.appendChild(doneC);
+    doc.getElementById = id => find(body, id) || keep.gid(id);
+    doc.addEventListener = (t, fn, cap) => { if (t === 'keydown') docKeys.push({fn, capture: !!cap}); };
+    doc.removeEventListener = (t, fn, cap) => { const i = docKeys.findIndex(l => l.fn === fn && l.capture === !!cap); if (i > -1) docKeys.splice(i, 1); };
+    doc.querySelectorAll = sel => /\[data-ft-pick\]\[aria-pressed="true"\]$/.test(sel) ? [{dataset: {ftPick: 'Great Weapon Master'}}] : [];
+    ctx.openModal = () => {}; ctx.closeModal = () => { closesC++; };
+    ctx.gatherChoices = () => { gathers++; return [{type: 'asi', pick: 'Great Weapon Master', plus: []}]; };
+    X.rules = Object.assign({}, keep.rules, {feats: [{name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nx', ability: [{str: 1}]}]});
+    const tapC = el => { (el._on.pointerdown || []).forEach(fn => fn({target: el})); (el._on.pointerup || []).forEach(fn => fn({target: el})); el.click(); };
+    for (const on of [false, true]) {
+      X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8; X.character.abilities.str = 12;
+      X.settings.backdropClose = on; gathers = 0; closesC = 0;
+      let now = 5e6; ctx.Date.now = () => now;
+      doneC._on = {};
+      ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+      doneC.focus();
+      doneC.click();                     // the first click: the warning opens
+      const w = find(body, 'askWin');
+      now += 150; tapC(w);               // the second, 150 ms later, on its backdrop
+      find(body, 'askYes').click({detail: 2});   // or on a phone, on the ok button under Done (fix round 2)
+      doneC.click();                     // and, were it to reach Done, Done again
+      await flush();
+      ck('#118 fix1 double-click on Done (Tap outside ' + (on ? 'on' : 'off') + '): the warning stays open, nothing committed',
+         !!w && find(body, 'askWin') === w && gathers === 0 && closesC === 0 && !X.character.features.some(f => /Great Weapon/.test(f.name)));
+      ctx.askCancel(); await flush();
+      ck('#118 fix1 ...and answering it no afterwards commits nothing either', gathers === 0 && closesC === 0 && !find(body, 'askWin'));
+    }
+  } catch (err) {
+    ck('#118 fix1 the double-click check ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askCancel(); ctx.Date.now = realNow; X.settings.backdropClose = false;
+    doc.getElementById = keep.gid; doc.createElement = keep.ce; doc.body = keep.body; doc.activeElement = keep.ae; doc.querySelectorAll = keep.qsa;
+    doc.addEventListener = keep.ael; doc.removeEventListener = keep.rel; ctx.closeModal = keep.cm; ctx.openModal = keep.om; ctx.gatherChoices = keep.gc;
+    X.character = keep.ch; X.rules = keep.rules;
+  }
+}
+
+/* ---------- #118 fix round 1: the level-up toast's Undo while a warning is open.
+   The toast stays reachable over the dialog and the warning. Undo replaces the
+   sheet the question was about, so the warning is answered no, the window
+   closes, the sheet is restored, and nothing commits afterwards. Driven like
+   t118EndToEnd (a real timer, the modal's open state tracked by wrapping
+   openModal/closeModal), with the REAL askConfirm over the harness's stub DOM. */
+async function t118UndoUnderWarning() {
+  const keep = {ch: X.character, rules: X.rules, st: ctx.setTimeout, ct: ctx.clearTimeout, om: ctx.openModal, cm: ctx.closeModal,
+    gid: ctx.document.getElementById, qsa: ctx.document.querySelectorAll, toast: ctx.toast, mm: ctx.window.matchMedia, id: X.activeId,
+    gc: ctx.gatherChoices, ask: ctx.askConfirm};
+  const tick = ms => new Promise(r => setTimeout(r, ms || 0));
+  let open = false, toasts = [], doneFn = null, pressed = [], gathers = 0;
+  const asked = [], answers = [];
+  const fakeModal = {classList: {contains: c => c === 'open' && open}};
+  ctx.setTimeout = setTimeout; ctx.clearTimeout = clearTimeout;
+  ctx.openModal = function () { keep.om.apply(null, arguments); open = true; };
+  ctx.closeModal = function () { open = false; return keep.cm.apply(null, arguments); };
+  ctx.document.getElementById = id => id === 'modal' ? fakeModal
+    : id === 'chDone' ? {isConnected: true, addEventListener: (e, fn) => { if (e === 'click') doneFn = fn; }} : keep.gid(id);
+  ctx.document.querySelectorAll = sel => /\[data-ft-pick\]\[aria-pressed="true"\]$/.test(sel) ? pressed.map(k => ({dataset: {ftPick: k}})) : keep.qsa(sel);
+  ctx.toast = (msg, action) => { toasts.push({msg: String(msg), action}); };
+  ctx.window.matchMedia = () => ({matches: true, addEventListener() {}});
+  ctx.askConfirm = o => { asked.push(o); const p = keep.ask(o); p.then(v => answers.push(v)); return p; };
+  try {
+    X.resetRules();
+    X.mergeRules({system: 'T6', classes: [{name: 'Fighter', hitDie: 'd10', levels: {'8': {choices: [{type: 'asi'}]}}}],
+      feats: [{name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nx', ability: [{str: 1}]}]}, 'test-118-undo');
+    X.character = X.blankChar(); X.character.name = 'Tess'; X.character.classes = [{name: 'Fighter', level: 7}]; X.character.level = 7;
+    X.character.hp.max = 61; X.character.hp.cur = 61; X.character.abilities.str = 10;
+    ctx.renderAll(); ctx.recompute(); X.activeId = 'T6'; X._undo = null;
+    const start = JSON.stringify(X.character);
+    ctx.doLevelUp(0); ctx.luSetHP('7'); ctx.luFinish();
+    ck('#118 fix1 undo: the level-up\'s choice window is open', open && typeof doneFn === 'function');
+    // the ASI, no warning: Done commits, the level-up settles, the toast offers Undo
+    pressed = ['__asi__'];
+    ctx.gatherChoices = () => { gathers++; return [{type: 'asi', pick: '__asi__', mode: '2', a: 'con'}]; };
+    doneFn(); await tick();
+    const tt = toasts.find(t => /Fighter is now level 8/.test(t.msg));
+    ck('#118 fix1 undo: settled, and the toast offers Undo', !open && tt && tt.action && X.undoLevelUpAvailable() === true, toasts.map(t => t.msg));
+    // a choice window opens over the unchanged sheet, and its Done asks the feat warning
+    doneFn = null; gathers = 0;
+    ctx.runChoices('Fighter', [{type: 'asi'}], [], null);
+    pressed = ['Great Weapon Master'];
+    ctx.gatherChoices = () => { gathers++; return [{type: 'asi', pick: 'Great Weapon Master', plus: []}]; };
+    doneFn(); await tick();
+    ck('#118 fix1 undo: the warning is open over the window, Undo still on offer',
+       open && asked.length === 1 && asked[0].ok === 'Take it anyway' && answers.length === 0 && X.undoLevelUpAvailable() === true, {asked: asked.length, answers});
+    tt.action.run();
+    await tick();
+    ck('#118 fix1 undo: the toast\'s Undo answers the warning no', answers.length === 1 && answers[0] === false, answers);
+    ck('#118 fix1 undo: ...closes the choice window', !open);
+    ck('#118 fix1 undo: ...and restores the sheet exactly', JSON.stringify(X.character) === start && X.character.classes[0].level === 7, X.character.classes);
+    await tick(50);
+    ck('#118 fix1 undo: nothing commits afterwards: no picks read, no feat, no record',
+       gathers === 0 && !X.character.features.some(f => /Great Weapon/.test(f.name)) && (X.character.levelLog || []).length === 0 && JSON.stringify(X.character) === start);
+  } catch (err) {
+    ck('#118 fix1 undo ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askCancel();
+    ctx.setTimeout = keep.st; ctx.clearTimeout = keep.ct; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+    ctx.document.getElementById = keep.gid; ctx.document.querySelectorAll = keep.qsa; ctx.toast = keep.toast; ctx.window.matchMedia = keep.mm;
+    ctx.gatherChoices = keep.gc; ctx.askConfirm = keep.ask; X.activeId = keep.id;
+    X.character = keep.ch; X.rules = keep.rules; X._undo = null; X.resetRules();
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

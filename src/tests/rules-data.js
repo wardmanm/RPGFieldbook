@@ -2013,10 +2013,17 @@ function block(html, needle, tag) {
      /function syncChoiceLimits\([\s\S]*?disabled=\(picked>=target&&!cb\.checked\)/.test(js));
   // both Done buttons, not just the class one: the race/background modal never
   // populates _activeChoices, so data-choose on the wrapper is its only target
+  // #118: both Done buttons ask through choiceDoneHandler(), which runs the
+  // shortfall warning in the app's own window before the feat warning
   ck('the class chooser warns before committing too few',
-     /chDone[\s\S]{0,240}choiceShortfall\(choiceBlocks\(\)\)[\s\S]{0,120}confirm\(warn\)\)return;/.test(js));
+     /chDone[\s\S]{0,160}addEventListener\("click",choiceDoneHandler\(done,\(\)=>\{\s*const sel=gatherChoices\(\)/.test(js));
   ck('the race/background chooser warns as well',
-     /xchDone[\s\S]{0,260}choiceShortfall\(choiceBlocks\(\)\)[\s\S]{0,120}confirm\(warn\)\)return;/.test(js));
+     /xchDone[\s\S]{0,260}addEventListener\("click",choiceDoneHandler\(b,\(\)=>\{/.test(js));
+  ck('...and the shortfall is asked first, then the feats, both in the warning window',
+     /function choiceDoneHandler\(btn,commit\)\{[\s\S]{0,120}const short=choiceShortfall\(choiceBlocks\(\)\),feats=asiPickWarnings\(asiScreenPicks\(\)\);/.test(js) &&
+     /async function choiceWarningsConfirmed\(shortfall,featWarnings\)\{\s*if\(shortfall&&!await askConfirm\(\{[^}]*message:shortfall[^}]*\}\)\)return false;\s*for\(const message of featWarnings/.test(js));
+  ck('...and neither Done uses the browser\'s confirm() any more',
+     !/chDone[\s\S]{0,400}confirm\(warn\)/.test(js) && !/function choiceWarningsConfirmed[\s\S]{0,400}[^.\w]confirm\(/.test(js));
   ck('choiceBlocks reads the target from the DOM, not from _activeChoices',
      /function choiceBlocks\(\)\{[\s\S]*?\.choice\[data-choose\]/.test(js));
 
@@ -2025,7 +2032,7 @@ function block(html, needle, tag) {
   ck('the three dismissals go through dismissModal, not closeModal',
      /getElementById\("mClose"\)\.addEventListener\("click",dismissModal\)/.test(js) &&
      /if\(e\.target===modal&&both&&settings\.backdropClose===true\)dismissModal\(\)/.test(js) &&
-     /Escape"&&modal\.classList\.contains\("open"\)\)dismissModal\(\)/.test(js));
+     /Escape"&&!_ask&&modal\.classList\.contains\("open"\)\)dismissModal\(\)/.test(js));
   /* #106: a click outside closes a dialog only when Settings says so, off by
      default — a stray click, or a tap to hide a phone's keyboard, lost the
      form. × and Escape are untouched above. And only a click that began on the
@@ -2319,6 +2326,7 @@ function block(html, needle, tag) {
   ck('Appearance holds the look and the interface switches', on('secAppearance', ['segSkin', 'segTheme', 'swRough', 'swTabIcons', 'swBackdrop']));
   ck('Sheet display holds the card choices', on('secDisplay', ['swHpColor', 'swTrackers']));
   ck('#103 ...and the advancement choice and the familiars icon', on('secDisplay', ['segAdv', 'swFamiliars']));
+  ck('#118 ...and Feats allowed, beside Advancement', on('secDisplay', ['swFeats']) && sec('secDisplay').indexOf('id="segAdv"') < sec('secDisplay').indexOf('id="swFeats"') && sec('secDisplay').indexOf('id="swFeats"') < sec('secDisplay').indexOf('id="swFamiliars"'));
   ck('Carrying holds size, encumbrance, coins and the live line', on('secCarrying', ['setSize', 'segEnc', 'swCoinWeight', 'encHint']));
   ck('#102 Extensions is the extensions page, its status line and the sheet check (no #fileRules)',
      /const secRules=extPageHTML\(\)\+/.test(sec('secRules')) && on('secRules', ['rulesStatus', 'btnCharUpdate']) && !/fileRules/.test(src));
@@ -2328,8 +2336,8 @@ function block(html, needle, tag) {
   ck('encumbrance is a segmented choice now, not a dropdown', !/id="setEnc"/.test(src) &&
      /character\.encumbrance=b\.dataset\.enc;/.test(src) && ['none', 'standard', 'variant'].every(v => sec('secCarrying').includes('["' + v + '",')));
   ck('every switch on the dialog says its state to a screen reader',
-     // 8 since #52 added the per-character tabs switch (one literal occurrence in tabsGroupHTML)
-     (src.match(/class="switch /g) || []).length === 8 && (src.match(/role="switch" aria-checked=/g) || []).length === 8 &&
+     // 8 since #52 added the per-character tabs switch (one literal occurrence in tabsGroupHTML); 9 since #118's Feats allowed
+     (src.match(/class="switch /g) || []).length === 9 && (src.match(/role="switch" aria-checked=/g) || []).length === 9 &&
      /const s=e\.target\.closest\("\.switch"\);if\(s\)s\.setAttribute\("aria-checked",s\.classList\.contains\("on"\)\?"true":"false"\);/.test(src));
   ck('Settings opens wide, on the remembered page; a dialog opened from it does not',
      /openModal\("Settings",[\s\S]*?\{wide:true\}\);/.test(src) && /setPageOf\(settings\.setPage,hasChar\)/.test(src) &&

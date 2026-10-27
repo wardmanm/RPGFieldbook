@@ -11,12 +11,13 @@ the back-to-top button, and the wiring in `90-boot.js` that binds all of it once
 `scrollToTop()`, `HIDEABLE_TABS`, `TAB_LABELS`, `isTabHidden()`, `cleanHiddenTabs()`,
 `applyHiddenTabs()`, `setTabHidden()` (#52) in `40-sheet.js` ·
 `openModal()`, `closeModal()`, `dismissModal()`, `setDismissGuard()`, `modalTakeFocus()`,
-`modalGiveBackFocus()`, `openerSelector()` in `80-modal-forms.js` · `openBrowse()`, `closeBrowse()`
+`modalGiveBackFocus()`, `openerSelector()`, `askConfirm()`, `askKey()`, `askClose()`, `askCancel()` in
+`80-modal-forms.js` · `openBrowse()`, `closeBrowse()`
 in `85-browse.js` · `wire()`, `boot()` in `90-boot.js` · `toast()` in `60-attacks.js` ·
 `showUpdatePill()` in `30-version.js` · `renderExtPill()`, `extPillFocusBack()`, `checkSources()` in
 `89-extensions.js` · `10-chrome.css`, `50-modal.css` ·
 **Tests:** `rules-data.js` (tab bar, the retired ☰ stays gone, back to top, dismissals,
-combat tab, no escaped modal title), `sheet.js` (`MODAL_FOCUS_FIELDS`, `openerSelector()`, `finderQty()`), `char-update.js`
+combat tab, no escaped modal title), `sheet.js` (`MODAL_FOCUS_FIELDS`, `openerSelector()`, `finderQty()`, the warning window), `char-update.js`
 (what a dismissal hands on, what a choice window writes to `#mTitle`) ·
 **See also:** [Sections & layout](sections-and-layout.md), [Theming & icons](theming-and-icons.md),
 [Combat view](../features/combat-view.md), [Build & source split](../architecture/build-and-source-split.md),
@@ -37,6 +38,7 @@ Source order in the template matters (see Rules). Layers are `z-index`:
 | `#btnToTop` | the back-to-top button, fixed bottom-right | 25 |
 | `#home` | character library and first-run setup ([Home & characters](../features/home-and-characters.md)) | 60 |
 | `#modal` | the generic dialog | 80 |
+| `#askWin` | the warning window, over the dialog; made on demand (below) | 90 |
 | `#toast` | one status line, optionally with one button | 9999 |
 | `<script>` | all the JS, ending in `boot();` | — |
 | `#printArea` | filled by `printSheet()`; print CSS hides every other body child | — |
@@ -166,6 +168,55 @@ One `#modal` backdrop holds `.modal` (`role="dialog"`, `aria-modal`, `tabindex="
   which die with it, and never to `#mBody` (Settings delegates from `#setSections` for this reason).
   The dialog's one persistent listener, `change` on `#modal` feeding `syncChoiceLimits()`, is bound
   once at load.
+
+### The warning window
+
+`askConfirm({title, message, ok, cancel})` returns a Promise that resolves `true` or `false`. It is
+the app's own two-button question, for places that used the browser's `confirm`, whose buttons
+can only say OK and Cancel. Callers `await` it.
+
+- **A second layer.** It builds `#askWin` (`.backdrop.ask-back.open`, z-index 90) around a
+  `.modal.ask` box (`role="alertdialog"`, `aria-modal`, labelled by `#askTitle`, described by
+  `#askMsg`), appends it to `<body>`, and removes it on close. It never touches `#modal`, so the
+  dialog beneath stays open and untouched, and it works with no dialog open too. It uses the
+  modal's own classes, so it follows both skins and both themes. `50-modal.css` adds only a narrower
+  box (440px), a 16px gutter and 44px buttons.
+- **Text only.** The title (default "Are you sure?"), the message and the labels (default OK and
+  Cancel) are `textContent`. Callers pass them as written and never `esc()` them. A `\n` in the
+  message is a line break, because `.m-body p` is pre-wrap.
+- **The buttons.** The safe one (`#askNo`, cancel) is on the left and the primary (`#askYes`, ok)
+  on the right, in the accent colour.
+- **Keyboard and focus.** Focus starts on the safe button, and Tab moves between the two buttons
+  only. Enter and Space press the focused button natively. A held key (`e.repeat`) is ignored, so
+  Enter held on the button that opened it can't repeat into it. Escape answers `false`. While it is
+  open, every other `<body>` child is inert (the dialog too; the toast excepted, as with the
+  dialog). On close it releases them and focuses what had focus before.
+- **Escape stops there.** `askKey()` is a capture-phase `keydown` on `document`, added on open and
+  removed on close. It runs before the dialog's Escape handler and stops the event, and that handler
+  also checks `!_ask`.
+- **A double-click on Done can't answer it.** The second click lands where Done was. That is on
+  the new warning's backdrop, or, on a phone, where Done and the right-hand button can share a
+  spot, on a button.
+  - **The buttons.** A pointer click on either button (`e.detail > 0`) does nothing for
+    `ASK_CLICK_GRACE` (400 ms) after opening. Enter and Space (a click with `detail` 0) always
+    work.
+  - **The backdrop.** A click there follows the dialog's rule (#106). With
+    `settings.backdropClose` off, the default, it does nothing. With it on, only a click pressed
+    and let go on the backdrop answers `false`, and only after the same grace.
+  - **No selection.** `.ask-back` is `user-select:none`, because that second click would otherwise
+    select the nearest word in the box.
+  - Escape always cancels.
+- **It never calls `closeModal()`,** so answering never settles a level-up (`luMaybeSettle()`) or
+  runs a dismissal guard.
+- **One at a time.** `askConfirm()` while one is open answers the open one `false`, then shows the
+  new one. `openModal()`, `closeModal()` and `undoLevelUp()` answer it `false` through
+  `askCancel()`, because the window or sheet it asked about is gone. The toast stays reachable over
+  a warning, so its Undo is the live case.
+
+The choice windows' Done uses it for its two warnings
+([Character building](../features/character-building.md)). The other `confirm` calls, including
+`dismissModal()`'s, are #126's to convert. The browser's own prompt when a tab closes can't be
+replaced, and stays.
 
 ### The browse picker
 
@@ -304,6 +355,9 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - **The modal title is `textContent`, the body is `innerHTML`.** Callers escape the body and must
   not escape the title. `rules-data.js` pins the assignment and reads every `openModal()` call's
   first argument, refusing `esc(` or an entity in it.
+- **The warning window never calls `closeModal()`** and never touches `#modal`. A caller that needs
+  the dialog closed closes it after the answer.
+- **The warning window's texts are `textContent`.** Callers never `esc()` them (asserted in `sheet.js`).
 - **`MODAL_FOCUS_FIELDS` never includes `select`**, checkbox, radio or file (asserted in `sheet.js`).
 - **`modalGiveBackFocus()` releases only what `modalTakeFocus()` made inert.**
 - **Never bind a listener to `#mBody` or `#browse` with `addEventListener`.** Both are reused, so
@@ -358,6 +412,11 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 | A tap on a finder row | Updates that row and the footer in place | Re-rendering: it throws away the scroll position and redraws 400+ rows per tap |
 | The off-screen Add button | `width:auto` on the origin select, `flex-wrap` as a safety net | `overflow-x:hidden` on `.browse`: hides a recurrence instead of preventing one |
 | Markup that moves, in `wire()` | A local `on()` that skips a missing id | — (reason: one dead button is a far better failure than every later listener unbound) |
+| A question with two named answers (#118, Mike 2026-10-27) | The app's own warning window, `askConfirm()`, a second layer over the dialog | The browser's `confirm`: its buttons can only say OK and Cancel. Swapping the dialog's content: the window beneath, and its picks, would be lost |
+| A click on the warning's backdrop (#118 fix round 1) | The dialog's rule: nothing unless Tap outside is on, then a click pressed and let go on the backdrop, after a 400 ms grace | Always cancel: the second click of a double-click on Done answered the warning at once, a flash and no question |
+| A pointer click on the warning's buttons right after it opens (#118 fix round 2) | Ignored for 400 ms; Enter and Space always work | No grace: on a phone Done and Take it anyway can share a spot, so a double-click accepted the warning unread |
+| A second warning while one is open (#118) | Answers the open one no, then shows the new one | A queue: the earlier question is stale by then, and a queued promise could wait forever |
+| Where the warning window's markup lives (#118) | Made on open, removed on close | In the template: `modalTakeFocus()` would make the hidden window inert, and it would then open inert over the dialog |
 | The modal title's contract (#69) | Plain text, set as `textContent`; callers never escape it | `innerHTML` with callers escaping: 51 of 52 calls already passed plain text and a header needs no markup, so every call would change and any one that forgot would be an injection point |
 | An index of a tab's sections (#103) | None: the ☰ section flyout is retired (Mike, 2026-10-24); the tabs are organised well enough to need no index | Keeping it: after the Sheet makeover each tab is short and plainly laid out, and the flyout was one more control in a crowded tab bar |
 | Where focus goes after Back to top (#103) | The active tab, or the swords in the combat view | Leaving it on the button: the button hides at the top, and a focused element that hides drops focus to `<body>`, stranding a keyboard user |
@@ -410,3 +469,6 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-25 — `openBrowse()` takes an `onClose`, run by Close only; the item finder's config is `itemBrowseCfg()`, shared with the trade window. → ledger L7291, #47
 - 2026-10-26 — The top bar gains the Extensions pill and a × on both pills, one auto margin on the save state, and a notice row after the buttons up to 560px; a dismissal guard returning `true` refuses outright; boot ends with the source check. → ledger L7428, #102
 - 2026-10-26 — The ≤560px notice row is decided (Mike): it stays; one combined pill was rejected. → ledger L7513, #102
+- 2026-10-27 — The warning window: `askConfirm()`, a second layer over the dialog with named buttons, Escape that stops there, and focus back; `openModal()` and `closeModal()` answer it no. → ledger L7710, #118
+- 2026-10-27 — Fix round 1: the warning's backdrop follows the dialog's rule (off by default; with it on, a 400 ms grace after opening), and `undoLevelUp()` and every `closeModal()` answer an open warning no. → ledger L7710, #118
+- 2026-10-27 — Fix round 2: a pointer click on either button is ignored for 400 ms after opening (`ASK_CLICK_GRACE`), so a double-click can't accept it unread. → ledger L7710, #118

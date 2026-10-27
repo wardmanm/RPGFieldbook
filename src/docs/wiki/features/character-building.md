@@ -10,18 +10,24 @@ so removing the source takes it back out; that mechanism is
 
 **Code:** `openAddClass()`, `addClass()`, `applyClassLevel()`, `removeClass()`, `doLevelUp()`,
 `doLevelDown()`, `selectSubclass()`, `chooseSubclass()`, `hpChoice()`, `commitHPChoice()`,
-`seedLevel1HP()`, `grantClassSaves()`, `multiclassChoices()`, `multiclassNote()` in
+`seedLevel1HP()`, `grantClassSaves()`, `multiclassChoices()`, `multiclassNote()`,
+`levelRecordFor()`, `levelDownHTML()`, `applyLevelDown()` in
 `56-class.js`; `choiceFieldHTML()`, `runChoices()`, `gatherChoices()`, `commitChoices()`,
-`effectiveChoose()`, `choiceShortfall()`, `armChoiceDismissGuard()`, `choiceWindowTitle()`,
-`choiceLevelSpan()`, `choiceNoteText()` in `58-choices.js`;
+`effectiveChoose()`, `choiceShortfall()`, `choiceDoneHandler()`, `choiceWarningsConfirmed()`,
+`armChoiceDismissGuard()`, `choiceWindowTitle()`,
+`choiceLevelSpan()`, `choiceNoteText()`, and for feats (#118) `featCategory()`, `featPrereq()`,
+`featUnmet()`, `featOfferable()`, `featAbilityChoices()`, `featPendingIncreases()`,
+`asiFeatListHTML()`, `asiPanelHTML()`, `wireAsiFeats()`, `asiPickWarnings()`,
+`asiScreenPicks()`, `commitAsiPick()`, `commitExtraChoices()` in `58-choices.js`;
 `openAddRace()`, `applyRace()`, `racesForCharacter()` in `52-race.js`; `openAddBackground()`,
 `applyBackground()` in `54-background.js`; `subclassesFor()`, `addFeatureFromDef()`,
 `grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
-`setDismissGuard()` in `80-modal-forms.js`; `classLineHTML()`, `classFlyHTML()`, `openShFly()` in
+`setDismissGuard()`, `askConfirm()` in `80-modal-forms.js`; `classLineHTML()`, `classFlyHTML()`, `openShFly()` in
 `40-sheet.js`; `raceInfoFoot()` in `52-race.js`, `bgInfoFoot()` in `54-background.js`;
 `grantLanguages()`, `dropLanguages()` in `41-chips.js` · `levelSnapshot()`, `levelGains()`,
 `luHPCheck()`, `openLevelUp()`, `levelUpCardHTML()`, `levelUpHPHTML()`, `luSetHP()`, `luFinish()`,
-`luDismissed()`, `playLevelUpFx()`, `luSkip()` in `57-levelup.js` · **Data:** `choices` on class, subclass and race
+`luDismissed()`, `playLevelUpFx()`, `luSkip()`, `undoLevelUp()`, `undoLevelUpAvailable()`,
+`luUndoCard()`, `levelLogRecord()`, `luMaybeSettle()`, `luSettle()` in `57-levelup.js` · **Data:** `choices` on class, subclass and race
 levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `multiclass` block,
 §6.3; the `features.json` of the 2024 pack (private repo) and of `data/srd52/` ·
 **Tests:** `sheet.js`, `char-update.js`, `rules-data.js` · **See also:**
@@ -55,7 +61,17 @@ then grants from the species and then the subrace: fixed `abilityScores` as a fe
 saves as grants, each trait as a feature, any `choices` (skill) queued, `equipmentGrants`, and speed
 and size **only if those boxes are empty**. `proficiencies` is appended to the free-text
 Proficiencies box; `languages` become chips stamped `race:<Name>` (`grantLanguages()`), which
-removing or changing the species takes back ([Grants & provenance](../architecture/grants-and-provenance.md)). Queued skill choices then open through `runExtraChoices()`.
+removing or changing the species takes back ([Grants & provenance](../architecture/grants-and-provenance.md)).
+A species grants feats the way a background does (#118):
+- **A fixed `feat`** (a string, or a one-item array) is granted through `grantFeatDef()` with the
+  race origin.
+- **An array of two or more is a choose-one menu**, as a background's is. It is queued as
+  `{type:"feat", from:[…]}`.
+- **Each `{type:"feat"}` in `choices`** is queued with the `race:` sid. That includes Human's
+  Versatile, `{type:"feat", category:"origin", label:"An Origin feat of your choice"}`.
+
+Queued skill and feat choices then open through `runExtraChoices()`. Each feat choice there is the
+ASI step's list without its ASI row (below).
 `openRaceInfo(idOrName,opts)` opens by the pack entry's `_id` as readily as by name, and the Rules
 tab's Species rows open it with `{ref:true}` (#99): the window shows the species' own rules with no
 "— selected" mark, since there is no character to mark it against.
@@ -64,7 +80,9 @@ tab's Species rows open it with `{ref:true}` (#99): the window shows the species
 +2/+1 or +1/+1/+1, a feat (a select when the background offers more than one), the granted skills,
 tools and languages. `applyBackground()` adds the ability feature, the skill grants, the feat through
 `grantFeatDef()`, the single background `feature`, `equipmentGrants`, appends tools to
-Proficiencies, and grants its `languages` as chips stamped `bg:<Name>`. `openBackgroundInfo(idOrName,opts)` opens by id as well as by name, and
+Proficiencies, and grants its `languages` as chips stamped `bg:<Name>`. A `{type:"feat"}` in a
+background's `choices` is queued with the `bg:` sid and opens the same list as a species' (#118).
+No shipped background carries one yet. `openBackgroundInfo(idOrName,opts)` opens by id as well as by name, and
 the Rules tab's Backgrounds rows open it with `{ref:true}` (#99): the window shows the background's
 options, not this character's choices.
 
@@ -129,10 +147,76 @@ character has changed (`luStale()`): no card, no HP, no choices. Loading, import
 character, or going Home, calls `luAbandon()` first, which ends a playing scene and closes an open
 card. **Creation is unchanged**: a first class
 added above level 1 still gets its `{type:"hp"}` block inside the choice window for levels 2..N
-(see the table below), because creation has no fanfare. **Level down** (`doLevelDown(idx)`) only lowers
-the number: traits, grants and choices stay. From a class's menu it lowers that class, and at level 1
-says to use Remove in the class's menu; with no index it lowers the one class above level 1, or asks
-which when there are several.
+(see the table below), because creation has no fanfare.
+
+**Undo level-up (#118).**
+- **The copy.** `doLevelUp()` stores `_undo`, a JSON copy of the character, before it changes
+  anything, and marks a level-up as in progress. `_undo` is a variable in `57-levelup.js`, never a
+  field of `character`, so it is never saved.
+- **The card.** The card carries **Undo level-up** beside Done or Continue. `luUndoCard()` drops the
+  level-up first, so closing the card neither commits its HP nor opens its choices, then restores
+  the copy with `undoLevelUp({force:true})`.
+- **Settling.** A level-up spans the card and every window behind it: the choices, a subclass's
+  own window, and the Choose window. `closeModal()` and `scheduleSave()` both call
+  `luMaybeSettle()`, which waits one turn of the event loop. A window that closes only to open the
+  next one is therefore still seen as open. When the last window has closed, by Done or by
+  Escape, `luSettle()` runs once:
+  1. it writes the `levelLog` record (below);
+  2. it takes a signature, the sheet as JSON, after the record;
+  3. it saves;
+  4. it toasts "Fighter is now level 8 · Max HP 61 → 68" with **Undo**.
+
+  The toast carries the HP because it replaces the HP step's own toast.
+- **When Undo is offered.** `undoLevelUpAvailable()` is true only while the sheet is exactly as the
+  level-up left it, meaning `JSON.stringify(character)` still equals the signature. Any edit after
+  the level-up spends it, and saving alone does not. The toast's Undo after a change answers "Undo is no longer
+  available: the sheet has changed since the level-up." and changes nothing.
+- **Restoring.** `undoLevelUp()` restores the copy exactly (`JSON.parse`, no `migrate()`),
+  re-renders, saves, and says "Level-up undone". The toast stays reachable over a modal, so first
+  it closes any open window, which is about the sheet being replaced: a Level down dialog left open
+  would act on the restored sheet. It clears `_undo` before that `closeModal()`, so the close's
+  settle hook records nothing.
+- **When it ends.** `luAbandon()` clears the copy, so loading, importing or starting a character,
+  or going Home, ends it. A reload ends it too.
+
+**The level log (#118).** Each settled level-up appends one record to `character.levelLog`, from
+`levelLogRecord(before, after, cls, level)`:
+
+```
+{at, class, level, hp, features:[{id, name, grants}], abilities, subclass, grants, slots:{before, after}}
+```
+
+- `features` lists the new features whose origin is that class and level: traits, the ASI or the
+  feat.
+- A feature's `grants` are the new proficiencies tied to it. A grant is tied only when exactly one
+  of the level's new features is an embedded class or subclass trait whose rules entry grants that
+  proficiency outright (`lvFeatureGrantKeys()`). A level's skill pick, a feat's skill choices and
+  anything ambiguous stay untied, in `grants` only.
+- The log keeps the newest 200 records. `removeClass()` drops that class's records.
+- `migrate()` keeps only well-formed records, and normalizes the inside of each without dropping
+  its other keys ([Character model](../architecture/character-model.md)). `levelDownHTML()` and
+  `applyLevelDown()` read a record's features and grants through `lvRecFeats()` and
+  `lvRecGrants()`, so a malformed one can't make Level down throw.
+
+**Level down** (`doLevelDown(idx)`). From a class's menu it lowers that class, and at level 1 says
+to use Remove in the class's menu. With no index it lowers the one class above level 1, or asks
+which when there are several. What happens next depends on whether `levelRecordFor()` finds the
+newest record for that class at its current level:
+- **With a record**, the "Level down" dialog (`levelDownHTML()`) reads "Fighter 8 → 7. Level 8 gave
+  you:", then:
+  - **Ticked boxes**, for "+7 hit points (max HP 68 → 61)" and each feature still on the sheet,
+    for example "Feat: Grappler (+1 Dexterity)". A feature's tied grants are named with it ("…, and
+    the proficiency it gave: Survival") and go with it.
+  - **What changes by itself:** proficiency bonus, spell slots and class resources.
+  - **What to adjust by hand:** the subclass, untied grants, and any spells you learned.
+
+  **Level down** calls `applyLevelDown()`, which removes what is ticked, lowers the level, and
+  deletes the record whatever was ticked. A feature removed by hand since is skipped, and the dialog
+  says how many. The button passes what the dialog showed: the class entry, its level and the
+  record. If the sheet has changed under the dialog, `applyLevelDown()` changes nothing and toasts
+  "The sheet changed while Level down was open, so nothing was changed. Open Level down again."
+- **With no record** (a level gained before #118), it lowers only the number and toasts "Only the
+  level is lowered: traits, proficiencies and choices you've gained are kept."
 
 **Subclass.** Either a `subclass` choice at the class's level, or Choose/Change in the class info
 window (`chooseSubclass()`), which shows each with its pack and description. `selectSubclass()`
@@ -148,8 +232,8 @@ pack is keyed "Name (PACK)" and offered alongside, and `subSourceTag()` tags the
 |---|---|---|
 | `skill` | checkboxes; ones you already have are ticked, disabled and `data-fixed`, naming the source | a grant per pick under the choice's sid |
 | `option` | radios for `choose:1`, capped checkboxes above that; options already on the sheet are marked "already yours" unless `repeatable` | each pick becomes a feature (with `effects`, `skills`, `saves`, `cost`) whose origin comes from `sidToOrigin()` |
-| `asi` | +2 to one, or +1 to two | an "Ability Score Improvement" feature carrying the effects |
-| `feat` | a select over `from`, or every loaded feat | `grantFeatDef()` |
+| `asi` | the ASI step (#118, below): a list with Ability Score Improvement pinned first, and a panel. With Feats allowed off, +2 to one or +1 to two, as before | `commitAsiPick()`: an "Ability Score Improvement" feature carrying the effects, or the feat with its +1 |
+| `feat` | on a species or background, or with a `category` and no `from`: the ASI step's list with no ASI row. On a class level: a select over `from`, or every loaded feat | `commitAsiPick()` with the species or background origin; a class level's select through `grantFeatDef()` |
 | `subclass` | radios with pack and description | `selectSubclass()` after the rest commits |
 | `hp` | a dice box, Roll for me, and the working ("Average 6 + 2 CON = 8 HP") — creation only now: a level-up or a second class gets the level-up card's own HP step instead (#101) | `commitHPChoice()` |
 
@@ -157,8 +241,95 @@ pack is keyed "Name (PACK)" and offered alongside, and `subSourceTag()` tags the
 budget, but it never asks for more than remain. The target is written as `data-choose` on the
 `.choice` wrapper; a `change` listener on the modal calls `syncChoiceLimits()`, which disables the
 unticked boxes once the block is full and re-enables them off `data-fixed`, never off `checked`. On
-Done, `choiceShortfall(choiceBlocks())` warns about unmade picks; `gatherChoices()` reads only
-checked, **enabled** boxes; `commitChoices()` grants, renders, then opens the next window.
+Done is `choiceDoneHandler(btn, commit)`, in both choice windows (`runChoices()`,
+`runExtraChoices()`). It asks its warnings in the app's warning window (`askConfirm()`,
+[Shell](../ui/shell.md)), over the choice window, which stays open while it asks:
+- **Picks left** (Go back / Continue anyway), with `choiceShortfall(choiceBlocks())`'s text;
+- then, one feat at a time, the prerequisite warning below.
+
+`choiceWarningsConfirmed()` asks them in turn and stops at the first "no", which leaves the window
+open with every pick. Only then does `commit` read the picks: `gatherChoices()` reads only checked,
+**enabled** boxes, and `commitChoices()` grants, renders, then opens the next window.
+- **Nothing to ask:** Done commits at once, in the same task, as it always has.
+- **Something to ask:** pressing Done again while a warning is open does nothing, so a double press
+  can't commit twice. If the window went while the question was open (its Done is out of the page),
+  nothing commits.
+
+**The ASI step (#118).** At an `asi` choice the player takes the Ability Score Improvement or a feat,
+in one list (`asiFeatListHTML()`).
+
+- **The list.**
+  - It has a search box (it matches the name only, and never hides the pressed row) and a
+    **Show all** switch.
+  - **Ability Score Improvement** is pinned first and pressed to start, with the subline "+2 to one
+    score, or +1 to two" and the tag General.
+  - Then come the offered feats, by name. Each shows a short line and a tag.
+    - The short line (`asiFeatShort()`) is its increase and its first benefit's name. The increase
+      reads "+1 Str or Dex", or "+1 any" when all six abilities are allowed, as most Epic Boons'
+      are. The first benefit is the first "Name: …" line that isn't a `Repeatable:` or
+      `Prerequisite:` line, so Skilled has none.
+    - The tag is its category, or, under Show all, the first unmet prerequisite in amber ("needs
+      the Fighting Style feature").
+  - A row's key is the feat's `_id` when the merge gave it one, else its name, because two packs
+    can share a name.
+- **What is offered** (`featOfferable()`, Show all off):
+  - **The category** is read from the feat's first line (`featCategory()`). General feats are
+    offered when their prerequisites are met. Origin feats are not (backgrounds and species grant
+    them). Fighting Style feats need a feature named "Fighting Style". Epic Boons need a level-19
+    choice. A feat with no category line is offered when its prerequisites are met.
+  - **Prerequisites** come from "Prerequisite:" on that line (`featPrereq()`). The parts it reads
+    are `Level N+`, `<Ability> N+` (after effects, through `abilFinal()`), "Spellcasting feature"
+    (a caster class by `classCasterKind()`, Pact Magic excluded, or a feature named Spellcasting),
+    "Spellcasting or Pact Magic feature" and "Fighting Style feature". The text can hold "or"
+    groups and parts joined by "and" or commas. An unknown part is shown and never counts as unmet.
+    `featUnmet()` says what is missing. A part every alternative shares (Grappler's "Level 4+")
+    is listed on its own. What is left of the alternatives is one entry naming them all: "Strength
+    13 or Dexterity 13 (yours: Strength 10, Dexterity 10)". With a single alternative each unmet
+    part is its own entry, "Strength 13 or higher (yours is 12)". The amber tag shows the first
+    entry, and the warning joins them with "and".
+  - **A feat already taken** is hidden unless its text has a `Repeatable:` line. The rules entry
+    named "Ability Score Improvement" is never listed.
+- **Show all** lists every loaded feat. It lifts every filter, a species list's category included
+  (Ruling 6, Mike's "turn off that filter and see all feats"). A fixed `from` menu is the one thing
+  it never widens.
+- **The panel** (`asiPanelHTML()`):
+  - **For the ASI**, today's +2 / +1+1 controls.
+  - **For a feat**, its text below the category line (escaped, in paragraphs), then one "+1 to:"
+    chip group per choose increase, the first option pressed. A fixed increase is shown as text.
+  - **The increases** come from the feat's `ability` field, else from "Increase your A, B, or C
+    score by N" in its text (`featAbilityChoices()`). `featPendingIncreases()` drops anything the
+    feat's own `effects` already raise, so a pack that carries both never gives +2.
+- **Done.**
+  - **The warning.** For each pressed feat (`asiScreenPicks()`) with unmet readable prerequisites,
+    `asiPickWarnings()` writes the sentence: "Grappler needs level 4 or higher (yours is 1) and
+    Strength 13 or Dexterity 13 (yours: Strength 10, Dexterity 10). Take it anyway?" Done asks it in the warning window, titled
+    "Prerequisite not met", with **Choose another** and **Take it anyway**, one feat at a time. It
+    never blocks. Choose another keeps the step open with the pick.
+  - **The grant.** `commitAsiPick()` stores the ASI as before. A feat goes through `grantFeatDef()`
+    with the class-level origin `{kind:"class", class, level}`, and its +1 is added as an
+    `ability.<k>` effect on that same feature, so removing the class removes both.
+  - **No pick.** A list with no row pressed commits nothing.
+- **Feats allowed off** (`character.featsAllowed === false`, Settings → Sheet display) draws exactly
+  the old controls, with no list. The feats a character already has stay.
+- **Level 19.** `applyClassLevel()` adds `{type:"asi", boon:true}` at level 19 when the level has a
+  trait named exactly "Epic Boon" and no `asi` choice of its own. The trait is still added. The
+  card's row reads "Epic Boon — a feat, or an Ability Score Improvement" (`LU_CHOICE.boon`), and the
+  step offers Epic Boons as qualified. While feats are allowed, that choice row is the card's only
+  Epic Boon row: `levelGains()` leaves the trait's feature row off, and the trait is still on the
+  Features card. With Feats allowed off it is a plain ASI, and the feature row stays.
+- **Species and background feat choices** use the same list with no ASI row and nothing pressed to
+  start (Ruling 9). This applies to every `{type:"feat"}` queued with a `race:` or `bg:` sid, and
+  any with a `category` and no `from`.
+  - With a `category` it is filtered to that category.
+  - With a `from` menu it lists exactly those feats, and a name with no loaded feat still gets a
+    row.
+  - With neither (Tasha's Custom Lineage) it offers Origin feats, plus General and Fighting Style
+    feats whose readable prerequisites are met. Epic Boons appear only under Show all.
+
+  Feats allowed off does not hide this list: it is the species' own feat, not the optional rule.
+  `data-choose="1"` asks for the pick only when the list has a row. `commitExtraChoices()` grants it
+  with the origin its sid names, and a picked feat's own skill choices open as the next window. A
+  class level's `{type:"feat"}` keeps its select.
 
 **The window's title** names the levels the window holds, read off its contents by
 `choiceWindowTitle()`. Every choice and every spell note carries the `_level` it was collected at
@@ -230,6 +401,26 @@ they are built: [Converter](../data/converter.md).
 - **Every choice and level note a window shows carries `_level`.** The title is derived from them,
   never passed in, so a new source of choices or notes that leaves `_level` off drops out of the
   title's span.
+- **The undo copy is never part of `character`** (#118). `_undo` lives in `57-levelup.js`, so no
+  save or export carries it, and every path that replaces `character` ends it through
+  `luAbandon()`.
+- **The signature is taken after the record is written,** and `luSettle()`'s save leaves
+  `character` alone. Taken before the push, writing the record would spend Undo at once. Six
+  tests in `sheet.js` fail if the order flips.
+- **A level-up settles once, after its last window.** `luSettle()` gives up while the card is up,
+  the scene plays or `#modal` is open. A new window opened behind a level-up must open
+  synchronously from the one closing, or the record misses its picks.
+- **Level down removes a grant only when it traces to one feature.** Grants carry the class sid,
+  not a level or a feature id. Matching more loosely, for example a feat by its rules `skills`,
+  which `grantFeatDef()` doesn't grant, could take away a skill the player picked.
+- **A feat's +1 lives on the feat's own feature,** so it reverts with whatever granted the feat.
+  It is never a separate ASI feature.
+- **The feat helpers stay DOM-free:** `featOfferable()`, `featUnmet()`, `asiPickWarnings()`,
+  `asiRowHidden()` and the HTML builders. Only `wireAsiFeats()` and `asiScreenPicks()` read the
+  document.
+- **Done reads the picks after the warnings,** in its `commit`, with the window still open, and
+  commits at once when there is nothing to ask. The synchronous flow tests in `char-update.js`
+  depend on that.
 - **`character.classes[].subclass` stores the `subclassesFor()` key**, so a supplement must never be
   allowed to take an existing key from another pack.
 - **The first class is `character.classes[0]`**, the one added while the list was empty. Classes
@@ -274,6 +465,18 @@ they are built: [Converter](../data/converter.md).
   text, so `&` showed as `&amp;`.
 - **"(TCE) (TCE)".** A reprint already keyed "Psi Warrior (TCE)" was tagged again in both subclass
   pickers; `subSourceTag()` now skips a tag already in the name.
+- **A feat's +1 counted twice (#118).** A Humblewood feat (Arboreal Acrobat) carries its +1 as an
+  effect and also names it in its text, which the fallback reads, so Dex went 14 → 16. Fixed by
+  `featPendingIncreases()`, which drops what the feat's effects already raise.
+- **"+1 to:" answers read in order went to the wrong increase (#118).** A fixed increase draws no
+  chips, so the groups after it shifted down by one. Each chip carries the index of the increase it
+  answers (`data-ft-plus`).
+- **Search matched the tag (#118).** Matching a row's whole text matched "st" against "needs the
+  Fighting Style feature". It matches the name only.
+- **A Warlock met "Spellcasting feature" (#118).** `classCasterKind()` returns `"pact"` for a
+  Warlock, which counts only for "Spellcasting or Pact Magic". Reading the class's own
+  `spellcasting` field instead missed Eldritch Knights and Arcane Tricksters, whose casting lives
+  on the subclass.
 - **Not everything reverts.** Tools and languages go into the free-text Proficiencies box and stay
   there when the ancestry or background is removed. Speed and size are seeded only into empty boxes
   and are not cleared by `removeRace()`, so swapping ancestry keeps the first one's values (traced in
@@ -305,11 +508,34 @@ they are built: [Converter](../data/converter.md).
 | Removing the first class while another remains | The class now first takes its own saving throws, with a toast | Leaving the saves off: the sheet would have no save proficiencies at all (owner may reverse) |
 | Hit points for a first class that starts above level 1 | Seed level 1, then an HP step for levels 2..N in the same window | None at all, as before: a level-3 character was created with no hit points |
 | What a choice window's title names (#69) | The span of levels its choices and notes carry, an HP step's own span included; no level when nothing carries one | The first choice's level: whichever block led decided it. A level the caller passes: a second source that can disagree with what the window shows |
+| Which feats the ASI step offers (#118, decision 1) | The feats the character qualifies for, with Show all; an unmet prerequisite asks "Take it anyway?" at Done and never blocks | Every feat, unchecked: dozens the character can't legally take. Strict, no override: house rules need a manual edit |
+| A feat's own +1 (#118, decision 2) | Asked in the same step and stored on the feat, so removing the feat removes it | By hand: the step players forget. A cap of 20: a wider change, since nothing caps scores |
+| Level 19's Epic Boon (#118, decision 3) | An ASI level too, detected in the app from the level-19 "Epic Boon" trait; Epic Boons are offered only there | In the converter: every pack's class data would move for what the app can see. Left manual: nothing prompts |
+| The step's layout (#118, decision 5) | One list, Ability Score Improvement pinned first (mockup B); 2024 frames the ASI as a General feat | Two tabs, ASI and Feat: one more control, and the book doesn't separate them |
+| Species feats (#118, decision 7) | Granted as a background's are: a fixed `feat`, or a feat choice through the same list, reverting with the species | Versatile as prose: the player adds the feat by hand |
+| A species `feat` array (#118, Ruling 10) | Choose one, as a background's array | Granting every entry: backgrounds already read an array as a menu |
+| A species or background feat choice with no category (#118, Ruling 9) | The list: Origin feats plus General and Fighting Style feats whose readable prerequisites are met; Epic Boons only under Show all | The old full select: no text, no warning, no +1 (Tasha's Custom Lineage) |
+| What Show all lifts (#118, Ruling 6) | Every filter, a species list's category included; a fixed `from` menu stays | Keeping the category: Show all is the house-rule escape hatch |
+| The unmet-prerequisite warning (#118, Ruling 2; Mike 2026-10-27) | The app's warning window with the spec's sentence and its buttons, Choose another / Take it anyway; the shortfall warning moves into it too (Go back / Continue anyway) | The browser's `confirm` (as first built): its buttons can only say OK and Cancel |
+| The Epic Boon rows on the level-19 card (#118, Mike 2026-10-27) | One: the choice row while feats are allowed; the feature row only with Feats allowed off | Both, as §5 first read: the same thing listed twice |
+| When Done commits with nothing to ask (#118) | At once, in the same task | Always after a promise: every flow behind the window would change timing for no question asked |
+| Undo after a level-up (#118, decision 8) | A copy taken before the level-up; the card and its toast offer Undo while the sheet is exactly as the level-up left it (a signature) | A general per-level revert: too much isn't recorded per level. Cleared by the next save (spec §5a as first written): the level-up's own saves would spend it |
+| Level down (#118, decision 9) | Every level-up records what it gave; level down removes the ticked HP and features (with grants traced to one feature) and lists the rest; a level with no record lowers only the number | Number only: the player has to remember what the level gave |
 
 ## Open
 
-- An `asi` choice offers +2 / +1+1 only. [rules-schema](../../../../docs/rules-schema.md) §5 says
-  "or a feat instead"; the app has no such branch.
+- **A feat's fixed `skills` are not granted** by `grantFeatDef()`, and the ASI's "+1 to two" accepts
+  the same ability twice. Both predate #118 ([Known issues](../roadmap/known-issues.md)).
+- **The choices inside a feat stay by hand:** its spells, tools, damage types, Resilient's saving
+  throw and Weapon Master's mastery. Only its +1 is asked.
+- **Deferred from #118's review.** None blocks a level-up:
+  - An error part-way through `doLevelUp()` can leave a settle armed for the next unrelated edit.
+  - The toast's Undo stays clickable after a change. It answers "no longer available" instead of
+    disappearing.
+  - Subclass traits below the reached level, picked late, aren't in the record.
+  - With max HP blank, the dialog reads "max HP 0 → 1".
+  - The dismiss guard doesn't count a feat pick (as before #118, for the ASI).
+  - `sidLabel()` cuts a colon-named species in its "from …" label.
 - A class's gold alternative uses the average of its dice, not a roll.
 - The Humblewood Gadgeteer has no `multiclass` data (no Humblewood source defines it), so a
   multiclass Gadgeteer is offered no class skills and told so. The pack's Artificer carries TCE's
@@ -318,8 +544,9 @@ they are built: [Converter](../data/converter.md).
   only recognises a level-1 seed ([Vitals & rest](vitals-and-rest.md)).
 - A feat picked from the Features & Traits browser gets no skill-choice prompt:
   `grantFeatDef()` only queues those when there is an origin sid.
-- Level-down keeps everything, and class-level feat skill choices revert with the class, not the
-  level: [Grants & provenance](../architecture/grants-and-provenance.md).
+- Level down lists a level's skill picks, its subclass and its spells to adjust by hand, and a
+  level gained before #118 has no record, so level down keeps everything from it:
+  [Grants & provenance](../architecture/grants-and-provenance.md).
 - A picked subclass's own window carries the class name, like the window before it, so the two
   can share a title ("Fighter — Level 3" twice). Naming the subclass there needs a display name
   apart from the `className` the flow keys on.
@@ -360,3 +587,16 @@ they are built: [Converter](../data/converter.md).
   stack"; a failed Apply takes the earlier HP back; a level-up whose character changed is dropped;
   one spell note per class. Closing early is wired through `setDismissGuard()`, and the timer is
   the scene's only end (correcting L6840). → ledger L6928, #101
+- 2026-10-27 — At an Ability Score Improvement, the ASI or a feat from one list, with Show all,
+  the prerequisite warning and the feat's +1; Feats allowed; level 19's Epic Boon; species and
+  background feat choices through the same list; Undo level-up while the sheet is unchanged; each
+  level-up records what it gave, and level down shows it and removes the ticked HP and features.
+  → ledger L7569, #118
+- 2026-10-27 — The final review's fixes: Undo closes an open window, and a stale Level down
+  dialog changes nothing. A malformed level record can't make Level down throw. A feat's short
+  line skips `Repeatable:` and `Prerequisite:` lines, and reads "+1 any" for all six abilities.
+  → ledger L7657, #118
+- 2026-10-27 — The choice windows' two warnings (picks left, a feat's unmet prerequisite) ask in the
+  app's own warning window with named buttons; Done reads the picks after them and commits once.
+  Epic Boon shows once on the level-19 card. → ledger L7710, #118
+- 2026-10-27 — Fix round 1: an "or" prerequisite is named whole ("Strength 13 or Dexterity 13"), not just its closest alternative. → ledger L7710, #118

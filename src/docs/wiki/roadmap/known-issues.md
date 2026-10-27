@@ -16,11 +16,31 @@ Humblewood playtests (the private repo's `docs/HUMBLEWOOD-PLAYTESTS.md`), [2.0](
 
 Known behaviour that is accepted for now.
 
-- **Level-down only lowers the number.** `doLevelDown()` keeps every trait, proficiency, grant and
-  choice from the level it removes. Grants are keyed by source (`class:<Name>`),
-  not by level, so there is nothing per-level to revert. Removing the class reverts all of it, and
-  race and background choices revert fully. → ledger L2571, and
-  [Grants & provenance](../architecture/grants-and-provenance.md)
+- **Level down only lowers the number for a level with no record.** A level gained before #118
+  has no `levelLog` record, so `doLevelDown()` keeps every trait, proficiency, grant and choice from
+  it. Grants are keyed by source (`class:<Name>`), not by level. A level gained since has a record:
+  level down removes its ticked HP and features, with the grants traced to one feature, and lists a
+  skill pick, the subclass and spells to adjust by hand. Removing the class reverts all of it, and
+  race and background choices revert fully. → ledger L2571, L7569, and
+  [Character building](../features/character-building.md)
+- **A feat's fixed `skills` are not granted.** `grantFeatDef()` forwards a feat's effects, uses,
+  cost and skill *choices*, but not a fixed `skills` list, so such a skill is added by hand. It
+  predates #118, and level down deliberately never matches a feat by its rules `skills`. → ledger
+  L7569, and [Grants & provenance](../architecture/grants-and-provenance.md)
+- **A fixed species or background feat's `ability` increase is not applied.** `grantFeatDef()`
+  applies a feat's `effects` only. The +1 is asked only when the feat is picked from a list
+  (`commitAsiPick()`), so for a fixed `feat` the player raises the score by hand. It is dormant for
+  shipped data: no shipped species uses a fixed `feat`, and Origin feats carry no `ability`.
+  `docs/rules-schema.md` says so. → ledger L7657, and
+  [Character building](../features/character-building.md)
+- **The ASI's "+1 to two" accepts the same ability twice,** for +2 to one score. The 2024 rule
+  says two different scores. It predates #118. → ledger L7569, and
+  [Abilities & skills](../features/abilities-and-skills.md)
+- **The choices inside a feat stay by hand.** The ASI step asks only for a feat's +1. Its spells
+  (Magic Initiate, Fey-Touched, Ritual Caster…), tools and instruments (Crafter, Musician), damage
+  types (Elemental Adept), Resilient's saving throw and Weapon Master's mastery are the player's to
+  add. No shipped pack carries them in structured form. → ledger L7569, and
+  [Character building](../features/character-building.md)
 - **Hit points don't leave with a class above level 1.** Removing a class clears only the level-1
   seed: a first class added at level 3 and then removed keeps its levels 2–3, and removing a
   multiclass class keeps the hit points its levels added — the same as a class levelled up in play.
@@ -360,7 +380,6 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 - **`docs/rules-schema.md`** (it ships):
   - §6.11 still names a Tables tab, says ragged rows are padded (only the converter pads), and leaves
     `race` out of `ownerKind`.
-  - §5 says an `asi` choice offers "a feat instead", but the app's `asi` branch has no feat option.
 - **Code comments that no longer match:**
   - The `30-version.js` header says to bump `APP_VERSION` on every change, and the `UPDATE_REPO`
     comment describes the old badge.
@@ -524,3 +543,5 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-25 — Edit lines keep only what changed, so the log's storage entry narrows to one-copy lines; selling no longer reads short. → ledger L7401, #47
 - 2026-10-26 — Fixed and removed: a data update announced, never installed (#102 installs and updates packs from a manifest). Added: #102's deferred minors, its release-tooling minors and the ≤560px notice row. → ledger L7428, #102
 - 2026-10-26 — Removed: the ≤560px notice row (decided: it stays) and two release-tooling minors fixed in #102's final wave (`release-files`' `isfile` guard, `data-release.js`'s exit cleanup). → ledger L7513, #102
+- 2026-10-27 — Narrowed: level down lowers only the number for a level with no record. Fixed and removed: rules-schema §5's "a feat instead", which the app now offers. Added: a feat's fixed `skills` not granted, "+1 to two" accepting one ability twice, and the choices inside feats staying manual. → ledger L7569, #118
+- 2026-10-27 — Added: a fixed species or background feat's `ability` increase is not applied (the final review's M4; the player docs now say so). → ledger L7657, #118

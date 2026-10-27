@@ -68,6 +68,7 @@ function saveNow(){
 function scheduleSave(){
   const el=document.getElementById("savestate");if(el){el.textContent="Saving…";el.className="savestate";}
   saveDue=true;clearTimeout(saveTimer);saveTimer=setTimeout(()=>showSaveResult(saveNow()),500);
+  if(typeof luMaybeSettle==="function")luMaybeSettle();   /* #118: a no-op unless a level-up is in progress */
 }
 /* A refused write used to change this one label, in a title bar that scrolls
    away (#81). Now it also raises #saveWarn, fixed to the foot of the window on

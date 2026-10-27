@@ -133,6 +133,8 @@ function openSettings(){
     setGroupHTML("Levels and companions",
       setRowHTML("Advancement","XP shows your experience in the header, with a bar to the next level. Milestone hides it: your table grants levels, taken with Level up.",
         `<div class="seg" id="segAdv">${[["xp","XP"],["milestone","Milestone"]].map(([v,l])=>`<button type="button" data-adv="${esc(v)}" class="${advancementOf(character)===v?"on":""}" aria-pressed="${advancementOf(character)===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
+      setRowHTML("Feats allowed","Offer a feat instead of an Ability Score Improvement. Turning it off keeps the feats you have.",
+        `<button type="button" class="switch ${character.featsAllowed!==false?"on":""}" id="swFeats" role="switch" aria-checked="${character.featsAllowed!==false?"true":"false"}" aria-label="Feats allowed"></button>`,true)+
       setRowHTML("Familiars &amp; companions icon","A paw in the sheet's header that lists your familiars and companions, and adds them.",
         `<button type="button" class="switch ${character.showFamiliars===true?"on":""}" id="swFamiliars" role="switch" aria-checked="${character.showFamiliars===true?"true":"false"}" aria-label="Familiars and companions icon"></button>`,true))+
     setGroupHTML("Ammunition",
@@ -227,6 +229,8 @@ function openSettings(){
   {const b=document.getElementById("swTrackers");if(b)b.addEventListener("click",()=>{character.showTrackers=!showTrackers(character);b.classList.toggle("on",character.showTrackers);renderTrackers();scheduleSave();});}
   /* #103: both repaint the sheet header */
   {const g=document.getElementById("segAdv");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-adv]");if(!b)return;character.advancement=advancementOf({advancement:b.dataset.adv});g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderSheetHead();scheduleSave();});}
+  /* #118: read at the next ASI step; the feats already taken stay */
+  {const b=document.getElementById("swFeats");if(b)b.addEventListener("click",()=>{character.featsAllowed=character.featsAllowed===false;b.classList.toggle("on",character.featsAllowed);scheduleSave();});}
   {const b=document.getElementById("swFamiliars");if(b)b.addEventListener("click",()=>{character.showFamiliars=character.showFamiliars!==true;b.classList.toggle("on",character.showFamiliars);renderSheetHead();scheduleSave();});}
   document.querySelectorAll("[data-tabsw]").forEach(b=>b.addEventListener("click",()=>{
     const t=b.dataset.tabsw,show=isTabHidden(t);   /* hidden now → this click shows it */

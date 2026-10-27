@@ -7565,3 +7565,292 @@ Tests (data-archive):
 
 Pages: [settings & updates](../wiki/features/settings-and-updates.md),
 [rules packs](../wiki/architecture/rules-packs.md).
+
+## Feat support (#118, 2026-10-27)
+
+Branch `issue/118-feats`, commits `2bf87c3..be89263`, then this docs commit. Spec:
+`src/docs/specs/2026-10-26-feat-support-design.md`. Its As built section lists every ruling and
+every deferred minor. Plan: `src/docs/plans/2026-10-27-feat-support.md`. Mike decided the nine
+§2 decisions on 2026-10-26 and 2026-10-27.
+
+**What changed:**
+
+- **The converter.**
+  - `convert_feats()` keeps 5etools' structured `ability` field (`feat_ability()`): a
+    `{choose, amount, max?}` or a fixed `{abil: n, max?}` per increase. It drops `hidden` entries.
+  - `convert_races()` writes a race's or subrace's `feats` (`race_feats()`):
+    - `anyFromCategory` becomes `choices:[{type:"feat", category, label}]`;
+    - `any` becomes `{type:"feat", label:"A feat of your choice"}`;
+    - a named feat becomes `feat`, resolved through the feat index, with `_title_feat_name()` as
+      the fallback.
+- **The packs.**
+  - SRD 5.2: 8 of 17 feats gain `ability` (the seven Epic Boons and Grappler), and Human gains
+    `{type:"feat", category:"origin", label:"An Origin feat of your choice"}`.
+  - The private 2024, Xanathar's and Tasha's packs moved the same way (feats 54/77, 11/15 and
+    10/15; races in 2024 and Tasha's). They are committed in the private repo as `999bf63`, which
+    is **not pushed**; push it right after public `main`.
+  - **Each of the four packs needs a data release, which Mike cuts.**
+- **The ASI step (`58-choices.js`).**
+  - An `asi` choice is one list: Ability Score Improvement pinned first, then the feats the
+    character qualifies for (`featOfferable()`), a search box and a Show all switch. Below it is
+    one panel, holding either the +2 / +1+1 controls or the feat's text and its "+1 to:" chips.
+  - Prerequisites are read from the feat's first line (`featPrereq()`, `featUnmet()`).
+  - The +1 comes from the `ability` field, else from the text (`featAbilityChoices()`), minus
+    what the feat's own effects already raise (`featPendingIncreases()`).
+  - `commitAsiPick()` grants the feat with the class-level origin and stores the +1 as an effect
+    on that feature.
+  - A pick with an unmet prerequisite asks through `confirm()` (Ruling 2), which never blocks.
+  - Show all lifts every filter, a species list's category included (Ruling 6).
+- **Species and background feats.**
+  - `applyRace()` grants a fixed `feat`. An array of two or more is a choose-one menu (Ruling 10).
+    Each `{type:"feat"}` choice is queued with the `race:` sid, and `applyBackground()` does the
+    same with the `bg:` sid.
+  - Every such choice without `from` opens the same list with no ASI row (Ruling 9). With a
+    category it is filtered to that category. With none it offers Origin feats, plus General and
+    Fighting Style feats whose readable prerequisites are met. Epic Boons appear only under Show
+    all.
+  - `commitExtraChoices()` grants the pick with the species or background origin.
+- **Level 19.** `applyClassLevel()` adds `{type:"asi", boon:true}` when level 19 has a trait
+  named "Epic Boon" and no `asi` choice. The level-up card reads "Epic Boon — a feat, or an
+  Ability Score Improvement".
+- **Feats allowed.** `character.featsAllowed` is `true` in `blankChar()`, and `migrate()` keeps a
+  boolean. The switch is in Settings → Sheet display → Levels and companions. Off, the ASI step
+  draws today's controls, and species and background feat choices still open.
+- **Undo level-up (`57-levelup.js`).**
+  - `doLevelUp()` takes `_undo` (a JSON copy) before it changes anything (Ruling 1).
+  - Once the last window closes, `luSettle()` writes the `levelLog` record, then takes a
+    signature of the sheet, and toasts "Fighter is now level 8 · Max HP 61 → 68" with Undo.
+  - Undo is offered while the sheet still matches that signature exactly. It is not cleared by
+    the next save, as spec §5a first said.
+  - The card's own **Undo level-up** skips the signature (Ruling 3).
+  - Switching character, going Home or reloading ends it.
+- **Level down with a record (`56-class.js`).**
+  - The record is `{at, class, level, hp, features:[{id, name, grants}], abilities, subclass,
+    grants, slots}`, capped at 200 records.
+  - Level down shows the record's HP and features as ticked boxes. A feature's grants go with it
+    only when they trace to that feature: exactly one of the level's new traits grants that
+    proficiency outright.
+  - Everything else (other grants, the subclass, spells) is listed to adjust by hand.
+  - A level with no record lowers only the number, as before.
+  - `removeClass()` drops that class's records.
+
+**Why:** a player at an ASI level had to add a feat and its +1 by hand. Human's Versatile was
+prose. Level down left the player to remember what the level gave.
+
+**Tests:** converter (`feat_ability`, `race_feats`); sheet (helpers, the step, species and
+background lists, level 19, Undo end to end, the record and level down); rules-data (the switch).
+Browser QA is in `.claude/qa/in-progress/118-feats/` (`118-before-*`, `118-after-*`, `118-t*-*`).
+
+**Left open:**
+- the deferred minors, listed in the spec's As built;
+- three new known issues: fixed feat `skills` not granted, "+1 to two" accepting one ability
+  twice, and choices inside feats staying manual.
+
+Pages: [character building](../wiki/features/character-building.md),
+[abilities & skills](../wiki/features/abilities-and-skills.md),
+[grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[character model](../wiki/architecture/character-model.md),
+[converter](../wiki/data/converter.md), [settings & updates](../wiki/features/settings-and-updates.md),
+[known issues](../wiki/roadmap/known-issues.md), [2.0](../wiki/roadmap/2.0.md),
+[1.9.0](../wiki/roadmap/1.9.0.md), [decisions](../wiki/decisions.md).
+
+## #118 final fix wave (2026-10-27)
+
+**What:** the five minors from #118's final whole-branch review.
+
+- **Undo closes the open window.** The level-up toast stays reachable over a modal. Before, its
+  Undo swapped `character` under whatever dialog was open. In a Level down dialog, that dialog's
+  Level down then removed the *older* record (Fighter 8 → toast Undo → Fighter 6).
+  - `undoLevelUp()` now clears `_undo` and the in-progress flag first, then closes an open modal
+    with `closeModal()`, then restores. Its `luMaybeSettle()` hook finds nothing to settle.
+  - `applyLevelDown(idx, remove, expect)` takes what the dialog showed: the class entry, the level
+    and the record. On any mismatch it toasts "The sheet changed while Level down was open, so
+    nothing was changed. Open Level down again." and changes nothing. An undo makes a new
+    `character`, so the identity check fails.
+- **A malformed imported level record no longer breaks Level down.** `migrate()` still drops
+  records that aren't objects or lack `class`, `level` or a `features` array. A kept record now
+  keeps every key, with the parts Level down reads made safe:
+  - features: objects with a non-empty string `id` (`lvRecFeats()`), each with a `grants` array;
+  - grants: objects (`lvRecGrants()`), with string `sid`/`type`/`key`;
+  - `hp` a number ≥ 0, `subclass` a string, `abilities` an object.
+
+  `levelDownHTML()` and `applyLevelDown()` read through the same two helpers, and `lvGrantKey` is
+  null-safe, so a record that bypasses `migrate()` can't throw either.
+- **A feat row's short line skips `Repeatable:` and `Prerequisite(s):` lines** (`asiFeatShort()`).
+  SRD Skilled read "Repeatable". It now has no short line, like Savage Attacker.
+- **"+1 any".** A feat whose +1 allows all six abilities reads "+1 any · Peerless Aim", not "+1 Str
+  or Dex or Con or Int or Wis or Cha · …". Any other set is listed as before.
+- **rules-schema §6.2.** A species' fixed `feat` gets its effects, not its `ability` increase:
+  that is asked only when the feat is picked from a list. The player raises the score by hand, or
+  the pack author puts the increase in `effects`. This is a doc fix only. Routing a fixed feat's
+  `ability` through the +1 step would change behaviour, and that is Mike's call.
+
+**Why:** M1 lost a second level and its record. M2 made Level down do nothing on a bad import. M3
+and M5 were misleading or long sublines. M4 promised players something the app doesn't do.
+
+**Tests:** sheet: the toast's Undo while Level down is open closes the dialog and records
+nothing, and the stale click changes nothing; a stale or moved `expect` applies nothing, and a
+matching one applies. Four malformed record shapes each load, round-trip unchanged, and open and
+apply Level down, raw as well as migrated. The short-line fixtures are invented: Repeatable,
+Prerequisite in any case, "+1 any" in any order, five abilities, and a fixed increase.
+
+**QA:** `.claude/qa/in-progress/118-feats/118-fix-*` holds the shots:
+- before and after of Skilled under Show all at Fighter 8;
+- before and after of the level-19 boons, at 1280 and 390;
+- the M1 sequence before (the dialog stays open over Fighter 7) and after (the dialog closes).
+
+The toast's Undo was a real click. Live, a malformed record migrated and leveled down, and a normal
+Level down was clicked through.
+
+Pages: [character building](../wiki/features/character-building.md),
+[character model](../wiki/architecture/character-model.md),
+[known issues](../wiki/roadmap/known-issues.md) (the fixed feat's `ability`, M4), and the spec's
+As built.
+
+## #118 the warning window, and Epic Boon once (2026-10-27)
+
+Two changes Mike approved on 2026-10-27, which settle the spec's last two Open items.
+
+**The app's own warning window.** `askConfirm({title, message, ok, cancel})` in
+`80-modal-forms.js` returns a Promise of true or false. It replaces the browser's `confirm()` at the
+two choice windows' Done.
+- **A second layer.** Its own backdrop and box (`#askWin.backdrop.ask-back`, z-index 90, between
+  the modal's 80 and the toast's 9999), built on demand and removed on close. The dialog under it
+  stays open and untouched. It uses the modal's own classes, so both skins and both themes come
+  free. `50-modal.css` adds only a narrower box, a 16px gutter and 44px buttons.
+- **Text only.** The title, message and labels are `textContent`, and the message's `\n` are line
+  breaks (`.m-body p` is pre-wrap). Defaults are "Are you sure?", OK and Cancel.
+- **Keyboard.** `role="alertdialog"`, `aria-modal`, labelled by its title and described by its
+  message. Focus starts on the safe button and Tab stays between the two. Escape answers no, and
+  so does a backdrop click under the dialog's own rule (fix round 1, below). A capture-phase `keydown` on `document` (`askKey()`) stops Escape there, so
+  the dialog's own Escape never sees it, and that handler also checks `!_ask`. A held Enter or
+  Space is ignored, so a key held on Done can't repeat into the warning. Every other `<body>`
+  child goes inert, the dialog included and the toast excepted. On close, focus returns to what
+  had it.
+- **Never `closeModal()`.** Answering it doesn't settle a level-up (`luMaybeSettle()`) or run a
+  dismissal guard.
+- **Rulings.** Asking again while one is open answers the open one no, then shows the new one; no
+  queue. `openModal()` and `closeModal()` answer it no through `askCancel()`,
+  because the question was about a window that is no longer there. It is created on
+  demand rather than in the template, so `modalTakeFocus()` can never find it hidden and make it
+  inert. This is the first `async`/`await` in `src/js`.
+
+**Done.** Both choice windows' Done (`runChoices()`, `runExtraChoices()`) is now
+`choiceDoneHandler(btn, commit)` in `58-choices.js`.
+- It asks "Picks left" (Go back / Continue anyway) with `choiceShortfall()`'s text. Then, one feat
+  at a time, "Prerequisite not met" with the spec's sentence (Choose another / Take it anyway). Both
+  go through `choiceWarningsConfirmed()`.
+- The picks are read in `commit`, after the answers, with the window still open, as before.
+- **With nothing to ask, it commits at once, in the same task.** So every flow behind the window,
+  and the level-up's settle, keep their timing, and `char-update`'s synchronous flow tests pass
+  unchanged.
+- With something to ask, a second press while waiting is ignored. A window that went while the
+  question was open (its button is out of the page) commits nothing.
+- `asiPickConfirmed()` and `asiScreenPicksConfirmed()` are gone. Their parts are `asiScreenPicks()`
+  (the DOM read) and `asiPickWarnings()` (the sentences, DOM-free).
+- `dismissModal()`'s `confirm()` and the app's other `confirm()` calls are #126's to convert. The
+  browser's prompt when a tab closes stays.
+
+**Epic Boon once (`301442e`).** The level-19 card listed Epic Boon twice: the class feature and
+the choice. `levelGains()` now leaves the feature row off while feats are allowed and the level
+has a `boon` ASI choice, so the choice row is the one shown. The feature itself is still added to
+the Features card. With Feats allowed off the choice reads as a plain ASI, and the feature row
+stays.
+
+**Tests:** sheet drives the real window in a small fake document:
+- it opens over a stand-in dialog that stays, with the roles and labels;
+- the safe button is focused, Tab cycles, and a held Enter is ignored;
+- Escape answers no and goes no further, and inert is released, the listener removed and focus
+  returned;
+- the primary button, the backdrop (but not the box) and the safe button each answer;
+- a second ask cancels the first;
+- nothing is ever parsed as markup, and nothing calls `closeModal()` or settles.
+
+Both Done handlers are driven too, with `askConfirm` stubbed:
+- with nothing to ask, they commit in the same task;
+- the shortfall, declined then accepted, reads the picks only afterwards;
+- the feat warning declined keeps the window open and grants nothing, and accepted grants once;
+- a double press asks and commits once, and a window gone mid-question commits nothing;
+- `runExtraChoices()` declines and accepts the same way.
+
+rules-data's source checks follow the new Done.
+
+**QA:** shots are in `.claude/qa/in-progress/118-feats/118-warn-*`:
+- the feat warning over the level-up window, in both skins, light and dark, at 1280 and 390;
+- the window after Choose another, the sheet after Take it anyway, and the shortfall warning in the
+  Humblewood skin.
+
+Driven live with the SRD pack: a Fighter 7 → 8 with Show all on and Grappler picked.
+- Enter on Done opened the warning with focus on Choose another. Clicking it left the window open
+  with Grappler and its +1 intact.
+- Escape closed only the warning. Tab cycled between the two buttons, and Space on Take it anyway
+  granted Feat: Grappler once and settled the level once.
+- A Fighter added at level 1: Done with no skills asked Picks left. A backdrop click cancelled it
+  (the behaviour before fix round 1: a backdrop click now does nothing unless Tap outside is on),
+  Continue anyway went on to the equipment window, and that window's Done committed with no
+  warning.
+
+The other skin's 1280 shots swap `data-skin`/`data-theme` with the warning open. The shortfall
+shot is a real Humblewood character. The console showed nothing new.
+
+Pages: [shell](../wiki/ui/shell.md),
+[character building](../wiki/features/character-building.md), [decisions](../wiki/decisions.md),
+and the spec's §5, §6 and As built.
+
+**Fix round 1 (the same day, before review).** Three concerns from the first report, settled with
+tests:
+- **An "or" prerequisite is named whole.** `featUnmet()` used to name only the closest alternative,
+  so Grappler (Str 13 or Dex 13) told a character with 10 in both "needs Strength 13 or higher".
+  - A part every alternative shares (its "Level 4+") is now listed on its own.
+  - What is left of the alternatives is one entry: "Strength 13 or Dexterity 13 (yours: Strength
+    10, Dexterity 10)".
+  - A single alternative (an and-group) still lists each unmet part with its "or higher (yours
+    is N)".
+
+  The row's amber tag and the warning both read it. This uses `featPartNeed()`, `featPartHave()`
+  and `featPartSig()`.
+- **A backdrop click follows the dialog's rule (#106).**
+  - With Tap outside to close dialogs off (the default), a click on the warning's backdrop does
+    nothing.
+  - With it on, only a click pressed and let go on the backdrop counts, and not within
+    `ASK_CLICK_GRACE` (400 ms) of opening (named `ASK_BACKDROP_GRACE` until fix round 2).
+  - So the second click of a double-click on Done, which lands on the new warning's backdrop, never
+    answers it. Escape and the safe button always cancel.
+  - `.ask-back` is `user-select:none`, because that second click otherwise highlighted the nearest
+    word in the box.
+- **Undo replaces the sheet the warning asked about.** `undoLevelUp()` calls `askCancel()` first,
+  and `closeModal()` now calls it unconditionally.
+  - It used to be gated on the dialog being open, so the harness, whose `modal` is a stub, could
+    never reach it.
+  - The toast's Undo over an open warning now answers it no, closes the window and restores the
+    sheet, and nothing commits after.
+
+Tests (sheet):
+- seven invented prerequisite fixtures (shared and-part, one alternative met, an and-group, an
+  unequal or-group, three alternatives) and the warning's sentence;
+- the backdrop with the setting off, on, a press that began in the box, inside the grace, and after
+  it;
+- a double-click on Done with the real window, under both settings: the warning stays and nothing
+  commits;
+- the toast's Undo while a warning is open, driven end to end with the real `askConfirm`.
+
+QA:
+- `118-warn-fix1-orgroup-dblclick-1280.png` and `118-warn-fix1-orgroup-390.png`: the or-group
+  warning, after a real double-click, with no selection.
+- `118-warn-fix1-orgroup-tag-390.png`: the longer amber tag, which wraps inside its pill.
+- `118-warn-fix1-undo-under-warning-1280.png` and `118-warn-fix1-undo-after-1280.png`: a real click
+  on the toast's Undo over the warning. Level 7 was restored, nothing was granted, and there was no
+  record.
+
+**Fix round 2 (review minors).**
+- **The buttons get the same 400 ms grace.** At phone width Done and the warning's right-hand
+  button can sit under the same spot, so the second click of a double-click could accept the
+  warning unread. A pointer click on either button (`e.detail > 0`) within `ASK_CLICK_GRACE` of
+  opening now does nothing. Enter and Space (a click with `detail` 0) always work.
+- `featUnmet()` loses a dead `rest.length===1` branch. With one alternative every part is shared,
+  so it already returned above. The output is identical.
+
+Tests (sheet): a pointer click on the ok button at 399 ms is ignored, and on the safe button too;
+at 400 ms ok accepts; keyboard activation works at once on both buttons. The double-click test also
+clicks the ok button. QA: `118-warn-fix2-dblclick-390.png`, a real double-click on Done at 390 px,
+with the warning still open.

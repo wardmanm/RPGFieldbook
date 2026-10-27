@@ -21,7 +21,7 @@ const vm = require("vm");
 const ROOT = path.resolve(__dirname, "..", "..");
 
 /* the globals a suite may need to WRITE, so they need accessors */
-const MUTABLE = ["rules", "character", "activeId", "updateAvailable", "dataUpdate"];
+const MUTABLE = ["rules", "character", "activeId", "updateAvailable", "dataUpdate", "_undo"];
 
 function loadApp(names) {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "src/manifest.json"), "utf8"));
@@ -59,7 +59,7 @@ function loadApp(names) {
              scrollTo: noop, print: noop},
     document: {
       getElementById: () => stubEl, querySelector: () => null, querySelectorAll: () => [],
-      createElement: () => stubEl, addEventListener: noop, body: stubEl, documentElement: stubEl,
+      createElement: () => stubEl, addEventListener: noop, removeEventListener: noop, body: stubEl, documentElement: stubEl,
     },
   };
   ctx.globalThis = ctx;

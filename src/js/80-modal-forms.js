@@ -16,6 +16,9 @@ const modal=document.getElementById("modal");
    plan while its files download (#102), where there is nothing to confirm —
    closing can't stop an install already under way. */
 let _dismissGuard=null,_dismissThen=null;
+/* the open warning window (askConfirm, below), or null — declared up here
+   because openModal() and closeModal() read it */
+let _ask=null;
 function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
 /* `title` is plain TEXT, set as textContent: it holds class, spell, item and
    pack names, so it is never parsed as markup. Callers pass it exactly as
@@ -30,8 +33,8 @@ function setDismissGuard(fn,then){_dismissGuard=fn;_dismissThen=then||null;}
    `opts` is optional: {wide:true} widens the dialog (Settings, #107). Like the
    emblem, the class is set or cleared on EVERY open, so a dialog opened from a
    wide one comes up at the normal width. */
-function openModal(title,html,icon,opts){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";const box=modal.querySelector(".modal");if(box)box.classList.toggle("wide",!!(opts&&opts.wide));document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
-function closeModal(){_dismissGuard=null;_dismissThen=null;const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();}
+function openModal(title,html,icon,opts){_dismissGuard=null;_dismissThen=null;askCancel();const was=modal.classList.contains("open");document.getElementById("mTitle").textContent=title;const mi=document.getElementById("mIcon");if(mi)mi.innerHTML=icon||"";const box=modal.querySelector(".modal");if(box)box.classList.toggle("wide",!!(opts&&opts.wide));document.getElementById("mBody").innerHTML=html;modal.classList.add("open");modalTakeFocus(was);}
+function closeModal(){_dismissGuard=null;_dismissThen=null;askCancel();const was=modal.classList.contains("open");modal.classList.remove("open");document.getElementById("mBody").innerHTML="";if(was)modalGiveBackFocus();if(typeof luMaybeSettle==="function")luMaybeSettle();}
 /* ---- focus ----
    A dialog takes the keyboard with it. On open, every other child of <body> goes
    inert (the toast stays reachable) and focus moves in: to the first field with a
@@ -110,7 +113,97 @@ let _downOnBackdrop=false,_upOnBackdrop=false;
 modal.addEventListener("pointerdown",e=>{_downOnBackdrop=e.target===modal;});
 modal.addEventListener("pointerup",e=>{_upOnBackdrop=e.target===modal;});
 modal.addEventListener("click",e=>{const both=_downOnBackdrop&&_upOnBackdrop;_downOnBackdrop=_upOnBackdrop=false;if(e.target===modal&&both&&settings.backdropClose===true)dismissModal()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modal.classList.contains("open"))dismissModal()});
+/* `_ask`: a warning window open over the dialog takes its own Escape (askKey,
+   capture phase, stops it there); this is the belt to that brace. */
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!_ask&&modal.classList.contains("open"))dismissModal()});
+/* ---- the warning window (#118) ----
+   askConfirm({title,message,ok,cancel}) → Promise<boolean>: a two-button
+   question in the app's own look, for the moments the browser's confirm() was
+   used because nothing else existed — whose buttons can only say OK and Cancel.
+   It is a SECOND layer: its own backdrop and box (z-index 90, over #modal's 80,
+   under the toast), built on demand and removed on close, so the dialog under
+   it stays open and untouched. It works with no dialog open too.
+   - Everything is text: title, message and labels are textContent, never
+     markup, so callers pass them as written and never esc() them. The message's
+     \n are line breaks (.m-body p is pre-wrap).
+   - Focus starts on the SAFE button (cancel), Tab moves between the two buttons
+     only, Escape or a click on its backdrop is cancel, and focus goes back to
+     what had it. Every other <body> child is inert while it is open (the toast
+     excepted, as the dialog's own focus rule has it), the open dialog included.
+   - It never calls closeModal(): answering it must not settle a level-up
+     (luMaybeSettle) or run a dismissal guard.
+   - One at a time: asking again while one is open answers the open one false
+     first. openModal() and closeModal() answer it false as well — the question
+     was about a window that is no longer there — and so does Undo level-up,
+     which replaces the sheet it was about.
+   - A double-click on Done must not answer the question its first click
+     asked. Its second click lands wherever Done was: on this backdrop, or — on
+     a phone, where Done and the right-hand button can share a spot — on a
+     button. So a POINTER click on either button does nothing for ASK_CLICK_GRACE
+     ms after opening (e.detail is 0 for Enter and Space, which always work),
+     and a click on the backdrop follows the dialog's rule (#106): nothing,
+     unless the player turned Tap outside to close dialogs on, and then only a
+     click pressed AND let go on the backdrop, after the same grace. Escape
+     always cancels.
+   The browser's own prompt when a tab closes (beforeunload) cannot be replaced
+   and stays. The other confirm() calls are #126's to convert. */
+const ASK_CLICK_GRACE=400;
+function askConfirm(opts){
+  const o=opts||{};
+  askCancel();
+  return new Promise(resolve=>{
+    const mk=(tag,cls,id,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(id)el.id=id;if(text!=null)el.textContent=String(text);return el;};
+    const back=mk("div","backdrop ask-back open","askWin");
+    const box=mk("div","modal ask");
+    box.setAttribute("role","alertdialog");box.setAttribute("aria-modal","true");
+    box.setAttribute("aria-labelledby","askTitle");box.setAttribute("aria-describedby","askMsg");
+    const head=mk("div","m-head"),body=mk("div","m-body"),acts=mk("div","m-actions");
+    head.appendChild(mk("div","m-title","askTitle",o.title||"Are you sure?"));
+    body.appendChild(mk("p","","askMsg",o.message==null?"":o.message));
+    const no=mk("button","tbtn","askNo",o.cancel||"Cancel"),yes=mk("button","tbtn primary","askYes",o.ok||"OK");
+    no.type="button";yes.type="button";
+    acts.appendChild(no);acts.appendChild(yes);body.appendChild(acts);
+    box.appendChild(head);box.appendChild(body);back.appendChild(box);
+    const a=document.activeElement;
+    const st={el:back,no,yes,resolve,opener:(a&&a!==document.body)?a:null,inert:[],key:askKey,at:Date.now(),down:false,up:false};
+    const early=e=>e.detail>0&&Date.now()-st.at<ASK_CLICK_GRACE;   /* a pointer click too soon after opening */
+    no.addEventListener("click",e=>{if(!early(e))askClose(false);});
+    yes.addEventListener("click",e=>{if(!early(e))askClose(true);});
+    back.addEventListener("pointerdown",e=>{st.down=e.target===back;});
+    back.addEventListener("pointerup",e=>{st.up=e.target===back;});
+    back.addEventListener("click",e=>{
+      const both=st.down&&st.up;st.down=st.up=false;
+      if(e.target===back&&both&&settings.backdropClose===true&&!early({detail:1}))askClose(false);
+    });
+    [...document.body.children].forEach(el=>{if(el.id==="toast"||el.tagName==="SCRIPT"||el.inert)return;el.inert=true;st.inert.push(el);});
+    document.body.appendChild(back);
+    /* capture, on document: ahead of the dialog's own Escape (above) and every
+       other document keydown, so none of them sees a key this window answers */
+    document.addEventListener("keydown",st.key,true);
+    _ask=st;
+    no.focus({preventScroll:true});
+  });
+}
+function askKey(e){
+  const st=_ask;if(!st)return;
+  if(e.key==="Escape"){e.preventDefault();e.stopPropagation();askClose(false);return;}
+  if(e.key==="Tab"){e.preventDefault();e.stopPropagation();(document.activeElement===st.no?st.yes:st.no).focus({preventScroll:true});return;}
+  /* Enter and Space are the focused button's own. A HELD key is not: Enter
+     held on the Done that opened this would repeat into the button it lands on. */
+  if((e.key==="Enter"||e.key===" ")&&e.repeat)e.preventDefault();
+}
+function askClose(answer){
+  const st=_ask;if(!st)return;_ask=null;
+  document.removeEventListener("keydown",st.key,true);
+  st.el.remove();
+  st.inert.forEach(el=>{el.inert=false;});
+  const o=st.opener;
+  if(o&&o.isConnected&&!o.closest("[inert]")&&o.focus)o.focus({preventScroll:true});
+  st.resolve(!!answer);
+}
+/* Answer an open warning "no": what openModal(), closeModal() and a second
+   askConfirm() call when the ground moves under it. */
+function askCancel(){if(_ask)askClose(false);}
 /* Locking a full choice block is a render concern, so it rides the modal rather
    than the global change handler in 90-boot.js — which the test harness drops. */
 modal.addEventListener("change",e=>{

@@ -19,7 +19,8 @@ that file does not say: what must not move, and the traps that have already ship
 `_fill_template()`, `_full_imm_res()`, `_template_leftovers()`, `_template_miss_warnings()`,
 `convert_items()`, `_item_effects()`, `_bonus_reading()`, `_bonus_prose_notes()`, `_weapon_defs()`,
 `_weapon_refs()`, `_weapon_miss_warnings()`, `_class_tables()`, `convert_classes()`,
-`_skill_profs()`, `_multiclass()`, `_optfeat_choices()`, `convert_races()`,
+`_skill_profs()`, `_multiclass()`, `_optfeat_choices()`, `convert_races()`, `convert_feats()`,
+`feat_ability()`, `race_feats()`, `_title_feat_name()`, `_feat_cat()`,
 `_ammo_kind()`, `_ammo_type_kind()`, `_pack_of()`, `_shipped_2024()`, `_reprint_keys()`,
 `_fill_variant()`, `_ammo_pieces()`, `_is_ammo_variant()`, `_variant_selected()`,
 `convert_ammo_variants()`,
@@ -262,6 +263,24 @@ X of your choice"). A class whose entry is `{}` (Monk, Sorcerer, Wizard) gets `"
 one with no entry (the UA Mystic) gets no key, so the app can tell "gains nothing" from "not
 said". The pack's Artificer is the TCE printing and carries TCE's row. What the app does with it:
 [Character building](../features/character-building.md); the shape: rules-schema §6.3.
+
+**Feat increases and species feats (#118).**
+
+- **A feat's ability increase.** `convert_feats()` keeps 5etools' structured `ability` field
+  through `feat_ability()`, so the app can ask for a feat's +1 without reading its text. Each
+  increase is `{"choose": [abil…], "amount": N}` or a fixed `{abil: N}`, and either keeps a `max`.
+  Entries marked `hidden` are dropped (only the Ability Score Improvement feat has one). The shape is
+  in rules-schema §6.6. 8 of SRD 5.2's 17 feats carry it, and 54 of the 2024 pack's 77.
+- **A species' feats.** `convert_races()` reads a race's or subrace's `feats` through
+  `race_feats()`:
+  - `anyFromCategory` becomes `choices:[{type:"feat", category, label}]` (`_feat_cat()` maps O, G,
+    EB and FS to `origin`, `general`, `boon` and `style`). Human's Versatile becomes
+    `{"type":"feat","category":"origin","label":"An Origin feat of your choice"}`.
+  - An unknown category code, or `any`, becomes `{type:"feat", label:"A feat of your choice"}`.
+  - A named feat becomes `feat`, resolved to its canonical name through the feat index, with
+    `_title_feat_name()` as the fallback. A `;` qualifier reads "Magic Initiate (Cleric)".
+
+  The species' `traits` are unchanged.
 
 **Hand-authored inputs.** `data/overlay.json` (`byName`: Archery, Defense) adds numeric `effects`
 to feats and fighting-style options by name, via `apply_overlay()`. `data/class-resources.json`
@@ -571,6 +590,7 @@ its words.
 | The Paladin's and Ranger's own Fighting Style option (#84, R4) | On the menu beside the styles, from the class feature's `refFeat`, in both packs | The hard-coded menu alone: it replaced the feature, so the option the feature names was never offered |
 | A dice roll holding a 5e-tools prompt template (#84) | Prints its display text; every other dice tag keeps its roll | Display text for every two-field dice tag: `{@dice 1d6\|one die}` prints `1d6` today, and that would move dice text that reads correctly. The roll: a template is 5e-tools' input box, not the book's words |
 | A class feature's `refFeat` the feat index lacks (#84) | The option is left off and a `WARNING` names it; `classes` takes `--feats` | Silently off the menu: how `classes` alone lost Blessed Warrior and Druidic Warrior. A README line saying "use `all`": leaves the silent path in place |
+| Where a feat's +1 comes from (#118, decision 6) | The converter keeps 5etools' `ability` field; the app reads it first, then the feat's text, which covers Humblewood and homebrew | Text only: the 2024 and SRD packs don't carry the sentence, so 55 of 77 2024 feats would get nothing |
 
 ## Open
 
@@ -595,6 +615,8 @@ its words.
   `--overlay` and `--resources` (`all` warns when it cannot find them; README-converter says so).
   Only `srd-corrections.json` is found beside it. `fbdata.py convert` and `build` pass all three
   ([Data kit](data-kit.md)).
+- `_title_feat_name()` doesn't capitalise after a hyphen ("Fey-touched"). It is dormant: no
+  species in any pack uses the named-feat branch.
 - The module docstring's USAGE block predates `supplement` and the unprefixed filenames.
 - Rune Knight runes get no tracker: they are per-rune uses, not a pool. See
   [Known issues](../roadmap/known-issues.md).
@@ -629,3 +651,4 @@ its words.
 - 2026-10-09 — Bundling moves to `bundle()` in `tools/data-kit/fbdata.py` (Python), replacing the Node bundler, byte for byte. → ledger L5342, #85
 - 2026-10-09 — The 2024, Xanathar's and Tasha's packs move to the private repo: `convert.py` ships in the data kit, the 2024 gate diffs `_private-data/data/5e2024`, the pack checks split between the public suites and the private one, and `CLASS_BLURB` is Fieldbook's own wording. → ledger L5426, #85
 - 2026-10-13 — The private packs' gate covers Xanathar's and Tasha's too, through `scripts/sync-private.py`, which a change that moves them uses to regenerate them. → ledger L5724, #90
+- 2026-10-27 — Feats keep their structured `ability` increase (`feat_ability()`), and a species' `feats` become a fixed `feat` or a feat choice (`race_feats()`); SRD 5.2 moved `feats.json` (8 feats) and `races.json` (Human), and the three private packs moved the same way. Each needs a data release. → ledger L7569, #118

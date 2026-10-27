@@ -22,7 +22,12 @@ the dot handlers in `90-boot.js`; `syncStatLock()` in `87-combat.js`; markup in
 `data-recompute`, so every keystroke writes the model and runs `recompute()`. A typed score is the
 *base*: ability increases from an ancestry, a background or a level's ASI are effects on features,
 and `abilFinal()` adds every `ability.<k>` effect from enabled features, equipped items, active
-statuses and summoned familiars. The modifier is `modOf()` of that. Typing CON also re-syncs a
+statuses and summoned familiars. A feat's own increase is asked, not applied by hand (#118). When
+the feat is taken at an ASI, or as a species or background feat, the step asks "+1 to:" from the
+feat's `ability` field or its text, and stores the answer as an `ability.<k>` effect on the feat's
+feature. Removing the feat, or whatever granted it, removes the +1
+([Character building](character-building.md)). Nothing caps a score at 20 or at a feat's stated
+`max`. The modifier is `modOf()` of that. Typing CON also re-syncs a
 seeded level-1 Max HP — the input handler grabs the previous score before the write
 ([Vitals & rest](vitals-and-rest.md)).
 
@@ -132,7 +137,11 @@ the only sane order with one column.
 
 - Rules content never grants expertise: a grant carries a level, but nothing supplies 2, and
   expertise features stay prose by decision (see [Known issues](../roadmap/known-issues.md)).
-- Player-choice ability increases on some feats (Sun Touched, Moonlit) are applied by hand.
+- A feat added from the Features & Traits browser gets no "+1 to:" question, so its increase is
+  applied by hand. Taken through the ASI step or a species or background list, the increase is
+  asked, and that includes Humblewood's Sun Touched and Moonlit, read from their text.
+- The ASI's "+1 to two" accepts the same ability twice. 2024 says two different scores
+  ([Known issues](../roadmap/known-issues.md)).
 
 ## History
 
@@ -146,3 +155,4 @@ the only sane order with one column.
 - 2026-10-13 — A modifier, save or skill an effect lowers is red with ▼, even beside a bonus; its breakdown line is red. → ledger L5700, #89
 - 2026-10-16 — In the combat view the By ability header keeps a full-size name, modifier and score. → ledger L5756, #92
 - 2026-10-23 — One layout: the abilities as a strip with their saves, Skills its own condensed card beside Defences; By ability and the Skills display setting retired. → ledger L6633, #103
+- 2026-10-27 — A feat's +1 is asked when the feat is taken at an ASI or from a species or background, and stored on the feat's feature. → ledger L7569, #118

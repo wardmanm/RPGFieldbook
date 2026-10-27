@@ -146,13 +146,18 @@ function grantFeatDef(featName,origin,pending){
   const sid=originSid(origin);
   if(pending&&sid)(fd.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:sid}),sid,label:"Feat: "+fd.name});});
 }
-/* present a set of pending {ch,sid,label} skill-choices (from race traits or feats) and grant to each sid */
+/* present a set of pending {ch,sid,label} choices — skill choices (from race
+   traits or feats), feat choices (a species' or background's, #118) and
+   equipment pickers — and grant each to its sid */
 function runExtraChoices(pending){
   const skills=(pending||[]).filter(x=>x&&x.kind!=="equip"&&x.ch&&x.ch.type==="skill"&&(x.ch.from||[]).length);
+  const feats=(pending||[]).filter(x=>x&&x.kind!=="equip"&&x.ch&&x.ch.type==="feat");
   const equips=(pending||[]).filter(x=>x&&x.kind==="equip"&&(x.options||[]).length);
-  if(!skills.length&&!equips.length)return;
-  let body="",ci=0;
-  skills.forEach(x=>{body+=`<p class="hint" style="color:var(--accent-2);font-size:13px;margin:6px 0 0">✦ ${esc(x.label||"Choose")}</p>`+choiceFieldHTML(x.ch,ci++,null);});
+  if(!skills.length&&!feats.length&&!equips.length)return;
+  let body="",ci=0;const list=[];
+  skills.forEach(x=>{list[ci]=x.ch;body+=`<p class="hint" style="color:var(--accent-2);font-size:13px;margin:6px 0 0">✦ ${esc(x.label||"Choose")}</p>`+choiceFieldHTML(x.ch,ci++,null);});
+  /* the sid rides on the block's data-sid (choiceFieldHTML reads ch._sid) */
+  feats.forEach(x=>{const ch=Object.assign({},x.ch,{_sid:x.sid});list[ci]=ch;body+=choiceFieldHTML(ch,ci++,null);});
   equips.forEach((x,ei)=>{
     body+=`<div class="choice" data-ctype="equip" data-eqi="${esc(ei)}" style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px"><label class="f">${esc(x.label||"Starting equipment")}</label>`+
       x.options.map((o,oi)=>`<label class="opt" style="align-items:flex-start"><input type="radio" name="eq-${esc(ei)}" data-eq-opt="${esc(oi)}" ${oi===0?"checked":""}><span>${esc(equipOptLabel(o))}</span></label>`).join("")+`</div>`;
@@ -164,17 +169,21 @@ function runExtraChoices(pending){
      only place the target exists here; choiceBlocks() reads it from the DOM,
      which is exactly why it was put there. */
   armChoiceDismissGuard();
+  wireAsiFeats(list);
   const b=document.getElementById("xchDone");
-  if(b)b.addEventListener("click",()=>{
-    const warn=choiceShortfall(choiceBlocks());
-    if(warn&&!confirm(warn))return;
-    gatherChoices().forEach(s=>{if(s.type==="skill")s.keys.forEach(k=>grantProf(s.sid,"skill",k,1));});
+  /* The warnings first (choiceDoneHandler, 58-choices.js), with the window
+     open; the picks are read after them */
+  if(b)b.addEventListener("click",choiceDoneHandler(b,()=>{
+    const next=[];
+    commitExtraChoices(gatherChoices(),next);
     document.querySelectorAll('[data-ctype="equip"]').forEach(div=>{
       const ei=num(div.dataset.eqi),sel=div.querySelector('[data-eq-opt]:checked'),x=equips[ei];
       if(x&&sel)applyEquipOption(x.options[num(sel.dataset.eqOpt)],x.sid);
     });
     closeModal();renderInventory();renderAttacks();renderFeatures();renderAllRT();recompute();scheduleSave();
-  });
+    /* a picked feat's own skill choices: the next window, one at a time (#63) */
+    if(next.length)runExtraChoices(next);
+  }));
 }
 
 /* Every class, species and background change ends here. The Class and

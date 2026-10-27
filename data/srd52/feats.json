@@ -24,31 +24,122 @@
     },
     {
       "name": "Boon of Combat Prowess",
-      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nPeerless Aim: When you miss with an attack roll, you can hit instead. Once you use this benefit, you can't use it again until the start of your next turn."
+      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nPeerless Aim: When you miss with an attack roll, you can hit instead. Once you use this benefit, you can't use it again until the start of your next turn.",
+      "ability": [
+        {
+          "choose": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "amount": 1,
+          "max": 30
+        }
+      ]
     },
     {
       "name": "Boon of Dimensional Travel",
-      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nBlink Steps: Immediately after you take the Attack action or the Magic action, you can teleport up to 30 feet to an unoccupied space you can see."
+      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nBlink Steps: Immediately after you take the Attack action or the Magic action, you can teleport up to 30 feet to an unoccupied space you can see.",
+      "ability": [
+        {
+          "choose": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "amount": 1,
+          "max": 30
+        }
+      ]
     },
     {
       "name": "Boon of Fate",
-      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nImprove Fate: When you or another creature within 60 feet of you succeeds on or fails a D20 Test, you can roll 2d4 and apply the total rolled as a bonus or penalty to the d20 roll. Once you use this benefit, you can't use it again until you roll Initiative or finish a Short or Long Rest."
+      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nImprove Fate: When you or another creature within 60 feet of you succeeds on or fails a D20 Test, you can roll 2d4 and apply the total rolled as a bonus or penalty to the d20 roll. Once you use this benefit, you can't use it again until you roll Initiative or finish a Short or Long Rest.",
+      "ability": [
+        {
+          "choose": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "amount": 1,
+          "max": 30
+        }
+      ]
     },
     {
       "name": "Boon of Irresistible Offense",
-      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nOvercome Defenses: The Bludgeoning, Piercing, and Slashing damage you deal always ignores Resistance.\nOverwhelming Strike: When you roll a 20 on the d20 for an attack roll, you can deal extra damage to the target equal to the ability score increased by this feat. The extra damage's type is the same as the attack's type."
+      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nOvercome Defenses: The Bludgeoning, Piercing, and Slashing damage you deal always ignores Resistance.\nOverwhelming Strike: When you roll a 20 on the d20 for an attack roll, you can deal extra damage to the target equal to the ability score increased by this feat. The extra damage's type is the same as the attack's type.",
+      "ability": [
+        {
+          "choose": [
+            "str",
+            "dex"
+          ],
+          "amount": 1,
+          "max": 30
+        }
+      ]
     },
     {
       "name": "Boon of Spell Recall",
-      "description": "Epic Boon · Prerequisite: Level 19+ and Spellcasting feature\nYou gain the following benefits.\nFree Casting: Whenever you cast a spell with a level 1-4 spell slot, roll 1d4. If the number you roll is the same as the slot's level, the slot isn't expended."
+      "description": "Epic Boon · Prerequisite: Level 19+ and Spellcasting feature\nYou gain the following benefits.\nFree Casting: Whenever you cast a spell with a level 1-4 spell slot, roll 1d4. If the number you roll is the same as the slot's level, the slot isn't expended.",
+      "ability": [
+        {
+          "choose": [
+            "int",
+            "wis",
+            "cha"
+          ],
+          "amount": 1,
+          "max": 30
+        }
+      ]
     },
     {
       "name": "Boon of the Night Spirit",
-      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nMerge with Shadows: While within Dim Light or Darkness, you can give yourself the Invisible condition as a Bonus Action. The condition ends on you immediately after you take an action, a Bonus Action, or a Reaction.\nShadowy Form: While within Dim Light or Darkness, you have Resistance to all damage except Psychic and Radiant."
+      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nMerge with Shadows: While within Dim Light or Darkness, you can give yourself the Invisible condition as a Bonus Action. The condition ends on you immediately after you take an action, a Bonus Action, or a Reaction.\nShadowy Form: While within Dim Light or Darkness, you have Resistance to all damage except Psychic and Radiant.",
+      "ability": [
+        {
+          "choose": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "amount": 1,
+          "max": 30
+        }
+      ]
     },
     {
       "name": "Boon of Truesight",
-      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nTruesight: You have Truesight with a range of 60 feet."
+      "description": "Epic Boon · Prerequisite: Level 19+\nYou gain the following benefits.\nTruesight: You have Truesight with a range of 60 feet.",
+      "ability": [
+        {
+          "choose": [
+            "str",
+            "dex",
+            "con",
+            "int",
+            "wis",
+            "cha"
+          ],
+          "amount": 1,
+          "max": 30
+        }
+      ]
     },
     {
       "name": "Defense",
@@ -62,7 +153,16 @@
     },
     {
       "name": "Grappler",
-      "description": "General feat · Prerequisite: Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\nYou gain the following benefits.\nPunch and Grab: When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn.\nAttack Advantage: You have Advantage on attack rolls against a creature Grappled by you.\nFast Wrestler: You don't have to spend extra movement to move a creature Grappled by you if the creature is your size or smaller."
+      "description": "General feat · Prerequisite: Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\nYou gain the following benefits.\nPunch and Grab: When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn.\nAttack Advantage: You have Advantage on attack rolls against a creature Grappled by you.\nFast Wrestler: You don't have to spend extra movement to move a creature Grappled by you if the creature is your size or smaller.",
+      "ability": [
+        {
+          "choose": [
+            "str",
+            "dex"
+          ],
+          "amount": 1
+        }
+      ]
     },
     {
       "name": "Great Weapon Fighting",

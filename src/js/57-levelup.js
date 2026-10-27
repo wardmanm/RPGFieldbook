@@ -23,7 +23,9 @@ function levelSnapshot(){
 }
 const LU_ORD=["","1st","2nd","3rd","4th","5th","6th","7th","8th","9th"];
 const LU_CHOICE={asi:["Ability Score Improvement","+2 to one ability, or +1 to two"],feat:["Choose a feat",""],
-  subclass:["Choose your subclass",""],skill:["Choose skills",""],option:["Choose an option",""]};
+  subclass:["Choose your subclass",""],skill:["Choose skills",""],option:["Choose an option",""],
+  /* #118: level 19's asi choice; with Feats allowed off it is a plain ASI (§5) */
+  boon:["Epic Boon","a feat, or an Ability Score Improvement"]};
 /* A feature's first sentence as plain text: the card is a summary, and the
    full text stays on the Features card. Escaped where it is rendered. */
 function luSummary(s){
@@ -40,14 +42,19 @@ function luSummary(s){
 const LU_NO_STACK=["extra attack","unarmored defense"];
 function levelGains(before,after,choices,notes){
   const rows=[],had=new Set(before.feats.map(f=>f.id));
-  after.feats.filter(f=>!had.has(f.id)).forEach(f=>{
+  /* #118: level 19's Epic Boon shows once — as the choice row, which is what
+     the player acts on. Its feature row is left off the card (the feature is
+     still on the Features card); with Feats allowed off the choice reads as a
+     plain ASI, so the feature row stays. */
+  const boonRow=character.featsAllowed!==false&&(choices||[]).some(ch=>ch&&ch.type==="asi"&&ch.boon);
+  after.feats.filter(f=>!had.has(f.id)&&!(boonRow&&/^epic boon$/i.test(String(f.name||"").trim()))).forEach(f=>{
     const nm=f.name.toLowerCase();
     const twin=LU_NO_STACK.includes(nm)&&before.feats.find(b=>b.cls&&f.cls&&b.cls!==f.cls&&b.name.toLowerCase()===nm);
     rows.push({kind:"feature",text:f.name,detail:luSummary(f.desc),tag:f.sub||"feature",
       warn:twin?`You already have this from ${twin.cls}; they don't stack.`:""});
   });
   (choices||[]).filter(ch=>ch&&ch.type!=="hp").forEach(ch=>{
-    const d=LU_CHOICE[ch.type]||["A choice",""];
+    const d=(ch.type==="asi"&&ch.boon&&character.featsAllowed!==false)?LU_CHOICE.boon:(LU_CHOICE[ch.type]||["A choice",""]);
     rows.push({kind:"choice",text:String(ch.label||d[0]),detail:d[1],tag:"choose next",warn:""});
   });
   Object.keys(after.res).forEach(k=>{
@@ -122,7 +129,7 @@ function levelUpCardHTML(lu){
   return `<div class="lu-card"><div class="lu-bn">LEVEL ${esc(String(lu.charLevel))}</div>`+
     `<p class="lu-k">You reached</p><p class="lu-cls">${esc(lu.cls)} ${esc(String(lu.from))} → ${esc(String(lu.to))} · character level ${esc(String(lu.charLevel))}</p>`+
     `<ul class="lu-list">${rows}</ul>`+levelUpHPHTML(lu.hp)+
-    `<div class="m-actions"><button type="button" class="tbtn primary" id="luGo" disabled>${(lu.choices||[]).length?"Continue to your choice ▸":"Done"}</button></div></div>`;
+    `<div class="m-actions"><button type="button" class="tbtn" id="luUndo">Undo level-up</button><button type="button" class="tbtn primary" id="luGo" disabled>${(lu.choices||[]).length?"Continue to your choice ▸":"Done"}</button></div></div>`;
 }
 /* true, and the level-up dropped, when the open character is not the one it
    started on */
@@ -132,6 +139,7 @@ function luStale(){if(_lu&&_lu.id!==activeId){_lu=null;return true;}return false
    opens nothing) and an open card closes, so neither stays over another sheet. */
 function luAbandon(){
   const had=!!_lu;_lu=null;
+  _undo=null;_luActive=false;   /* #118: Undo belongs to the sheet it was taken on */
   luSkip();
   if(had&&document.querySelector&&document.querySelector("#mBody .lu-card"))closeModal();
 }
@@ -148,6 +156,7 @@ function showLevelUpCard(){
   on("luTyped","keydown",e=>{if(e.key==="Enter"){e.preventDefault();apply();}});
   on("luAvg","click",()=>luSetHP(null));
   on("luGo","click",luFinish);
+  on("luUndo","click",luUndoCard);
 }
 function luSay(text,bad){const el=document.getElementById("luRes");if(!el)return;el.textContent=text;if(el.classList)el.classList.toggle("bad",!!bad);}
 /* raw===null takes the average (half the die + 1). Otherwise raw is checked
@@ -197,6 +206,101 @@ function luDismissed(){
   const lu=_lu;_lu=null;if(!lu||lu.id!==activeId)return;
   if(lu.set){commitHPChoice(lu.hp,lu.raw);scheduleSave();}
   runChoices(lu.cls,lu.choices,[],lu.pending);
+}
+/* ---- #118 undo level-up, and the level log ----
+   doLevelUp() takes the copy before it changes anything: the character as a
+   JSON string, never saved, so a reload or a switch of character ends it.
+   A level-up spans the card and the choice windows behind it (runChoices,
+   selectSubclass, runExtraChoices), each able to open the next. closeModal()
+   and scheduleSave() both call luMaybeSettle(); it waits a turn of the event
+   loop, so a window that closes only to open the next is still seen as open,
+   and settles once, when the last has closed by Done or by Escape: it writes
+   the levelLog record, then takes the signature, then saves. The save only
+   persists and leaves `character` alone, so the signature still holds after
+   it. Undo is offered while the sheet is exactly as the level-up left it
+   (sig), so it can never throw away a later edit. The card's own Undo comes
+   before the level-up has settled and passes force, which skips the signature
+   but still needs the copy. Spec §5a, §5b. */
+let _undo=null,_luActive=false;
+function undoLevelUpAvailable(){return !!_undo&&_undo.sig!=null&&JSON.stringify(character)===_undo.sig;}
+function undoLevelUp(opts){
+  if(!_undo)return false;
+  if(!(opts&&opts.force)&&!undoLevelUpAvailable()){toast("Undo is no longer available: the sheet has changed since the level-up.");return false;}
+  let c;try{c=JSON.parse(_undo.copy);}catch(e){_undo=null;_luActive=false;return false;}
+  _undo=null;_luActive=false;
+  /* A warning open over a window (askConfirm) is answered no first: its
+     question is about the sheet being replaced (#118 fix round 1). */
+  askCancel();
+  /* Any window still open is about the sheet being replaced: the toast stays
+     reachable over a modal, and a Level down or edit dialog left open would
+     act on the old sheet. Closed after the reset above, so the closeModal()
+     hook into luMaybeSettle finds nothing to settle and records nothing. */
+  const m=document.getElementById("modal");
+  if(m&&m.classList&&m.classList.contains("open")){_lu=null;closeModal();}
+  character=c;
+  renderAll();recompute();scheduleSave();toast("Level-up undone");return true;
+}
+/* The card's Undo: the level-up is dropped first, so closing the card neither
+   commits its hit points nor opens its choices. */
+function luUndoCard(){
+  if(luStale()){closeModal();return false;}
+  _lu=null;closeModal();
+  return undoLevelUp({force:true});
+}
+/* The skill and save proficiencies a feature's rules entry grants outright, as
+   addFeatureFromDef() grants them. Only an embedded class or subclass trait:
+   a feat's are not granted that way, and a choice's picks name no feature. */
+function lvFeatureGrantKeys(f){
+  const out=new Set();
+  if(!f||(f.src&&f.src.cat))return out;
+  const r=updResolve(f,"feature"),d=r&&r.def;if(!d)return out;
+  (d.skills||[]).forEach(nm=>{const k=skillKey(nm);if(k)out.add("skill|"+k);});
+  (d.saves||[]).forEach(ab=>out.add("save|"+String(ab).toLowerCase()));
+  return out;
+}
+const lvGrantKey=g=>g?g.sid+"|"+g.type+"|"+g.key:"";   /* null-safe: a record can come from an imported file */
+/* What one level-up gave, by comparing the character before it (b) with after
+   it (a). A grant new at this level is tied to a feature only when exactly one
+   of the level's new features grants that proficiency outright; level down
+   removes those with the feature, and lists the rest to adjust by hand. */
+function levelLogRecord(b,a,cls,L){
+  const ids=new Set((b.features||[]).map(f=>f&&f.id));
+  const feats=(a.features||[]).filter(f=>f&&!ids.has(f.id)&&f.origin&&f.origin.kind==="class"&&f.origin.class===cls&&num(f.origin.level)===L);
+  const abilities={};
+  feats.forEach(f=>(f.effects||[]).forEach(e=>{const m=/^ability\.(\w+)$/.exec(String((e&&e.target)||""));if(m)abilities[m[1]]=(abilities[m[1]]||0)+num(e.value);}));
+  const had=new Set((b.grants||[]).map(lvGrantKey));
+  const grants=(a.grants||[]).filter(g=>g&&!had.has(lvGrantKey(g))).map(g=>({sid:String(g.sid||""),type:String(g.type||""),key:String(g.key||"")}));
+  const keys=feats.map(lvFeatureGrantKeys),own=feats.map(()=>[]);
+  grants.forEach(g=>{
+    const who=feats.map((f,i)=>i).filter(i=>originSid(feats[i].origin)===g.sid&&keys[i].has(g.type+"|"+g.key));
+    if(who.length===1)own[who[0]].push(g);
+  });
+  const ac=(a.classes||[]).find(c=>c&&c.name===cls)||{},bc=(b.classes||[]).find(c=>c&&c.name===cls)||{};
+  const slots=c=>{const o={};Object.keys((c&&c.slots)||{}).forEach(k=>{const v=c.slots[k];o[k]=num(v&&v.total);});return o;};
+  return {at:Date.now(),class:cls,level:L,hp:Math.max(0,num(a.hp&&a.hp.max)-num(b.hp&&b.hp.max)),
+    features:feats.map((f,i)=>({id:f.id,name:String(f.name||""),grants:own[i]})),abilities,
+    subclass:(ac.subclass&&ac.subclass!==bc.subclass)?String(ac.subclass):"",
+    grants,slots:{before:slots(b),after:slots(a)}};
+}
+function luMaybeSettle(){
+  if(!_luActive||!_undo)return;
+  setTimeout(luSettle,0);
+}
+function luSettle(){
+  if(!_luActive||!_undo||_lu||luBusy())return;
+  const m=document.getElementById("modal");
+  if(m&&m.classList&&m.classList.contains("open"))return;
+  _luActive=false;
+  let before;try{before=JSON.parse(_undo.copy);}catch(e){_undo=null;return;}
+  if(!Array.isArray(character.levelLog))character.levelLog=[];
+  const rec=levelLogRecord(before,character,_undo.cls,_undo.level);
+  character.levelLog.push(rec);
+  if(character.levelLog.length>200)character.levelLog=character.levelLog.slice(-200);
+  _undo.sig=JSON.stringify(character);   /* after the record, so writing it never spends Undo */
+  scheduleSave();   /* persists only; `character` is unchanged, so the signature above still holds */
+  const was=num(before.hp&&before.hp.max);
+  /* the HP step's own toast is replaced by this one, so it carries the HP */
+  toast(`${_undo.cls} is now level ${_undo.level}`+(rec.hp?` · Max HP ${was} → ${was+rec.hp}`:""),{label:"Undo",run:()=>undoLevelUp()});
 }
 /* ---- the scene (panel F of the mockup) ----
    A layer over the page and under the modal (z-index 75 < 80): a rune circle

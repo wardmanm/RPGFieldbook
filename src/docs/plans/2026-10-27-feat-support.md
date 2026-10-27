@@ -290,16 +290,16 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 {
   const keep = X.character;
   const f = (name, desc, extra) => Object.assign({name, description: desc}, extra || {});
-  const ath = f('Athlete', 'General feat · Prerequisite: Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\nYou gain the following benefits.', {ability: [{choose: ['str', 'dex'], amount: 1}]});
+  const ath = f('Athlete', 'General feat · Prerequisite: Level 5+ and Strength 13+ or Level 5+ and Dexterity 13+\nYou gain the following benefits.', {ability: [{choose: ['str', 'dex'], amount: 1}]});
   const boon = f('Boon of Fate', 'Epic Boon · Prerequisite: Level 19+\nx', {ability: [{choose: ['str','dex','con','int','wis','cha'], amount: 1, max: 30}]});
   const sty = f('Archery', 'Fighting Style feat · Prerequisite: Fighting Style feature\nx');
   const org = f('Alert', 'Origin feat\nx');
   const odd = f('Weird', 'General feat · Prerequisite: Membership in the Harpers\nx');
   const spl = f('War Caster', 'General feat · Prerequisite: Level 4+ and Spellcasting or Pact Magic feature\nx');
-  const hb = f('Moonlit', 'Increase your Dexterity, Wisdom, or Charisma score by 1, to a maximum of 20.\nYou gain…');
+  const hb = f('Moonlit', 'Increase your Dexterity, Wisdom, or Charisma score by 1, up to 20.\nYou gain…');
   ck('#118 featCategory', X.featCategory(ath) === 'general' && X.featCategory(boon) === 'boon' && X.featCategory(sty) === 'style' && X.featCategory(org) === 'origin' && X.featCategory(hb) === '');
   const pr = X.featPrereq(ath);
-  ck('#118 featPrereq reads or-groups of and-parts', pr.length === 2 && pr[0].some(p => p.kind === 'level' && p.n === 4) && pr[0].some(p => p.kind === 'ability' && p.key === 'str' && p.n === 13) && pr[1].some(p => p.key === 'dex'), pr);
+  ck('#118 featPrereq reads or-groups of and-parts', pr.length === 2 && pr[0].some(p => p.kind === 'level' && p.n === 5) && pr[0].some(p => p.kind === 'ability' && p.key === 'str' && p.n === 13) && pr[1].some(p => p.key === 'dex'), pr);
   ck('#118 featPrereq keeps what it can\'t read as unknown', X.featPrereq(odd)[0][0].kind === 'unknown');
   ck('#118 featPrereq: spellcasting or pact magic', X.featPrereq(spl)[0].some(p => p.kind === 'spellcasting' && p.pact === true));
   X.character = X.blankChar(); X.character.classes = [{name: 'Fighter', level: 8}]; X.character.level = 8;
@@ -458,7 +458,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   X.character.abilities.str = 15;
   const evil = '<img src=x onerror=alert(1)>';
   X.rules = Object.assign({}, X.rules, {feats: [
-    {name: 'Athlete', description: 'General feat · Prerequisite: Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\nYou gain the following benefits.\nClimb Speed: …', ability: [{choose: ['str', 'dex'], amount: 1}]},
+    {name: 'Athlete', description: 'General feat · Prerequisite: Level 5+ and Strength 13+ or Level 5+ and Dexterity 13+\nYou gain the following benefits.\nClimb Speed: …', ability: [{choose: ['str', 'dex'], amount: 1}]},
     {name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nx', ability: [{str: 1}]},
     {name: 'Alert', description: 'Origin feat\nx'},
     {name: evil, description: 'General feat\n' + evil}]});

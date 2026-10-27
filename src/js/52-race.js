@@ -106,6 +106,16 @@ function applyRace(sel, subrace, opts){
     (obj.saves||[]).forEach(ab=>{if(character.saves[String(ab).toLowerCase()]!==undefined)grantProf("race:"+name,"save",String(ab).toLowerCase(),1);});
     (obj.traits||[]).forEach(t=>{addFeatureFromDef(t,{kind:"race",name});(t.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:(t.name||label)});});});
     (obj.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:label});});
+    /* #118: a species grants feats the way a background does — a fixed `feat`
+       now, or a feat choice (Human's Versatile) queued for runExtraChoices(),
+       where a `category` choice is the ASI step's list without its ASI row.
+       Both carry the race origin, so removeRace() takes them back out. */
+    /* An array is "choose one", as a background's is (bgFeatList): a choice
+       from that menu, through the same list; a one-item menu is just granted. */
+    const fl=Array.isArray(obj.feat)?obj.feat.filter(Boolean):(obj.feat?[obj.feat]:[]);
+    if(fl.length===1)grantFeatDef(fl[0],{kind:"race",name},pending);
+    else if(fl.length>1)pending.push({ch:{type:"feat",from:fl.slice(),label:"A feat of your choice",_sid:"race:"+name},sid:"race:"+name,label});
+    (obj.choices||[]).forEach(ch=>{if(ch&&ch.type==="feat")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:ch.label||label});});
     applyEquipGrants(obj.equipmentGrants,"race:"+name,pending);
     if(obj.speed&&(character.speed===""||character.speed==null))character.speed=obj.speed;
     /* Seeded like speed — only when empty, so a subrace never overrides the base
