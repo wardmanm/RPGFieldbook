@@ -1,12 +1,15 @@
 # Status: Fieldbook
-Updated: 2026-10-27 · Branch: main
+Updated: 2026-10-28 · Branch: main
 
 ## Current focus
-1.9.0 wave 3: #118 feat support merged 2026-10-27. Next: #125 (move Homebrew to the private repo, in
-1.9.0 at Mike's request), then #105 end-of-combat dialog, the capstone. The thirteen `1.9.1`-labelled
-issues wait for 1.9.1; #110 and #126 have no milestone. No branch open.
+1.9.0 wave 3: #118 (2026-10-27) and #125 (2026-10-28) merged. Next: #105 end-of-combat dialog, the
+capstone. The thirteen `1.9.1`-labelled issues wait for 1.9.1; #110 and #126 have no milestone. No branch open.
 
 ## Recent changes
+- 2026-10-28: Merged #125: the Homebrew pack (The Predator) moved to the private repo with its CC BY-SA
+  credit; the public data download now holds only SRD 5.2. Installed copies keep working (release note
+  only, Mike's decision). Claude's ruling: the private leak scan still counts Homebrew as free text where
+  an older public checkout or tag carries it, so the next private data release passes on v1.8.1.
 - 2026-10-27: Merged #118, feat support:
   - At an ASI level, one list: Ability Score Improvement pinned first, then qualified feats, search and
     Show all; a feat's +1 is asked in place. Unmet prerequisites warn, never block. Per-character
@@ -40,9 +43,9 @@ issues wait for 1.9.1; #110 and #126 have no milestone. No branch open.
   2026-10-19). Options: keep / restore it.
 
 ## Loose ends
-- 31 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
-- #118 needs data releases (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs
-  gained feat ability increases and species feats.
+- 32 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
+- Data releases needed (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs
+  (#118 feat ability increases and species feats), and Homebrew in the private repo (#125).
 - #118 deferred minors, in the spec's As built: a feat's fixed skills aren't granted; a fixed species or
   background feat's +1 isn't applied (dormant in shipped data); "+1 to two" accepts one score twice.
 - Mike's device pass for #118, #102, #47, #91, #52, #101, #103, #97 and #99: touch, print, Safari and Firefox, and his own
