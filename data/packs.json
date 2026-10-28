@@ -5,18 +5,6 @@
   "homepage": "https://github.com/wardmanm/RPGFieldbook",
   "packs": [
     {
-      "system": "Homebrew",
-      "dir": "homebrew",
-      "file": "homebrew_full.json",
-      "title": "Homebrew",
-      "version": "1.8.0",
-      "digest": "sha256:4bbe06154fa412eabd7d6da5240471ca3633188faea66461c14caac7e71c65a9",
-      "license": "CC-BY-SA-3.0",
-      "attribution": "The Predator, a Warlock subclass by D&D Wiki contributors (https://www.dandwiki.com/wiki/The_Predator_(5e_Subclass)), used under CC BY-SA 3.0. Changed: converted to Fieldbook's rules format.",
-      "summary": "Hand-picked extra options, starting with The Predator, a warlock subclass.",
-      "description": "Options from outside the official books, picked and converted by hand.\n\nIt starts with The Predator, a Warlock subclass from D&D Wiki, used under CC BY-SA 3.0. It needs SRD 5.2 for the Warlock class and the spells it refers to."
-    },
-    {
       "system": "SRD 5.2",
       "dir": "srd52",
       "file": "srd52_full.json",

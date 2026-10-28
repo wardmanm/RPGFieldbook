@@ -440,14 +440,16 @@ section('pack credits', () => {
   ck('a known licence links its deed', html.includes('href="https://creativecommons.org/licenses/by/4.0/"'), html);
   ck('an unknown licence is plain text', html.includes('Licence: Custom-1.') && !/href="[^"]*Custom/.test(html), html);
 
-  /* the shipped Homebrew bundle carries its credit through an import */
-  const hb = path.join(ROOT, 'dist', 'homebrew_full.json');
-  if (fs.existsSync(hb)) {
+  /* the shipped SRD 5.2 bundle carries its credit through an import (the same
+     check on the Homebrew bundle moved to the private repo's suite with the
+     pack, #125) */
+  const srdB = path.join(ROOT, 'dist', 'srd52_full.json');
+  if (fs.existsSync(srdB)) {
     X.resetRules();
-    X.importRulesPayloads([{name: 'homebrew_full.json', bytes: new Uint8Array(fs.readFileSync(hb))}]);
-    ck('the Homebrew bundle\'s credit reaches Settings',
-       /CC-BY-SA-3\.0/.test(X.rulesCreditsHTML()) && /D&amp;D Wiki/.test(X.rulesCreditsHTML()), X.rulesCreditsHTML());
-  } else console.log('note: dist/homebrew_full.json missing (run.sh bundles first), its credit check skipped');
+    X.importRulesPayloads([{name: 'srd52_full.json', bytes: new Uint8Array(fs.readFileSync(srdB))}]);
+    ck('the SRD 5.2 bundle\'s credit reaches Settings',
+       /CC-BY-4\.0/.test(X.rulesCreditsHTML()) && /System Reference Document 5\.2\.1/.test(X.rulesCreditsHTML()), X.rulesCreditsHTML());
+  } else console.log('note: dist/srd52_full.json missing (run.sh bundles first), its credit check skipped');
   X.resetRules();
 });
 

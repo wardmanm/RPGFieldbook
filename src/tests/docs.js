@@ -73,8 +73,8 @@ fs.readdirSync(path.join(ROOT, 'src/tests'))
 
 // ---------- no public test reads a private pack (#85, Review Focus 2)
 // The 2024, Xanathar's, Tasha's and Humblewood packs live in the private repo,
-// and CI has none of them. This catches every form the suites used to read one
-// by (<pack> is one of the four folder names below):
+// and so does Homebrew since #125; CI has none of them. This catches every form
+// the suites used to read one by (<pack> is one of the five folder names below):
 //   a path                      'data/<pack>/x.json', path.join(ROOT, 'data', '<pack>', f)
 //   a bundle name               dist/<pack>_full.json, '<pack>_full.json' anywhere
 //   a helper given the folder   pack('<pack>', f), shippedItems('<pack>', f), read('<pack>', f, n)
@@ -83,18 +83,22 @@ fs.readdirSync(path.join(ROOT, 'src/tests'))
 //   a key, or a path under data '<pack>/items.json Name', {'<pack>': {…}}, <pack>: {…}
 // Every .js, .py and .sh file under src/tests, at any depth (fixtures/ holds
 // JSON data, not reads). A label in a synthetic fixture is renamed rather than
-// excused, so nothing is exempt.
+// excused, so nothing is exempt — except two forms homebrew is spared: it is
+// also the everyday word for a pack of one's own, so a bare 'homebrew_full.json'
+// or a homebrew: key labels an invented pack (the credit and #102 manifest
+// fixtures), never a read. Its folder, in a path (its bundle under dist
+// included), a helper call or a list, is caught like the other four (#125).
 {
-  const NAMES = '5e2024|xanathars|tashas|humblewood', LONE = '(?:5e2024|xanathars|tashas)';
-  const PK = '(?:' + NAMES + ')', Q = '[\'"]';
+  const NAMES = '5e2024|xanathars|tashas|humblewood', LONE = '(?:5e2024|xanathars|tashas|homebrew)';
+  const PK = '(?:' + NAMES + ')', PKD = '(?:' + NAMES + '|homebrew)', Q = '[\'"]';
   const PRIVATE_PACK = new RegExp([
-    '(?:data|dist)[\\/\'", ]+' + PK + '(?:_full\\.json|[\\/\'"])',
+    '(?:data|dist)[\\/\'", ]+' + PKD + '(?:_full\\.json|[\\/\'"])',
     PK + '_full\\.json',
-    '\\w\\(\\s*' + Q + PK + Q + '\\s*[,)]',
-    '\\[\\s*' + Q + PK + Q + '\\s*,',
+    '\\w\\(\\s*' + Q + PKD + Q + '\\s*[,)]',
+    '\\[\\s*' + Q + PKD + Q + '\\s*,',
     '\\[\\s*' + Q + LONE + Q + '\\s*\\]',
-    Q + '(?:' + NAMES + '|homebrew|srd52)' + Q + '\\s*,\\s*' + Q + PK + Q,
-    Q + PK + '/',
+    Q + '(?:' + NAMES + '|homebrew|srd52)' + Q + '\\s*,\\s*' + Q + PKD + Q,
+    Q + PKD + '/',
     Q + '?\\b' + PK + Q + '?\\s*:\\s*[{\\[]',
   ].join('|'));
   const testFiles = d => fs.readdirSync(path.join(ROOT, 'src/tests', d), { withFileTypes: true }).flatMap(e =>
@@ -219,10 +223,11 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   let dv = null;
   try { dv = JSON.parse(dvm[1]); } catch (e) { /* reported below */ }
   ck('DATA_VERSIONS is present and is flat JSON (release.js rewrites it)', !!dv);
-  /* #85: these four packs left this registry for the private repo's. The
-     snapshot still names them until the next release retakes it from this
-     registry, so each may be absent here, and only these four. */
-  const LEFT_FOR_PRIVATE = ['XPHB', 'Humblewood', 'XGE', 'TCE'];
+  /* #85: these four packs left this registry for the private repo's, and
+     Homebrew followed them (#125). The snapshot still names a departed pack until
+     the next release retakes it from this registry, so each may be absent here,
+     and only these five. */
+  const LEFT_FOR_PRIVATE = ['XPHB', 'Humblewood', 'XGE', 'TCE', 'Homebrew'];
   if (dv) Object.entries(dv).forEach(([sys, v]) => {
     const p = packsReg.packs.find(x => x.system === sys);
     if (!p && LEFT_FOR_PRIVATE.includes(sys)) return;
@@ -277,7 +282,7 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   // This is the check that fires when a future pack adds a race and nobody
   // notices it renders bare. A data-only change CAN go red here — that is the
   // point, and the fix is one line in src/icons/icons.json.
-  const DIRS = ['homebrew', 'srd52'];
+  const DIRS = ['srd52'];
   const FILES = { classes: 'classes.json', races: 'races.json', backgrounds: 'backgrounds.json' };
   DATA_KINDS.forEach(kind => {
     const have = new Set(Object.keys(iconMap[kind] || {}).map(n => n.trim().toLowerCase()));
