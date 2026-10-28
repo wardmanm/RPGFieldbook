@@ -15285,8 +15285,8 @@ function importRulesFiles(files){
     /* The toast says what happened and what went wrong, never the counts: they
        are on the status lines and the Rules tab itself, and on a phone they made
        a 13-line toast that hid after 1.9 s (#87). A file that failed is an error
-       that stays; a notice (missing content, skipped entries) is not — importing
-       the public zip always notes homebrew's Xanathar's spells — so it gets 6 s. */
+       that stays; a notice (missing content, skipped entries) is not — an add-on
+       pack imported without the pack it leans on is a normal import — so it gets 6 s. */
     const brief=(importSummary(res)+m+sk).trim()||"Rules imported.";
     rulesImportStatus(msg,cls,{toast:brief,err:res.failed.length>0,long:!!(m||sk)});
     return saving.then(err=>{
