@@ -7854,3 +7854,60 @@ Tests (sheet): a pointer click on the ok button at 399 ms is ignored, and on the
 at 400 ms ok accepts; keyboard activation works at once on both buttons. The double-click test also
 clicks the ok button. QA: `118-warn-fix2-dblclick-390.png`, a real double-click on Done at 390 px,
 with the warning still open.
+
+## The Homebrew pack moves to the private repo (#125, 2026-10-28)
+
+Mike, 2026-10-27: Homebrew (The Predator, CC BY-SA 3.0) moves to RPGFieldbookPrivate, because it
+leans on private content (two Xanathar's spells). Players who installed it get release notes
+only: their copy keeps working, shown as a plain installed pack with no updates.
+
+1. **The private repo** gains `data/homebrew/` (the three files, byte-identical but for one line)
+   and a `Homebrew` entry at the end of its `data/packs.json`, carried over with its `version`
+   (1.8.0), `digest`, `license`, `attribution`, `summary` and `description`. The Xanathar's
+   `requires` group gains `"file": "xanathars_full.json"` in all three files, now that both packs
+   live together; the SRD 5.2 group is unchanged. That line moves the pack's digest, so the next
+   private data release bumps it. The description now says it needs Xanathar's for two spells
+   (not a digest field). `fbdata.py bundle` stamps the licence and credit from the private entry
+   into `homebrew_full.json`, and `pack` lists them in the private archive's `NOTICE.md`; the
+   private release notes say so instead of "these packs carry no open licence".
+2. **The public repo** removes `data/homebrew/` and its registry entry. `DATA_VERSIONS` is left
+   as it is, as #85 left it for the four packs (L5426, ruling `LEFT_FOR_PRIVATE`): `release.js`
+   retakes it from the registry at the next app release. `docs.js`'s `LEFT_FOR_PRIVATE` gains
+   `Homebrew`. No `releases/data/` exists yet; `release-files` rewrites it from the registry, so
+   the first one will hold no homebrew. The public archive now holds SRD 5.2 alone, and its
+   `NOTICE.md` credits only the SRD.
+3. **Tests moved private.** The homebrew pack checks (files, system, same `requires`, the
+   Predator), its `requires` groups, the SRD 5.2 plus homebrew import, homebrew's D&D group
+   resolving with SRD 5.2 alone (#84 R7), and its bundle's credit reaching Settings move to
+   `tests/private-data.js`. There, `homebrew` joins the folders read from the private repo, so the
+   item and effect checks, the table-shape checks, the bundle round trip and its anchors cover it.
+   New there: the Xanathar's group names its file, both files are bundles a registry ships, and
+   importing the Xanathar's bundle too leaves nothing missing. The registry check now compares
+   licence and credit as well.
+4. **Public tests.** Every `['homebrew','srd52']` loop is `['srd52']`. Kept on invented packs: the
+   tooltip's two forms, "— import <file>" and "— from <pack>" (the real pack was the only cover
+   of the second). The real-bundle credit check now runs on the SRD 5.2 bundle. The staleness
+   test needed two systems with a baseline, so it would have failed at the next release, when
+   `DATA_VERSIONS` keeps only SRD 5.2. It now lends a baseline to an invented system and takes
+   it back after. Checked by running the suites with `DATA_VERSIONS` set to SRD 5.2 only.
+   `docs.js`'s private-pack scan now catches the homebrew folder in a path, a helper call or a
+   list. A bare `homebrew_full.json` or a `homebrew:` key is spared, because invented fixtures use
+   the word as a label.
+5. **The leak scan.** Homebrew leaves the free corpus and does not join the private one: it is no
+   longer public text, and it may be shared. So no text is masked by homebrew any more; #85's
+   "homebrew masking" ruling is moot. The scan still passes: 0 failing, 35 reported, as before.
+6. Docs: CLAUDE.md, README (the zip holds one pack; credits), README-converter, rules-schema (the
+   archive example uses an invented pack), the data-update issue template, the wiki pages below,
+   and the private README. A comment in `89-rules-merge.js` that said the public zip always notes
+   homebrew's spells now gives the general case.
+7. **Push order.** The private repo goes right after public `main`, as CLAUDE.md says. Pushed
+   first, its leak scan would fail on public `main`'s `data/homebrew/` (no longer free text). Left
+   unpushed, its nightly CI would fail reading the deleted public folder.
+
+Pages: [homebrew](../wiki/data/homebrew.md), [private data](../wiki/data/private-data.md),
+[overview](../wiki/overview.md), [rules packs](../wiki/architecture/rules-packs.md),
+[data archive](../wiki/architecture/data-archive.md), [SRD 5.2](../wiki/data/srd.md),
+[settings & updates](../wiki/features/settings-and-updates.md), [testing](../wiki/process/testing.md),
+[theming & icons](../wiki/ui/theming-and-icons.md), [converter](../wiki/data/converter.md),
+[known issues](../wiki/roadmap/known-issues.md), [2.0](../wiki/roadmap/2.0.md),
+[decisions](../wiki/decisions.md), [RELEASING](../RELEASING.md).

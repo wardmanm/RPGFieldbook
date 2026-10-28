@@ -1,18 +1,20 @@
 # Private data
 
 The public repository and its releases carry only rules data that may be shared: **SRD 5.2**
-(CC-BY-4.0) and **homebrew** (CC-BY-SA-3.0). The copyrighted packs, the full D&D 2024 pack (XPHB),
-Xanathar's (XGE), Tasha's (TCE) and Humblewood, carry the books' own words and no open licence, so
-they live in a private repository, `wardmanm/RPGFieldbookPrivate`, and are released only there. Its
-tests run against a public checkout, and its leak scan keeps the books' text out of the public repo.
+(CC-BY-4.0). The copyrighted packs, the full D&D 2024 pack (XPHB), Xanathar's (XGE), Tasha's (TCE)
+and Humblewood, carry the books' own words and no open licence, so they live in a private
+repository, `wardmanm/RPGFieldbookPrivate`, and are released only there. **Homebrew**
+(CC-BY-SA-3.0) lives there too since #125: its text may be shared, but it leans on Xanathar's
+spells, so it ships beside them ([Homebrew](homebrew.md)). The private repo's tests run against a
+public checkout, and its leak scan keeps the books' text out of the public repo.
 Nothing changed for a player's characters or loaded packs; anyone else builds their own packs with
 the [data kit](data-kit.md). This page is how the two repositories work together. The private
 repo's own guide is its `README.md`, and this page agrees with it.
 
 **Code:** `bundle()`, `cmd_build()`, `validate_archive()` in `tools/data-kit/fbdata.py`;
 `dataStatus()` in `88-settings.js`; `scripts/sync-private.py`, `scripts/data-release.js`,
-`scripts/wt.sh`, `dev.sh` (the converter menu), `src/tests/private-data.js` · **Data:** `data/packs.json` (public: SRD 5.2 and
-Homebrew); the private repo's `data/packs.json` (XPHB, Humblewood, XGE, TCE) · **Tests:**
+`scripts/wt.sh`, `dev.sh` (the converter menu), `src/tests/private-data.js` · **Data:** `data/packs.json` (public: SRD 5.2);
+the private repo's `data/packs.json` (XPHB, Humblewood, XGE, TCE, Homebrew) · **Tests:**
 `private-data.js` (runs the private suites), `docs.js` (no public test reads a private pack),
 `data-kit.py` (`data-release.js` against another registry; the `private-data` suite's three outcomes;
 `sync-private.py` on a fake converter)
@@ -28,16 +30,18 @@ Homebrew); the private repo's `data/packs.json` (XPHB, Humblewood, XGE, TCE) · 
 A pack's text is the book's when it comes from the book: 5e-tools copies the published prose, and the
 converter keeps it. SRD 5.2 is the part of D&D that Wizards of the Coast publishes under CC-BY-4.0, and
 The Predator is CC-BY-SA-3.0, so those two may be shared and carry their credit (see
-[SRD 5.2](srd.md), [Homebrew](homebrew.md)). The other four may not. Since #85 the public repo holds:
+[SRD 5.2](srd.md), [Homebrew](homebrew.md)). The other four may not. Homebrew may be shared but
+needs two Xanathar's spells, so since #125 it is private too, its credit carried in its bundle and
+the private archive's `NOTICE.md`. The public repo holds:
 
-- `data/srd52/` and `data/homebrew/`, the only folders `data/packs.json` registers;
+- `data/srd52/`, the only folder `data/packs.json` registers;
 - the converter, `scripts/convert.py`, with its `all` and `supplement` code: the code is Fieldbook's,
   and so is its prose since the class one-liners were rewritten (spec decision 1);
 - the hand-authored inputs (`data/overlay.json`, `data/class-resources.json`,
   `scripts/srd-corrections.json`), the icon map and the kit.
 
-The private repo holds the four packs, the Humblewood extractor and its PDF suite, the tests that
-read those packs, and the leak scan. Packs players already loaded keep working: the app changed only
+The private repo holds the four packs and Homebrew, the Humblewood extractor and its PDF suite, the
+tests that read those packs, and the leak scan. Packs players already loaded keep working: the app changed only
 to show such a pack's version quietly (the `known` state of `dataStatus()`; see
 [Settings & updates](../features/settings-and-updates.md)).
 
@@ -48,11 +52,11 @@ Its paths mirror the public ones, so the kit's `--registry` and `--data-root` op
 
 ```
 README.md                      how the repo works with the public one; the leak-scan rules
-data/packs.json                the registry: XPHB, Humblewood, XGE, TCE (versions, digests, release)
-data/5e2024/ xanathars/ tashas/ humblewood/
+data/packs.json                the registry: XPHB, Humblewood, XGE, TCE, Homebrew (versions, digests, release)
+data/5e2024/ xanathars/ tashas/ humblewood/ homebrew/
 scripts/extract-humblewood.py  the Humblewood PDFs to rules data (needs PyMuPDF)
 tests/run.sh                   every private suite, run against a public checkout
-tests/private-data.js          the four packs' content checks, on the public test harness
+tests/private-data.js          the five packs' content checks, on the public test harness
 tests/humblewood-verbatim.py   the Humblewood prose matches the book
 tests/leak-scan.py             no public file carries the private text
 tests/leak-allowlist.json      the reviewed exceptions: file, hash and reason, never text
@@ -97,13 +101,13 @@ Present, it runs it with `FIELDBOOK` set to this checkout, relays its output, an
 the runner exits 0 and its last line is `ALL PASSED (n)`; anything else is `FAILURES: private-data`,
 never a pass.
 
-The private `tests/run.sh` bundles the four packs into its own `dist/` with the public
+The private `tests/run.sh` bundles the five packs into its own `dist/` with the public
 `tools/data-kit/fbdata.py bundle`, then runs five suites, each judged the same way:
 
 | Suite | Checks | Skips when |
 |---|---|---|
 | `leak-scan-self-test` | the scanner itself, on invented text | never |
-| `private-data` | the registry agrees with every bundle; the four packs' content checks, loaded through the public `harness.js` | never |
+| `private-data` | the registry agrees with every bundle (licence and credit included); the five packs' content checks, loaded through the public `harness.js` | never |
 | `leak-scan` | no public file carries the private text (below) | never |
 | `converter-gate` | the 2024, Xanathar's and Tasha's packs reproduce byte for byte from the dump, through the public `sync-private.py` | no dump in `$FIELDBOOK/_conversion-data/5etools-v2.36.1` |
 | `humblewood-verbatim` | the Humblewood prose matches the book | no PyMuPDF, or no PDFs |
@@ -151,8 +155,8 @@ under the suite even when it passes, and `wt.sh rm` prints them as a branch is t
 
 ### The leak scan
 
-`tests/leak-scan.py` (spec R9) reads every string of the four private packs (the private text) and
-every string of `data/srd52/` and `data/homebrew/` (the free text), then every file git tracks in the
+`tests/leak-scan.py` (spec R9) reads every string of the four copyrighted packs (the private text)
+and every string of the public `data/srd52/` (the free text), then every file git tracks in the
 public checkout, every new file there git doesn't ignore (`git ls-files --cached --others
 --exclude-standard`, so a local run sees a file before it is committed), plus `dist/fieldbook.html`.
 It reports runs of words that a file shares with the private text and not with the free text. All
@@ -165,6 +169,9 @@ text in a single-quoted or escaped string is seen whole.
 - **A run of 10 to 13 words is reported** as a `NOTE` and never fails.
 - **An allowlist entry that matches nothing fails**, so an entry goes when its run does.
 - **A missing private pack folder fails**, or the scan would quietly look for less.
+- **Homebrew is in neither corpus** (#125). It is no longer public text, so it cannot be free
+  text: as free text it masked runs it shares with Xanathar's, such as The Predator's stock
+  expanded-spell sentence. And it is shareable, so it is not private text either.
 
 An allowlist entry is `{file, hash, why}`: the hash is the first 16 hex of the sha256 of the run's
 normalised words joined by single spaces, so the allowlist is never a second copy of the text. Entries
@@ -196,7 +203,9 @@ commit and tag commands to run in the private repo. Pushing the tag runs the pri
 `data-release.yml`: it checks that the public app has a `vX.Y.Z` tag, that the tag matches the
 registry's `release` and no pack changed after the bump; builds the public app at `vX.Y.Z`; runs the
 private suites; bundles and packs the archive with the public kit; validates it **without**
-`--public`, because these packs carry no open licence; and publishes it with `--latest=false`. Unlike
+`--public`, because the copyrighted packs carry no open licence; and publishes it with
+`--latest=false`. Its `NOTICE.md` lists Homebrew's CC BY-SA credit, and the release notes point at
+it. Unlike
 the public workflows it has no approval step: required reviewers on a private repo need a paid plan,
 so the tag publishes, guarded only by Claude Code's ask rules and `/release`'s "publish". The
 full procedure is [RELEASING](../../RELEASING.md) §1c.
@@ -204,7 +213,8 @@ full procedure is [RELEASING](../../RELEASING.md) §1c.
 XPHB and XGE had changed since their 1.7.2 versions, and the bundle format joined every digest
 (#86), so all four private packs bumped at the first private release, `1.8.1-1` (2026-10-16), after
 app 1.8.1; its archive carries #96's ammunition fixes to the 2024 items. No app release ever bumps a
-private pack.
+private pack. Homebrew joined the private registry at its public version, `1.8.0`; the move gave its
+Xanathar's group a `file`, so it bumps at the next private release.
 
 ### Mike's workflow
 
@@ -247,7 +257,9 @@ imports the public archive and then the private one resolves a shared table name
   The private registry is never copied into the public one.
 - **No public test reads a private pack.** The public suites pass with no private data present, as
   CI has none; `docs.js` fails on any read of the four folders or their bundles from any file under
-  `src/tests/`. A check on those packs belongs in the private `tests/private-data.js`.
+  `src/tests/`, and of the homebrew folder in a path, a helper call or a list (a bare
+  `homebrew_full.json` label is spared: invented fixtures use the word). A check on those packs
+  belongs in the private `tests/private-data.js`.
 - **The allowlist holds hashes and one of four reasons, nothing else** (above), each entry added by
   review. A new leak is fixed in the public file, not allowlisted.
 - **No book text in a public file**, dev docs included: a paraphrase, an invented example, or a
@@ -277,9 +289,10 @@ imports the public archive and then the private one resolves a shared table name
 - **One private clone serves every worktree.** A branch's regenerated packs land in it straight
   away, so two branches that both move private packs overwrite each other, and `main`'s own test run
   fails the converter gate until the branch merges. One such branch at a time, merged promptly.
-- **Homebrew masks a shared run.** The free corpus includes homebrew, as R9 says, so text homebrew
-  shares with a private pack is never flagged: The Predator's stock expanded-spell sentence is one
-  such run. Mike's call whether to narrow it.
+- **Push the private repo right after public `main` when both change, never before.** Pushed
+  first with Homebrew's move, its leak scan would read public `main`'s old `data/homebrew/` as
+  neither free nor private and fail on The Predator's runs shared with Xanathar's; left unpushed,
+  its nightly CI would fail reading a public homebrew folder that is gone.
 - **The private history is imprecise in one file.** `git filter-repo`'s rewrite of the #73 merge
   (`1c3aa49`) took `data/xanathars/tables.json` from the merge's first parent, so the private copy
   lacks its 17 footnotes across `1c3aa49..e8f8582`; `c0b0e64` restores them and the tip is exact.
@@ -313,7 +326,9 @@ imports the public archive and then the private one resolves a shared table name
 | Same-named 2024 and SRD entries, now in two archives (ruling) | The player's import order decides; import the private archive first | Keeping #84's RF5 check: neither registry holds both packs, so it could only pass vacuously |
 | `DATA_VERSIONS` naming the departed packs (ruling) | `docs.js` tolerates those four (`LEFT_FOR_PRIVATE`) until the next release retakes the snapshot; then delete it | A tripwire once it is inert: it would fail CI at the release itself |
 | The filter-repo footnote gap (ruling) | Left, documented here and in the private README; the tip is exact | Rebuilding the history: cheap only before the first push, so it is Mike's call then |
-| Text homebrew shares with a private pack (ruling) | Not flagged, as R9 has it; Mike's call | Scanning homebrew as private: its CC-BY-SA text is free |
+| Text homebrew shares with a private pack (ruling) | Not flagged, as R9 has it; Mike's call. Moot since #125: homebrew is in neither corpus | Scanning homebrew as private: its CC-BY-SA text is free |
+| Where Homebrew lives (#125, Mike 2026-10-27) | The private repo, registered with its licence and credit, which reach the bundle and `NOTICE.md` | Public: it needs Xanathar's, which no public file provides |
+| `DATA_VERSIONS` naming Homebrew after the move (#125) | Left for the next release to retake, as #85 did; `LEFT_FOR_PRIVATE` names it | Editing it by hand: `release.js` owns it |
 | The main checkout's link (ruling) | Made at the finish, after the merge | Before: it would show as untracked until `.gitignore` names it |
 | Where the private packs' conversion commands live (#90) | `scripts/sync-private.py`, run by `dev.sh` and by the private gate | Each keeping its own copy, as `dev.sh` and `gate-2024.py` did: the gate would check one command while the menu wrote another |
 | What runs the converter gate (#90) | The private runner, calling the public script at `$FIELDBOOK` | A public suite: it would need private pack names in a public test, which `docs.js` forbids |
@@ -324,13 +339,10 @@ imports the public archive and then the private one resolves a shared table name
 
 - **Private packs get no newer-data notice**: `checkForDataUpdate()` reads the public registry
   (spec §8). Mike knows when he has cut one.
-- **Homebrew's Xanathar's spells cannot resolve publicly.** Its chip names Cause Fear and Primal
-  Savagery "from Xanathar's Guide to Everything" for any player without that pack; the cross-check
-  that they exist runs only in the private suite.
 - **The old releases' data stays reachable until 2.0**, through GitHub's Source code archives of
   each tag and through public history, even after the assets go. See [2.0](../roadmap/2.0.md).
 - **`LEFT_FOR_PRIVATE` in `docs.js` is to be deleted after the next release**, once `DATA_VERSIONS`
-  no longer names the departed packs.
+  no longer names the departed packs (Homebrew among them since #125).
 - **New characters still default to Humblewood** (`blankChar()`), with no public Humblewood data
   (spec §13): Mike's call, as its own issue.
 
@@ -343,4 +355,5 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-12 — The bundle format joins every digest, so Humblewood and TCE also bump at the first private release. → ledger L5627, #86
 - 2026-10-13 — `sync-private.py` holds the three conversion commands and checks, writes and reports on the private packs; the private gate covers Xanathar's and Tasha's too; the stale link and CI items leave Open (the link exists, the private CI has passed nightly since 2026-10-10). → ledger L5724, #90
 - 2026-10-16 — The first private release went out as `1.8.1-1`, after app 1.8.1, not `1.8.0-1`. → ledger L5990
+- 2026-10-28 — Homebrew moves here with its licence and credit; the leak scan reads it as neither corpus; the push order when both repos change. → ledger L7858, #125
 - 2026-10-19 — The private release has no approval gate (plan limit); the public ones do. → ledger L6226, #109

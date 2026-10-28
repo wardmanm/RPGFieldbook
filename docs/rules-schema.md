@@ -116,7 +116,7 @@ Every pack is a single JSON object. It may contain **any mix** of the category a
   { "system": "Humblewood", "advancement": [[0, 1], [100, 2], [400, 3]] }
   ```
 - **`rulebook`** *(optional, boolean)* — mark a pack that carries a whole system in one file, the
-  way `srd52_full.json` and `homebrew_full.json` do. Purely presentational: the app files it
+  way `srd52_full.json` does. Purely presentational: the app files it
   under a **Rulebook** heading in the home screen's loaded-data list instead of **Mixed**. Merging is
   unaffected — a rulebook merges exactly as its individual files would.
 - Category keys are all optional; include only what the pack provides. Split a large pack
@@ -648,8 +648,8 @@ It is written in one of two forms:
 This is **not** semver, where `-N` would mark a pre-release. Here it comes after: `1.8.0` <
 `1.8.0-1` < `1.8.0-2` < `1.8.0-10` < `1.8.1`.
 
-It is per pack: a release that only touches the homebrew pack leaves the SRD 5.2 pack's
-`dataVersion` alone, so SRD players aren't told to re-import a file that hasn't moved. The app compares it with the
+It is per pack: a release that only touches one pack leaves every other pack's
+`dataVersion` alone, so their players aren't told to re-import a file that hasn't moved. The app compares it with the
 version the running build shipped with ("update available" when the pack is older) and, when it
 can reach GitHub, with the newest rules-data release (a quiet "v*A* · v*B* out" when a newer copy
 is out). Distinct from `version`, which is the schema version. Hand-written packs can omit it — an
@@ -658,14 +658,15 @@ absent or unreadable `dataVersion` means "unknown", and the app stays quiet rath
 ### 6.10b The rules-data archive
 
 The packs Fieldbook ships come as one zip, `fieldbook-data-standalone-<version>.zip`, and the app
-opens it itself:
+opens it itself. Any archive takes the same shape; this example holds the SRD 5.2 pack and an
+invented second pack, `extras_full.json`, that needs it:
 
 ```
 fieldbook-data-standalone-1.8.0.zip
   fieldbook-data.json       the manifest
   NOTICE.md                 what is in it, and every pack's licence and credit
   srd52_full.json           the packs, under their usual file names
-  homebrew_full.json
+  extras_full.json
 ```
 
 The manifest, `fieldbook-data.json` (format 2; the same file Fieldbook reads from a source, §8):
@@ -676,9 +677,9 @@ The manifest, `fieldbook-data.json` (format 2; the same file Fieldbook reads fro
  "packs": [{"file": "srd52_full.json", "category": "rules", "system": "SRD 5.2", "title": "SRD 5.2",
             "summary": "The free D&D rules: …", "version": "1.8.0", "size": 973157,
             "sha256": "…", "license": "CC-BY-4.0", "attribution": "…"},
-           {"file": "homebrew_full.json", "category": "rules", "system": "Homebrew", "title": "Homebrew",
+           {"file": "extras_full.json", "category": "rules", "system": "Extras", "title": "Extras",
             "summary": "…", "version": "1.8.0", "size": 41210, "sha256": "…",
-            "license": "CC-BY-SA-3.0", "attribution": "…",
+            "license": "MIT", "attribution": "…",
             "requires": [{"pack": "SRD 5.2", "file": "srd52_full.json"}]}]}
 ```
 

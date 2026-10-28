@@ -101,3 +101,6 @@ Bullets below this line — leave the heading in place.
   your choice opens the same list.
 - Undo a level-up straight after it, from the level-up card or the message that follows. Level
   down shows what the level gave you and removes its hit points and features for you.
+- The Homebrew pack (The Predator, a Warlock subclass) no longer comes with Fieldbook's public rules
+  data: it needs spells from Xanathar's Guide, so it now lives alongside that book's pack. If you've
+  installed it, it keeps working, but it won't be updated from the public rules data.

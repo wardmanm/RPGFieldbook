@@ -98,7 +98,7 @@ binds one delegated click listener to each fresh `#extPage`. From the top:
 
 - **Warnings**, in red: a rules cache save that failed (`rulesCacheWarning()`), and a sources save the
   boot check couldn't make ("Couldn't save your sources at the last check: …").
-- **The updates banner**, while any row is an update: "**2 updates** · SRD 5.2, Homebrew" and
+- **The updates banner**, while any row is an update: "**2 updates** · SRD 5.2, Ember" and
   **Update all**, which plans every update at once. The pill's × never hides it.
 - **Rules data**, with a count: one row per loaded pack (`loadedRulesGroups()`), then one per pack an
   enabled source offers that isn't loaded (`extPackRows()`). A row has the pack's **name**, a button
@@ -382,8 +382,9 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 ## Open
 
 - **Private packs get no newer-data notice.** The data check reads the public registry, which lists
-  only SRD 5.2 and Homebrew since #85, so a private pack's row shows its version quietly (`known`)
-  and never "out" (see [Private data](../data/private-data.md)).
+  only SRD 5.2 since #125 (and SRD 5.2 and Homebrew from #85), so a private pack's row shows its
+  version quietly (`known`) and never "out", and so does a public player's old Homebrew once the
+  next release drops it from `DATA_VERSIONS` (see [Private data](../data/private-data.md)).
 - **Removing a source does not unload what it installed or fetched** (#102, by decision). Its packs
   stay until removed from their rows (see [Rules packs](../architecture/rules-packs.md)).
 - The header comment of `30-version.js` still says to bump `APP_VERSION` and add a `CHANGELOG` entry on
@@ -431,3 +432,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-26 — Invisible format characters are stripped from manifest text and from a source's name and host, so a bidi override can't reverse the host; the ≤560px notice row is decided, no longer open. → ledger L7513, #102
 - 2026-10-26 — URLs shown as text (the Sources sub-line, the details' Manifest and Homepage) are stripped of invisible characters too. → ledger L7546, #102
 - 2026-10-27 — Sheet display gains "Feats allowed" in Levels and companions, writing `character.featsAllowed` (on by default). → ledger L7569, #118
+- 2026-10-28 — The public registry lists SRD 5.2 alone; an installed Homebrew shows its version quietly, with no updates. → ledger L7858, #125

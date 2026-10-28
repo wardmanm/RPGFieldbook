@@ -3,8 +3,8 @@
 No rules content is baked into the app. Species, classes, subclasses, spells, items, feats,
 backgrounds, glossary terms and tables all arrive as JSON packs that the player imports at runtime.
 Each pack is either a **system** a character can be created in (D&D 2024, SRD 5.2, Humblewood) or
-an additive **supplement** (Xanathar's, Tasha's, Homebrew). This repo ships SRD 5.2 and Homebrew;
-the other four live in the private repo and reach the app the same way, from their own archive
+an additive **supplement** (Xanathar's, Tasha's, Homebrew). This repo ships SRD 5.2; the other
+five live in the private repo and reach the app the same way, from their own archive
 ([Private data](../data/private-data.md)). Every loaded pack merges into one pool,
 the global `rules`, which is cached across reloads (see [Storage](storage.md)) and consulted by
 name. The pack format itself is [rules-schema](../../../../docs/rules-schema.md), so this page
@@ -47,11 +47,11 @@ packs, and the table-name rule across every pack) · **See also:**
 | Pack | `system` stamp | Kind | `excludeSystems` | `requires` | Repo |
 |---|---|---|---|---|---|
 | `srd52_full.json` | `SRD 5.2` | system: the free D&D rules ([SRD 5.2](../data/srd.md)) | `["humblewood"]` | — | public |
-| `homebrew_full.json` | `Homebrew` | supplement, hand-authored | — | yes | public |
 | the 2024 pack | `XPHB` | system: D&D 2024 core | — | — | private |
 | the Humblewood pack | `Humblewood` | system | — | — | private |
 | the Xanathar's pack | `XGE` | supplement | `["humblewood"]` | — | private |
 | the Tasha's pack | `TCE` | supplement | `["humblewood"]` | — | private |
+| `homebrew_full.json` | `Homebrew` | supplement, hand-authored | — | yes | private (#125) |
 
 **Systems and supplements.** A character's `system` is `"dnd"` or `"humblewood"`. Nothing else is
 possible, because `migrate()` coerces it. A pack's `system` stamp is a source label (`XPHB`, `XGE`, …)
@@ -515,3 +515,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-26 — `extFetchBytes()` counts the body stream and cancels past the cap, so the caps hold without `Content-Length`; `addSource()` is capped; a garbled GitHub release list gets a plain message. → ledger L7477, #102
 - 2026-10-26 — `extText()` strips invisible format characters from every manifest string; `addSource()`'s over-cap message no longer says the host couldn't be reached. → ledger L7513, #102
 - 2026-10-26 — `addSource()` fetches and stores the normalised URL, so a raw U+202E in a typed URL is percent-encoded. → ledger L7546, #102
+- 2026-10-28 — Homebrew moves to the private repo; SRD 5.2 is the one public pack. → ledger L7858, #125

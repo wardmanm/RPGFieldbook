@@ -94,13 +94,13 @@ the public registry (never `--registry`, which has no public raw URL). `release.
 **The archive.** `fbdata.py pack` writes `fieldbook-data.json` (the manifest), `NOTICE.md` and the
 bundles — sorted, dated 1980-01-01, deflated at level 9 — and `fbdata.py validate`
 (`validate_archive()`) checks it. A build names it `+dev` when a digest is unreleased. The app zip
-carries it in `data/`. It holds every registered pack, two since #85: `srd52_full.json`, the
-[SRD 5.2](../data/srd.md) pack, and `homebrew_full.json`. The 2024, Xanathar's, Tasha's and
-Humblewood packs left the registry and the archive for the private repo
-([Private data](../data/private-data.md)); a player who loaded them keeps them, shown with the
-quiet `known` chip. SRD 5.2 has no version until 1.8.0 gives it one, so the manifest and `NOTICE.md` list it without one, its bundle has no `dataVersion`, and the
-app shows it no version badge (the **unknown** state). `NOTICE.md` carries its CC-BY-4.0
-attribution in full.
+carries it in `data/`. It holds every registered pack, one since #125: `srd52_full.json`, the
+[SRD 5.2](../data/srd.md) pack. The 2024, Xanathar's, Tasha's and Humblewood packs left the
+registry and the archive for the private repo in #85, and Homebrew followed in #125
+([Private data](../data/private-data.md), [Homebrew](../data/homebrew.md)); a player who loaded
+them keeps them, shown with the quiet `known` chip once `DATA_VERSIONS` no longer names them.
+`NOTICE.md` carries the SRD's CC-BY-4.0 attribution in full; the private archive's `NOTICE.md`
+carries Homebrew's CC BY-SA credit, from the private registry.
 
 **Opening a zip.** `89-zip.js` is pure. `readDataArchive()` reads, in order: an archive (its manifest
 at the root or one folder down); the data kit, refused; an archive one level inside (the app zip); a
@@ -226,3 +226,4 @@ list.
 - 2026-10-12 — The digest covers `BUNDLE_FORMAT`, pinned by a fingerprint of the bundler's output; the old releases' asset deletion is deferred. → ledger L5627, #86
 - 2026-10-12 — The import toast drops the counts; a failure is an error toast that stays until tapped. → ledger L5648, #87
 - 2026-10-26 — The manifest is format 2 and doubles as the extension manifest; `release-files` writes `releases/data/` for each public release, and CI checks it. → ledger L7428, #102
+- 2026-10-28 — The archive holds SRD 5.2 alone; Homebrew and its credit move to the private archive. → ledger L7858, #125
