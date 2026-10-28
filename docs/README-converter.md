@@ -27,7 +27,7 @@ running `convert.py` directly, name them yourself, as the examples below do.
 **What you may share.** `srd` builds the SRD 5.2 pack, which is under CC-BY-4.0: share it with its
 attribution (below). `all` and `supplement` build packs from the books themselves, so what they
 write holds the books' text: it is for your own use only. Fieldbook's rules-data zip carries only
-the SRD 5.2 and homebrew packs for that reason.
+the SRD 5.2 pack for that reason.
 
 ## Get the source data
 From the 5e-tools GitHub data repo (or the site's `data/` folder):

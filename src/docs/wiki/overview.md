@@ -3,8 +3,8 @@
 Fieldbook is a character sheet for **D&D 5e 2024** and **Humblewood**, shipped as one self-contained
 HTML file that opens from disk and works offline. Rules content is not built in: players load **rules
 packs** (JSON) generated from 5e-tools exports and the Humblewood books, and the sheet copies what a
-character takes from them. This repo carries only the packs that may be shared, SRD 5.2 and
-homebrew; the 2024, Xanathar's, Tasha's and Humblewood packs live in a private repo
+character takes from them. This repo carries only the pack that may be shared and stands alone,
+SRD 5.2; the 2024, Xanathar's, Tasha's, Humblewood and homebrew packs live in a private repo
 ([Private data](data/private-data.md)), and anyone can build their own with the
 [data kit](data/data-kit.md). This page is the map — what the pieces are called, where they live,
 and which page explains each.
@@ -33,11 +33,11 @@ the **skin** (`classic` or `humblewood`). Packs are stamped with a `system` of t
 | Pack dir | `system` stamp | Role | Where |
 |---|---|---|---|
 | `srd52/` | `SRD 5.2` | the free D&D rules (the SRD), a system read as D&D; species kept from Humblewood | this repo's `data/` |
-| `homebrew/` | `Homebrew` | hand-authored, additive; declares `requires` | this repo's `data/` |
 | `5e2024/` | `XPHB` | core D&D 2024 | the private repo's `data/` |
 | `humblewood/` | `Humblewood` | core Humblewood (supplements D&D classes/spells; replaces species) | the private repo's `data/` |
 | `xanathars/` | `XGE` | additive supplement, not a system you create a character in | the private repo's `data/` |
 | `tashas/` | `TCE` | additive supplement | the private repo's `data/` |
+| `homebrew/` | `Homebrew` | hand-authored, additive, CC-BY-SA; declares `requires` | the private repo's `data/` |
 
 The three non-negotiables — one shipped file, offline-first with loud storage failures,
 backward-compatible saves — are stated in [CLAUDE.md](../../../CLAUDE.md) and argued on
@@ -81,10 +81,10 @@ releases/data/            the official extension source: the release's manifest 
 data/
   packs.json              the registry: every public pack's dir, file, title, version, digest, credit,
                           summary and description
-  srd52/  homebrew/       per-category rules data — bundled into the packs, does not ship as-is
+  srd52/                  per-category rules data — bundled into the pack, does not ship as-is
   overlay.json            hand-authored convert.py inputs; ship in the data kit zip, not the
   class-resources.json      archive, because they are not loadable packs
-_private-data             gitignored link to the private repo, RPGFieldbookPrivate: the other four
+_private-data             gitignored link to the private repo, RPGFieldbookPrivate: the other five
                           packs, their tests and the leak scan (Mike's checkouts only)
 docs/                     PLAYER-FACING — ships. An allowlist of exactly three files:
   rules-schema.md           the schema of every data file
@@ -189,8 +189,8 @@ name says where its first function came from, not everything it holds: `migrate(
 | **data version** | A pack's own version, `X.Y.Z` (the data shipped with app X.Y.Z) or `X.Y.Z-N` (the Nth data-only release after it). Not semver: `1.8.0 < 1.8.0-1 < 1.8.1`. Compared with `cmpDataVer()`, never `cmpVer()`. A pack's `dataVersion` |
 | **data release** | A release of rules data with no app: tag `data-vX.Y.Z-N`, the archive as its only asset, never GitHub's "latest". Cut by `data-release.js`, published by `data-release.yml` |
 | **extension / source / manifest** | An *extension* is an installable pack, in a `category` (only `rules` today). A *source* is where Fieldbook finds them: the built-in official source, a manifest URL, or an old-style plain URL (`settings.sources`). A *manifest* is a `fieldbook-data.json`, format 2, listing packs with versions, sha256s and `minApp`. → [Rules packs](architecture/rules-packs.md) |
-| **rules-data archive** | `fieldbook-data-standalone-<release>.zip`: every public pack (SRD 5.2 and homebrew), the manifest `fieldbook-data.json` and `NOTICE.md`. Attached to every release and carried in the app zip; Fieldbook opens it itself |
-| **private data** | The 2024, Xanathar's, Tasha's and Humblewood packs, which carry book text and no open licence: in `wardmanm/RPGFieldbookPrivate`, reached as `_private-data`, released privately as `fieldbook-data-private-<ver>.zip`. → [Private data](data/private-data.md) |
+| **rules-data archive** | `fieldbook-data-standalone-<release>.zip`: every public pack (SRD 5.2 alone), the manifest `fieldbook-data.json` and `NOTICE.md`. Attached to every release and carried in the app zip; Fieldbook opens it itself |
+| **private data** | The 2024, Xanathar's, Tasha's and Humblewood packs, which carry book text and no open licence, and Homebrew, which needs Xanathar's: in `wardmanm/RPGFieldbookPrivate`, reached as `_private-data`, released privately as `fieldbook-data-private-<ver>.zip`. → [Private data](data/private-data.md) |
 | **data kit** | `tools/data-kit/fbdata.py` and the converter, attached to each app release as `fieldbook-data-kit-<ver>.zip`; `fbdata.py build` turns a 5e-tools export into an archive Fieldbook opens. → [Data kit](data/data-kit.md) |
 | **supplement** | A pack that adds to a system rather than being one (XGE, TCE, homebrew) |
 | **SRD 5.2** | The pack of the D&D rules Wizards of the Coast publishes free under CC-BY-4.0, the System Reference Document: `data/srd52/`, `system: "SRD 5.2"`, built by `convert.py srd` from the SRD-flagged entries of the 5e-tools dump and matched to the SRD 5.2.1 PDF. A system read as D&D (`systemOf()`). Not the same as the `srd52` *flag* in the dump, which marks what the SRD contains. → [SRD 5.2](data/srd.md) |
@@ -229,3 +229,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-25 — `87-initiative.js` joins the code map (JS fragment count 35→36): the initiative tracker's party, combatants, turns, bands, the strip and dialogs, placed right after `87-combat.js`. → ledger L7097, #91
 - 2026-10-25 — `67-trade.js` joins the code map (JS fragment count 36→37): the inventory log, its undo and dialog, and the trade window, placed right after `66-coins-hp.js`. → ledger L7291, #47
 - 2026-10-26 — `89-extensions.js` joins the code map (JS fragment count 37→38), after `89-rules-merge.js`; the layout gains `releases/data/`; the glossary gains extension, source and manifest. → ledger L7428, #102
+- 2026-10-28 — Homebrew moves to the private repo: the pack table, layout and glossary say SRD 5.2 is the one public pack. → ledger L7858, #125

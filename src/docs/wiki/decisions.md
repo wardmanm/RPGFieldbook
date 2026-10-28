@@ -604,6 +604,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **The "requires Xanathar's Guide to Everything" chip on the official manifest (#102, Mike 2026-10-26)** — It stays. Homebrew depends on private content, so it is to move into the private repo, as separate work
 - **Its `requires` once SRD 5.2 exists (#84, R7)** — Left pointed at the 2024 pack for that release
 - **Xanathar's group's `file` once it goes private (#85)** — Dropped — the group names the book only
+- **Where Homebrew lives (#125, Mike 2026-10-27)** — The private repo, beside Xanathar's, its licence and credit carried in its registry entry
+- **Players who already installed it (#125, Mike 2026-10-27)** — Release notes only; their copy keeps working as a plain installed pack
+- **Xanathar's group's `file` once both are private (#125)** — `xanathars_full.json`, the file beside it in the same archive
+- **The leak scan's corpora (#125)** — Homebrew stays free text, read from the public checkout's `data/homebrew/` while an older ref has it
 
 ### [SRD 5.2](data/srd.md)
 
@@ -637,7 +641,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Same-named 2024 and SRD entries, now in two archives (ruling)** — The player's import order decides; import the private archive first
 - **`DATA_VERSIONS` naming the departed packs (ruling)** — `docs.js` tolerates those four (`LEFT_FOR_PRIVATE`) until the next release retakes the snapshot; then delete it
 - **The filter-repo footnote gap (ruling)** — Left, documented here and in the private README; the tip is exact
-- **Text homebrew shares with a private pack (ruling)** — Not flagged, as R9 has it; Mike's call
+- **Text homebrew shares with a private pack (ruling)** — Not flagged, as R9 has it; Mike's call. Since #125 only where a public ref still carries `data/homebrew/`
+- **`DATA_VERSIONS` naming Homebrew after the move (#125)** — Left for the next release to retake, as #85 did; `LEFT_FOR_PRIVATE` names it
 - **The main checkout's link (ruling)** — Made at the finish, after the merge
 
 ### [Data kit](data/data-kit.md)

@@ -127,18 +127,15 @@ Known behaviour that is accepted for now.
   2024 pack first was removed: no registry holds both packs now. → ledger L5148, L5269, L5426, and
   [Private data](../data/private-data.md)
 - **Private packs get no newer-data notice.** `checkForDataUpdate()` reads the public registry,
-  which lists only SRD 5.2 and Homebrew; a private pack shows its version quietly (`known`).
-  → ledger L5426, and [Settings & updates](../features/settings-and-updates.md)
-- **Homebrew's Xanathar's spells cannot resolve publicly.** With only the public archive loaded, its
-  chip names Cause Fear and Primal Savagery "from Xanathar's Guide to Everything", and no public
-  file provides them; only the private suite can check that the names exist. → ledger L5426, and
-  [Homebrew](../data/homebrew.md)
+  which lists only SRD 5.2 since #125; a private pack shows its version quietly (`known`), as does
+  an old public Homebrew once the next release drops it from `DATA_VERSIONS`.
+  → ledger L5426, L7858, and [Settings & updates](../features/settings-and-updates.md)
+- **A public player's old Homebrew still names Xanathar's spells "from Xanathar's Guide to
+  Everything"**, which no public file provides. The release notes say it moved; re-importing it
+  from the private archive replaces it. → ledger L7858, and [Homebrew](../data/homebrew.md)
 - **The old releases' copyrighted data stays reachable until 2.0.** Deleting the v1.3.0–v1.7.2 pack
   assets (at the #85 finish) leaves GitHub's Source code archives of each tag, and public history,
   until the history purge. → ledger L5426, and [2.0](2.0.md)
-- **The leak scan never flags text homebrew shares with a private pack**, because its free corpus
-  includes homebrew (spec R9): The Predator's stock expanded-spell sentence is one such run. Mike's
-  call. → ledger L5426, and [Private data](../data/private-data.md)
 - **The trackers' Σ is a button nested in a `role="button"` group header,** so assistive tech may
   flatten the header and never reach the Σ. Restructuring the header pattern (the journal's and the
   section notes' group headers share it) is likely 2.0's. → ledger L6057, and [Journal](../features/journal.md)
@@ -361,7 +358,7 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   private repo's Humblewood suite inside `private-data`, use the `python3` on `PATH`, which lacks
   PyMuPDF. With `.venv/bin` on `PATH` they run (the Humblewood one reports 165 passed). `run.sh`'s
   closing "All N suites passed" also counts a skipped suite. → [Testing](../process/testing.md)
-- **`docs.js` still tolerates `DATA_VERSIONS` naming XPHB, Humblewood, XGE and TCE**
+- **`docs.js` still tolerates `DATA_VERSIONS` naming XPHB, Humblewood, XGE, TCE and Homebrew**
   (`LEFT_FOR_PRIVATE`). The next release retakes `DATA_VERSIONS` from the pruned registry, after
   which the tolerance is inert: delete it then. → ledger L5426, and [Testing](../process/testing.md)
 - **Tests the ledger says exist but don't:** unit tests for `usesMax()` and for the casting engine
@@ -545,3 +542,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-26 — Removed: the ≤560px notice row (decided: it stays) and two release-tooling minors fixed in #102's final wave (`release-files`' `isfile` guard, `data-release.js`'s exit cleanup). → ledger L7513, #102
 - 2026-10-27 — Narrowed: level down lowers only the number for a level with no record. Fixed and removed: rules-schema §5's "a feat instead", which the app now offers. Added: a feat's fixed `skills` not granted, "+1 to two" accepting one ability twice, and the choices inside feats staying manual. → ledger L7569, #118
 - 2026-10-27 — Added: a fixed species or background feat's `ability` increase is not applied (the final review's M4; the player docs now say so). → ledger L7657, #118
+- 2026-10-28 — Homebrew is private: its Xanathar's spells resolve in the private archive, and `LEFT_FOR_PRIVATE` names it too. → ledger L7858, #125

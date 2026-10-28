@@ -127,7 +127,7 @@ registry bump itself failing — leaves `data/packs.json` and `30-version.js` bo
 |---|---|
 | `fieldbook.html` | Players who just want the app. This is the whole thing. |
 | `fieldbook-v<V>.zip` | The player bundle — app, README, `LICENSE`, the rules-data archive in `data/`, docs. No converter since #85. |
-| `fieldbook-data-standalone-<V>.zip` | The rules data on its own: the public packs (SRD 5.2 and homebrew), a manifest and `NOTICE.md`. Fieldbook opens it directly. |
+| `fieldbook-data-standalone-<V>.zip` | The rules data on its own: the public pack (SRD 5.2), a manifest and `NOTICE.md`. Fieldbook opens it directly. |
 | `fieldbook-data-kit-<V>.zip` | The data kit: `fbdata.py`, `convert.py` and its inputs, flat, for anyone building rules data from their own 5e-tools export (`fbdata.py build`). |
 | GitHub's own `Source code (zip)` / `(tar.gz)` | Attached automatically from the tag — we don't build or upload a source archive. |
 
@@ -189,7 +189,7 @@ A **data release** publishes new rules data without a new app: the rules-data ar
 a tag `data-vX.Y.Z-N`, where X.Y.Z is the current `APP_VERSION` and N counts up from 1. Its packs
 get versions like `1.8.0-1`, which Fieldbook sorts after `1.8.0` and before `1.8.1`.
 
-**When.** Rules data changed and the app didn't — a data fix, a converter run, new homebrew. If app
+**When.** Rules data changed and the app didn't — a data fix, a converter run. If app
 changes are also pending, cut an app release instead; it carries the data too. The `./dev.sh`
 header says when one is waiting: `data 1.8.0, 2 changed`.
 
@@ -261,7 +261,7 @@ older version is never offered back). `data/packs.json` keeps the versions it re
 
 ## 1c. Private data releases
 
-The 2024, Xanathar's, Tasha's and Humblewood packs live in the private repo,
+The 2024, Xanathar's, Tasha's, Humblewood and Homebrew packs live in the private repo,
 `wardmanm/RPGFieldbookPrivate`, linked into the checkout as `_private-data` (see the wiki's
 [Private data](wiki/data/private-data.md) page and that repo's README). They are released there, and
 only there, as **data-only releases in the same scheme**: changed packs become `<APP_VERSION>-N`, the
@@ -299,7 +299,7 @@ a tag that isn't `data-vX.Y.Z-N`; a public app with no `vX.Y.Z` tag; a private `
 whose `release` isn't the tag's version; a pack changed after the bump (`fbdata.py versions
 --check`); a failing public build at `vX.Y.Z`; failing private suites. It then bundles and packs
 `fieldbook-data-private-X.Y.Z-N.zip` with the public kit at that tag, validates it **without
-`--public`** (these packs carry no open licence), and publishes a release on the private repo only,
+`--public`** (the copyrighted packs carry no open licence), and publishes a release on the private repo only,
 with `--latest=false`. Running copies of Fieldbook never announce it: the newer-data check reads the
 public registry.
 

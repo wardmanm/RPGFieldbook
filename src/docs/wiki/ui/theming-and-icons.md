@@ -168,9 +168,9 @@ removed".
 - **Emblems are keyed by name, lower-cased, never by `_id`.** This is the "keep working with no pack"
   property.
 - **Subclasses get no emblem** (`docs.js` asserts `icons.json` has no `subclasses` block).
-- **Every shipped class, race and background has an emblem.** `docs.js` walks the public packs
-  (`DIRS`: `homebrew` and `srd52`), and the private suite walks the 2024, Humblewood, Xanathar's and
-  Tasha's packs, so a **data-only** change that adds a name turns one of them red until
+- **Every shipped class, race and background has an emblem.** `docs.js` walks the public pack
+  (`DIRS`: `srd52`), and the private suite walks the 2024, Humblewood, Xanathar's, Tasha's and
+  homebrew packs, so a **data-only** change that adds a name turns one of them red until
   `icons.json` gains a line and the fetcher is re-run. The icon map keeps every pack's names,
   private ones included: names are not the protected text.
 - **The kinds list lives in three places** and moves together: `KINDS` in `fetch-icons.js`,
@@ -255,3 +255,4 @@ removed".
 - 2026-10-24 — Corrected: Humblewood's scene tokens are on `:root`, not `html[data-theme]`. → ledger L6928, #101
 - 2026-10-25 — `--hb-healthy`, `--hb-injured`, `--hb-bloodied`, `--hb-near` and `--hb-empty` join `:root`, one set for all four palettes, for the initiative tracker's health bands. → ledger L7097, #91
 - 2026-10-25 — `--on-accent` joins every palette and the rail; every rule with text on an accent fill uses it. → ledger L7401, #47
+- 2026-10-28 — The emblem coverage check walks `srd52` alone; homebrew's moves to the private suite with the pack. → ledger L7858, #125

@@ -404,8 +404,9 @@ dump. This is the outline; [SRD 5.2](srd.md) has the whole of it.
 ## Traps
 
 Two notes on the guards named below, since #85. `rules-data.js` and `tables.js` run their pack checks
-over the public packs (SRD 5.2 and homebrew), and the private repo's `private-data.js` runs the same
-checks, with the 2024, Xanathar's and Tasha's pins, over the private packs. And `converter.py`'s
+over the public pack (SRD 5.2; homebrew went private in #125), and the private repo's
+`private-data.js` runs the same checks, with the 2024, Xanathar's and Tasha's pins, over the private
+packs. And `converter.py`'s
 inputs keep the 5e-tools structure with invented text, so "real shapes" means the dump's shapes, not
 its words.
 
@@ -652,3 +653,4 @@ its words.
 - 2026-10-09 — The 2024, Xanathar's and Tasha's packs move to the private repo: `convert.py` ships in the data kit, the 2024 gate diffs `_private-data/data/5e2024`, the pack checks split between the public suites and the private one, and `CLASS_BLURB` is Fieldbook's own wording. → ledger L5426, #85
 - 2026-10-13 — The private packs' gate covers Xanathar's and Tasha's too, through `scripts/sync-private.py`, which a change that moves them uses to regenerate them. → ledger L5724, #90
 - 2026-10-27 — Feats keep their structured `ability` increase (`feat_ability()`), and a species' `feats` become a fixed `feat` or a feat choice (`race_feats()`); SRD 5.2 moved `feats.json` (8 feats) and `races.json` (Human), and the three private packs moved the same way. Each needs a data release. → ledger L7569, #118
+- 2026-10-28 — The public suites' pack checks run over SRD 5.2 alone. → ledger L7858, #125

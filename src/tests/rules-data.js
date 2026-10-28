@@ -144,6 +144,21 @@ X.mergeRules({system:'Homebrew',subclasses:[{class:'Warlock',name:'P'}],
   X.rules=revived;
   ck('and still reports after restore', X.missingRequirements('Homebrew').length>0);
 }
+// what the tooltip tells a player to get: a group with a `file` names the file;
+// one with only a `pack` names the book (a pack no public file provides). The
+// real homebrew pack covered the second until it moved private (#125).
+X.resetRules();
+X.mergeRules({system:'Homebrew',requires:[{pack:'A Rulebook',file:'rulebook_full.json',spells:['Zap']},
+  {pack:'A Book',spells:['Fizzle']}]},'hb.json');
+{
+  const m=X.missingRequirements('Homebrew');
+  const book=m.find(g=>g.pack==='A Book');
+  ck('a group with no file reports none', !!book&&book.file==='', m);
+  const h=X.requiresStatusHTML({source:'Homebrew'});
+  ck('the tooltip sends a filed group to its file', /Zap — import rulebook_full\.json/.test(h), h);
+  ck('...and a file-less group to its book by name', /Fizzle — from A Book/.test(h), h);
+}
+X.resetRules();
 
 // ---------- #88: pack labels as map keys
 // `rules.requires` and `rules.credits` are keyed by a pack's own label
@@ -382,7 +397,7 @@ function entrySet(r){
   X.RULE_CATS.forEach(c=>{o[c]=(r[c]||[]).map(e=>String(e.name||e.term||'')).sort();});
   return o;
 }
-for(const sys of ['homebrew','srd52']){
+for(const sys of ['srd52']){
   const dir=path.join('data',sys);
   const files=fs.readdirSync(dir).filter(f=>f.endsWith('.json')).sort();
   X.resetRules();
@@ -498,61 +513,18 @@ for(const sys of ['homebrew','srd52']){
      above. */
 }
 
-// ---------- the homebrew pack: hand-authored, and the reason `requires` exists
+// ---------- the public pack's tables: names and anchors
 // (The supplement packs' own counts, and every check that read them, moved to
-// the private repo's suite with the packs, #85.)
+// the private repo's suite with the packs, #85; so did the homebrew pack's,
+// with it, #125. `requires` itself is tested on invented packs above.)
 {
-  {
-    const files=fs.readdirSync(path.join('data','homebrew')).filter(f=>f.endsWith('.json')).sort();
-    ck('homebrew ships the expected files',
-       JSON.stringify(files)===JSON.stringify(['features.json','subclasses.json','tables.json']), files);
-    const reqs=files.map(f=>JSON.parse(fs.readFileSync(path.join('data','homebrew',f),'utf8')));
-    ck('every homebrew file declares system Homebrew', reqs.every(o=>o.system==='Homebrew'));
-    // fbdata.py bundle compares these with JSON.stringify and fails the build if
-    // they differ, so a mismatch must be a red test here first
-    const one=JSON.stringify(reqs[0].requires);
-    ck('every homebrew file declares the SAME requires', reqs.every(o=>JSON.stringify(o.requires)===one));
-    ck('homebrew declares what it needs', Array.isArray(reqs[0].requires)&&reqs[0].requires.length>0);
-    const sub=JSON.parse(fs.readFileSync(path.join('data','homebrew','subclasses.json'),'utf8')).subclasses[0];
-    ck('the Predator attaches to Warlock', sub.class==='Warlock'&&sub.name==='The Predator');
-    ck('the Predator has traits at every declared level',
-       Object.values(sub.levels).every(l=>(l.traits||[]).length>0), Object.keys(sub.levels));
-  }
-  // ---------- homebrew's needs point at public packs (#85, R14)
-  ['features', 'subclasses', 'tables'].forEach(f => {
-    const req = JSON.parse(fs.readFileSync('data/homebrew/' + f + '.json', 'utf8')).requires || [];
-    ck('homebrew/' + f + ': its D&D group needs SRD 5.2, by file', req[0] && req[0].pack === 'SRD 5.2' && req[0].file === 'srd52_full.json', req[0]);
-    ck('homebrew/' + f + ": its Xanathar's group names the book, not a file", req[1] && req[1].pack === "Xanathar's Guide to Everything" && !('file' in req[1]), req[1]);
-  });
-  // and the pack an actual player imports resolves that way: load the two
-  // dist bundles a player would (SRD 5.2, the public group's new target, then
-  // homebrew), and the only thing still missing is Xanathar's — which was
-  // never public to begin with, so it is named by the book, not a file.
-  {
-    X.resetRules();
-    X.mergeRules(JSON.parse(fs.readFileSync(path.join(ROOT,'dist','srd52_full.json'),'utf8')), 'srd52_full.json');
-    X.mergeRules(JSON.parse(fs.readFileSync(path.join(ROOT,'dist','homebrew_full.json'),'utf8')), 'homebrew_full.json');
-    const missReal=X.missingRequirements('Homebrew');
-    const xanGroups=missReal.filter(g=>g.pack==="Xanathar's Guide to Everything");
-    const flatReal=xanGroups.flatMap(g=>g.missing.map(x=>x.name));
-    ck('importing SRD 5.2 then homebrew leaves only Xanathar\'s content missing',
-       missReal.every(g=>g.pack==="Xanathar's Guide to Everything"), missReal);
-    ck('...named Cause Fear and Primal Savagery, with no file to point at',
-       JSON.stringify(flatReal.slice().sort())===JSON.stringify(['Cause Fear','Primal Savagery'])
-       && xanGroups.every(g=>g.file===''), [flatReal, xanGroups]);
-    const hReal=X.requiresStatusHTML({source:'Homebrew'});
-    ck('requiresStatusHTML for the homebrew group points at the book by name',
-       /from Xanathar&#39;s Guide to Everything/.test(hReal), hReal);
-    X.resetRules();
-  }
-
   // findTable() looks a table up by NAME across every loaded pack, and a
   // "[Table: X]" anchor carries no pack — so two packs sharing a name means one
   // book's prose opens the other's table. Identical twins are harmless. (The
   // SRD 5.2 / 2024 pairs, which differ in wording on purpose, are pinned in the
   // private repo's suite with the 2024 pack, #85.)
   const seen={};
-  ['homebrew','srd52'].forEach(d=>{
+  ['srd52'].forEach(d=>{
     const p=path.join('data',d,'tables.json');
     if(!fs.existsSync(p))return;
     JSON.parse(fs.readFileSync(p,'utf8')).tables.forEach(t=>{
@@ -563,7 +535,7 @@ for(const sys of ['homebrew','srd52']){
   ck('no table name is used by two packs, except identical twins', clash.length===0,
      clash.map(([n,v])=>n+' -> '+v.map(x=>x.d).join(', ')));
   // and the anchors must follow the rename, or they resolve to nothing
-  ['homebrew','srd52'].forEach(d=>{
+  ['srd52'].forEach(d=>{
     const names=new Set(JSON.parse(fs.readFileSync(path.join('data',d,'tables.json'),'utf8'))
       .tables.map(t=>t.name));
     const dangling=[];
@@ -586,7 +558,7 @@ for(const sys of ['homebrew','srd52']){
 // from an object-shaped reference, is how that looks in a pack.
 {
   const weapons=[];
-  ['homebrew','srd52'].forEach(d=>
+  ['srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
         .forEach(it=>{if(it.weapon)weapons.push({where:d+'/'+f,it});});
@@ -647,7 +619,7 @@ for(const sys of ['homebrew','srd52']){
 {
   const ALL_ATTACKS_OK=[];
   const items=[];
-  ['homebrew','srd52'].forEach(d=>
+  ['srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
         .forEach(it=>items.push({where:d+'/'+f,it}));
@@ -701,7 +673,7 @@ for(const sys of ['homebrew','srd52']){
   ];
   const SIX=['str','dex','con','int','wis','cha'];
   const items=[];
-  ['homebrew','srd52'].forEach(d=>
+  ['srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[])
         .forEach(it=>items.push({dir:d,where:d+'/'+f,it}));
@@ -743,17 +715,16 @@ for(const sys of ['homebrew','srd52']){
     'srd52':{'+1 Wand of the War Mage':'atk+1','+2 Wand of the War Mage':'atk+2','+3 Wand of the War Mage':'atk+3',
              'Robe of the Archmagi':'atk+2 dc+2','Staff of Power':'atk+2','Staff of the Magi':'atk+2',
              'Staff of the Woodlands':'atk+2','Talisman of Pure Good':'atk+2','Talisman of Ultimate Evil':'atk+2'},
-    'homebrew':{},
   };
   const got={};
-  ['homebrew','srd52'].forEach(d=>
+  ['srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       (JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')).items||[]).forEach(it=>{
         const fx=(it.effects||[]).filter(e=>/^spell\./.test(String(e&&e.target)));
         if(fx.length)(got[d]=got[d]||{})[it.name]=fx.map(e=>(e.target==='spell.attack'?'atk':e.target==='spell.dc'?'dc':e.target)+'+'+e.value).join(' ');
       });
     }));
-  ['homebrew','srd52'].forEach(d=>{
+  ['srd52'].forEach(d=>{
     const want=SPELL[d]||{}, have=got[d]||{};
     const wrong=Object.keys(have).filter(n=>want[n]!==have[n]).concat(Object.keys(want).filter(n=>have[n]!==want[n]));
     ck('#77 '+d+': exactly the reviewed items carry a spell attack or spell save DC bonus ('+Object.keys(want).length+')',
@@ -774,7 +745,7 @@ for(const sys of ['homebrew','srd52']){
     if(Array.isArray(n.effects))n.effects.forEach(e=>{if(!e||!known.has(e.target))bad.push(where+' '+(n.name||n.term||'?')+': '+JSON.stringify(e));});
     Object.keys(n).forEach(k=>walk(n[k],where));
   };
-  ['homebrew','srd52'].forEach(d=>
+  ['srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json'))
       .forEach(f=>walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f)));
   ck('#77 every effect target in every pack is one fxTargets() lists', bad.length===0, bad.slice(0,10));
@@ -799,7 +770,7 @@ for(const sys of ['homebrew','srd52']){
       const k=where+' '+(n.name||n.term||'?'); got[k]=(got[k]?got[k]+' ':'')+e.target+(e.value>=0?'+':'')+e.value; } });
     Object.keys(n).forEach(k=>walk(n[k],where));
   };
-  ['homebrew','srd52'].forEach(d=>
+  ['srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json'))
       .forEach(f=>walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f)));
   const wrong=[...new Set(Object.keys(got).concat(Object.keys(WANT)))].filter(k=>got[k]!==WANT[k]);
@@ -827,11 +798,11 @@ for(const sys of ['homebrew','srd52']){
     Object.keys(n).forEach(k=>walk(n[k],where,nm));
   };
   let files=0;
-  ['homebrew','srd52'].forEach(d=>
+  ['srd52'].forEach(d=>
     fs.readdirSync(path.join('data',d)).filter(f=>f.endsWith('.json')).forEach(f=>{
       files++; walk(JSON.parse(fs.readFileSync(path.join('data',d,f),'utf8')),d+'/'+f,'?');
     }));
-  ck('#78 the packs have files to scan', files>=14, files);
+  ck('#78 the packs have files to scan', files>=11, files);
   ck('#78 no pack carries 5e-tools template text: no {#…}, {{…}}, {=…} or {@…}', bad.length===0,
      bad.length+' strings, e.g. '+JSON.stringify(bad.slice(0,6)));
   // the families that shipped the tag now read the book's words, filled from the item
@@ -897,18 +868,23 @@ X.mergeRules({system:'XGE',subclasses:[{class:'Ranger',name:'Horizon Walker',des
 // nagged. The three states have to be distinguishable, and "unknown" must never
 // be reported as stale — a false alarm on someone's homebrew is worse than
 // staying quiet.
-/* Two systems this build HAS a baseline for, read from DATA_VERSIONS rather than
-   named: the snapshot is retaken from data/packs.json at every release, and the
-   packs that left for the private repo (#85) leave it then. */
-const [OLD_SYS, CUR_SYS] = Object.keys(X.DATA_VERSIONS);
-ck('DATA_VERSIONS has two systems to test staleness with', !!OLD_SYS && !!CUR_SYS, X.DATA_VERSIONS);
+/* Two systems this build HAS a baseline for. The first is read from
+   DATA_VERSIONS rather than named: the snapshot is retaken from data/packs.json at
+   every release, and the packs that left for the private repo (#85, #125) leave
+   it then. Once Homebrew has left, the public registry holds one pack, so the
+   second baseline is lent to an invented system for this test and taken back
+   after it — a snapshot with one system must not fail the release that takes it. */
+const [OLD_SYS] = Object.keys(X.DATA_VERSIONS);
+ck('DATA_VERSIONS has a system to test staleness with', !!OLD_SYS, X.DATA_VERSIONS);
+const CUR_SYS = 'Lent Baseline Pack';
+X.DATA_VERSIONS[CUR_SYS] = X.DATA_VERSIONS[OLD_SYS];
 X.resetRules();
 X.mergeRules({system:OLD_SYS, dataVersion:'1.0.0', rulebook:true,
               races:[{name:'Elf'}]}, 'rulebook_full.json');
 X.mergeRules({system:CUR_SYS, dataVersion:X.DATA_VERSIONS[CUR_SYS], rulebook:true,
               races:[{name:'Corvum'}]}, 'campaign_full.json');
 /* deliberately a system DATA_VERSIONS has never heard of — "Homebrew" used to
-   play this role and is now a real shipped pack, which made the test read as if
+   play this role and is now a real pack (private since #125), which made the test read as if
    it were asserting something about that pack. */
 X.mergeRules({system:'MyOwnStuff', rulebook:true, races:[{name:'Mine'}]}, 'mine.json');
 
@@ -938,6 +914,8 @@ X.resetRules();
 X.mergeRules({system:OLD_SYS, dataVersion:'99.0.0', rulebook:true, races:[{name:'Elf'}]}, 'f.json');
 ck('a pack newer than the app is not flagged stale',
    X.dataStatus(X.loadedRulesGroups()[0]).state === 'current');
+delete X.DATA_VERSIONS[CUR_SYS];
+X.resetRules();
 
 // ---------- every shipped pack agrees with data/packs.json (#83)
 JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs.forEach(reg => {
@@ -1027,18 +1005,8 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'packs.json'), 'utf8')).packs
   ck('#84 every renamed entry is there under its SRD name',
      Object.values(fx.renamed).every(nm => allText.includes(String(nm).toLowerCase())),
      Object.values(fx.renamed).filter(nm => !allText.includes(String(nm).toLowerCase())));
-  // R7/#85 R14: homebrew's D&D group resolves with SRD 5.2 alone — since #85
-  // that group names SRD 5.2 directly (not the 2024 pack's bundle), so match it
-  // by its own pack/file rather than the 2024 pack's.
-  const pool = {};
-  ['spells', 'classes'].forEach(cat => S(cat)[cat].forEach(e => (pool[cat] = pool[cat] || new Set()).add(String(e.name).toLowerCase())));
-  const hb = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'homebrew', 'subclasses.json'), 'utf8')).requires;
-  const dnd = hb.find(g => g.file === 'srd52_full.json' || g.pack === 'SRD 5.2');
-  const missHb = [];
-  ['spells', 'classes'].forEach(cat => ((dnd || {})[cat] || []).forEach(nm => {
-    if (!pool[cat].has(String(nm).toLowerCase())) missHb.push(cat + ': ' + nm);
-  }));
-  ck('#84 R7 every name homebrew\'s D&D group requires is in SRD 5.2', !!dnd && missHb.length === 0, missHb);
+  // R7: homebrew's D&D group resolving with SRD 5.2 alone is checked in the
+  // private repo's suite, with the pack (#125).
   ck('#84 R6 systemOf reads "SRD 5.2" as D&D', X.systemOf({_source: 'SRD 5.2'}) === 'dnd');
   // Review focus 1: species by character system
   X.resetRules();

@@ -18,8 +18,8 @@ the free D&D rules of **SRD 5.2** and the **Humblewood** TTRPG, plus additive pa
 Guide**, **Tasha's Cauldron** and hand-authored **homebrew**. It ships as one self-contained file,
 `dist/fieldbook.html`, built by concatenating the fragments in `src/`. A Python CLI
 (`scripts/convert.py`) turns 5e-tools exports into the app's JSON. Players load the resulting
-rules packs at runtime. This repo's packs are SRD 5.2 and homebrew; the 2024, Xanathar's, Tasha's
-and Humblewood packs live in the private repo (`RPGFieldbookPrivate`, linked into a checkout as
+rules packs at runtime. This repo's pack is SRD 5.2; the 2024, Xanathar's, Tasha's, Humblewood
+and homebrew packs live in the private repo (`RPGFieldbookPrivate`, linked into a checkout as
 `_private-data`; see [private data](src/docs/wiki/data/private-data.md)). Details:
 [overview](src/docs/wiki/overview.md).
 
@@ -51,7 +51,7 @@ src/                     THE SOURCE OF TRUTH — edit here, never the built file
   tests/                 the suites — ./src/tests/run.sh
   docs/                  dev docs (never ship): wiki/, specs/, plans/, UNRELEASED.md, …
 dist/fieldbook.html      BUILD ARTIFACT, tracked. Never hand-edit
-data/<system>/*.json     rules data: srd52/ and homebrew/; data/packs.json registers each pack;
+data/<system>/*.json     rules data: srd52/ only; data/packs.json registers each pack;
                          bundled into dist/*_full.json
 tools/data-kit/          fbdata.py — bundling, pack versions, digests, the data archive, and the
                          data kit's convert and build (Python 3.8+, stdlib) → wiki data/data-kit.md
