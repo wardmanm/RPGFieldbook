@@ -328,7 +328,7 @@ imports the public archive and then the private one resolves a shared table name
 | `DATA_VERSIONS` naming the departed packs (ruling) | `docs.js` tolerates those four (`LEFT_FOR_PRIVATE`) until the next release retakes the snapshot; then delete it | A tripwire once it is inert: it would fail CI at the release itself |
 | The filter-repo footnote gap (ruling) | Left, documented here and in the private README; the tip is exact | Rebuilding the history: cheap only before the first push, so it is Mike's call then |
 | Text homebrew shares with a private pack (ruling) | Not flagged, as R9 has it; Mike's call. Since #125 only where a public ref still carries `data/homebrew/` | Scanning homebrew as private: its CC-BY-SA text is free |
-| Homebrew in the leak scan after the move (#125, Mike's fix-round ruling) | Kept in the free corpus, read from the public checkout when the folder is there | Dropping it: the scan fails at `v1.8.1`, the tag the next private release builds on |
+| Homebrew in the leak scan after the move (#125, Claude's fix-round ruling) | Kept in the free corpus, read from the public checkout when the folder is there | Dropping it: the scan fails at `v1.8.1`, the tag the next private release builds on |
 | Where Homebrew lives (#125, Mike 2026-10-27) | The private repo, registered with its licence and credit, which reach the bundle and `NOTICE.md` | Public: it needs Xanathar's, which no public file provides |
 | `DATA_VERSIONS` naming Homebrew after the move (#125) | Left for the next release to retake, as #85 did; `LEFT_FOR_PRIVATE` names it | Editing it by hand: `release.js` owns it |
 | The main checkout's link (ruling) | Made at the finish, after the merge | Before: it would show as untracked until `.gitignore` names it |

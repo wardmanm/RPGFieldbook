@@ -7899,7 +7899,7 @@ only: their copy keeps working, shown as a plain installed pack with no updates.
    public tag a release builds on: `v1.8.1` and every older ref still carry `data/homebrew/`, and
    with homebrew out of the free corpus its Predator sentence shared with Xanathar's (27 words)
    failed the scan there, so the next private data release, and `main` before this merge, would
-   have gone red (review, Important 1; Mike chose this fix). `corpus()` skips a missing folder, so
+   have gone red (review, Important 1; Claude's ruling). `corpus()` skips a missing folder, so
    at refs after this merge the entry reads nothing. Proved green against public `main` as it was
    (806), a clone of `v1.8.1` with no dump, as CI runs it (747), and this branch.
 6. Docs: CLAUDE.md, README (the zip holds one pack; credits), README-converter, rules-schema (the

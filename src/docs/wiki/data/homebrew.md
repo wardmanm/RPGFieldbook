@@ -128,7 +128,7 @@ announces it (Mike, 2026-10-27).
 | Where Homebrew lives (#125, Mike 2026-10-27) | The private repo, beside Xanathar's, its licence and credit carried in its registry entry | Staying public: its chip names a pack no public file provides |
 | Players who already installed it (#125, Mike 2026-10-27) | Release notes only; their copy keeps working as a plain installed pack | A "moved" signal in the app: their copy keeps working, and it shows as installed with no updates, which is true |
 | Xanathar's group's `file` once both are private (#125) | `xanathars_full.json`, the file beside it in the same archive | Keeping it book-only: the file is now one the player who has Homebrew can get |
-| The leak scan's corpora (#125, Mike's fix-round ruling) | Free, read from the public checkout's `data/homebrew/` when it is there | Neither: a public ref that still carries the folder (`v1.8.1`, the base of the next private release) fails on the Predator's sentence shared with Xanathar's. Private: its CC BY-SA text has nothing to protect |
+| The leak scan's corpora (#125, Claude's fix-round ruling) | Free, read from the public checkout's `data/homebrew/` when it is there | Neither: a public ref that still carries the folder (`v1.8.1`, the base of the next private release) fails on the Predator's sentence shared with Xanathar's. Private: its CC BY-SA text has nothing to protect |
 
 ## Open
 
