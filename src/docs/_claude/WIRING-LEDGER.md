@@ -7883,7 +7883,8 @@ only: their copy keeps working, shown as a plain installed pack with no updates.
    item and effect checks, the table-shape checks, the bundle round trip and its anchors cover it.
    New there: the Xanathar's group names its file, both files are bundles a registry ships, and
    importing the Xanathar's bundle too leaves nothing missing. The registry check now compares
-   licence and credit as well.
+   licence and credit as well, and #77's spell-bonus check expects homebrew to carry none, as the
+   public one did.
 4. **Public tests.** Every `['homebrew','srd52']` loop is `['srd52']`. Kept on invented packs: the
    tooltip's two forms, "— import <file>" and "— from <pack>" (the real pack was the only cover
    of the second). The real-bundle credit check now runs on the SRD 5.2 bundle. The staleness
@@ -7893,16 +7894,21 @@ only: their copy keeps working, shown as a plain installed pack with no updates.
    `docs.js`'s private-pack scan now catches the homebrew folder in a path, a helper call or a
    list. A bare `homebrew_full.json` or a `homebrew:` key is spared, because invented fixtures use
    the word as a label.
-5. **The leak scan.** Homebrew leaves the free corpus and does not join the private one: it is no
-   longer public text, and it may be shared. So no text is masked by homebrew any more; #85's
-   "homebrew masking" ruling is moot. The scan still passes: 0 failing, 35 reported, as before.
+5. **The leak scan.** Homebrew stays in the free corpus, read from `$FIELDBOOK/data/homebrew`, and
+   does not join the private one. Its text is CC BY-SA, so free is true. The private CI scans the
+   public tag a release builds on: `v1.8.1` and every older ref still carry `data/homebrew/`, and
+   with homebrew out of the free corpus its Predator sentence shared with Xanathar's (27 words)
+   failed the scan there, so the next private data release, and `main` before this merge, would
+   have gone red (review, Important 1; Mike chose this fix). `corpus()` skips a missing folder, so
+   at refs after this merge the entry reads nothing. Proved green against public `main` as it was
+   (806), a clone of `v1.8.1` with no dump, as CI runs it (747), and this branch.
 6. Docs: CLAUDE.md, README (the zip holds one pack; credits), README-converter, rules-schema (the
    archive example uses an invented pack), the data-update issue template, the wiki pages below,
    and the private README. A comment in `89-rules-merge.js` that said the public zip always notes
    homebrew's spells now gives the general case.
-7. **Push order.** The private repo goes right after public `main`, as CLAUDE.md says. Pushed
-   first, its leak scan would fail on public `main`'s `data/homebrew/` (no longer free text). Left
-   unpushed, its nightly CI would fail reading the deleted public folder.
+7. **Push order.** The private repo goes right after public `main`, as CLAUDE.md says. Left
+   unpushed, its nightly CI would run the old suite, which reads the public homebrew folder, now
+   deleted. Pushed first, it passes against the old public `main` (point 5).
 
 Pages: [homebrew](../wiki/data/homebrew.md), [private data](../wiki/data/private-data.md),
 [overview](../wiki/overview.md), [rules packs](../wiki/architecture/rules-packs.md),

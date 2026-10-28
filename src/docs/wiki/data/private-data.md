@@ -156,7 +156,8 @@ under the suite even when it passes, and `wt.sh rm` prints them as a branch is t
 ### The leak scan
 
 `tests/leak-scan.py` (spec R9) reads every string of the four copyrighted packs (the private text)
-and every string of the public `data/srd52/` (the free text), then every file git tracks in the
+and every string of the public `data/srd52/` and, where the checkout still has it, `data/homebrew/`
+(the free text), then every file git tracks in the
 public checkout, every new file there git doesn't ignore (`git ls-files --cached --others
 --exclude-standard`, so a local run sees a file before it is committed), plus `dist/fieldbook.html`.
 It reports runs of words that a file shares with the private text and not with the free text. All
@@ -169,9 +170,10 @@ text in a single-quoted or escaped string is seen whole.
 - **A run of 10 to 13 words is reported** as a `NOTE` and never fails.
 - **An allowlist entry that matches nothing fails**, so an entry goes when its run does.
 - **A missing private pack folder fails**, or the scan would quietly look for less.
-- **Homebrew is in neither corpus** (#125). It is no longer public text, so it cannot be free
-  text: as free text it masked runs it shares with Xanathar's, such as The Predator's stock
-  expanded-spell sentence. And it is shareable, so it is not private text either.
+- **Homebrew stays free text** (#125). It is CC BY-SA, and the private CI scans the public tag a
+  release builds on: `v1.8.1` and older refs still carry `data/homebrew/`, whose Predator sentence
+  shares 27 words with Xanathar's, so without it the scan fails there. At refs after the move the
+  folder is gone and the entry reads nothing (the scan skips a missing folder).
 
 An allowlist entry is `{file, hash, why}`: the hash is the first 16 hex of the sha256 of the run's
 normalised words joined by single spaces, so the allowlist is never a second copy of the text. Entries
@@ -289,10 +291,9 @@ imports the public archive and then the private one resolves a shared table name
 - **One private clone serves every worktree.** A branch's regenerated packs land in it straight
   away, so two branches that both move private packs overwrite each other, and `main`'s own test run
   fails the converter gate until the branch merges. One such branch at a time, merged promptly.
-- **Push the private repo right after public `main` when both change, never before.** Pushed
-  first with Homebrew's move, its leak scan would read public `main`'s old `data/homebrew/` as
-  neither free nor private and fail on The Predator's runs shared with Xanathar's; left unpushed,
-  its nightly CI would fail reading a public homebrew folder that is gone.
+- **Push the private repo right after public `main` when both change.** Left unpushed after
+  Homebrew's move, its nightly CI would run the old suite, which reads a public homebrew folder that
+  is gone. Its leak scan passes against public refs from before and after the move.
 - **The private history is imprecise in one file.** `git filter-repo`'s rewrite of the #73 merge
   (`1c3aa49`) took `data/xanathars/tables.json` from the merge's first parent, so the private copy
   lacks its 17 footnotes across `1c3aa49..e8f8582`; `c0b0e64` restores them and the tip is exact.
@@ -326,7 +327,8 @@ imports the public archive and then the private one resolves a shared table name
 | Same-named 2024 and SRD entries, now in two archives (ruling) | The player's import order decides; import the private archive first | Keeping #84's RF5 check: neither registry holds both packs, so it could only pass vacuously |
 | `DATA_VERSIONS` naming the departed packs (ruling) | `docs.js` tolerates those four (`LEFT_FOR_PRIVATE`) until the next release retakes the snapshot; then delete it | A tripwire once it is inert: it would fail CI at the release itself |
 | The filter-repo footnote gap (ruling) | Left, documented here and in the private README; the tip is exact | Rebuilding the history: cheap only before the first push, so it is Mike's call then |
-| Text homebrew shares with a private pack (ruling) | Not flagged, as R9 has it; Mike's call. Moot since #125: homebrew is in neither corpus | Scanning homebrew as private: its CC-BY-SA text is free |
+| Text homebrew shares with a private pack (ruling) | Not flagged, as R9 has it; Mike's call. Since #125 only where a public ref still carries `data/homebrew/` | Scanning homebrew as private: its CC-BY-SA text is free |
+| Homebrew in the leak scan after the move (#125, Mike's fix-round ruling) | Kept in the free corpus, read from the public checkout when the folder is there | Dropping it: the scan fails at `v1.8.1`, the tag the next private release builds on |
 | Where Homebrew lives (#125, Mike 2026-10-27) | The private repo, registered with its licence and credit, which reach the bundle and `NOTICE.md` | Public: it needs Xanathar's, which no public file provides |
 | `DATA_VERSIONS` naming Homebrew after the move (#125) | Left for the next release to retake, as #85 did; `LEFT_FOR_PRIVATE` names it | Editing it by hand: `release.js` owns it |
 | The main checkout's link (ruling) | Made at the finish, after the merge | Before: it would show as untracked until `.gitignore` names it |
@@ -355,5 +357,5 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-12 — The bundle format joins every digest, so Humblewood and TCE also bump at the first private release. → ledger L5627, #86
 - 2026-10-13 — `sync-private.py` holds the three conversion commands and checks, writes and reports on the private packs; the private gate covers Xanathar's and Tasha's too; the stale link and CI items leave Open (the link exists, the private CI has passed nightly since 2026-10-10). → ledger L5724, #90
 - 2026-10-16 — The first private release went out as `1.8.1-1`, after app 1.8.1, not `1.8.0-1`. → ledger L5990
-- 2026-10-28 — Homebrew moves here with its licence and credit; the leak scan reads it as neither corpus; the push order when both repos change. → ledger L7858, #125
 - 2026-10-19 — The private release has no approval gate (plan limit); the public ones do. → ledger L6226, #109
+- 2026-10-28 — Homebrew moves here with its licence and credit; the leak scan keeps reading the public `data/homebrew/` as free text where an older ref has it; the push order when both repos change. → ledger L7858, #125

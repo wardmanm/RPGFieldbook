@@ -87,11 +87,12 @@ zip. Don't unzip it — Fieldbook opens it itself. It holds the rules that may b
 **The D&D 2024 books, Xanathar's Guide, Tasha's Cauldron and Humblewood are no longer
 distributed.** Their text belongs to their publishers, so Fieldbook no longer hands it out. The
 Homebrew pack (The Predator, a Warlock patron) has left the zip too: it leans on Xanathar's Guide,
-so it went with it. If you already loaded any of those packs, nothing changes: they stay loaded and keep working, and your
-characters keep everything they took from them. Humblewood characters still work too, though
-without the Humblewood pack its ancestries, classes and spells aren't in the pickers, so you fill
-those in by hand. If you have your own 5e-tools data, the **data kit** attached to each release
-builds more packs from it for your own use (see [section 9](#9-whats-in-the-download)).
+so it went with it. If you already loaded any of those packs, nothing changes: they stay loaded
+and keep working, and your characters keep everything they took from them. Humblewood characters
+still work too, though without the Humblewood pack its ancestries, classes and spells aren't in
+the pickers, so you fill those in by hand. If you have your own 5e-tools data, the **data kit**
+attached to each release builds more packs from it for your own use
+(see [section 9](#9-whats-in-the-download)).
 
 If a pack refers to something you haven't loaded, Fieldbook says so: the pack gets a red **! n
 missing** badge under **Loaded data**, and hovering it lists what's absent and where to get it (a

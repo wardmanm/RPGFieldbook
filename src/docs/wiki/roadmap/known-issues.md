@@ -542,4 +542,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-26 — Removed: the ≤560px notice row (decided: it stays) and two release-tooling minors fixed in #102's final wave (`release-files`' `isfile` guard, `data-release.js`'s exit cleanup). → ledger L7513, #102
 - 2026-10-27 — Narrowed: level down lowers only the number for a level with no record. Fixed and removed: rules-schema §5's "a feat instead", which the app now offers. Added: a feat's fixed `skills` not granted, "+1 to two" accepting one ability twice, and the choices inside feats staying manual. → ledger L7569, #118
 - 2026-10-27 — Added: a fixed species or background feat's `ability` increase is not applied (the final review's M4; the player docs now say so). → ledger L7657, #118
-- 2026-10-28 — Homebrew is private: its Xanathar's spells resolve in the private archive, the leak scan no longer reads it as free text, and `LEFT_FOR_PRIVATE` names it too. → ledger L7858, #125
+- 2026-10-28 — Homebrew is private: its Xanathar's spells resolve in the private archive, and `LEFT_FOR_PRIVATE` names it too. → ledger L7858, #125

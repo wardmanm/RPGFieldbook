@@ -83,7 +83,7 @@ announces it (Mike, 2026-10-27).
 
 - **Every file in the folder declares the same `system` and the same `requires`.** The bundle is one
   file and can carry one answer; `bundle()` compares `requires` with `JSON.stringify` and fails the
-  build on a mismatch, and `rules-data.js` asserts it first.
+  build on a mismatch, and the private `private-data.js` asserts it first.
 - **Every name in `requires` must exist in a pack, and every `file` must be a bundle a registry
   ships.** The private suite resolves the D&D group's names against the public SRD 5.2 folder
   (#84's R7 check) and the Xanathar's group's against the Xanathar's pack, and checks both files
@@ -92,8 +92,10 @@ announces it (Mike, 2026-10-27).
   no authoring; `requires` is for references that live in prose.
 - **Homebrew stays shareable.** Only content under an open licence goes here, with its licence
   and credit in its registry entry, though it now ships in the private archive.
-- **The leak scan reads it as neither side.** It is not public text (so not the free corpus), and
-  it may be shared (so not the private one); see [Private data](private-data.md).
+- **The leak scan counts it as free text, never private.** Its text is CC BY-SA. The scan reads
+  the public `data/homebrew/`, which only refs older than #125 still carry (such as the `v1.8.1` a
+  private release builds on); afterwards that folder is gone and adds nothing. See
+  [Private data](private-data.md).
 - **A new homebrew folder with its own `system` is one registration, plus its tests:** a pack in
   the private repo's `data/packs.json` (`system`, `dir`, `file`, `title`, and `version: null` until
   its first release), else it is never bundled, archived or versioned; and the folder lists in its
@@ -126,7 +128,7 @@ announces it (Mike, 2026-10-27).
 | Where Homebrew lives (#125, Mike 2026-10-27) | The private repo, beside Xanathar's, its licence and credit carried in its registry entry | Staying public: its chip names a pack no public file provides |
 | Players who already installed it (#125, Mike 2026-10-27) | Release notes only; their copy keeps working as a plain installed pack | A "moved" signal in the app: their copy keeps working, and it shows as installed with no updates, which is true |
 | Xanathar's group's `file` once both are private (#125) | `xanathars_full.json`, the file beside it in the same archive | Keeping it book-only: the file is now one the player who has Homebrew can get |
-| The leak scan's corpora (#125) | Homebrew is in neither | Free: it would mask Xanathar's text it shares. Private: its CC BY-SA text has nothing to protect |
+| The leak scan's corpora (#125, Mike's fix-round ruling) | Free, read from the public checkout's `data/homebrew/` when it is there | Neither: a public ref that still carries the folder (`v1.8.1`, the base of the next private release) fails on the Predator's sentence shared with Xanathar's. Private: its CC BY-SA text has nothing to protect |
 
 ## Open
 
