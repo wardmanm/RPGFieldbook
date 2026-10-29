@@ -312,9 +312,14 @@ function insertJournalCheckbox(){insertCheckboxInto("jnlText");}
    page shown in the End of combat window. Refused while that page is in the
    editor: its text is the textarea's then, and the next keystroke
    (jnlInput()) would write the old text back over the tick. */
+/* Not a page open in the Journal tab's editor: its next keystroke would write
+   the old text back. The editor stays open across a fight, so a tick from the
+   End of combat window (#105) can land here: say why nothing happened. toast()
+   sets its text as textContent, so the title is never markup. */
 function jnlTogglePage(id,n){
-  if(jnlUI.who===character&&jnlUI.editing&&jnlUI.open===id)return false;
-  const p=jnlPages(character).find(x=>x.id===id);if(!p)return false;
+  const p=jnlPages(character).find(x=>x.id===id);
+  if(jnlUI.who===character&&jnlUI.editing&&jnlUI.open===id){toast(`Finish editing “${jnlTitle(p)}” first.`);return false;}
+  if(!p)return false;
   const cur=jnlStr(p.text),t=toggleCheckbox(cur,n);
   if(t===cur)return false;
   p.text=t;p.editedAt=Date.now();

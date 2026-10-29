@@ -266,13 +266,24 @@ function trkAct(id,fn,viaKey,inPlace){
   if(viaKey&&undo)undo.focus();
   return true;
 }
+/* #105: while the End of combat window is open, its list (#ecTrkList) is
+   where a tracker's focus belongs — the Journal tab's copy sits under the
+   modal, inert, or on a hidden tab. null when the window isn't open. */
+function trkFocusScope(){
+  if(typeof endFightLive!=="function"||!endFightLive()||!document.getElementById("ecDone"))return null;
+  return document.getElementById("ecTrkList")||null;
+}
 /* The first control of the first of `ids` still open and on screen — the rows
-   may have moved on since the toast went up — or else + Tracker. */
+   may have moved on since the toast went up — or else + Tracker. Inside the
+   End of combat window: only its own tiles, or else its first control left,
+   or else Done. */
 function trkNextControl(ids){
+  const sc=trkFocusScope(),root=sc||document;
   for(const id of ids){
-    const row=document.querySelector(".trk:not(.trk-closed)"+attrSel("data-trk",id)),f=row&&row.querySelector("button,input");
+    const row=root.querySelector(".trk:not(.trk-closed)"+attrSel("data-trk",id)),f=row&&row.querySelector("button,input");
     if(f&&f.getClientRects().length)return f;
   }
+  if(sc)return sc.querySelector("button,input")||document.getElementById("ecDone");
   return document.getElementById("addTracker");
 }
 /* `who` is the character object the toast was shown for: its Undo belongs to
@@ -283,7 +294,12 @@ function undoTrackerChange(snap,who,viaKey){
   if(!trkRestore(character,snap))return false;
   renderTrackers();scheduleSave();
   toast(`“${trkName(snap)}” is back`);
-  if(viaKey){const b=document.querySelector(attrSel("data-trkedit",snap.id));if(b&&b.focus)b.focus();}
+  if(viaKey){
+    /* the window's tiles have no pen: there, the tile's + */
+    const sc=trkFocusScope();
+    const b=sc?(sc.querySelector(attrSel("data-trkinc",snap.id))||document.getElementById("ecDone")):document.querySelector(attrSel("data-trkedit",snap.id));
+    if(b&&b.focus)b.focus();
+  }
   return true;
 }
 /* The count box commits on change or Enter, like the coin and HP boxes

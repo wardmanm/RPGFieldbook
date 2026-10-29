@@ -447,7 +447,9 @@ function tradeClosed(done){
 function tradeFind(){
   const lib=rules.items||[];
   if(!lib.length){toast("No rules items are loaded. Add a custom item instead.");return;}
-  const back=()=>{const bt=document.getElementById("btnTrade");if(bt&&bt.getClientRects().length)bt.focus({preventScroll:true});if(_trade)showTrade();};
+  /* Focus to the Equipment card's Trade only for a trade opened there: one
+     with an onClose (#105) hands focus to its own opener when it closes. */
+  const back=()=>{const bt=!_trOnClose&&document.getElementById("btnTrade");if(bt&&bt.getClientRects().length)bt.focus({preventScroll:true});if(_trade)showTrade();};
   closeModal();
   openBrowse(Object.assign(itemBrowseCfg(lib),{
     added:x=>!!_trade&&_trade.get.items.some(g=>!g.custom&&String(g.name).toLowerCase()===String(x.name||"").toLowerCase()),

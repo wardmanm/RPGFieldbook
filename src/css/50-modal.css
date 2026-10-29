@@ -448,6 +448,11 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .ft-chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 /* #105 the End of combat window (87-combat-end.js). It opens wide, so like the
    trade window it fills the fixed-height box: the rows scroll, Done stays. */
+/* Ruling 19: the window fits its content, up to the wide modal's height — a
+   quiet fight is short. min-height:0 lets the body shrink below its content so
+   the rows scroll (.ec-scroll) and Done stays in view. */
+.modal.wide:has(.ec-wrap){height:auto;max-height:min(680px,90dvh)}
+.modal.wide:has(.ec-wrap) .m-body{min-height:0}
 .ec-wrap{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding-right:14px}
 .m-body .ec-time{margin:0 0 8px;font-family:var(--head);font-size:13px;color:var(--ink-soft)}
 .ec-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 2px 8px}
@@ -465,6 +470,7 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .ec-foot{flex:none;margin-top:0;padding:10px 0 14px;border-top:1px dotted var(--hair)}
 .ec-foot .tbtn{min-height:44px}
 .ec-xp input{max-width:200px}
+.m-body .ec-err{color:var(--brick);margin:4px 0 8px}
 .m-body .ec-ready{color:var(--accent-2);font-weight:700;margin:4px 0 0}
 .ec-trk{padding:4px 0 6px}
 .ec-page{border:1px solid var(--hair);border-radius:8px;padding:6px 10px;margin-top:8px;background:var(--field)}

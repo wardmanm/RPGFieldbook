@@ -24,7 +24,7 @@ its own tab. Leaving the tab never ends combat.
 `endFightXpToAdd()`, `endFightXpSection()`, `endFightSetXp()`, `endFightSetStatus()`,
 `endFightXpPatch()`, `endFightSetSplit()`; Loot `endFightLootWith()`, `endFightLootSection()`,
 `endFightOpenLoot()`, `endFightReopen()`; After combat `endFightAfterLists()`,
-`endFightAfterStatus()`, `endFightTrackersHTML()`, `endFightAfterSection()`,
+`endFightAfterStatus()`, `endFightTrkList()`, `endFightAfterSection()`,
 `endFightPaintTrackers()`, `endFightTick()`, `endFightKey()`; the DOM layer `endFightToggle()`,
 `endFightRepaintSection()`, `endFightUndoAmmo()`, `endFightClick()`, `endFightWire()` ·
 `endCombatNow()` in `87-combat.js` · `openTrade()`, `tradeClosed()` in `67-trade.js` ·

@@ -15,6 +15,8 @@ const EC_LABEL={ammo:"Ammunition",xp:"Experience",loot:"Loot",after:"After comba
    see endFightKey(). One selector for the click and the key; the CSS that
    drops their pointer (50-modal.css) spells the same two out. */
 const EC_INERT=".ec-page .kw,.ec-page .tblref";
+/* The trade's With box's maxlength (67-trade.js): Loot's seeded name fits it. */
+const EC_WITH_MAX=60;
 let _endFight=null;
 function endFightLive(){if(_endFight&&_endFight.who!==character)_endFight=null;return _endFight;}
 function endCombatOpenOf(c){const m=c&&c.endCombatOpen;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
@@ -23,8 +25,12 @@ function openEndOfCombat(r){
   _endFight={who:character,rounds:Math.max(0,num(o.rounds)),sec:Math.max(0,num(o.sec)),
     combatants:Array.isArray(o.combatants)?o.combatants:[],
     ammo:{logged:Array.isArray(a.logged)?a.logged:[],lines:Array.isArray(a.lines)?a.lines:[],undo:typeof a.undo==="function"?a.undo:null,undone:false},
-    xp:"",traded:"",asking:false};
+    xp:"",traded:"",asking:false,opener:null,openerSel:null,
+    trk:endFightAfterLists(character).trackers.length>0};   /* the After combat list stays for the window's life (endFightTrkList()) */
   endFightShow();
+  /* What opened it, for focus to go back to on the final close: the trade's
+     round trip reopens the window over whatever the trade left focused. */
+  if(_endFight){_endFight.opener=_modalOpener;_endFight.openerSel=_modalOpenerSel;}
   return _endFight;
 }
 /* (Re)opens the window from _endFight: first from End combat, again after a
@@ -63,17 +69,26 @@ function endFightGuard(){
 function endFightClose(add,levelUp){
   const st=endFightLive();_endFight=null;
   if(!st||!add)return false;
-  const n=endFightXpToAdd(st,character);if(!(n>0))return false;
+  const n=endFightXpToAdd(st,character),base=endFightXpBase(character);
+  if(!(n>0)||base===null)return false;   /* XP the sheet can't read is never overwritten (Ruling 21) */
   const lv=endFightReadyLevel(character,n);
-  character.xp=endFightXpBase(character)+n;
+  character.xp=base+n;
   renderLevelBadge();scheduleSave();
   if(lv&&levelUp)doLevelUp();
   return true;
 }
 /* Done: adds the XP (its share when split), closes the window, and opens the
-   level-up when that XP reached a level. Returns whether it closed. */
+   level-up when that XP reached a level. Returns whether it closed. Not while
+   the box holds something that isn't a whole number: the row opens if it was
+   folded and focus goes to the box, under its "Whole numbers only". */
 function endFightDone(){
-  if(!endFightLive())return false;
+  const st=endFightLive();if(!st)return false;
+  const x=endFightXpView(st,character);
+  if(x&&x.bad){
+    if(endCombatOpenOf(character).xp!==true)endFightToggle("xp");
+    const b=document.getElementById("ecXp");if(b&&b.focus)b.focus({preventScroll:true});
+    return false;
+  }
   closeModal();
   endFightClose(true,true);
   return true;
@@ -105,42 +120,62 @@ function endFightAmmoSection(st,c){
 }
 /* ---- Experience (spec §4.3): shown only when the character levels by XP ---- */
 function endFightN(n){return Math.max(0,Math.floor(num(n))).toLocaleString("en-US");}
-/* The box's number: whole, 0 to 1,000,000; anything else is 0. */
+/* The box's number. A text box, not type=number: Safari's number box lets
+   letters in and then reports them as blank, which dropped the XP silently.
+   So the parse is strict: digits, or digits in thousands groups ("6,350"),
+   and nothing else. Blank is 0; above 1,000,000 is 1,000,000; anything else
+   is null — not a number, and the window says so. */
 function endFightXpInt(v){
   const s=String(v==null?"":v).trim();if(!s)return 0;
-  const n=Math.floor(Number(s));
-  return isFinite(n)&&n>0?Math.min(1000000,n):0;
+  if(!/^(\d+|\d{1,3}(,\d{3})+)$/.test(s))return null;
+  return Math.min(1000000,parseInt(s.replace(/,/g,""),10));
 }
 /* What Done adds: the typed number, or its share, rounded down. */
 function endFightXpMath(typed,split,party){
-  const t=endFightXpInt(typed),n=split?Math.max(1,Math.floor(num(party))):1;
+  const t=endFightXpInt(typed)||0,n=split?Math.max(1,Math.floor(num(party))):1;
   return {typed:t,n,each:Math.floor(t/n)};
 }
 /* The Party roster (#91) plus this character. */
 function endFightPartySize(c){return cleanParty(c&&c.party).length+1;}
-/* The XP Done adds to: xpNumber() reads "6,350"; blank or text counts as 0. */
-function endFightXpBase(c){const v=xpNumber(c&&c.xp);return v===null?0:v;}
+/* The XP Done adds to, read by the sheet's own xpNumber() so the window and
+   the sheet agree (Ruling 21): "6,350" is 6350 and blank is 0. Text it can't
+   read ("6350 xp", "lots") is null: Done never overwrites it. */
+function endFightXpBase(c){
+  const v=c&&c.xp;
+  if(v==null||(typeof v==="string"&&!v.trim()))return 0;
+  return xpNumber(v);
+}
 /* The level the XP would make ready — only when the level-up is not ready
    before and is after, the rule Done opens it by. */
 function endFightReadyLevel(c,add){
   if(advancementOf(c)!=="xp"||!(add>0))return null;
-  const base=endFightXpBase(c),b=xpProgress(Object.assign({},c,{xp:base})),a=xpProgress(Object.assign({},c,{xp:base+add}));
+  const base=endFightXpBase(c);if(base===null)return null;
+  const b=xpProgress(Object.assign({},c,{xp:base})),a=xpProgress(Object.assign({},c,{xp:base+add}));
   return a&&a.ready&&!(b&&b.ready)?a.level+1:null;
 }
+/* The Experience row's view. `unread`: the sheet's XP is text xpNumber()
+   can't read, so there is no box and nothing to add. `bad`: the box holds
+   something that isn't a whole number — "Whole numbers only" under it, the
+   status as if nothing were typed, and Done refuses until it is fixed. */
 function endFightXpView(st,c){
   if(advancementOf(c)!=="xp")return null;
-  const party=endFightPartySize(c),split=!!c&&c.xpSplit===true&&party>1,m=endFightXpMath(st.xp,split,party);
+  const party=endFightPartySize(c),split=!!c&&c.xpSplit===true&&party>1;
+  if(endFightXpBase(c)===null)return {party,split,m:{typed:0,n:1,each:0},status:"XP",err:"",line:"",ready:"",bad:false,unread:true};
+  const bad=endFightXpInt(st.xp)===null,m=endFightXpMath(bad?"":st.xp,split,party);
   const p=xpProgress(Object.assign({},c,{xp:endFightXpBase(c)})),lv=endFightReadyLevel(c,m.each);
   const status=m.each>0?`+${endFightN(m.each)} XP`:!p?"XP":p.next===null?`XP ${endFightN(p.xp)}`:`XP ${endFightN(p.xp)} / ${endFightN(p.next)}`;
-  return {party,split,m,status,
+  return {party,split,m,status,bad,unread:false,
+    err:bad?"Whole numbers only":"",
     line:split&&m.typed>0?`${endFightN(m.typed)} ÷ ${m.n} = ${endFightN(m.each)} each`:"",
     ready:lv?`Level ${lv} ready — the level-up opens when you press Done.`:""};
 }
 function endFightXpToAdd(st,c){const x=endFightXpView(st,c);return x?x.m.each:0;}
 function endFightXpSection(st,c){
   const x=endFightXpView(st,c);if(!x)return null;
+  if(x.unread)return {status:x.status,body:`<p class="hint" id="ecXpUnread">Your XP on the sheet isn't a number, so it can't be added to here.</p>`};
   return {status:x.status,body:
-    `<div class="field ec-xp"><label class="f" for="ecXp">XP</label><input id="ecXp" type="number" inputmode="numeric" min="0" max="1000000" step="1" value="${esc(st.xp)}" autocomplete="off"></div>`+
+    `<div class="field ec-xp"><label class="f" for="ecXp">XP</label><input id="ecXp" type="text" inputmode="numeric" maxlength="12" value="${esc(st.xp)}" autocomplete="off" aria-describedby="ecXpErr"${x.bad?` aria-invalid="true"`:""}></div>`+
+    `<p class="hint ec-err" id="ecXpErr"${x.err?"":" hidden"}>${esc(x.err)}</p>`+
     (x.party>1?`<div class="toggle"><div><div class="t-lbl">Split among ${esc(x.party)}</div></div>`+
       `<button type="button" class="switch${x.split?" on":""}" id="ecSplit" role="switch" aria-checked="${x.split?"true":"false"}" aria-label="Split among ${esc(x.party)}"></button></div>`:"")+
     `<p class="hint" id="ecXpLine"${x.line?"":" hidden"}>${esc(x.line)}</p>`+
@@ -161,6 +196,8 @@ function endFightXpPatch(st){
   const x=endFightXpView(st,character);if(!x)return;
   endFightSetStatus("xp",x.status);
   const l=document.getElementById("ecXpLine");if(l){l.textContent=x.line;l.hidden=!x.line;}
+  const er=document.getElementById("ecXpErr");if(er){er.textContent=x.err;er.hidden=!x.err;}
+  const b=document.getElementById("ecXp");if(b&&b.setAttribute){if(x.bad)b.setAttribute("aria-invalid","true");else if(b.removeAttribute)b.removeAttribute("aria-invalid");}
   const r=document.getElementById("ecXpReady");if(r){r.textContent=x.ready;r.hidden=!x.ready;}
 }
 /* Split among N: saved on the character at once (xpSplit). */
@@ -176,7 +213,18 @@ function endFightSetSplit(on){
    foes), or "Combat loot". Raw text: the trade window escapes it where drawn. */
 function endFightLootWith(list){
   const names=(Array.isArray(list)?list:[]).filter(r=>r&&typeof r==="object"&&r.kind==="foe"&&combatantDead(r)).map(r=>String(r.name||"").trim()).filter(Boolean);
-  return names.length?names.join(", "):"Combat loot";
+  return names.length?endFightNamesCap(names,EC_WITH_MAX):"Combat loot";
+}
+/* The trade's With box holds 60 characters (maxlength, 67-trade.js), and a
+   seeded value would get past it. So the names are cut at a name, with the
+   rest counted: "Goblin 1, Goblin 2, … and 3 more". A first name too long on
+   its own is cut inside it ("…"). Cut by characters, never mid-surrogate. */
+function endFightNamesCap(names,max){
+  const all=names.join(", ");if(all.length<=max)return all;
+  for(let k=names.length-1;k>=1;k--){const s=names.slice(0,k).join(", ")+`, … and ${names.length-k} more`;if(s.length<=max)return s;}
+  const tail=names.length>1?` and ${names.length-1} more`:"",cs=Array.from(names[0]);
+  let cut="";for(const ch of cs){if((cut+ch).length+1+tail.length>max)break;cut+=ch;}
+  return cut+"…"+tail;
 }
 function endFightLootSection(st){
   return {status:st.traded||"Open trade…",
@@ -200,7 +248,12 @@ function endFightReopen(done){
   const m=document.getElementById("modal");
   if(m&&m.classList&&m.classList.contains("open")&&!document.getElementById("ecDone")){_endFight=null;return false;}
   if(done&&typeof done==="object"&&done.title)st.traded=String(done.title);
-  return endFightShow();
+  if(!endFightShow())return false;
+  /* openModal() took whatever the trade left focused as this window's opener;
+     put back the one it had, and the player back on Open trade. */
+  _modalOpener=st.opener;_modalOpenerSel=st.openerSel;
+  const b=document.getElementById("ecTrade");if(b&&b.focus)b.focus({preventScroll:true});
+  return true;
 }
 /* ---- After combat (spec §4.5): the open trackers and the pages flagged
    "Show after combat" — none while the Journal tab is hidden (#52), and no
@@ -215,18 +268,30 @@ function endFightAfterStatus(l){
   const n=(k,w)=>k?`${k} ${w}${k===1?"":"s"}`:"";
   return [n(l.trackers.length,"tracker"),n(l.pages.length,"page")].filter(Boolean).join(" · ");
 }
-function endFightTrackersHTML(c){return endFightAfterLists(c).trackers.map(t=>trackerRowHTML(t,{noEdit:true})).join("");}
+/* The tracker list's content. Once the window opened with trackers, the list
+   stays for its life (st.trk), so the toast's Undo can paint a closed tile
+   back into it — across a trade's round trip too. With none left open it reads
+   "Nothing here is still open." (the row "All done"), or, with pages below
+   it, simply hides. */
+function endFightTrkList(l){
+  if(l.trackers.length)return {html:l.trackers.map(t=>trackerRowHTML(t,{noEdit:true})).join(""),hidden:false};
+  return l.pages.length?{html:"",hidden:true}:{html:`<p class="hint">Nothing here is still open.</p>`,hidden:false};
+}
 function endFightAfterSection(st,c){
-  const l=endFightAfterLists(c);if(!l.trackers.length&&!l.pages.length)return null;
-  return {status:endFightAfterStatus(l),
-    body:(l.trackers.length?`<div class="trk-group ec-trk" id="ecTrkList">${endFightTrackersHTML(c)}</div>`:"")+
+  if(isTabHidden("journal",c))return null;
+  const l=endFightAfterLists(c),keep=l.trackers.length>0||(!!(st&&st.trk)&&showTrackers(c));
+  if(!keep&&!l.pages.length)return null;
+  const t=endFightTrkList(l);
+  return {status:endFightAfterStatus(l)||"All done",
+    body:(keep?`<div class="trk-group ec-trk" id="ecTrkList"${t.hidden?" hidden":""}>${t.html}</div>`:"")+
       l.pages.map(p=>{const b=noteHTML(jnlStr(p.text));
         return `<div class="ec-page" data-ecpage="${esc(p.id)}"><h4 class="ec-ph">${esc(jnlTitle(p))}</h4>${b?`<div class="n-body">${b}</div>`:""}</div>`;}).join("")};
 }
 /* renderTrackers() calls this for the window's copy of the tiles. */
 function endFightPaintTrackers(box){
-  box.innerHTML=endFightTrackersHTML(character);
-  endFightSetStatus("after",endFightAfterStatus(endFightAfterLists(character)));
+  const l=endFightAfterLists(character),t=endFightTrkList(l);
+  box.innerHTML=t.html;box.hidden=t.hidden;
+  endFightSetStatus("after",endFightAfterStatus(l)||"All done");
 }
 /* A tick on a page shown here: that page's line, as on the Journal tab
    (jnlTogglePage(), which also redraws the tab), then this page's body, with
@@ -241,10 +306,14 @@ function endFightTick(id,n){
 /* A rules term or table link in a page here would open its own dialog over
    this one — the modal has one layer — and lose what the window holds. Here
    they are words: the tap or the key stops at the window (#mBody's listeners
-   run before the document's dispatchers, so stopPropagation() is enough). */
+   run before the document's dispatchers, so stopPropagation() is enough).
+   And Enter in the XP box is Done, as in any one-field form — once per press
+   (a held key repeats), never while an input method is composing. */
 function endFightKey(e){
   if(!e||!(e.key==="Enter"||e.key===" "))return;
-  const t=e.target;if(!t||!t.closest)return;
+  const t=e.target;if(!t)return;
+  if(e.key==="Enter"&&t.id==="ecXp"){if(e.isComposing)return;e.preventDefault();if(!e.repeat)endFightDone();return;}
+  if(!t.closest)return;
   if(t.closest(EC_INERT)){e.preventDefault();e.stopPropagation();}
 }
 /* One row's {status, body}, or null to leave it out. */
