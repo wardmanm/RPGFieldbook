@@ -209,5 +209,61 @@ const rd = (d, rel) => fs.readFileSync(path.join(d, rel), 'utf8');
      ['CLAUDE.md', '.claude/skills', 'src', 'scripts'].every(s => md.SCAN.includes(s)) && !md.SCAN.some(s => /^(dist|docs)(\/|$)/.test(s)), md.SCAN);
 }
 
+/* ---------- scripts/pre-release-record.js (#127, spec §3, §5) */
+const rec = require(RECORD_JS);
+/* a record in the spec's format; `open` lists the steps still open */
+const record = (ver, open = []) => [
+  '# Pre-release ' + ver, 'Started: 2026-10-30 · App was 1.8.1', '',
+  '| Step | State | Done | Summary |', '|---|---|---|---|',
+  ...rec.STEPS.map((s, i) => open.includes(i + 1) ? `| ${i + 1}. ${s} | open | | |` : `| ${i + 1}. ${s} | done | 2026-10-30 | ok |`),
+  '', '## Step 2: outstanding issues', '| Item | Source | Title | Priority | Decision | Issue |', '|---|---|---|---|---|---|', '',
+  '## Step 4: bugs from QA', '| Line | Title | Priority | Issue | State |', '|---|---|---|---|---|',
+  '| 1. Sheet | HP box | P2 | #140 | open |', ''].join('\n');
+
+{
+  const p = rec.parseRecord(record('1.9.0', [4]));
+  ck('#127 parseRecord: the version and five steps, from the top table only',
+     p.version === '1.9.0' && p.steps.length === 5 && p.steps[3].state === 'open' && p.steps[0].state === 'done', p);
+  ck('#127 the steps are the spec\'s five, in order', same(rec.STEPS, ['Docs', 'Outstanding issues', 'QA checklist', 'QA bugs', 'Release notes']));
+  ck('#127 a complete record for exactly that version passes', rec.recordProblem(record('1.9.0'), '1.9.0') === null);
+  ck('#127 no record: refused, naming /pre-release',
+     rec.recordProblem(null, '1.9.0') === 'no pre-release record for 1.9.0 (src/docs/PRE-RELEASE.md does not exist). Run /pre-release 1.9.0 first.');
+  ck('#127 a record for another version: refused, naming both',
+     rec.recordProblem(record('1.9.1'), '1.9.0') === 'src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /pre-release 1.9.0 first.');
+  ck('#127 ...1.9.0 is not 1.9.00', rec.recordProblem(record('1.9.00'), '1.9.0') !== null);
+  ck('#127 an open step: refused, naming the first open one',
+     rec.recordProblem(record('1.9.0', [5, 3]), '1.9.0') === 'pre-release 1.9.0 is not finished: step 3. QA checklist is open. Run /pre-release 1.9.0 to finish it.');
+  ck('#127 a state that is not exactly "done" is open', rec.recordProblem(record('1.9.0').replace('| 2. Outstanding issues | done', '| 2. Outstanding issues | Done'), '1.9.0')
+     .includes('step 2. Outstanding issues is open'));
+  ck('#127 a missing step row: refused', rec.recordProblem(record('1.9.0').replace(/^\| 5\. .*\n/m, ''), '1.9.0') ===
+     'src/docs/PRE-RELEASE.md has no row for step 5. Release notes. Run /pre-release 1.9.0 to finish it.');
+  ck('#127 no heading: refused', rec.recordProblem('just text\n', '1.9.0').includes('has no "# Pre-release X.Y.Z" heading'));
+  ck('#127 the archive path', rec.archivePath('1.9.0') === ['src', 'docs', 'archive', '1.9.0', 'PRE-RELEASE.md'].join('/'));
+}
+
+{
+  // the CLI, and gateProblem/archiveRecord on a scratch tree
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-record-'));
+  const cli = (...a) => spawnSync('node', [RECORD_JS, ...a, '--root', d], {encoding: 'utf8'});
+  let r = cli('1.9.0');
+  ck('#127 the CLI with no record exits 1 with the gate\'s words', r.status === 1 && r.stderr.includes('Run /pre-release 1.9.0 first'), r.stderr);
+  r = cli();
+  ck('#127 ...and with no version either', r.status === 1 && r.stderr.includes('Run /pre-release X.Y.Z first'), r.stderr);
+  fs.mkdirSync(path.join(d, 'src/docs'), {recursive: true});
+  fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.0', [4]));
+  r = cli();
+  ck('#127 the CLI with no version checks the record\'s own', r.status === 1 && r.stderr.includes('step 4. QA bugs is open'), r.stderr);
+  fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.0'));
+  r = cli('1.9.0');
+  ck('#127 the CLI passes a complete record', r.status === 0 && r.stdout.trim() === 'pre-release 1.9.0: complete', r.stdout + r.stderr);
+  const text = fs.readFileSync(path.join(d, rec.RECORD), 'utf8');
+  ck('#127 archiveRecord moves it, bytes intact', rec.archiveRecord(d, '1.9.0') === rec.archivePath('1.9.0') &&
+     !fs.existsSync(path.join(d, rec.RECORD)) && fs.readFileSync(path.join(d, rec.archivePath('1.9.0')), 'utf8') === text);
+  fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.0'));
+  ck('#127 gateProblem refuses a version already archived', rec.gateProblem(d, '1.9.0') ===
+     rec.archivePath('1.9.0') + ' already exists: 1.9.0 has been cut before.');
+  fs.rmSync(d, {recursive: true, force: true});
+}
+
 // ---- add new cases above this line ----
 ck.done();

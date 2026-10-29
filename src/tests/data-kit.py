@@ -322,7 +322,8 @@ def checkout(app="1.8.0", release="1.8.0"):
     """a scratch repo laid out like this one: the scripts, the kit, 30-version.js,
     the notebook and data/, digests seeded, everything committed"""
     d = scratch()
-    for rel in ("scripts/data-release.js", "scripts/data-release-notes.js", "scripts/release.js", "tools/data-kit/fbdata.py"):
+    for rel in ("scripts/data-release.js", "scripts/data-release-notes.js", "scripts/release.js",
+                "scripts/pre-release-record.js", "tools/data-kit/fbdata.py"):
         os.makedirs(os.path.dirname(os.path.join(d, rel)), exist_ok=True)
         shutil.copy(os.path.join(ROOT, rel), os.path.join(d, rel))
     write(d, "src/js/30-version.js", raw='const APP_VERSION="%s";\nconst DATA_VERSIONS={"Alpha":"1.8.0","Beta":"1.7.0"};\n'
@@ -340,6 +341,23 @@ def checkout(app="1.8.0", release="1.8.0"):
     git(d, "add", "-A")
     git(d, "commit", "-qm", "start")
     return d
+
+
+PRE_RELEASE_STEPS = ["Docs", "Outstanding issues", "QA checklist", "QA bugs", "Release notes"]
+
+
+def prerelease(d, ver, open_steps=()):
+    """a pre-release record in the spec's format (#127, spec §3): every step done but open_steps"""
+    rows = ["| %d. %s | %s |" % (i + 1, s, "open | |" if i + 1 in open_steps else "done | 2026-10-30 | ok")
+            for i, s in enumerate(PRE_RELEASE_STEPS)]
+    write(d, "src/docs/PRE-RELEASE.md", raw="# Pre-release %s\nStarted: 2026-10-30 · App was 1.8.0\n\n"
+          "| Step | State | Done | Summary |\n|---|---|---|---|\n%s\n" % (ver, "\n".join(rows)))
+
+
+def untracked_all(d):
+    """git status --porcelain, every untracked file listed (#127 ruling 12: a refusal
+    must leave no new file either, which git diff --stat cannot see)"""
+    return git(d, "status", "--porcelain", "--untracked-files=all").stdout.strip()
 
 
 d = checkout()
@@ -388,8 +406,41 @@ r = node(d, "scripts/data-release.js")
 ck("data-release refuses an app older than 1.8.0", r.returncode == 1 and "1.8.0 or later" in r.stderr, r.stderr)
 shutil.rmtree(d)
 
+# ---------- #127: release.js refuses without a complete pre-release record (spec §5)
+d = checkout()
+rec_path = os.path.join(d, "src/docs/PRE-RELEASE.md")
+for name, rec, level, msg in [
+        ("no record", None, "1.9.0",
+         "no pre-release record for 1.9.0 (src/docs/PRE-RELEASE.md does not exist). Run /pre-release 1.9.0 first."),
+        ("a record for another version", ("1.9.1", ()), "1.9.0",
+         "src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /pre-release 1.9.0 first."),
+        ("an open step, naming the first", ("1.9.0", (3, 5)), "1.9.0",
+         "pre-release 1.9.0 is not finished: step 3. QA checklist is open. Run /pre-release 1.9.0 to finish it."),
+        ("a level that resolves to another version", ("1.9.0", ()), "patch",
+         "src/docs/PRE-RELEASE.md is for 1.9.0, not 1.8.1. Run /pre-release 1.8.1 first.")]:
+    if os.path.exists(rec_path):
+        os.remove(rec_path)
+    if rec:
+        prerelease(d, *rec)
+    r = node(d, "scripts/release.js", level)
+    ck("#127 release.js refuses %s" % name, r.returncode == 1 and ("release: " + msg) in r.stderr, r.stderr)
+    status = untracked_all(d)
+    ck("#127 ...and writes nothing (%s)" % name,
+       git(d, "diff", "--stat").stdout.strip() == "" and os.path.exists(rec_path) == bool(rec)
+       and status == ("?? src/docs/PRE-RELEASE.md" if rec else ""), (git(d, "diff", "--stat").stdout, status))
+prerelease(d, "1.9.0")
+write(d, os.path.join("src/docs/archive", "1.9.0", "PRE-RELEASE.md"), raw="# Pre-release 1.9.0\n")
+before = untracked_all(d)
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 release.js refuses a version whose record is already archived",
+   r.returncode == 1 and "already exists: 1.9.0 has been cut before." in r.stderr and git(d, "diff", "--stat").stdout.strip() == ""
+   and untracked_all(d) == before, (r.stderr, before, untracked_all(d)))
+shutil.rmtree(d)
 d = checkout()
 write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 6}]})
+prerelease(d, "1.9.0")
+with open(os.path.join(d, "src/docs/PRE-RELEASE.md"), encoding="utf-8") as f:
+    record_text = f.read()
 r = node(d, "scripts/release.js", "1.9.0")
 reg = read_json(d, "data/packs.json")
 with open(os.path.join(d, "src/js/30-version.js"), encoding="utf-8") as f:
@@ -399,6 +450,12 @@ ck("release.js bumps the changed pack to the new app version",
    (r.stderr, reg))
 ck("...snapshots DATA_VERSIONS from the registry", 'const DATA_VERSIONS={"Alpha":"1.9.0","Beta":"1.7.0"}' in v, v[:200])
 ck("...and still bumps APP_VERSION", 'APP_VERSION="1.9.0"' in v)
+archived = os.path.join(d, "src/docs/archive", "1.9.0", "PRE-RELEASE.md")
+ck("#127 ...files the pre-release record under src/docs/archive/<version>/, bytes intact",
+   not os.path.exists(os.path.join(d, "src/docs/PRE-RELEASE.md")) and os.path.exists(archived)
+   and open(archived, encoding="utf-8").read() == record_text, r.stderr)
+ck("#127 ...and commits and tags nothing",
+   git(d, "rev-list", "--count", "HEAD").stdout.strip() == "1" and git(d, "tag", "-l").stdout.strip() == "")
 shutil.rmtree(d)
 
 d = checkout()
