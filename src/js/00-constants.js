@@ -99,6 +99,10 @@ function blankChar(){
        before it shows it. `trackerTotals` maps a tag key to `true` where the
        group shows its total (#93). */
     trackers:[], trackerCollapse:{}, trackerTotals:{}, showTrackers:true,
+    /* #105: the End of combat window (87-combat-end.js): whether its XP box
+       splits among the party, and which of its folded rows are open (row key ->
+       true). Trackers and pages carry their own optional afterCombat:true. */
+    xpSplit:false, endCombatOpen:{},
     /* Ammunition fired since the last recovery (62-ammo.js): stack or thrown
        weapon id -> {n, hits, misses, kind, snap}. `ammoInit` is NOT defaulted:
        the one-time pass sets it. `ammoRecovery` is the character's rule for what

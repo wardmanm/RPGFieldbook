@@ -98,6 +98,13 @@ function migrateSheet103(c){
   if(c.langLifted!==true){liftLanguages(c);c.langLifted=true;}
   ensureDefaultLanguages(c);
 }
+/* #105: which End of combat rows are open — key -> true; any other value is
+   dropped. Not a whitelist of keys: a row added later keeps its state. */
+function cleanEndCombatOpen(v){
+  const o={};
+  if(v&&typeof v==="object"&&!Array.isArray(v))Object.keys(v).forEach(k=>{if(v[k]===true&&k!=="__proto__")o[k]=true;});
+  return o;
+}
 function migrate(s){
   s=s||{};
   const base=blankChar(), blank=blankChar();
@@ -151,6 +158,12 @@ function migrate(s){
   base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
   base.hiddenTabs=cleanHiddenTabs(s.hiddenTabs);   /* #52 */
   base.featsAllowed=typeof s.featsAllowed==="boolean"?s.featsAllowed:true;   /* #118 */
+  /* #105: the End of combat window's settings, and "Show after combat" on
+     trackers and pages, kept only when true — absent is off */
+  base.xpSplit=s.xpSplit===true;
+  base.endCombatOpen=cleanEndCombatOpen(s.endCombatOpen);
+  base.trackers.forEach(t=>{if(t.afterCombat!==true)delete t.afterCombat;});
+  base.journal.forEach(p=>{if(p.afterCombat!==true)delete p.afterCombat;});
   /* #118: well-formed level records only; the rest are dropped. A kept record
      keeps every key, and the parts Level down reads are made safe: features
      objects with a string id (lvRecFeats), each with a grants array; grants

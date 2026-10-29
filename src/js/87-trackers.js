@@ -108,6 +108,7 @@ function trkFromForm(t,f){
   delete t.items;delete t.done;
   t.autoClose=f.autoClose!==false;
   t.value=trkInt(t.value);
+  if(f.afterCombat===true)t.afterCombat=true;else delete t.afterCombat;   /* #105 */
   return t;
 }
 
@@ -186,6 +187,8 @@ function trackerFormHTML(t,tags,isNew){
     `<div class="field"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
     `<div class="toggle" id="tkAutoRow"><div><div class="t-lbl">Close when complete</div><div class="t-sub">Move it to Completed once it's done. You get an Undo.</div></div>`+
       `<button type="button" class="switch ${auto?"on":""}" id="tkAuto" role="switch" aria-checked="${auto?"true":"false"}" aria-label="Close when complete"></button></div>`+
+    `<div class="toggle"><div><div class="t-lbl">Show after combat</div></div>`+
+      `<button type="button" class="switch ${t.afterCombat===true?"on":""}" id="tkAfter" role="switch" aria-checked="${t.afterCombat===true?"true":"false"}" aria-label="Show after combat"></button></div>`+
     `<div class="m-actions">`+(isNew?"":`<button type="button" class="tbtn danger" id="tkDel" style="margin-right:auto">Delete</button>`+
       `<button type="button" class="tbtn" id="tkCloseNow">${t.closed===true?"Reopen":"Close now"}</button>`)+
     `<button type="button" class="tbtn" id="tkCancel">Cancel</button><button type="button" class="tbtn primary" id="tkSave">${isNew?"Add":"Save"}</button></div>`;
@@ -315,13 +318,14 @@ function openTrackerForm(existing){
   const sync=()=>{$("tkAutoRow").hidden=!trkInt($("tkGoal").value);};
   $("tkGoal").addEventListener("input",sync);sync();
   $("tkAuto").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
+  $("tkAfter").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
   $("tkCancel").addEventListener("click",closeModal);
   /* The tracker as stored NOW. The toast sits outside the modal's inert, so its
      Undo can land while this form is open and swap the stored object for its
      snapshot — `t` would then be a copy no longer in the list. A new tracker
      has no stored copy: Save adds `t` itself. */
   const cur=()=>isNew?t:trkById(t.id);
-  const fields=()=>({name:$("tkName").value,tag:$("tkTag").value,goal:$("tkGoal").value,autoClose:$("tkAuto").classList.contains("on")});
+  const fields=()=>({name:$("tkName").value,tag:$("tkTag").value,goal:$("tkGoal").value,autoClose:$("tkAuto").classList.contains("on"),afterCombat:$("tkAfter").classList.contains("on")});
   const done=()=>{closeModal();renderTrackers();scheduleSave();};
   {const d=$("tkDel");if(d)d.addEventListener("click",()=>{
     if(!confirm(`Delete the tracker “${trkName(cur()||t)}”?`))return;

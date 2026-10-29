@@ -7511,6 +7511,54 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = keep;
 }
 
+/* ---------- #105 the data: xpSplit, endCombatOpen, afterCombat on trackers and pages */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const src105 = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
+  const keep = X.character;
+  const b = X.blankChar();
+  ck('#105 a new character: no split, every row folded', b.xpSplit === false && same(b.endCombatOpen, {}));
+  const m = X.migrate({abilities: {}, xpSplit: 'yes', endCombatOpen: {ammo: true, xp: 1, loot: 'true', after: true, later: true},
+    trackers: [{id: 't1', name: 'Goblins', afterCombat: true}, {id: 't2', name: 'Pages', afterCombat: 'yes'}],
+    journal: [{id: 'p1', title: 'Loot list', afterCombat: true}, {id: 'p2', title: 'Notes', afterCombat: false}]});
+  ck('#105 migrate: anything but true is no split', m.xpSplit === false && X.migrate({abilities: {}, xpSplit: true}).xpSplit === true);
+  ck('#105 migrate: open rows keep only true values, any key', same(m.endCombatOpen, {ammo: true, after: true, later: true}), m.endCombatOpen);
+  ck('#105 migrate: open rows that are not a plain object become {}',
+     same(X.migrate({abilities: {}, endCombatOpen: ['ammo']}).endCombatOpen, {}) && same(X.migrate({abilities: {}, endCombatOpen: 'x'}).endCombatOpen, {}) &&
+     same(X.migrate({abilities: {}}).endCombatOpen, {}) && same(X.migrate({abilities: {}, endCombatOpen: null}).endCombatOpen, {}));
+  ck('#105 migrate: a tracker keeps afterCombat only when true', m.trackers[0].afterCombat === true && !('afterCombat' in m.trackers[1]));
+  ck('#105 migrate: a page likewise', m.journal[0].afterCombat === true && !('afterCombat' in m.journal[1]));
+  const back = X.migrate(JSON.parse(JSON.stringify(m)));
+  ck('#105 a save → load round trip keeps all four', back.xpSplit === false && same(back.endCombatOpen, m.endCombatOpen) &&
+     back.trackers[0].afterCombat === true && back.journal[0].afterCombat === true && !('afterCombat' in back.trackers[1]) && !('afterCombat' in back.journal[1]));
+  ck('#105 ...and a split that is on stays on', X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {xpSplit: true})))).xpSplit === true);
+  // the tracker form
+  const f = X.trackerFormHTML({id: 't', type: 'counter', afterCombat: true}, [], false);
+  ck('#105 the tracker form has Show after combat, on when set', /id="tkAfter" role="switch" aria-checked="true"/.test(f) && />Show after combat</.test(f), f);
+  ck('#105 ...off by default', /id="tkAfter" role="switch" aria-checked="false"/.test(X.trackerFormHTML({type: 'counter', autoClose: true}, [], true)));
+  ck('#105 the form writes it, and takes it away',
+     X.trkFromForm({}, {afterCombat: true}).afterCombat === true && !('afterCombat' in X.trkFromForm({afterCombat: true}, {afterCombat: false})));
+  ck('#105 the tracker form wires and reads the switch',
+     /\$\("tkAfter"\)\.addEventListener\("click"/.test(src105('87-trackers.js')) && /afterCombat:\$\("tkAfter"\)\.classList\.contains\("on"\)/.test(src105('87-trackers.js')));
+  // the page editor
+  const ed = X.journalEditorHTML({id: 'p', title: 't', tag: '', text: '', afterCombat: true}, []);
+  ck('#105 the page editor has Show after combat', /data-jnlac role="switch" aria-checked="true"/.test(ed) && />Show after combat</.test(ed), ed);
+  ck('#105 ...off by default', /data-jnlac role="switch" aria-checked="false"/.test(X.journalEditorHTML({id: 'p', title: '', tag: '', text: ''}, [])));
+  ck('#105 the switch is wired in the dispatcher', /t\.closest\("\[data-jnlac\]"\)\)return jnlToggleAfterCombat\(\)/.test(src105('90-boot.js')));
+  const c = X.blankChar(); X.character = c;
+  c.journal = [{id: 'p1', title: 'Loot list', tag: '', text: 'x', at: 1, editedAt: 1}];
+  ctx.renderJournal(); ctx.jnlStartEdit('p1', 1, 'jnlText');
+  ck('#105 on a saved page the switch writes the page', ctx.jnlToggleAfterCombat() === true && c.journal[0].afterCombat === true && c.journal[0].editedAt === 1);
+  ck('#105 ...and off removes the key', ctx.jnlToggleAfterCombat() === false && !('afterCombat' in c.journal[0]));
+  ctx.jnlNewPage();
+  ck('#105 on a draft it is held until the page exists', ctx.jnlToggleAfterCombat() === true && c.journal.length === 1);
+  ck('#105 ...and the new page takes it', X.jnlSavePage(c, {id: 'n1', afterCombat: true}, {title: 'New'}, 5).afterCombat === true &&
+     !('afterCombat' in X.jnlSavePage(c, {id: 'n2'}, {title: 'Other'}, 6)));
+  ctx.jnlReset();
+  ck('#105 not while nothing is being edited', ctx.jnlToggleAfterCombat() === false);
+  X.character = keep;
+}
+
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
    A real timer (Node's), borrowed for this block only: the harness's setTimeout
    never fires, and settling is a setTimeout(0). The modal's open state is

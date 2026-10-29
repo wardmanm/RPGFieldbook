@@ -63,6 +63,7 @@ function wire(){
     if((m=t.closest("[data-jnldel]"))){jnlDelete(m.dataset.jnldel);return;}
     if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
     if(t.closest("[data-jnlck]"))return insertJournalCheckbox();
+    if(t.closest("[data-jnlac]"))return jnlToggleAfterCombat();
     /* a checkbox in a rendered page, a Story field or a section note (#95):
        only those three surfaces answer it — a box drawn in an item description
        does nothing */

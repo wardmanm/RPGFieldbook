@@ -83,6 +83,7 @@ function jnlSavePage(c,draft,fields,now){
   if(i<0){
     if(!draft.at)draft.at=now;
     const p={id:draft.id,title,tag,text,at:draft.at,editedAt:now};
+    if(draft.afterCombat===true)p.afterCombat=true;   /* #105: set on the draft before the page existed */
     c.journal.push(p);return p;
   }
   const p=c.journal[i];
@@ -184,6 +185,8 @@ function journalEditorHTML(p,tags){
     `<div class="field"><label class="f" for="jnlText">Page</label>`+
     `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
     `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button><button type="button" class="tbtn" data-jnlck>Insert checkbox</button></div>`+
+    `<div class="toggle"><div><div class="t-lbl">Show after combat</div></div>`+
+      `<button type="button" class="switch ${p.afterCombat===true?"on":""}" data-jnlac role="switch" aria-checked="${p.afterCombat===true?"true":"false"}" aria-label="Show after combat"></button></div>`+
     NOTE_FMT_HINT+(when?`<p class="hint">${esc(when)}</p>`:"");
 }
 
@@ -263,6 +266,20 @@ function jnlInput(){
   const v=id=>{const e=document.getElementById(id);return e?e.value:"";};
   jnlSavePage(character,jnlUI.draft,{title:v("jnlTitle"),tag:v("jnlTag"),text:v("jnlText")},Date.now());
   scheduleSave();
+}
+/* "Show after combat" (#105), from the editor. A saved page takes it at once,
+   and it is not content, so editedAt stays. A draft that is not a page yet
+   (jnlSavePage()'s rule) holds it until its first keystroke makes the page. The
+   switch is patched in place: the editor is never rebuilt while open. */
+function jnlToggleAfterCombat(){
+  if(!jnlUI.editing||!jnlUI.draft)return false;
+  const p=jnlPages(character).find(x=>x.id===jnlUI.draft.id);
+  const on=!((p||jnlUI.draft).afterCombat===true);
+  if(on)jnlUI.draft.afterCombat=true;else delete jnlUI.draft.afterCombat;
+  if(p){if(on)p.afterCombat=true;else delete p.afterCombat;scheduleSave();}
+  const b=document.querySelector("[data-jnlac]");
+  if(b){b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");}
+  return on;
 }
 function jnlDelete(id){
   const p=jnlPages(character).find(x=>x.id===id);if(!p)return false;
