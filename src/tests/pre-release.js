@@ -20,12 +20,20 @@ const LEDGER_LINES = ['# Wiring ledger', '', '## Example (#1, 2026-01-01)', '',
   'Spec: `src/docs/specs/example-alpha-design.md`; plan: `src/docs/plans/example-alpha.md`.',
   '1. Spec `specs/example-alpha-design.md`, and its [page](../wiki/example-page.md).',
   'Its [spec](../specs/example-alpha-design.md) again; the other one, `specs/example-alpha-design-v2.md`, stays.', ''];
+/* a binary fixture that is NOT moved: must survive untouched (extension excludes it
+   from scanFiles; #127 fix round 1, finding 2's second test) */
+const IMG_UNMOVED = crypto.randomBytes(777);
+/* a binary fixture that IS moved: must come out byte for byte (finding 2's first test) */
+const IMG_MOVED = crypto.randomBytes(4096);
 const FILES = {
   'src/docs/specs/example-alpha-design.md': [
     '# Alpha: design', '', 'Read [the page](../wiki/example-page.md) and [Beta](example-beta-design.md) first.',
-    'Plan: [plan](../plans/example-alpha.md).', ''].join('\n'),
+    'Plan: [plan](../plans/example-alpha.md).',
+    'See [plans/](../plans/), [x](../../js/10-example.js#sec) and ![img](../img/example-a.png).', ''].join('\n'),
   'src/docs/specs/example-beta-design.md': ['# Beta: design', '', 'Follows [Alpha](example-alpha-design.md).', ''].join('\n'),
   'src/docs/specs/example-alpha-design-v2.md': '# Alpha v2\n',
+  'src/docs/specs/example-img.png': IMG_MOVED,
+  'src/docs/img/example-a.png': IMG_UNMOVED,
   'src/docs/plans/example-alpha.md': [
     '# Alpha plan', '', '**Spec:** `src/docs/specs/example-alpha-design.md`, also [the spec](../specs/example-alpha-design.md).',
     '', '```bash', 'cat src/docs/specs/example-alpha-design.md', 'echo "[Journal](features/example-journal.md)"', '```',
@@ -42,6 +50,7 @@ const FILES = {
 const MOVES = [
   {from: 'src/docs/specs/example-alpha-design.md', to: 'src/docs/specs/1.9.0/example-alpha-design.md'},
   {from: 'src/docs/plans/example-alpha.md', to: 'src/docs/plans/1.9.0/example-alpha.md'},
+  {from: 'src/docs/specs/example-img.png', to: 'src/docs/specs/1.9.0/example-img.png'},
 ];
 const tree = () => {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-move-docs-'));
@@ -111,6 +120,9 @@ const rd = (d, rel) => fs.readFileSync(path.join(d, rel), 'utf8');
   ck('#127 a moved spec\'s own relative links are recomputed from its new folder',
      spec.includes('[the page](../../wiki/example-page.md)') && spec.includes('[Beta](../example-beta-design.md)') &&
      spec.includes('[plan](../../plans/1.9.0/example-alpha.md)'), spec);
+  ck('#127 a moved spec\'s folder link, deep anchored link and image all still resolve (#127 fix round 1, finding 1)',
+     spec.includes('[plans/](../../plans/)') && spec.includes('[x](../../../js/10-example.js#sec)') &&
+     spec.includes('![img](../../img/example-a.png)'), spec);
   ck('#127 a sibling that stayed links to the moved one', rd(d, 'src/docs/specs/example-beta-design.md').includes('[Alpha](1.9.0/example-alpha-design.md)'));
   const plan = rd(d, MOVES[1].to);
   ck('#127 a moved plan: repo paths and relative links both follow',
@@ -136,6 +148,10 @@ const rd = (d, rel) => fs.readFileSync(path.join(d, rel), 'utf8');
      led[5] === '1. Spec `specs/1.9.0/example-alpha-design.md`, and its [page](../wiki/example-page.md).' &&
      led[6] === 'Its [spec](../specs/1.9.0/example-alpha-design.md) again; the other one, `specs/example-alpha-design-v2.md`, stays.', led.slice(4, 7));
   ck('#127 a doc whose name only starts the same is untouched', rd(d, 'src/docs/specs/example-alpha-design-v2.md') === '# Alpha v2\n');
+  ck('#127 a binary file that is moved keeps its exact bytes and hash (#127 fix round 1, finding 2)',
+     !fs.existsSync(path.join(d, MOVES[2].from)) && fs.readFileSync(path.join(d, MOVES[2].to)).equals(IMG_MOVED));
+  ck('#127 a binary file under a scanned root that is not moved is left untouched',
+     fs.readFileSync(path.join(d, 'src/docs/img/example-a.png')).equals(IMG_UNMOVED));
   // run it again with nothing to do: the same moves now refuse, and nothing changes
   const after = snapshot(d);
   const again = runMove(d, MOVES);
