@@ -8318,4 +8318,85 @@ async function t105Xp() {
   }
 }
 
-t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+/* ---------- #105 Loot: a trade from the window, and back */
+async function t105Loot() {
+  const keep = {om: ctx.openModal, ot: ctx.openTrade, ch: X.character, toast: ctx.toast, conf: state.confirm};
+  const opened = [], trades = [];
+  try {
+    ctx.openModal = function (t, h) { opened.push({t, h}); return keep.om.apply(null, arguments); };
+    ctx.toast = () => null;
+    const c = X.blankChar(); X.character = c; c.classes = [{name: 'Fighter', level: 4}]; c.level = 4;
+    const foes = [{id: 'y', kind: 'you', name: 'Tess'}, {id: 'g', kind: 'foe', name: 'Goblin 1', band: 4},
+                  {id: 'g2', kind: 'foe', name: 'Goblin 2', band: 1}, {id: 'b', kind: 'foe', name: 'Bugbear', band: 4}];
+    ck('#105 Loot: the other party is the fallen, joined with commas', ctx.endFightLootWith(foes) === 'Goblin 1, Bugbear');
+    ck('#105 ...a fallen party member is never named', ctx.endFightLootWith(foes.concat([{id: 'p', kind: 'party', name: 'Brindle', dead: true}])) === 'Goblin 1, Bugbear');
+    ck('#105 ...or "Combat loot" when none fell or nobody was tracked', ctx.endFightLootWith([foes[0], foes[2]]) === 'Combat loot' && ctx.endFightLootWith([]) === 'Combat loot');
+    ctx.openEndOfCombat({rounds: 3, sec: 18, combatants: foes});
+    let h = opened[opened.length - 1].h;
+    ck('#105 Loot is always shown, reading "Open trade…"', /data-ecrow="loot"/.test(h) && /id="ecSt-loot">Open trade…</.test(h) && /id="ecTrade">Open trade</.test(h) &&
+       h.includes("<p>Coins and items from the fight go through a trade, so they're in your inventory log.</p>"), h);
+    ctx.endFightSetXp('450'); ctx.endFightToggle('xp'); ctx.endFightToggle('loot');
+    ctx.openTrade = o => { trades.push(o); };
+    ck('#105 Open trade passes the fallen as the other party, and an onClose', ctx.endFightOpenLoot() === true && trades.length === 1 && trades[0].with === 'Goblin 1, Bugbear' && typeof trades[0].onClose === 'function', trades);
+    opened.length = 0; trades[0].onClose(null);
+    h = opened.length ? opened[0].h : '';
+    ck('#105 a cancelled trade brings the window back, its state intact', opened.length === 1 && opened[0].t === 'End of combat' &&
+       /id="ecXp"[^>]*value="450"/.test(h) && /data-ecrow="xp" aria-expanded="true"/.test(h) && /data-ecrow="loot" aria-expanded="true"/.test(h) && /id="ecSt-loot">Open trade…</.test(h), h);
+    opened.length = 0; trades[0].onClose({title: 'Traded with Goblin 1, Bugbear'});
+    ck('#105 after a completed trade the row reads "Traded with …"', /id="ecSt-loot">Traded with Goblin 1, Bugbear</.test(opened[0].h));
+    ck('#105 ...and another trade is allowed', ctx.endFightOpenLoot() === true && trades.length === 2);
+    X.character = X.blankChar(); opened.length = 0; trades[1].onClose(null);
+    ck('#105 a character change while trading drops the window; nothing reopens', opened.length === 0 && X._endFight === null);
+    // the real trade window's onClose
+    ctx.openTrade = keep.ot; X.character = c;
+    let calls = [];
+    ctx.openTrade({with: 'Goblin 1', onClose: d => calls.push(d)});
+    ctx.dismissModal();
+    ck('#105 × on the trade runs onClose, with null', calls.length === 1 && calls[0] === null, calls);
+    ctx.dismissModal();
+    ck('#105 ...once', calls.length === 1);
+    calls = []; ctx.openTrade({with: 'x', get: {coins: {gp: 5}}, onClose: d => calls.push(d)});
+    state.confirm = false; state.lastConfirm = null; ctx.dismissModal();
+    ck('#105 declining "Discard this trade?" keeps it open: no onClose', calls.length === 0 && state.lastConfirm === 'Discard this trade?');
+    state.confirm = true; ctx.dismissModal();
+    ck('#105 ...accepting it hands back', calls.length === 1);
+    calls = []; ctx.openTrade({onClose: d => calls.push(d)}); const e = {title: 'Traded with x'};
+    ctx.tradeClosed(e); ctx.tradeClosed(null);
+    ck('#105 tradeClosed hands the completed line on, once', calls.length === 1 && calls[0] === e);
+    /* PF8: a trade opened without onClose drops an earlier opener's hook, closes, and reopens nothing */
+    calls = []; ctx.openTrade({onClose: d => calls.push(d)});
+    let closes = 0; const cmKeep = ctx.closeModal; ctx.closeModal = function () { closes++; return cmKeep.apply(null, arguments); };
+    opened.length = 0; ctx.openTrade({}); ctx.dismissModal(); ctx.tradeClosed(null);
+    ctx.closeModal = cmKeep;
+    ck('#105 a trade with no onClose closes as before: it closes, no earlier onClose runs, nothing reopens',
+       closes === 1 && calls.length === 0 && opened.length === 1 && opened[0].t === 'Trade', {closes, calls, opened: opened.map(o => o.t)});
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '67-trade.js'), 'utf8');
+    ck('#105 Cancel and Complete Trade both hand back through onClose',
+       /#trCancel"\)\)\{closeModal\(\);tradeClosed\(null\);return;\}/.test(src) && /const done=completeTrade\(d\);closeModal\(\);\s*if\(done\)toast\([^\n]*\n\s*tradeClosed\(done\);/.test(src));
+    // end to end: the real trade over the real window, and back
+    ctx.openEndOfCombat({rounds: 1, sec: 6, combatants: foes}); ctx.endFightSetXp('30');
+    opened.length = 0; ctx.endFightOpenLoot();
+    ck('#105 the trade window replaces this one, with the fallen in its With box', opened.length === 1 && opened[0].t === 'Trade' && /id="trWith" value="Goblin 1, Bugbear"/.test(opened[0].h));
+    ctx.dismissModal();
+    ck('#105 ...and closing it brings End of combat back, state intact', opened.length === 2 && opened[1].t === 'End of combat' && /id="ecXp"[^>]*value="30"/.test(opened[1].h));
+    const asked = []; const askKeep = ctx.askConfirm; ctx.askConfirm = o => { asked.push(o); return new Promise(() => {}); };
+    ctx.dismissModal(); ctx.askConfirm = askKeep;
+    ck('#105 ...with its dismiss guard set again: × asks "Add 30 XP?"', asked.length === 1 && asked[0].title === 'Add 30 XP?' && X._endFight !== null, asked);
+    X._endFight.asking = false;
+    trades.length = 0; ctx.openTrade = o => { trades.push(o); };
+    ctx.endFightClick({target: {closest: s => s === '#ecTrade' ? {} : null}});
+    ck('#105 the Open trade button opens the trade', trades.length === 1 && trades[0].with === 'Goblin 1, Bugbear');
+    const gid = ctx.document.getElementById;
+    ctx.document.getElementById = id => id === 'modal' ? {classList: {contains: k => k === 'open'}} : id === 'ecDone' ? null : gid(id);
+    opened.length = 0; const back = trades[0].onClose(null);
+    ctx.document.getElementById = gid;
+    ck('#105 if another dialog took the modal meanwhile, nothing is drawn over it and the state goes', back === false && opened.length === 0 && X._endFight === null);
+  } catch (err) {
+    ck('#105 t105Loot ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.openModal = keep.om; ctx.openTrade = keep.ot; ctx.toast = keep.toast; state.confirm = keep.conf;
+    X.character = keep.ch; X._endFight = null;
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

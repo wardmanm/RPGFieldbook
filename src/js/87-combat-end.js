@@ -166,10 +166,43 @@ function endFightSetSplit(on){
   endFightRepaintSection("xp","#ecSplit");
   return character.xpSplit;
 }
+/* ---- Loot (spec §4.4): always shown; a trade, so it lands in the inventory log ---- */
+/* The trade's other party: the fallen FOES, by name (a fallen party member is
+   struck through in the summary but never named: the loot came from the
+   foes), or "Combat loot". Raw text: the trade window escapes it where drawn. */
+function endFightLootWith(list){
+  const names=(Array.isArray(list)?list:[]).filter(r=>r&&typeof r==="object"&&r.kind==="foe"&&combatantDead(r)).map(r=>String(r.name||"").trim()).filter(Boolean);
+  return names.length?names.join(", "):"Combat loot";
+}
+function endFightLootSection(st){
+  return {status:st.traded||"Open trade…",
+    body:`<p>Coins and items from the fight go through a trade, so they're in your inventory log.</p>`+
+      `<button type="button" class="tbtn" id="ecTrade">Open trade</button>`};
+}
+/* The trade window replaces this one (the modal has one layer); its onClose
+   brings this back from _endFight, as it was. */
+function endFightOpenLoot(){
+  const st=endFightLive();if(!st)return false;
+  openTrade({with:endFightLootWith(st.combatants),onClose:endFightReopen});
+  return true;
+}
+/* The trade's onClose (tradeClosed() runs it once, however the trade closed).
+   Back only for the character it was opened for (endFightLive()), and only
+   onto a free modal, or onto this window itself: if something else has taken
+   the modal meanwhile, the window is not drawn over it and its state goes, as
+   on ×. endFightShow() sets the dismiss guard again. */
+function endFightReopen(done){
+  const st=endFightLive();if(!st)return false;
+  const m=document.getElementById("modal");
+  if(m&&m.classList&&m.classList.contains("open")&&!document.getElementById("ecDone")){_endFight=null;return false;}
+  if(done&&typeof done==="object"&&done.title)st.traded=String(done.title);
+  return endFightShow();
+}
 /* One row's {status, body}, or null to leave it out. */
 function endFightSection(k,st,c){
   if(k==="ammo")return endFightAmmoSection(st,c);
   if(k==="xp")return endFightXpSection(st,c);
+  if(k==="loot")return endFightLootSection(st,c);
   return null;
 }
 /* Every attribute interpolates esc(k) whole: rules-data.js's attribute scan
@@ -228,6 +261,7 @@ function endFightClick(e){
   if((m=t.closest("[data-ecrow]"))){endFightToggle(m.dataset.ecrow);return;}
   if(t.closest("#ecUndoAmmo")){endFightUndoAmmo();return;}
   if(t.closest("#ecSplit")){endFightSetSplit(character.xpSplit!==true);return;}
+  if(t.closest("#ecTrade")){endFightOpenLoot();return;}
   if(t.closest("#ecDone")){endFightDone();return;}
 }
 function endFightWire(){
