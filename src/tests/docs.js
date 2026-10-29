@@ -452,4 +452,41 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   ck('#127 ...and every section has at least one line', empty.length === 0, empty);
 }
 
+// ---------- the pre-release and release skills agree with the gate (#127, spec §5)
+// release.js reads the record's step rows; the skill writes them. And /release's
+// preflight must run the same check before Mike is asked for a number.
+{
+  const pre = read('.claude/skills/pre-release/SKILL.md');
+  const rel = read('.claude/skills/release/SKILL.md');
+  const {STEPS} = require('../../scripts/pre-release-record.js');
+  ck('#127 /pre-release is Mike\'s to start', /^---\nname: pre-release\n/.test(pre) &&
+     /^disable-model-invocation: true$/m.test(pre) && /^argument-hint: /m.test(pre));
+  const rows = STEPS.map((s, i) => '| ' + (i + 1) + '. ' + s + ' | open | | |');
+  ck('#127 its record template has the five step rows release.js reads', rows.every(r => pre.includes(r)), rows.filter(r => !pre.includes(r)));
+  const areas = [...read('src/docs/qa/smoke.md').matchAll(/^## (.+)$/gm)].map(m => m[1].trim());
+  ck('#127 its checklist names the smoke list\'s areas, in order', pre.includes(areas.join(', ')), areas.join(', '));
+  ck('#127 /release\'s preflight runs the record check and the open-P0 check',
+     rel.includes('node scripts/pre-release-record.js') && rel.includes('.priority=="P0"'));
+  // Each skill keeps its own open-P0 query, since each must run on its own; the
+  // two copies must stay one query (#127 ruling 5). A fenced block is compared
+  // with its fence's indent removed, as a list item indents it.
+  const fenced = text => {
+    const out = []; let cur = null, ind = '';
+    for (const line of text.split('\n')) {
+      const f = /^([ \t]*)```/.exec(line);
+      if (f && !cur) { cur = []; ind = f[1]; continue; }
+      if (f && cur) { out.push(cur.join('\n')); cur = null; continue; }
+      if (cur) cur.push(line.startsWith(ind) ? line.slice(ind.length) : line);
+    }
+    return out;
+  };
+  const p0 = text => fenced(text).filter(b => b.includes('.priority=="P0"'));
+  const [a, b] = [p0(pre), p0(rel)];
+  ck('#127 both skills hold one open-P0 query, and it is the same query',
+     a.length === 1 && b.length === 1 && a[0] === b[0], {pre: a, release: b});
+  // spec §7: it runs on main and refuses elsewhere; it never switches branch (#127 ruling 8)
+  ck('#127 /pre-release refuses off main and never switches branch',
+     pre.includes('git branch --show-current') && !pre.includes('git switch'));
+}
+
 ck.done();
