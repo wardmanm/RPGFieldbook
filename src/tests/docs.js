@@ -440,4 +440,16 @@ if (packsReg && Array.isArray(packsReg.packs)) {
      dead.length === 0, dead.slice(0, 10));
 }
 
+// ---------- the standing QA list (#127, pre-release spec §4 step 3)
+// /pre-release copies each area's lines from it into the release's checklist,
+// area by area, so its headings are the app's areas in tab order.
+{
+  const AREAS = ['Home', 'Sheet', 'Combat', 'Spells', 'Inventory', 'Bio', 'Journal', 'Rules', 'Settings', 'Extensions and updates'];
+  const smoke = read('src/docs/qa/smoke.md');
+  const heads = [...smoke.matchAll(/^## (.+)$/gm)].map(m => m[1].trim());
+  ck('#127 qa/smoke.md has one section per app area, in tab order', JSON.stringify(heads) === JSON.stringify(AREAS), heads);
+  const empty = smoke.split(/^## /m).slice(1).filter(s => !/^- \S/m.test(s)).map(s => s.split('\n')[0]);
+  ck('#127 ...and every section has at least one line', empty.length === 0, empty);
+}
+
 ck.done();
