@@ -466,3 +466,8 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .ec-foot .tbtn{min-height:44px}
 .ec-xp input{max-width:200px}
 .m-body .ec-ready{color:var(--accent-2);font-weight:700;margin:4px 0 0}
+.ec-trk{padding:4px 0 6px}
+.ec-page{border:1px solid var(--hair);border-radius:8px;padding:6px 10px;margin-top:8px;background:var(--field)}
+.ec-ph{margin:0 0 4px;font-family:var(--head);font-size:14px}
+.ec-page .n-body{max-height:220px;overflow-y:auto;margin-top:0}
+.ec-page .kw,.ec-page .tblref{cursor:text}

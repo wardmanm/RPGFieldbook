@@ -3073,7 +3073,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
 {
   const c = X.blankChar(); X.character = c;
   c.trackers = [{id: 'b', name: 'Codex', type: 'counter', value: 5, goal: 20, autoClose: true}];
-  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector};
+  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector, querySelectorAll: doc.querySelectorAll};
   let draws = 0;
   const attrs = {}, fill = {style: {}};
   const bar = {setAttribute: (k, v) => { attrs[k] = String(v); }, querySelector: s => s === 'span' ? fill : null};
@@ -3082,6 +3082,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const list = {set innerHTML(v) { draws++; }, get innerHTML() { return ''; }};
   doc.getElementById = id => id === 'trkList' ? list : null;
   doc.querySelector = s => s === '[data-trk="b"]' ? row : s === '[data-trkval="b"]' ? box : null;
+  /* #105: trkPatchRow() patches every copy of the row (the Journal tab's and the End of combat window's) */
+  doc.querySelectorAll = s => s === '[data-trk="b"]' ? [row] : [];
   box.value = '9';
   ctx.commitTrackerValue(box, false);
   ck('a typed count is stored', c.trackers[0].value === 9, c.trackers[0].value);
@@ -3112,7 +3114,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   c.trackers = [{id: 'g', name: 'Goblins', type: 'counter', tag: 'Kills', value: 5},
     {id: 'o', name: 'Orcs', type: 'counter', tag: 'kills', value: 2, closed: true, closedAt: 1}];
   c.trackerTotals = {kills: true};
-  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector};
+  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector, querySelectorAll: doc.querySelectorAll};
   let draws = 0;
   const total = {textContent: '· 7'};
   const group = {querySelector: s => s === '.trk-total' ? total : null};
@@ -3121,6 +3123,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const list = {set innerHTML(v) { draws++; }, get innerHTML() { return ''; }};
   doc.getElementById = id => id === 'trkList' ? list : null;
   doc.querySelector = s => s === '[data-trk="g"]' ? row : s === '[data-trkval="g"]' ? box : null;
+  /* #105: trkPatchRow() patches every copy of the row (the Journal tab's and the End of combat window's) */
+  doc.querySelectorAll = s => s === '[data-trk="g"]' ? [row] : [];
   box.value = '9';
   let err = null;
   try { ctx.commitTrackerValue(box, false); } catch (e) { err = e; }
@@ -8399,4 +8403,74 @@ async function t105Loot() {
   }
 }
 
-t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+/* ---------- #105 After combat: flagged trackers and pages, live */
+async function t105After() {
+  const keep = {om: ctx.openModal, ch: X.character, gid: ctx.document.getElementById, qsa: ctx.document.querySelectorAll, toast: ctx.toast};
+  try {
+    ctx.toast = () => null;
+    const c = X.blankChar(); X.character = c;
+    c.trackers = [{id: 't1', name: 'Goblins slain', type: 'counter', tag: 'Kills', value: 3, goal: 0, autoClose: true, afterCombat: true},
+                  {id: 't2', name: 'Unflagged', type: 'counter', value: 1},
+                  {id: 't3', name: 'Closed one', type: 'counter', value: 5, goal: 5, closed: true, afterCombat: true}];
+    c.journal = [{id: 'p1', title: 'Loot list <i>', tag: '', text: '[ ] Search the bodies\n[x] Count the coins', at: 2, editedAt: 2, afterCombat: true},
+                 {id: 'p2', title: 'Diary', tag: '', text: 'x', at: 1, editedAt: 1}];
+    /* PF8: through End combat itself, so a bump on the way would show */
+    const before = JSON.stringify([c.trackers, c.journal]);
+    X.startCombatNow(); c.combatRound = 1; ctx.endCombatNow();
+    ck('#105 ending a fight bumps no tracker and ticks no box', !!X._endFight && !X.inCombat(c) && JSON.stringify([c.trackers, c.journal]) === before &&
+       c.trackers[0].value === 3 && c.journal[0].text === '[ ] Search the bodies\n[x] Count the coins', JSON.stringify([c.trackers, c.journal]));
+    let h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 After combat: flagged open trackers and flagged pages only', /data-ecrow="after"/.test(h) && /id="ecSt-after">1 tracker · 1 page</.test(h) &&
+       h.includes('data-trk="t1"') && !h.includes('data-trk="t2"') && !h.includes('data-trk="t3"') && h.includes('data-ecpage="p1"') && !h.includes('data-ecpage="p2"'), h);
+    ck('#105 a tile without its edit pen, + and − live', /data-trkinc="t1"/.test(h) && /data-trkdec="t1"/.test(h) && !/data-trkedit="t1"/.test(h) && /id="ecTrkList"/.test(h));
+    ck('#105 a page: its title, escaped, and its rendered, tickable text', h.includes('Loot list &lt;i&gt;') && !h.includes('Loot list <i>') &&
+       /aria-checked="false" data-ck="0"/.test(h) && /aria-checked="true" data-ck="1"/.test(h));
+    c.showTrackers = false; h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 trackers switched off: no tiles, the pages stay', !h.includes('data-trk="t1"') && /id="ecSt-after">1 page</.test(h));
+    c.showTrackers = true; c.hiddenTabs = ['journal']; h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 a hidden Journal tab: no After combat row', !/data-ecrow="after"/.test(h));
+    c.hiddenTabs = [];
+    c.trackers.push({id: 't4', name: 'Arrows found', type: 'counter', value: 0, afterCombat: true});
+    ck('#105 the status counts plurals', /id="ecSt-after">2 trackers · 1 page</.test(ctx.endFightHTML(X._endFight, c)));
+    c.trackers.pop();
+    // a tick in the window
+    ck('#105 a tick in the window rewrites that page\'s line', ctx.endFightTick('p1', 0) === true && c.journal[0].text === '[x] Search the bodies\n[x] Count the coins' && c.journal[0].editedAt > 2);
+    ctx.renderJournal(); ctx.jnlStartEdit('p1', 2, 'jnlText');
+    ck('#105 ...not a page the Journal tab is editing', ctx.endFightTick('p1', 0) === false && c.journal[0].text.startsWith('[x] Search'));
+    ctx.jnlReset();
+    const src105 = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
+    ck('#105 the checkbox dispatcher sends a tick in the window to its page',
+       /ep=m\.closest\("\[data-ecpage\]"\);if\(ep\)endFightTick\(ep\.dataset\.ecpage,n\);else if\(m\.closest\("#jnlBody"\)\)jnlToggleCheckbox\(n\)/.test(src105('90-boot.js')));
+    // + in the window: both copies redrawn
+    const boxes = {trkList: {innerHTML: '', contains: () => false, querySelector: () => null}, ecTrkList: {innerHTML: '', contains: () => false, querySelector: () => null}};
+    ctx.document.getElementById = id => boxes[id] || keep.gid(id);
+    ctx.trkAct('t1', (x, now) => X.trkStep(x, 1, now), false);
+    ck('#105 + changes the counter and redraws both copies of the tile', c.trackers[0].value === 4 &&
+       /data-trkval="t1"[^>]*value="4"/.test(boxes.trkList.innerHTML) && /data-trkval="t1"[^>]*value="4"/.test(boxes.ecTrkList.innerHTML) && !/data-trkedit/.test(boxes.ecTrkList.innerHTML), boxes.ecTrkList.innerHTML);
+    ctx.document.getElementById = keep.gid;
+    // a typed count patches every copy
+    const mkRow = () => { const v = {value: '3'}, fill = {style: {}}, bar = {attrs: {}, setAttribute(k, x) { this.attrs[k] = x; }, querySelector: () => fill};
+      return {v, fill, querySelector: s => s === '[data-trkval]' ? v : s === '.trk-bar' ? bar : null, closest: () => null}; };
+    const rows = [mkRow(), mkRow()];
+    ctx.document.querySelectorAll = sel => sel === '[data-trk="t1"]' ? rows : keep.qsa(sel);
+    c.trackers[0].value = 7; c.trackers[0].goal = 10;
+    ck('#105 a typed count patches every copy of the tile', ctx.trkPatchRow(c.trackers[0]) === true && rows.every(r => r.v.value === '7' && r.fill.style.width === '70%'));
+    ctx.document.querySelectorAll = keep.qsa;
+    // chips are inert in the window (Review Focus 1)
+    let stopped = 0, prevented = 0;
+    const chipEv = key => ({key, target: {closest: s => s === '.ec-page .kw,.ec-page .tblref' ? {} : null}, stopPropagation() { stopped++; }, preventDefault() { prevented++; }});
+    ctx.endFightClick(chipEv());
+    ctx.endFightKey(chipEv('Enter'));
+    ck('#105 chips are inert in the window: a tap or Enter on a rules term or table link stops there', stopped === 2 && prevented === 2);
+    ctx.endFightKey(chipEv('Escape'));
+    ck('#105 ...Escape still reaches the dialog', stopped === 2);
+    ck('#105 the Journal tab\'s own tiles keep their pen', /data-trkedit="t1"/.test(X.trackersHTML(c, false)));
+  } catch (err) {
+    ck('#105 t105After ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.openModal = keep.om; ctx.document.getElementById = keep.gid; ctx.document.querySelectorAll = keep.qsa; ctx.toast = keep.toast;
+    ctx.jnlReset(); X.character = keep.ch; X._endFight = null;
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

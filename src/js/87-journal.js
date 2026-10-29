@@ -308,13 +308,22 @@ function insertJournalCheckbox(){insertCheckboxInto("jnlText");}
    the text (toggleCheckbox()), stamps editedAt, saves and redraws, with focus
    back on the same box. Refused while editing (the text is in the textarea
    then, and no box is on screen), and when the page is gone. */
-function jnlToggleCheckbox(n){
-  if(!jnlUI.open||jnlUI.editing)return false;
-  const p=jnlPages(character).find(x=>x.id===jnlUI.open);if(!p)return false;
+/* #105: the n-th checkbox of a page by id — the Journal tab's open page, or a
+   page shown in the End of combat window. Refused while that page is in the
+   editor: its text is the textarea's then, and the next keystroke
+   (jnlInput()) would write the old text back over the tick. */
+function jnlTogglePage(id,n){
+  if(jnlUI.who===character&&jnlUI.editing&&jnlUI.open===id)return false;
+  const p=jnlPages(character).find(x=>x.id===id);if(!p)return false;
   const cur=jnlStr(p.text),t=toggleCheckbox(cur,n);
   if(t===cur)return false;
   p.text=t;p.editedAt=Date.now();
   scheduleSave();renderJournal();
+  return true;
+}
+function jnlToggleCheckbox(n){
+  if(!jnlUI.open||jnlUI.editing)return false;
+  if(!jnlTogglePage(jnlUI.open,n))return false;
   const b=document.querySelector(`#jnlBody [data-ck="${num(n)}"]`);if(b&&b.focus)b.focus({preventScroll:true});
   return true;
 }

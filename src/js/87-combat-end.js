@@ -11,6 +11,10 @@
    and pages. Design: src/docs/specs/2026-10-29-end-of-combat-design.md */
 const EC_ROWS=["ammo","xp","loot","after"];
 const EC_LABEL={ammo:"Ammunition",xp:"Experience",loot:"Loot",after:"After combat"};
+/* A rules term or table link inside a page shown here (After combat): inert,
+   see endFightKey(). One selector for the click and the key; the CSS that
+   drops their pointer (50-modal.css) spells the same two out. */
+const EC_INERT=".ec-page .kw,.ec-page .tblref";
 let _endFight=null;
 function endFightLive(){if(_endFight&&_endFight.who!==character)_endFight=null;return _endFight;}
 function endCombatOpenOf(c){const m=c&&c.endCombatOpen;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
@@ -198,11 +202,57 @@ function endFightReopen(done){
   if(done&&typeof done==="object"&&done.title)st.traded=String(done.title);
   return endFightShow();
 }
+/* ---- After combat (spec §4.5): the open trackers and the pages flagged
+   "Show after combat" — none while the Journal tab is hidden (#52), and no
+   trackers while the sheet's trackers are switched off. Nothing changes on
+   its own: the tiles' + and − and the pages' boxes are the player's. ---- */
+function endFightAfterLists(c){
+  if(isTabHidden("journal",c))return {trackers:[],pages:[]};
+  return {trackers:showTrackers(c)?trkList(c).filter(t=>t.closed!==true&&t.afterCombat===true):[],
+    pages:jnlSort(jnlPages(c).filter(p=>p.afterCombat===true))};
+}
+function endFightAfterStatus(l){
+  const n=(k,w)=>k?`${k} ${w}${k===1?"":"s"}`:"";
+  return [n(l.trackers.length,"tracker"),n(l.pages.length,"page")].filter(Boolean).join(" · ");
+}
+function endFightTrackersHTML(c){return endFightAfterLists(c).trackers.map(t=>trackerRowHTML(t,{noEdit:true})).join("");}
+function endFightAfterSection(st,c){
+  const l=endFightAfterLists(c);if(!l.trackers.length&&!l.pages.length)return null;
+  return {status:endFightAfterStatus(l),
+    body:(l.trackers.length?`<div class="trk-group ec-trk" id="ecTrkList">${endFightTrackersHTML(c)}</div>`:"")+
+      l.pages.map(p=>{const b=noteHTML(jnlStr(p.text));
+        return `<div class="ec-page" data-ecpage="${esc(p.id)}"><h4 class="ec-ph">${esc(jnlTitle(p))}</h4>${b?`<div class="n-body">${b}</div>`:""}</div>`;}).join("")};
+}
+/* renderTrackers() calls this for the window's copy of the tiles. */
+function endFightPaintTrackers(box){
+  box.innerHTML=endFightTrackersHTML(character);
+  endFightSetStatus("after",endFightAfterStatus(endFightAfterLists(character)));
+}
+/* A tick on a page shown here: that page's line, as on the Journal tab
+   (jnlTogglePage(), which also redraws the tab), then this page's body, with
+   focus back on the same box. */
+function endFightTick(id,n){
+  if(!endFightLive())return false;
+  if(!jnlTogglePage(id,n))return false;
+  const p=jnlPages(character).find(x=>x.id===id),box=document.querySelector(attrSel("data-ecpage",id)+" .n-body");
+  if(box&&p){box.innerHTML=noteHTML(jnlStr(p.text));const b=box.querySelector(`[data-ck="${num(n)}"]`);if(b&&b.focus)b.focus({preventScroll:true});}
+  return true;
+}
+/* A rules term or table link in a page here would open its own dialog over
+   this one — the modal has one layer — and lose what the window holds. Here
+   they are words: the tap or the key stops at the window (#mBody's listeners
+   run before the document's dispatchers, so stopPropagation() is enough). */
+function endFightKey(e){
+  if(!e||!(e.key==="Enter"||e.key===" "))return;
+  const t=e.target;if(!t||!t.closest)return;
+  if(t.closest(EC_INERT)){e.preventDefault();e.stopPropagation();}
+}
 /* One row's {status, body}, or null to leave it out. */
 function endFightSection(k,st,c){
   if(k==="ammo")return endFightAmmoSection(st,c);
   if(k==="xp")return endFightXpSection(st,c);
   if(k==="loot")return endFightLootSection(st,c);
+  if(k==="after")return endFightAfterSection(st,c);
   return null;
 }
 /* Every attribute interpolates esc(k) whole: rules-data.js's attribute scan
@@ -258,6 +308,7 @@ function endFightUndoAmmo(){
 function endFightClick(e){
   if(!endFightLive()||!document.getElementById("ecDone"))return;
   const t=e&&e.target;if(!t||!t.closest)return;let m;
+  if(t.closest(EC_INERT)){e.preventDefault();e.stopPropagation();return;}
   if((m=t.closest("[data-ecrow]"))){endFightToggle(m.dataset.ecrow);return;}
   if(t.closest("#ecUndoAmmo")){endFightUndoAmmo();return;}
   if(t.closest("#ecSplit")){endFightSetSplit(character.xpSplit!==true);return;}
@@ -269,4 +320,5 @@ function endFightWire(){
   body.dataset.ecWired="1";
   body.addEventListener("click",endFightClick);
   body.addEventListener("input",e=>{if(endFightLive()&&e.target&&e.target.id==="ecXp")endFightSetXp(e.target.value);});
+  body.addEventListener("keydown",e=>{if(endFightLive()&&document.getElementById("ecDone"))endFightKey(e);});
 }
