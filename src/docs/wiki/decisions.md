@@ -57,6 +57,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The chip lists (#103)** — Their own fields, read through one guard, `chipList()`
 - **How often the Languages lift runs (#103)** — Once, flagged by `langLifted` (never in `blankChar()`)
 - **Where hidden tabs are scoped (#52)** — Per character, saved on `character.hiddenTabs`; a new character shows every tab
+- **The End of combat window's settings (#105)** — `xpSplit` and `endCombatOpen` per character; the window's own state never saved
 
 ### [Rules packs](architecture/rules-packs.md)
 
@@ -357,6 +358,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Closing at 100%** — Close when complete, on by default, only on the step to complete, with an Undo of the whole tap
 - **Hiding the card** — Per character, in Settings → Sheet display
 - **Trackers in the combat view** — A registered section, so it also takes a section note
+- **The post-combat flag (#105)** — A per-tracker and per-page "Show after combat" switch; flagged counters and pages appear in the End of combat window, live; nothing changes automatically
 - **Tracker text** — Plain, `esc()` only
 - **Tracker layout (#93, #94)** — Compact tiles in a wrapping row per tag group; Completed stays a list of rows
 - **What a group total counts (#93)** — Every counter with that tag, open or closed; a Σ button on the group header, stored in `trackerTotals[tagKey]`
@@ -402,6 +404,12 @@ When a page gains a Decisions row, add its line here under that page.
 - **Your initiative (#91)** — The hit-die spend box's own controls: Roll for me, or a typed roll + Apply, with Advantage
 - **Everyone else's initiative (#91)** — A typed total
 - **Who is skipped (#91)** — Dead foes and Dead party members; you never are
+- **When the End of combat window opens (#105)** — After the fight has ended: End combat asks in the app's warning window, and confirming ends the fight and opens the window
+- **What the End of combat summary shows (#105)** — What the app already knows: rounds, time, the combatants with the fallen struck through, the ammunition line
+- **The XP box (#105)** — One box with a "Split among N" switch (the roster plus this character, rounded down), remembered per character; the level-up opens after Done when the XP reaches a level
+- **The End of combat layout (#105)** — Folded sections: the summary open, each other section a one-line row that opens on a tap and remembers being open, per character
+- **Loot's other party (#105)** — The fallen foes only, or "Combat loot"
+- **Closing the End of combat window with XP typed (#105)** — Refuse the dismissal and ask in the warning window; Add XP is Done, Don't add closes without it
 - **Show rolls (#91)** — A switch (`initShowRolls`, default on)
 - **Ties (#91)** — Act earlier / Act later in the combatant dialog, never a drag on the table
 

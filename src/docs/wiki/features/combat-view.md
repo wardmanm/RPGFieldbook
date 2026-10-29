@@ -15,7 +15,20 @@ its own tab. Leaving the tab never ends combat.
 `renderCombatHeader()`, `setCombatLive()`, `toggleCombatSection()`, `undoCombatRemove()`,
 `cvNeighbours()`, `syncCombatView()`, `startCombatNow()`, `endCombatAsk()`, `startCombatDrag()`,
 `moveCombatCard()`, `setCombatOrder()`, `combatHeaderHTML()` in `87-combat.js` ·
-**the End of combat window** (#105), in `87-combat-end.js`: `openEndOfCombat()`, `endFightShow()`, `endFightHTML()`, `endFightToggle()`, `endFightUndoAmmo()`, `endFightDone()`; `endCombatNow()` in `87-combat.js` ·
+**the End of combat window** (#105), in `87-combat-end.js`: `EC_ROWS`, `EC_LABEL`, `EC_INERT`,
+`_endFight`, `endFightLive()`, `endCombatOpenOf()`, `openEndOfCombat()`, `endFightShow()`,
+`endFightGuard()`, `endFightClose()`, `endFightDone()`; the markup `endFightSummaryHTML()`,
+`endFightAmmoLines()`, `endFightAmmoSection()`, `endFightSection()`, `endFightSectionHTML()`,
+`endFightHTML()`; Experience `endFightN()`, `endFightXpInt()`, `endFightXpMath()`,
+`endFightPartySize()`, `endFightXpBase()`, `endFightReadyLevel()`, `endFightXpView()`,
+`endFightXpToAdd()`, `endFightXpSection()`, `endFightSetXp()`, `endFightSetStatus()`,
+`endFightXpPatch()`, `endFightSetSplit()`; Loot `endFightLootWith()`, `endFightLootSection()`,
+`endFightOpenLoot()`, `endFightReopen()`; After combat `endFightAfterLists()`,
+`endFightAfterStatus()`, `endFightTrackersHTML()`, `endFightAfterSection()`,
+`endFightPaintTrackers()`, `endFightTick()`, `endFightKey()`; the DOM layer `endFightToggle()`,
+`endFightRepaintSection()`, `endFightUndoAmmo()`, `endFightClick()`, `endFightWire()` ·
+`endCombatNow()` in `87-combat.js` · `openTrade()`, `tradeClosed()` in `67-trade.js` ·
+`jnlTogglePage()` in `87-journal.js` · `askConfirm()` in `80-modal-forms.js` ·
 **the initiative tracker** (#91), in `87-initiative.js`: `cleanParty()`, `cleanCombatants()`,
 `combatantDead()`, `initSort()`, `initFirstAlive()`, `initNextTurn()`, `bandOfShare()`,
 `combatantBar()`, `initRollCheck()`, `initRollLine()`, `initModOf()`, `youAC()`,
@@ -34,6 +47,7 @@ its own tab. Leaving the tab never ends combat.
 `sheet.js` (the pure half), `rules-data.js` (the tab wiring) · **See also:**
 [the spec](../../specs/2026-09-24-combat-view-design.md), [the plan](../../plans/2026-09-24-combat-view.md),
 [the initiative tracker spec](../../specs/2026-10-25-initiative-tracker-design.md),
+[the End of combat spec](../../specs/2026-10-29-end-of-combat-design.md),
 [Spells](spells.md), [Ammunition](ammunition.md), [Sections & layout](../ui/sections-and-layout.md),
 [Story & notes](story-and-notes.md), [Shell](../ui/shell.md)
 
@@ -85,16 +99,8 @@ active spells untouched. (`startCombatNow()` is the same start with no roll and 
 calls it since #91, only the combat-view and ammunition tests.) ◀ and ▶ are
 `advanceRound(∓1)`, shared with the Active Spells card: every active spell and every active timed
 condition moves 6 s ([Conditions & concentration](conditions-and-concentration.md)), and in combat
-the round cannot drop below 1. End asks first (`endCombatAsk()`), then `combatEnd()` zeroes the
-round, clears the fight and returns `{rounds, sec, combatants}`: the summary plus the list it just
-cleared, which is where the end-of-fight dialog (#105) must read the fight from. `applyAmmoRecovery()` (#104) then recovers ammunition **on its
-own** — no question — and retires every outstanding count: each gives back what its rule allows and
-is cleared, the rest spent, so a count on None or Never never piles up for a later change of rule.
-When something came back its summary ("recovered 6 of 12 arrows, 2 of 2 daggers") joins the End
-combat toast, which carries **Undo recovery** (`undoRecoveryTap()`): it reverses exactly that
-recovery, every cleared entry included, scoped to the character it was shown for, and does nothing
-after a switch. When nothing came back the counts clear quietly and the toast says only that combat
-ended — see [Ammunition](ammunition.md). The header shows time
+the round cannot drop below 1. End asks first, and then wraps the fight up in one window (#105,
+below). The header shows time
 at the *start* of the round (`combatElapsedSec()`, round 7 → 36 sec); the summary counts the round
 being ended (round 7 → 7 rounds, 42 sec). Every round-mover repaints through `renderCombatChrome()`.
 The round is announced from `#cvLive`, outside the header that is repainted, and only when it has
@@ -216,6 +222,83 @@ characters), an
 initiative and an optional AC, inserted in sorted place; if it lands before the current actor the
 actor doesn't change.
 
+## End combat and the End of combat window (#105)
+
+Full decisions and wording are in [the spec](../../specs/2026-10-29-end-of-combat-design.md) and its
+As built; this section is the summary.
+
+**The warning.** End (`#cvEnd`) calls `endCombatAsk()`, which is async and asks in the app's own
+warning window ([Shell](../ui/shell.md), `askConfirm()`): "End combat?", "End the fight at round 5?",
+plus " Ammunition comes back under your recovery rule." only when something was fired since Start
+(`ammoFightTotals()`) and the rule is not None. **Keep fighting** (the safe button, focused) changes
+nothing; **End combat** ends it. One question at a time: a second press while it is open is refused
+(`_endAsking`), and an answer that comes after a character switch, or after the fight ended some
+other way, does nothing.
+
+**Ending** is `endCombatNow()`, in this order: one `ammo` log line per kind fired (#47, read before
+anything touches `ammoSpent`), `ammoFight` emptied, `combatEnd()` (which zeroes the round, clears the
+fight and returns `{rounds, sec, combatants}`), the chrome redrawn and saved, then the ammunition
+recovered **quietly** (`applyAmmoRecovery({quiet:true, logged})`, #104's rule, every outstanding
+count retired — see [Ammunition](ammunition.md)). The last Fire toast is hidden, since its Undo would
+re-spend shots in an ended fight (an error toast is left up: a save that did not land must never
+vanish unread), and the settlement is counted (`_ammoSettled`) so that Undo refuses even if it is
+reached. `#cvLive` says "Combat ended after 5 rounds (30 sec)". Then `openEndOfCombat()`.
+
+**The window** is `openModal("End of combat", …, {wide:true})`: wide on a desktop, and like the trade
+window it fills the fixed-height box, its rows scrolling in `.ec-scroll` with Done pinned at the foot.
+Under the title, "Round 5 · 30 sec" (`fmtCombatTime()`); then a chip per combatant in initiative
+order (`endFightSummaryHTML()`), this character left out, the fallen (`combatantDead()`) struck
+through with ", fell" in their accessible name. Then the folded rows, each a `<button>` with a label
+and a one-line status that ellipsizes (`endFightSectionHTML()`); a row with nothing to show is left
+out (`endFightSection()` returns null), so a quiet fight is a short window. A tap opens or folds a row
+in place (`endFightToggle()`, never a rebuild, so the XP box keeps its caret), remembered per character
+in `endCombatOpen`; the first time every row is folded.
+
+- **Ammunition** (when anything was fired since Start): per kind, `ammoLogTitle()`'s own words,
+  "Arrows: 9 fired, 4 recovered", read from the log line's `meta` so an Undo shows at once; under
+  None, "Arrows: 9 fired, none come back (recovery: None)". **Undo recovery** (`endFightUndoAmmo()`)
+  runs the quiet `undoRecoveryTap()` that `applyAmmoRecovery()` handed back — the same reversal the
+  toast's Undo did, log lines corrected — once, then reads "Recovery undone". Offered only while the
+  window is open, and only when something came back.
+- **Experience** (only when `advancementOf(c)==="xp"`): status "XP 6,350 / 6,500", or "+112 XP" once
+  something is typed. A whole-number box, 0 to 1,000,000 (`endFightXpInt()`: blank, text, negatives
+  read 0; `12.9` reads 12). **Split among N** (N = the Party roster plus this character,
+  `endFightPartySize()`), shown only with a roster, is a house `.switch` saved at once in `xpSplit`;
+  on, the line reads "450 ÷ 4 = 112 each", rounded down (`endFightXpMath()`). When the XP would make
+  the level-up ready, "Level 5 ready — the level-up opens when you press Done."
+  (`endFightReadyLevel()`). Typing patches the status and the two lines in place (`endFightXpPatch()`).
+- **Loot** (always): "Open trade…", then **Open trade** (`endFightOpenLoot()`), which calls
+  `openTrade({with, onClose: endFightReopen})` ([Inventory](inventory.md)). `with` is the fallen
+  **foes'** names joined with commas, or "Combat loot" (`endFightLootWith()`): a fallen party member is
+  struck through but never named, since the loot came from the foes. The trade replaces the window
+  (the modal has one layer); however it closes, `tradeClosed()` runs `endFightReopen()`, which redraws
+  the window from `_endFight` with everything as it was. After a completed trade the row reads the
+  trade's log title, "Traded with Goblin 1, Bugbear". If another dialog has taken the modal
+  meanwhile, nothing is drawn over it and the window's state is dropped.
+- **After combat** (when an open tracker or a page has `afterCombat` and the Journal tab is not hidden,
+  #52): status "1 tracker · 1 page" (`endFightAfterStatus()`). The open flagged trackers, as tiles
+  without the pen (`trackerRowHTML(t, {noEdit:true})`) — the form would replace the window — and only
+  while the sheet shows trackers; + and − work exactly as on the Journal tab, which patches both copies
+  ([Journal](journal.md)). Each flagged page's title and text (`noteHTML()`), its checkboxes tickable
+  there (`endFightTick()` → `jnlTogglePage()`); a long page scrolls inside its box. Rules terms and table
+  links in a page are inert (`EC_INERT`, `endFightKey()`), for the same reason. Nothing changes on its
+  own: ending a fight never bumps a tracker or ticks a box.
+
+**Done** (`endFightDone()`) closes the window, adds the XP (`endFightClose()`: `character.xp` becomes a
+number, its share when split) and, when that XP made the level-up ready, opens it through
+`doLevelUp()`, the level ring's own path. **× and Escape** with nothing typed simply close. With XP
+typed, the dismiss guard (`endFightGuard()`) refuses that dismissal and asks, in the warning window,
+"Add 112 XP?" / "You typed XP but didn't press Done." / **Add XP** / **Don't add**. Either answer
+closes the window: Add XP exactly as Done, the level-up included; Don't add, or Escape on the warning,
+without the XP. The answer acts only on the window it was asked about (`endFightLive()` is still that
+state, and its `#ecDone` is still in the open dialog).
+
+**The state**, `_endFight`, is in memory only — never on the character — and belongs to the character
+**object** the window was opened for (`endFightLive()` drops it the moment `character` is another
+object, as every toast Undo's `who` does; Import → Replace keeps the id, so an id would not do). It is
+dropped on Done, on ×/Escape and when the character changes. A reload with the window open loses typed
+XP; the fight itself had already ended and saved.
+
 ## Rules that must hold
 
 - **Move the real cards, never copy them.** A copy duplicates every id, and `getElementById` finds the
@@ -253,6 +336,17 @@ actor doesn't change.
   it cleared comes back in its return value, which is where #105 reads it.
 - **Your HP repaints your chip and row in place, never the strip (#91).** `renderInitStrip()`
   patches two nodes; a swap of the strip there loses the next tap (see Traps).
+- **The End of combat window's state is never saved, and belongs to the character object (#105).**
+  `_endFight` is read only through `endFightLive()`, which drops it once `character` is another
+  object.
+- **Nothing in the End of combat window opens a dialog over it except the trade, which brings it
+  back (#105).** The modal has one layer: a dialog opened over the window replaces it, losing the
+  typed XP and the Undo. So its tiles have no pen and the rules chips in its pages are inert.
+- **Its dismiss guard answers through `askConfirm()` and closes the window itself (#105).**
+  `endFightGuard()` returns `true` (refuse) while it asks; a guard that returned a message would put
+  the browser's `confirm` back.
+- **End combat's Undo-bearing toasts die with the fight (#105).** `endCombatNow()` hides the last Fire
+  toast and counts the settlement (`_ammoSettled`), and `undoFireTap()` refuses a shot from before it.
 
 ## Traps
 
@@ -287,6 +381,10 @@ actor doesn't change.
   won for every box with no flex override, so a party row's initiative box and a foe row's ×/AC/Init
   boxes each landed alone on their own line under `flex-wrap:wrap`; fixed with scoped widths. →
   L7097
+- **The last Fire toast outlived the fight (#105).** End combat used to replace it with its own
+  toast. With no toast of its own any more, the Fire toast stayed up over the End of combat window and
+  its Undo took a shot back into an ended fight: 8 spent shots came back on record, to be recovered a
+  second time. Fixed at both ends (above, and [Ammunition](ammunition.md)). → L7921
 
 ## Decisions
 
@@ -324,14 +422,30 @@ Settled in the [initiative tracker spec](../../specs/2026-10-25-initiative-track
 | Show rolls | A switch (`initShowRolls`, default on) hides initiative numbers from the strip | n/a |
 | Ties (plan-level, not in the spec table) | **Act earlier** / **Act later** buttons inside the combatant dialog | Dragging a table row: the table's targets are 44px inside a sideways-scrolling strip, where drag and scroll gestures collide |
 
+Settled in the [End of combat spec](../../specs/2026-10-29-end-of-combat-design.md) §2, with Mike,
+2026-10-29 (#105):
+
+| Question | Decision | Rejected, and why |
+|---|---|---|
+| When the window opens | **After the fight has ended.** End combat asks "are you sure?" in the app's warning window; confirming ends the fight and opens the window | The window with the fight still running and End combat as its last button (first chosen, then changed by Mike): the question and the wrap-up are different moments |
+| What the summary shows | **What the app already knows**: rounds, time (6 seconds a round), the combatants with the fallen struck through, the ammunition line | HP, slots and resources spent this fight: a snapshot at Start for a recap nothing acts on; rests restore them |
+| The XP box | **One box, with a "Split among N" switch** (the roster plus this character, rounded down), off by default and remembered per character; the level-up opens after Done when the XP reaches a level | A plain box: the split is the common table rule and the roster already knows N |
+| Layout | **Folded sections**: the summary open, each other section a one-line row that opens on a tap and remembers being open, per character | Everything open in one scroll: long after every fight |
+| Loot's other party (plan ruling) | **The fallen foes only**, or "Combat loot" | Every fallen combatant: a fallen party member is not who the loot came from |
+| Closing with XP typed (plan ruling) | **Refuse the dismissal and ask in the warning window**; Add XP is Done, Don't add closes without it | `dismissModal()`'s `confirm` message: a browser box, and its Cancel would keep the window open rather than close it without the XP |
+
 ## Open
 
 - The spec, including its "As built" section, describes the overlay and is historical: `inert`, the
   view's Esc, `aria-modal`, `html.cv-lock`, focus on ✕ at open, and since #80 the ✕ and the header's
   ☰ themselves, are all gone.
 - The item finder has no Esc of its own.
-- The end-of-fight dialog (loot, XP, recovering ammunition in one pass with the tracker's own
-  data) is #105.
+- **End combat's screen-reader announcement** (`#cvLive`) no longer says what ammunition was
+  recovered (the window shows it), and it lands in a region the End of combat window makes inert the
+  same moment, so a screen reader may not speak it at all (#105, an accepted minor).
+- **The End of combat window's rules chips stay buttons to assistive tech**: inert there, they keep
+  `role="button"` and a tab stop from `highlight()` (#105, accepted).
+- The #105 minors left for its final fix wave are listed in the spec's As built.
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -357,3 +471,4 @@ Settled in the [initiative tracker spec](../../specs/2026-10-25-initiative-track
 - 2026-10-25 — `leaveCombatTab()` goes to the Sheet rather than a `cvPrevTab` that has since been hidden; combat cards from a hidden tab stay in the view untouched. → ledger L6989, #52
 - 2026-10-25 — The initiative tracker: Roll initiative on Start combat, a strip of chips with a ▾ table under the header, a dialog per combatant, Turns/Rounds, Show rolls, and `87-initiative.js` as a new fragment. → ledger L7097, #91
 - 2026-10-25 — The final review's fixes: your chip follows your HP, the actor stays in view, Start commits a typed roll, a wrap on Dead or Remove advances the round, the dialog keeps focus and shows the clamped HP, the round is said once, and `combatEnd()` hands back the fight. → ledger L7212, #91
+- 2026-10-29 — End combat asks in the app's warning window and opens the End of combat window: the time and the fallen, folded rows for Ammunition (Undo recovery), Experience (Split among N, Done into the level-up, "Add N XP?" on close), Loot (a trade with the fallen, and back) and After combat (flagged tiles and pages); `endCombatNow()`, `87-combat-end.js`. → ledger L7921, #105

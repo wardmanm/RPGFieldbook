@@ -104,3 +104,10 @@ Bullets below this line — leave the heading in place.
 - The Homebrew pack (The Predator, a Warlock subclass) isn't in Fieldbook's public rules data any
   more: it needs spells from Xanathar's Guide, which Fieldbook no longer hands out. If you've
   installed it, it keeps working, but it won't get updates from there.
+- End combat now asks in Fieldbook's own window, then opens an End of combat window that wraps the fight up:
+  the rounds and time, who fell, the ammunition that came back (with Undo recovery), an XP box that can split
+  the XP among your party and opens the level-up when it reaches a level, and Open trade for the loot. Each
+  section folds away and remembers how you left it.
+- Trackers and journal pages have a "Show after combat" switch. Switched on, an open tracker's tile and a page's
+  text, checkboxes and all, appear in the End of combat window, so you can count the kills and tick off the loot
+  list there.

@@ -7,7 +7,7 @@ character **without losing a field**, including fields this build has never hear
 comes from keeping that loop lossless: a sheet saved by any version must still open.
 
 **Code:** `blankChar()`, `glossRepair()` in `00-constants.js`; `migrate()`, `migrateWeaponEquip()`,
-`exportChar()`, `importChar()`, `finishImport()` in `71-char-io.js`; `migrateAmmo()`,
+`cleanEndCombatOpen()`, `exportChar()`, `importChar()`, `finishImport()` in `71-char-io.js`; `migrateAmmo()`,
 `ammoSpentMap()`, `ammoRecoveryOf()` in `62-ammo.js`; `newCharacter()`,
 `loadCharById()` in `75-home-theme.js`; `charNeedsUpdate()` in `72-char-update.js`;
 `markCharChecked()` in `73-char-update-ui.js`; read-time guards `featCol()`, `invCol()`, `atkCol()`
@@ -33,9 +33,9 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
 | lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers`, `party` `[{id, name, ac, maxHp}]` (#91, the Bio-tab roster), `combatants` `[{id, kind, name, init, ac, track, band, hp, maxHp, dead, partyId}]` (#91, always `[]` out of combat), `invLog` `[{id, at, kind, title, lines, undo, undone, meta}]` (#47, the inventory log, newest first), `levelLog` `[{at, class, level, hp, features:[{id, name, grants}], abilities, subclass, grants, slots}]` (#118, one record per level-up for level down, oldest first, at most 200; `migrate()` keeps a record only when it is an object with a string `class`, a `level` above 0 and a `features` array, then normalizes the inside without dropping other keys: features are objects with a non-empty string `id`, each with a `grants` array; grants are objects with string `sid`/`type`/`key`; `hp` is a number ≥ 0, `subclass` a string, `abilities` an object) |
 | chip lists (#103) | `resists` `[{id, name}]`, `immunes` `[{id, name}]`, `senses` `[{id, name, range}]` (`range` whole feet or `""`), `languages` `[{id, name, src}]` (`src` `""` the player's, `race:…` / `bg:…` a grant, `system` a ruleset default) — all `[]` in `blankChar()` |
-| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0), `ammoFight` (ammunition kind → `{fired, back}`: what a row's Recover gave back during the current fight, for End combat's log line; `{}` default, emptied at the start and end of a fight, #47) |
+| maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0), `ammoFight` (ammunition kind → `{fired, back}`: what a row's Recover gave back during the current fight, for End combat's log line; `{}` default, emptied at the start and end of a fight, #47), `endCombatOpen` (End of combat window row key → `true` for a row the player left open: `ammo`, `xp`, `loot`, `after`; `{}` default, #105) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
-| per-character settings | `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `combatTurn` (the acting combatant's id, `""` default, #91), `initMode` (`"turns"` or `"rounds"`, `"turns"` default, #91), `initShowRolls` (boolean, `true` default, #91), `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103), `hiddenTabs` (word tabs this character has switched off, `[]` default, cleaned by `migrate()`, #52), `invLogSize` (how many log lines to keep: 100, 250, 500, 1000 or 2500, `500` default, #47), `featsAllowed` (offer a feat at an ASI, `true` default; `migrate()` keeps a boolean and sets anything else to `true`, #118) |
+| per-character settings | `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `combatTurn` (the acting combatant's id, `""` default, #91), `initMode` (`"turns"` or `"rounds"`, `"turns"` default, #91), `initShowRolls` (boolean, `true` default, #91), `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103), `hiddenTabs` (word tabs this character has switched off, `[]` default, cleaned by `migrate()`, #52), `invLogSize` (how many log lines to keep: 100, 250, 500, 1000 or 2500, `500` default, #47), `featsAllowed` (offer a feat at an ASI, `true` default; `migrate()` keeps a boolean and sets anything else to `true`, #118), `xpSplit` (the End of combat window's Split among N, `false` default; `migrate()` keeps it only when `true`, #105) |
 | retired, kept for old sheets | `hdStyle` (the three hit-dice looks) and `statStyle` (the By ability layout), both gone with #103; `migrate()` still carries them so an old save round-trips, nothing reads them |
 | text | `alignment` (on Bio since #103), `xp` (a number or digits with commas; anything else shows as typed), `proficiencies`, and the eight `BIO` fields: `appearance`, `personality`, `ideals`, `bonds`, `flaws`, `backstory`, `allies`, `notes` |
 
@@ -60,6 +60,11 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    `{}` in `blankChar()` and sits in `71-char-io.js`'s object-shape guard beside `noteCollapse` and
    `trackerTotals`: a non-object, an array or `null` becomes `{}` (#97). Its values are read
    `=== true`, so junk left inside the map reads as shown rather than needing its own coercion.
+   The #105 fields are set right after `featsAllowed`: `xpSplit` is `s.xpSplit===true`;
+   `endCombatOpen` goes through `cleanEndCombatOpen()`, which keeps each key whose value is `true` and
+   drops the rest (and `__proto__`), with no list of known keys, so a row added later keeps its
+   state; and `afterCombat` is deleted from every tracker and journal page where it is not `true`, so
+   the flag exists only when on.
 6. Each glossary entry is repaired, never dropped: `glossRepair()` fills an absent or blank `term`
    from `name` and an absent `text` from `description` (the other categories' field names, kept as
    they were), a numeric term becomes text, and an entry with no id gets one from `uid()` (a numeric
@@ -142,6 +147,12 @@ notes map, keyed by `NOTE_SECTIONS` id (not by heading, which gets reworded). Ea
 `{text, at, editedAt}`, saving an empty note deletes the key, and they are gathered on the Journal tab (`#tab-journal`).
 `journal` is a third thing: the Journal tab's own pages, `[{id, title, tag, text, at, editedAt}]`,
 with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal.md)).
+A page or a tracker may also carry `afterCombat:true`, "Show after combat" (#105).
+
+**Not on the character.** The End of combat window's own state, `_endFight` (the fight's summary,
+typed XP, Undo recovery, the last trade), is a module variable tied to the character object and is
+never saved: a reload with the window open loses typed XP, as any unsaved form does
+([Combat view](../features/combat-view.md)).
 
 ## Rules that must hold
 
@@ -198,6 +209,7 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 | A player's glossary entry with no term | Kept, given an id if it lacks one, listed as "(no term)" | Dropped: the player's own data, gone silently. Left without an id: Edit and Delete can't reach it (L4206) |
 | A player's glossary entry written `{name, description}` | Read as its term and text, originals kept | Leaving it termless: those are the names every other category uses, so the intent is plain (L4206) |
 | Pre-equip-era weapons | Equip them once, recorded by `wpnEquipInit` | Gating attacks on `equipped` with no migration: empties every existing Attacks card. Running it on every load: re-equips a weapon the player unequipped (L3213) |
+| The End of combat window's settings (#105) | `xpSplit` and `endCombatOpen` per character; the window's own state never saved | App-wide: a party's split and a player's habits are per character. Saving the window: a reload after a fight would reopen a wrap-up the player may have meant to leave |
 | Where hidden tabs are scoped (#52) | Per character, saved on `character.hiddenTabs`; a new character shows every tab | Per device: a Fighter and a Wizard on one device want different tabs hidden |
 
 ## Open
@@ -238,3 +250,4 @@ with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal
 - 2026-10-25 — `ammoFight` joins `blankChar()` (`{}`, coerced to an object by `migrate()`); `cleanInvLog()` drops an `undo` whose shape doesn't fit its kind. → ledger L7339, #47
 - 2026-10-27 — `featsAllowed` (`true`) and `levelLog` (`[]`) join `blankChar()`; `migrate()` keeps a boolean and the well-formed records. Undo level-up's copy is a module variable, never a field, so it is never saved. → ledger L7569, #118
 - 2026-10-27 — `migrate()` normalizes the inside of each kept `levelLog` record (features, grants, `hp`, `subclass`, `abilities`), keeping its other keys, so a malformed import can't make Level down throw. → ledger L7657, #118
+- 2026-10-29 — `xpSplit` (`false`) and `endCombatOpen` (`{}`) join `blankChar()`; `trackers[i]` and `journal[i]` gain an optional `afterCombat:true`; `migrate()` keeps `xpSplit` only when `true`, cleans `endCombatOpen` through `cleanEndCombatOpen()` and drops a non-`true` `afterCombat`. → ledger L7921, #105

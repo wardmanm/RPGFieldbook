@@ -97,12 +97,23 @@ Known behaviour that is accepted for now.
   out.** When recovery tops up an equivalent stack already on the sheet (the old one being gone)
   and that stack is then fired down to nothing, `undoRecovery()` finds the stack it depended on gone
   and does not restore the cleared entry, so the shots recovery did not give back are not put back
-  on record. Unreachable from the UI today: the shot's own toast replaces the one carrying Undo
-  recovery. → ledger L6147, and [Ammunition](../features/ammunition.md)
+  on record. Unreachable from the UI today: Undo recovery lives in the End of combat window (#105),
+  which keeps the sheet inert, so nothing can be fired while it is offered. → ledger L6147, L7921,
+  and [Ammunition](../features/ammunition.md)
 - **Undo recovery asks whether a grant is live now, not whether it was revoked since.**
   `grantSidLive()` checks the character's race, background and classes at Undo time, so a class
   removed and re-added inside the Undo window reads as never revoked, and a cleared entry from its
   old grant comes back. → ledger L6147, and [Ammunition](../features/ammunition.md)
+- **A reload with the End of combat window open loses the typed XP** (#105). The fight had already
+  ended and saved; the window's state (`_endFight`) is never saved, as any unsaved form isn't. →
+  ledger L7921, and [Combat view](../features/combat-view.md)
+- **A loot trade's With box can exceed its 60-character typing limit** with many fallen foes (#105):
+  `maxlength` limits typing only, so the seeded names all show but can't be added to until cut below
+  60. → ledger L7921, and [Inventory](../features/inventory.md)
+- **A shot's Undo refuses once End combat has settled it** (#105, by design): its toast is hidden at
+  End combat, and a shot fired outside a fight stops undoing once a later End combat sweeps it up.
+  The window's Undo recovery is the way back. → ledger L7921, and
+  [Ammunition](../features/ammunition.md)
 - **A weapon made in the item editor cannot be Thrown.** The editor has no weapon-notes field; Save
   carries `weapon.notes` from the pack entry last inserted, so only pack data marks a weapon Thrown.
   → ledger L6147, and [Ammunition](../features/ammunition.md)
@@ -543,3 +554,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-27 — Narrowed: level down lowers only the number for a level with no record. Fixed and removed: rules-schema §5's "a feat instead", which the app now offers. Added: a feat's fixed `skills` not granted, "+1 to two" accepting one ability twice, and the choices inside feats staying manual. → ledger L7569, #118
 - 2026-10-27 — Added: a fixed species or background feat's `ability` increase is not applied (the final review's M4; the player docs now say so). → ledger L7657, #118
 - 2026-10-28 — Homebrew is private: its Xanathar's spells resolve in the private archive, and `LEFT_FOR_PRIVATE` names it too. → ledger L7858, #125
+- 2026-10-29 — Added: a reload loses the End of combat window's typed XP; a loot trade's With can exceed its typing limit; a shot's Undo refuses once End combat has settled it. Undo recovery's home-joined gap stays unreachable, now because the window keeps the sheet inert. → ledger L7921, #105

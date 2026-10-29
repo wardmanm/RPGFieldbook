@@ -7917,3 +7917,107 @@ Pages: [homebrew](../wiki/data/homebrew.md), [private data](../wiki/data/private
 [theming & icons](../wiki/ui/theming-and-icons.md), [converter](../wiki/data/converter.md),
 [known issues](../wiki/roadmap/known-issues.md), [2.0](../wiki/roadmap/2.0.md),
 [decisions](../wiki/decisions.md), [RELEASING](../RELEASING.md).
+
+## End of combat (#105, 2026-10-29)
+
+Wave 4 of [1.9.0](../wiki/roadmap/1.9.0.md), the capstone. Spec
+`src/docs/specs/2026-10-29-end-of-combat-design.md` (its §2 decisions are Mike's, 2026-10-29), plan
+`src/docs/plans/2026-10-29-end-of-combat.md`, built in seven tasks on `issue/105-end-of-combat`.
+End combat now asks in the app's own warning window; confirming ends the fight and opens one
+**End of combat** window: the time, a chip per combatant with the fallen struck through, then folded
+rows for Ammunition (with Undo recovery), Experience (a box, Split among N, Done into the level-up),
+Loot (a trade with the fallen) and After combat (flagged trackers and pages, live).
+
+1. **The data** (Task 1, `a511679`). `blankChar()` gains `xpSplit:false` and `endCombatOpen:{}`;
+   `migrate()` keeps `xpSplit` only when `true`, cleans `endCombatOpen` through
+   `cleanEndCombatOpen()` (key → `true`, anything else dropped, no key whitelist), and strips
+   `afterCombat` from a tracker or page unless it is `true`. "Show after combat" is a switch in the
+   tracker form (`#tkAfter`, `trkFromForm()`) and in the page editor (`[data-jnlac]`,
+   `jnlToggleAfterCombat()`: a saved page takes it at once and keeps its `editedAt`; a draft holds it
+   until its first keystroke makes the page). Both use the house `.switch` (50×28), not the 44 px
+   rule (Ruling 9).
+2. **Quiet recovery** (Task 2, `8da70e8`). `applyAmmoRecovery(opts)`: with `opts.quiet` the same
+   recovery returns `{lines, undo}` instead of toast words; `undo` is the toast's own
+   `undoRecoveryTap()`, and `opts.logged` hands it End combat's log lines to correct, as the toast's
+   did. `undoRecoveryTap(rec, who, amend, opts)` gains `opts.quiet`: no "Recovery undone" toast over
+   a window that says it itself. Without `quiet`, exactly as before.
+3. **The window and the warning** (Task 3, `1fa00a8`, fix `ba8207b`). New fragment
+   `87-combat-end.js` (JS fragments 38 → 39; CLAUDE.md and ADR-001 updated), after `87-trackers.js`.
+   `endCombatAsk()` is async and asks through `askConfirm()` ("End combat?", "End the fight at round
+   5?" plus " Ammunition comes back under your recovery rule." only when something was fired and the
+   rule is not None; Keep fighting / End combat), with a one-at-a-time guard (`_endAsking`). The
+   ending is `endCombatNow()`: the per-kind log lines (#47), `combatEnd()`, the redraw and save, the
+   quiet recovery, `setCombatLive()` with no recovery words, then `openEndOfCombat()`. Its state,
+   `_endFight`, lives in memory and belongs to the character **object** (`endFightLive()`), as every
+   toast Undo here does. Each row folds and opens in place (`endFightToggle()`), remembered in
+   `endCombatOpen`.
+   Review, Important: the last Fire toast stayed up over the window with its Undo live, which
+   re-spent shots in an ended fight. Fixed at both ends: `endCombatNow()` hides the toast (an error
+   toast is left up), and `undoFireTap()` refuses once End combat has settled the ammunition since the
+   shot (`_ammoSettled`, a page counter stamped on each shot's record). Ruling 18, the implementer's,
+   upheld: a shot fired outside a fight is no longer undoable once a later End combat has swept it
+   up, since undoing it then would recover it twice.
+4. **Experience** (Task 4, `a85897f`). Shown only for `advancementOf(c)==="xp"`. The box takes whole
+   numbers 0 to 1,000,000 (`endFightXpInt()`); Split among N (N = the party roster plus one,
+   `endFightPartySize()`) shows only with a roster and rounds down (`endFightXpMath()`); the ready
+   line names the level when the XP would make the level-up ready (`endFightReadyLevel()`). Done
+   writes a number (`endFightClose()`) and opens the level-up through `doLevelUp()` when that XP made
+   it ready. The dismiss guard: with XP typed, × or Escape refuses the dismissal (`true`) and asks
+   through `askConfirm()` "Add 112 XP?" / "You typed XP but didn't press Done." / Add XP / Don't add;
+   either answer closes the window, Add XP exactly as Done (the level-up included). The answer acts
+   only on its own window (`endFightLive()===st` and `#ecDone` present, Ruling 16). `endFightDone()`
+   returns whether it closed.
+5. **Loot** (Task 5, `0105df8`). Always shown. Open trade calls
+   `openTrade({with: endFightLootWith(...), onClose: endFightReopen})`: the fallen **foes** by name,
+   or "Combat loot" (Ruling 1: a fallen party member is struck through in the summary, never named
+   here). `67-trade.js` gains `_trOnClose` and `tradeClosed(done)`, run once however the trade
+   closes (Cancel, Complete Trade, ×, Escape, a backdrop tap after "Discard this trade?"), never for
+   the finder; `openTrade()` without `onClose` drops an earlier opener's. The window comes back with
+   its state, and after a completed trade the row reads the trade's log title. It does not reopen
+   over another dialog: the state is dropped instead.
+6. **After combat** (Task 6, `49227a3`). Shown when an open tracker or a page has `afterCombat` and
+   the Journal tab is not hidden (#52); trackers only while `showTrackers`. Tiles are
+   `trackerRowHTML(t, {noEdit:true})`, with no pen, since its form would replace the window.
+   `trkPatchRow()` and `renderTrackers()` patch every copy (`endFightPaintTrackers()`), and
+   `commitTrackerValue()` returns to the box in the list it came from (Ruling 11). A tick goes
+   through the `[data-ck]` dispatcher's new `[data-ecpage]` branch to `endFightTick()` →
+   `jnlTogglePage(id, n)`, the Journal tab's own path, which refuses while that page is open in the
+   editor. Rules terms and table links in a page are inert there (`EC_INERT`, `endFightKey()`):
+   their dialog would replace the window.
+7. **Docs and QA** (Task 7). This entry, the wiki pages below, two `UNRELEASED.md` bullets, the
+   spec's As built. Screenshots in `.claude/qa/in-progress/105-end-of-combat/`.
+
+**Rulings from the plan's notes**, each a deviation from the spec's letter:
+- the Ammunition lines are `ammoLogTitle()`'s words, "Arrows: 9 fired, 4 recovered", not the
+  spec's example "4 came back", so the window and the log read the same;
+- the time line is `fmtCombatTime()`'s, "Round 5 · 30 sec", not "30 seconds";
+- `_endFight` is tied to the character object, not its id (Import → Replace keeps the id);
+- `applyAmmoRecovery()` takes `opts.logged` as well as `opts.quiet`, and `undoRecoveryTap()` takes
+  `opts.quiet`;
+- the window's tiles have no pen, and rules chips in its pages are inert;
+- the guard answers through `askConfirm()`, not `dismissModal()`'s `confirm`, refusing the dismissal
+  and closing the window itself on the answer, and Add XP behaves as Done (Ruling 2);
+- Loot names fallen foes only (Ruling 1).
+
+**Tests.** `sheet.js`: the #105 data block (20 checks), the quiet-recovery block, `t105End()`,
+the review-fix block, `t105Xp()`, `t105Loot()`, `t105After()`; the #41/#93 typed-count blocks stub
+`querySelectorAll` (Ruling 5). Two text checks changed: `rules-data.js`'s #104 check now looks for
+`applyAmmoRecovery({quiet:true,logged})` and `openEndOfCombat(`, and no "Undo recovery" toast label;
+`sheet.js`'s #104 and #47 End combat checks call `endCombatNow()` (the asking is `t105End()`'s).
+`harness.js`: `_endFight` joins `MUTABLE`. The suites ended at 8065 checks after Task 6.
+
+**Deferred** (listed in the spec's As built). For the final fix wave: XP held as text like
+"6350 xp" is overwritten by Done (data loss); desktop Safari lets letters into the XP box; focus
+does not return to Open trade when the window comes back; a tracker closed from the window sends
+`trkNextControl()`/`undoTrackerChange()` to the Journal tab's inert copy; After combat's row goes
+blank when its last tracker closes and no page remains; a tick on a page open in the editor is
+refused silently. Accepted minors: End combat's screen-reader announcement no longer says what was
+recovered, and lands in a region the window makes inert; inert chips keep `role="button"`;
+`#ecXpReady` has no `aria-live`; a classless character is told "Level 2 ready", then Done's "Add a
+class first"; `endFightReopen()`'s safety branch drops typed XP silently.
+
+Pages: [combat view](../wiki/features/combat-view.md), [ammunition](../wiki/features/ammunition.md),
+[journal](../wiki/features/journal.md), [inventory](../wiki/features/inventory.md),
+[shell](../wiki/ui/shell.md), [character model](../wiki/architecture/character-model.md),
+[decisions](../wiki/decisions.md), [known issues](../wiki/roadmap/known-issues.md),
+[1.9.0](../wiki/roadmap/1.9.0.md), [overview](../wiki/overview.md).

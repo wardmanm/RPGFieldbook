@@ -231,3 +231,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-25 — `67-trade.js` joins the code map (JS fragment count 36→37): the inventory log, its undo and dialog, and the trade window, placed right after `66-coins-hp.js`. → ledger L7291, #47
 - 2026-10-26 — `89-extensions.js` joins the code map (JS fragment count 37→38), after `89-rules-merge.js`; the layout gains `releases/data/`; the glossary gains extension, source and manifest. → ledger L7428, #102
 - 2026-10-28 — Homebrew moves to the private repo: the pack table, layout and glossary say SRD 5.2 is the one public pack. → ledger L7858, #125
+- 2026-10-29 — `87-combat-end.js` joins the code map (JS fragment count 38→39): the End of combat window, placed after `87-trackers.js`, whose renderers it calls. → ledger L7921, #105

@@ -18,7 +18,8 @@ is its count.
 `recoverOptionsHTML()` in `62-ammo.js` · `tidyRule()` in `89-rules-merge.js` · `openItemForm()`,
 `recoverShows()`, `syncRecover()` in `80-modal-forms.js` · `printSheet()` in `71-char-io.js` · `migrate()` in `71-char-io.js` ·
 `revertEquipmentGrants()` in `50-classrace.js` · `newCharacter()` in `75-home-theme.js` ·
-`updProject()` in `72-char-update.js` · `endCombatAsk()` in `87-combat.js` · **Data:** `weapon.ammo`,
+`updProject()` in `72-char-update.js` · `endCombatAsk()`, `endCombatNow()` in `87-combat.js` ·
+`endFightAmmoLines()`, `endFightAmmoSection()`, `endFightUndoAmmo()` in `87-combat-end.js` · **Data:** `weapon.ammo`,
 item `ammo`, item `recover`, bundle `pack` ([rules-schema](../../../../docs/rules-schema.md) §6.8) · **Tests:**
 `sheet.js`, `char-update.js`, `rules-data.js` · **See also:** [Inventory](inventory.md),
 [Attacks & damage](attacks-and-damage.md), [Combat view](combat-view.md),
@@ -91,7 +92,11 @@ on `hits` or `misses` when the Hit/Miss question (below) was answered, and a fre
 for recovery to rebuild from — so the running tallies are carried forward by hand rather than lost.
 `undoFire()` puts back one piece, or the whole stack at its old place, and the whole entry as it
 was, tallies included. An Undo for another character, or for a stack the player deleted since,
-does nothing.
+does nothing. Nor does one for a shot End combat has settled since (#105): each shot's record carries
+`_ammoSettled`, a page counter `endCombatNow()` raises, and `undoFireTap()` refuses when it has moved.
+That shot was recovered or spent with the rest, so taking it back would count it as spent again, to be
+recovered twice. A shot fired with no fight running still undoes, until a later End combat sweeps it
+up too.
 
 ## Thrown weapons
 
@@ -183,11 +188,21 @@ character.
 End combat recovers on its own (`applyAmmoRecovery()`), in place of the old Yes/No question, and
 **retires every outstanding count**: whenever any entry is on record it calls `recoverAmmo()` for
 every kind, so each entry gives back what its rule allows and is cleared, the rest spent — an entry
-on None, Never or the firearm-bullet default included. When something came back the toast says so
-and carries Undo recovery (`undoRecoveryTap()`), which restores every entry it cleared, zero-back
-ones included; when nothing came back the counts clear quietly, with no recovery words and no Undo.
-The row's Recover still names its own kind (a thrown weapon's, its own entry), leaving the rest on
-record. See [Combat view](combat-view.md).
+on None, Never or the firearm-bullet default included. The row's Recover still names its own kind (a
+thrown weapon's, its own entry), leaving the rest on record.
+
+**Quietly, into the End of combat window (#105).** End combat (`endCombatNow()`) calls
+`applyAmmoRecovery({quiet:true, logged})`: the same recovery, but instead of toast words it returns
+`{lines, undo}` — `lines` what came back per kind (empty when nothing did), and `undo` the old toast's
+Undo, `undoRecoveryTap(rec, who, {lines: logged, list}, {quiet:true})`, or null when nothing came back.
+Quiet, it never returns null. `logged` is End combat's log lines, which that Undo corrects. **There is
+no End combat toast any more.** The window's Ammunition row shows each kind in the log line's own words
+("Arrows: 9 fired, 4 recovered"; under None "Arrows: 9 fired, none come back (recovery: None)"), and its
+**Undo recovery** runs `undo` once, then reads "Recovery undone". `undoRecoveryTap()`'s `opts.quiet`
+leaves out its own "Recovery undone" toast, since the window says it. The Undo is offered only while
+the window is open. Without `quiet`, `applyAmmoRecovery()` behaves exactly as before (`{text, rec,
+list}` or null); nothing in the app calls it that way now, but the tests do. See
+[Combat view](combat-view.md).
 
 **The fight's line in the inventory log (#47).** Before recovery touches the counts, End combat
 writes one `ammo` line per kind fired to the [inventory log](inventory.md) — "Arrows: 5 fired, 2
@@ -197,8 +212,8 @@ as `ammoRecoverable()` does but keeps the kinds that give nothing back, plus `c.
 **Recover N** clears the counts it recovers, so during a fight `recoverWeaponAmmo()` keeps what it
 fired and gave back per kind there (`ammoFightKeep()`; nothing is kept outside a fight, where there
 is no fight line to count it in). End combat and `combatStart()` empty it. The line has no Undo of
-its own; the toast's Undo recovery takes End combat's own recovery back off the line's "recovered"
-(`undoRecoveryTap()`, handed the lines and what was recovered). A shot, and a row's Recover, is
+its own; the End of combat window's Undo recovery takes End combat's own recovery back off the
+line's "recovered" (`undoRecoveryTap()`, handed the lines and what was recovered). A shot, and a row's Recover, is
 never logged on its own.
 
 **Forgetting a stack's count.** Deleting a stack takes its `ammoSpent` entry with it
@@ -246,6 +261,8 @@ to the inserted entry's own default, keeping an explicit Always or Never.
   the rest, never kept for a later change of rule: kept, it piled up fight after fight and came
   back in full when the rule changed.
 - **A thrown weapon's Recover N and its tap read the same entry** — the one under its own id.
+- **A shot's Undo refuses once End combat has settled it (#105).** `undoFireTap()` compares the
+  shot's `settled` stamp with `_ammoSettled`; undoing a settled shot would recover it twice.
 - **The rule is read at recovery, never at the shot.** Changing the sheet's setting with shots
   outstanding changes what they get back; no shot carries its own copy of the rule.
 - **The pass re-baselines only what it wrote, and never over a player's edit.** Re-baselining more
@@ -314,12 +331,21 @@ Settled with Mike on 2026-10-17 and 2026-10-18 (#104); the full discussion is in
 | None and an item set to Always | **The item wins**: None is the sheet's default giving nothing back, but a thrown dagger is still picked up | None as a master switch: a thrown dagger would be lost for good on a table that doesn't use ammunition recovery |
 | Thrown weapons | **A Thrown weapon throws itself**: Throw spends one from its own count | Only the field, thrown weapons later: "always" would have no user |
 | A thrown weapon at ×0 | **Stays on the sheet at ×0, Throw disabled**, until recovery brings it back | Removed like an arrow stack: its attack row would vanish mid-fight |
-| End combat | **Recovers on its own, with a toast and an Undo**, when anything is recoverable | Still asking Yes/No: a tap after every fight |
+| End combat | **Recovers on its own, with a toast and an Undo**, when anything is recoverable. Since #105 the toast is the End of combat window's Ammunition row, with the same Undo | Still asking Yes/No: a tap after every fight |
 | Counts that give nothing back at End combat (final review) | **Retired with the rest**: every outstanding entry is cleared; with nothing back, quietly and with no Undo | Kept for a later change of rule (the plan): they piled up fight after fight and came back in full once the rule changed, and a Never stack's count was kept or cleared depending on its neighbours |
 | Shots fired under one rule, recovered under another | **The rule is read at recovery**; a Hit/Miss answer is recorded whenever it is given; in Hits-only, an unanswered shot comes back at half | The rule in force at each shot: every shot would carry its own rule, and changing the setting would do nothing to shots already fired |
 
 ## Open
 
+- **A shot's Undo stops working once End combat has settled it (#105).** The Fire or Throw toast is
+  hidden at End combat, but if its Undo is reached anyway it refuses and changes nothing, and so does
+  the Undo of a shot fired outside a fight once a later End combat has swept it up. Taking such a
+  shot back would count it as spent again and recover it twice; the End of combat window's Undo
+  recovery is the way back.
+- **End combat's screen-reader announcement no longer says what was recovered (#105).** The toast
+  used to carry it; `#cvLive` now says only that combat ended, and it lands in a region the End of
+  combat window makes inert the same moment, so a screen reader may not speak it. The window's
+  Ammunition row shows what came back.
 - **A weapon made in the item editor cannot be Thrown.** The editor has no weapon-notes field, so
   only pack data marks a weapon Thrown; a homebrew thrown weapon needs a pack entry (or its own
   file edit) until the editor learns a notes or Thrown field.
@@ -348,3 +374,4 @@ Settled with Mike on 2026-10-17 and 2026-10-18 (#104); the full discussion is in
 - 2026-10-19 — Final review: End combat retires every outstanding count; a thrown weapon's row reads its own entry; the editor's field follows the form's current weapon; only pack data marks a weapon Thrown. → ledger L6147, #104
 - 2026-10-25 — End combat writes one inventory-log line per kind fired, from `ammoFightSummary()`. → ledger L7291, #47
 - 2026-10-25 — A row's Recover counts in the fight's line (`ammoFight`, `ammoFightTotals()`), which reads "Fight of N rounds"; Undo recovery takes End combat's recovery back off it. → ledger L7339, #47
+- 2026-10-29 — End combat recovers quietly (`applyAmmoRecovery({quiet, logged})` hands back `{lines, undo}`) and the End of combat window's Ammunition row shows it with Undo recovery (`undoRecoveryTap(…, {quiet})`); there is no End combat toast; a shot's Undo refuses once End combat has settled it. → ledger L7921, #105
