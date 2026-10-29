@@ -429,12 +429,49 @@ for name, rec, level, msg in [
        git(d, "diff", "--stat").stdout.strip() == "" and os.path.exists(rec_path) == bool(rec)
        and status == ("?? src/docs/PRE-RELEASE.md" if rec else ""), (git(d, "diff", "--stat").stdout, status))
 prerelease(d, "1.9.0")
+# #127 ruling 17: "cut before" is an archived record git tracks, or the tag v<version>
 write(d, os.path.join("src/docs/archive", "1.9.0", "PRE-RELEASE.md"), raw="# Pre-release 1.9.0\n")
+git(d, "add", "src/docs/archive")
+git(d, "commit", "-qm", "an earlier cut of 1.9.0")
 before = untracked_all(d)
 r = node(d, "scripts/release.js", "1.9.0")
-ck("#127 release.js refuses a version whose record is already archived",
-   r.returncode == 1 and "already exists: 1.9.0 has been cut before." in r.stderr and git(d, "diff", "--stat").stdout.strip() == ""
-   and untracked_all(d) == before, (r.stderr, before, untracked_all(d)))
+ck("#127 release.js refuses a version whose archived record is tracked: cut before",
+   r.returncode == 1 and "release: src/docs/archive/1.9.0/PRE-RELEASE.md already exists: 1.9.0 has been cut before." in r.stderr
+   and git(d, "diff", "--stat").stdout.strip() == "" and untracked_all(d) == before, (r.stderr, before, untracked_all(d)))
+shutil.rmtree(d)
+d = checkout()
+prerelease(d, "1.9.0")
+git(d, "tag", "v1.9.0")
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 release.js refuses a version whose tag exists: cut before",
+   r.returncode == 1 and "release: the tag v1.9.0 already exists: 1.9.0 has been cut before." in r.stderr
+   and git(d, "diff", "--stat").stdout.strip() == "" and untracked_all(d) == "?? src/docs/PRE-RELEASE.md", (r.stderr, untracked_all(d)))
+shutil.rmtree(d)
+
+# ---------- #127 ruling 17: a cut undone with `git checkout -- .` (the record committed, as /pre-release does)
+d = checkout()
+prerelease(d, "1.9.0")
+git(d, "add", "-A")
+git(d, "commit", "-qm", "pre-release 1.9.0")
+r = node(d, "scripts/release.js", "1.9.0")
+first = r.returncode
+git(d, "checkout", "--", ".")
+before = untracked_all(d)
+r = node(d, "scripts/release.js", "1.9.0")
+mv = "mv src/docs/archive/1.9.0/PRE-RELEASE.md src/docs/PRE-RELEASE.md"
+ck("#127 an undone cut is refused as undone, not 'cut before', naming the command that puts the record back",
+   first == 0 and before == "?? src/docs/archive/1.9.0/PRE-RELEASE.md" and r.returncode == 1
+   and "release: src/docs/archive/1.9.0/PRE-RELEASE.md is left from a cut of 1.9.0 that was undone" in r.stderr
+   and r.stderr.rstrip().endswith(mv) and "cut before" not in r.stderr, (first, before, r.stderr))
+ck("#127 ...writes nothing, and moves nothing itself",
+   git(d, "diff", "--stat").stdout.strip() == "" and untracked_all(d) == before, (git(d, "diff", "--stat").stdout, untracked_all(d)))
+if r.stderr.rstrip().endswith(mv):  # run the command exactly as the refusal gave it
+    subprocess.run(r.stderr.rstrip().rsplit(": ", 1)[1], shell=True, cwd=d)
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 ...and after that command, the cut succeeds and files the record again",
+   r.returncode == 0 and not os.path.exists(os.path.join(d, "src/docs/PRE-RELEASE.md"))
+   and os.path.exists(os.path.join(d, "src/docs/archive/1.9.0/PRE-RELEASE.md"))
+   and 'APP_VERSION="1.9.0"' in open(os.path.join(d, "src/js/30-version.js"), encoding="utf-8").read(), r.stderr)
 shutil.rmtree(d)
 d = checkout()
 write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 6}]})

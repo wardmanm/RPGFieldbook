@@ -237,6 +237,19 @@ const record = (ver, open = []) => [
      .includes('step 2. Outstanding issues is open'));
   ck('#127 a missing step row: refused', rec.recordProblem(record('1.9.0').replace(/^\| 5\. .*\n/m, ''), '1.9.0') ===
      'src/docs/PRE-RELEASE.md has no row for step 5. Release notes. Run /pre-release 1.9.0 to finish it.');
+  /* #127 ruling 18: each step has exactly one row, or the record is invalid (fail closed) */
+  const row3 = '| 3. QA checklist | done | 2026-10-30 | ok |\n';
+  ck('#127 a duplicated step row, done then open: refused, naming the row',
+     rec.recordProblem(record('1.9.0').replace(row3, row3 + '| 3. QA checklist | open | | |\n'), '1.9.0') ===
+     'src/docs/PRE-RELEASE.md has 2 rows for step 3. QA checklist. Run /pre-release 1.9.0 to finish it.');
+  ck('#127 a duplicated step row, done then done: refused too',
+     rec.recordProblem(record('1.9.0').replace(row3, row3 + row3), '1.9.0') ===
+     'src/docs/PRE-RELEASE.md has 2 rows for step 3. QA checklist. Run /pre-release 1.9.0 to finish it.');
+  ck('#127 a missing row 4: refused, naming it',
+     rec.recordProblem(record('1.9.0').replace(/^\| 4\. .*\n/m, ''), '1.9.0') ===
+     'src/docs/PRE-RELEASE.md has no row for step 4. QA bugs. Run /pre-release 1.9.0 to finish it.');
+  ck('#127 ...an invalid record is refused as invalid even with an earlier step open',
+     rec.recordProblem(record('1.9.0', [1]).replace(row3, row3 + row3), '1.9.0').includes('has 2 rows for step 3'));
   ck('#127 no heading: refused', rec.recordProblem('just text\n', '1.9.0').includes('has no "# Pre-release X.Y.Z" heading'));
   ck('#127 the archive path', rec.archivePath('1.9.0') === ['src', 'docs', 'archive', '1.9.0', 'PRE-RELEASE.md'].join('/'));
 }
@@ -260,8 +273,14 @@ const record = (ver, open = []) => [
   ck('#127 archiveRecord moves it, bytes intact', rec.archiveRecord(d, '1.9.0') === rec.archivePath('1.9.0') &&
      !fs.existsSync(path.join(d, rec.RECORD)) && fs.readFileSync(path.join(d, rec.archivePath('1.9.0')), 'utf8') === text);
   fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.0'));
-  ck('#127 gateProblem refuses a version already archived', rec.gateProblem(d, '1.9.0') ===
-     rec.archivePath('1.9.0') + ' already exists: 1.9.0 has been cut before.');
+  /* #127 ruling 17: no git here, so the archived copy is untracked and there is no
+     tag: an undone cut. It names the command to put it back and moves nothing.
+     A tracked copy or a tag ("cut before") is tested end to end in data-kit.py. */
+  ck('#127 gateProblem: an untracked archived record with no tag is an undone cut, with the command to put it back',
+     rec.gateProblem(d, '1.9.0') === 'src/docs/archive/1.9.0/PRE-RELEASE.md is left from a cut of 1.9.0 that was undone: ' +
+     'git does not track it and there is no tag v1.9.0. Put the record back, then run again: ' +
+     'mv src/docs/archive/1.9.0/PRE-RELEASE.md src/docs/PRE-RELEASE.md', rec.gateProblem(d, '1.9.0'));
+  ck('#127 ...and moves nothing', fs.existsSync(path.join(d, rec.archivePath('1.9.0'))) && fs.existsSync(path.join(d, rec.RECORD)));
   fs.rmSync(d, {recursive: true, force: true});
 }
 

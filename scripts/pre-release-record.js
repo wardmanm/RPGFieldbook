@@ -14,6 +14,7 @@
 "use strict";
 const fs = require("fs");
 const path = require("path");
+const { spawnSync } = require("child_process");
 
 const RECORD = "src/docs/PRE-RELEASE.md";
 const STEPS = ["Docs", "Outstanding issues", "QA checklist", "QA bugs", "Release notes"];
@@ -45,23 +46,50 @@ function recordProblem(text, version) {
   const rec = parseRecord(text);
   if (!rec.version) return RECORD + ' has no "# Pre-release X.Y.Z" heading. ' + run + " first.";
   if (rec.version !== version) return RECORD + " is for " + rec.version + ", not " + version + ". " + run + " first.";
+  /* every step has exactly one row, or the record is invalid: a duplicated row
+     (one copy done, another open) must never pass on whichever copy comes
+     first (#127 ruling 18: fail closed) */
   for (let i = 0; i < STEPS.length; i++) {
-    const step = (i + 1) + ". " + STEPS[i];
+    const rows = rec.steps.filter(s => s.n === i + 1).length;
+    if (rows === 0) return RECORD + " has no row for step " + (i + 1) + ". " + STEPS[i] + ". " + run + " to finish it.";
+    if (rows > 1) return RECORD + " has " + rows + " rows for step " + (i + 1) + ". " + STEPS[i] + ". " + run + " to finish it.";
+  }
+  for (let i = 0; i < STEPS.length; i++) {
     const row = rec.steps.find(s => s.n === i + 1);
-    if (!row) return RECORD + " has no row for step " + step + ". " + run + " to finish it.";
-    if (row.state !== "done") return "pre-release " + version + " is not finished: step " + step + " is open. " + run + " to finish it.";
+    if (row.state !== "done") return "pre-release " + version + " is not finished: step " + (i + 1) + ". " + STEPS[i] + " is open. " + run + " to finish it.";
   }
   return null;
 }
 
-/* what release.js refuses with for `version` in the tree at root, or null */
+/* a local git query in the tree at root (offline); true when it exits 0. Not a
+   repo, or no git at all, reads as false. GIT_DIR and friends are dropped so a
+   hook's environment can't point it at another repo. */
+function gitOk(root, args) {
+  const env = Object.assign({}, process.env);
+  for (const k of ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"]) delete env[k];
+  const r = spawnSync("git", ["-C", root].concat(args), { stdio: "ignore", env });
+  return r.status === 0;
+}
+
+/* what release.js refuses with for `version` in the tree at root, or null.
+   "Cut before" (#127 ruling 17) is the tag v<version>, or an archived record
+   that git tracks. An archived record git does NOT track, with no tag, is a
+   cut that was undone (`git checkout -- .` restores what release.js changed
+   but leaves the new file): refused with the command that puts it back, and
+   never moved here, so nothing is lost or overwritten unasked. */
 function gateProblem(root, version) {
-  const p = recordProblem(readRecord(root), version);
-  if (p) return p;
-  if (fs.existsSync(path.join(root, archivePath(version)))) {
-    return archivePath(version) + " already exists: " + version + " has been cut before.";
+  const archived = archivePath(version);
+  if (gitOk(root, ["rev-parse", "-q", "--verify", "refs/tags/v" + version])) {
+    return "the tag v" + version + " already exists: " + version + " has been cut before.";
   }
-  return null;
+  if (fs.existsSync(path.join(root, archived))) {
+    if (gitOk(root, ["ls-files", "--error-unmatch", "--", archived])) {
+      return archived + " already exists: " + version + " has been cut before.";
+    }
+    return archived + " is left from a cut of " + version + " that was undone: git does not track it and there is no tag v" +
+      version + ". Put the record back, then run again: mv " + archived + " " + RECORD;
+  }
+  return recordProblem(readRecord(root), version);
 }
 
 /* move the record to src/docs/archive/<version>/; returns that path */
