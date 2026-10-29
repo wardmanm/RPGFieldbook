@@ -55,8 +55,9 @@ Mike's, in conversation, 2026-10-29. The 1.9.0 roadmap's two #105 rows (one scre
    and Undo handed to the window (§5).
 3. **The End of combat window** opens (§4).
 4. **Done** adds the XP (§4.3), closes the window, and opens the level-up if the XP reached a level.
-   Closing with × or Escape while XP is typed asks, through the dismiss guard, "Add 112 XP?" (OK adds
-   it and closes; Cancel closes without it). With no XP typed, × and Escape simply close.
+   Closing with × or Escape while XP is typed asks, in the app's warning window, "Add 112 XP?" ("Add XP"
+   does exactly what Done does, the level-up included; "Don't add" or Escape closes without it). With no XP
+   typed, × and Escape simply close.
 
 ## 4. The window
 
@@ -100,8 +101,9 @@ after, the level-up opens next, through the same path as the level ring's button
 Always shown. Row status: "Open trade…". The body says "Coins and items from the fight go through a trade,
 so they're in your inventory log", and an **Open trade** button calls
 `openTrade({with: <name>, onClose: <reopen>})`:
-- `<name>` is the fallen combatants' names joined with commas ("Goblin 1, Bugbear"), or "Combat loot" when
-  none fell or there were no combatants. The trade window lets the player edit it, as today.
+- `<name>` is the fallen foes' names joined with commas ("Goblin 1, Bugbear"), or "Combat loot" when none
+  fell or there were no combatants. A fallen party member is struck through in the summary but never named
+  here: the loot came from the foes. The trade window lets the player edit it, as today.
 - The trade window replaces this one (the modal has one layer). When it closes, by Complete Trade or by
   cancelling, `onClose` reopens the End of combat window with its state intact: typed XP, the split, open
   rows, Undo still offered or done. After a completed trade the Loot row reads "Traded with Goblin 1,
