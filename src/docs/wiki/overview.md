@@ -65,7 +65,12 @@ src/                      THE SOURCE OF TRUTH — edit here, never the built fil
     RELEASING.md            cutting and publishing a release
     WORKTREES.md            several issues at once in parallel worktrees
     ADR-001-source-split.md why the source is split
-    specs/  plans/          one design spec per feature, and the plans that execute them
+    specs/  plans/          one design spec per feature, and the plans that execute them;
+                            filed into specs/<ver>/ and plans/<ver>/ once shipped (/pre-release)
+    archive/<ver>/          finished docs, and each release's pre-release record
+    qa/smoke.md             the standing "Still works" list each QA checklist copies
+    PRE-RELEASE.md          while a release is being prepared: /pre-release's record
+    QA-CHECKLIST.md         that release's QA checklist, rebuilt by each run
     _claude/                agent context: WIRING-LEDGER.md (the log)
 dist/
   fieldbook.html          the app — a BUILD ARTIFACT, tracked in git. Never hand-edit
@@ -98,6 +103,8 @@ scripts/
   build-html.js           src/ → dist/fieldbook.html (dev)
   gen-changelog.js        regenerates docs/CHANGELOG.md (dev)
   release.js              bumps APP_VERSION, folds in UNRELEASED.md, bumps changed packs (dev)
+  pre-release-record.js   the /pre-release record: the gate release.js checks, and its CLI (dev)
+  move-docs.js            moves dev docs and rewrites every reference to them (dev)
   release-notes.js        one version's changelog section, for the release body (dev)
   data-release.js         prepares a data-only release: bumps changed packs to X.Y.Z-N (dev)
   data-release-notes.js   the rules-data part of a release body, from data/packs.json (dev)
@@ -109,7 +116,7 @@ tools/data-kit/          the data kit (Python 3.8+, stdlib), shipped as its own 
                           the archive's pack and validate, and convert and build for kit users
   README.md               the kit zip's own guide
   example-pack/           one invented pack with every category
-.claude/skills/wiki/      the skill that maintains this wiki (tracked; never ships)
+.claude/skills/           the project skills: wiki, status, release, pre-release (tracked; never ships)
 .github/workflows/        ci.yml (every push and PR), release.yml (on a version tag),
                           data-release.yml (on a data-v… tag)
 build.sh · dev.sh         build + validate + zip; the interactive menu over every task
@@ -189,6 +196,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | **registry** | `data/packs.json`: every pack's `system`, `dir`, `file`, `title`, `version`, content `digest` and optional `license` and `attribution`, plus `release`, the last release's version. Written only by `release.js` and `data-release.js`, through `fbdata.py` |
 | **data version** | A pack's own version, `X.Y.Z` (the data shipped with app X.Y.Z) or `X.Y.Z-N` (the Nth data-only release after it). Not semver: `1.8.0 < 1.8.0-1 < 1.8.1`. Compared with `cmpDataVer()`, never `cmpVer()`. A pack's `dataVersion` |
 | **data release** | A release of rules data with no app: tag `data-vX.Y.Z-N`, the archive as its only asset, never GitHub's "latest". Cut by `data-release.js`, published by `data-release.yml` |
+| **pre-release** | `/pre-release X.Y.Z`, the five steps before an app release is cut (docs filed, loose ends filed, the QA checklist, its bugs, the release notes), each recorded in `src/docs/PRE-RELEASE.md`, the *record*. `release.js` refuses to cut X.Y.Z until the record is complete for exactly X.Y.Z, then files it under `src/docs/archive/X.Y.Z/`. → [Building & CI](process/building-and-ci.md) |
 | **extension / source / manifest** | An *extension* is an installable pack, in a `category` (only `rules` today). A *source* is where Fieldbook finds them: the built-in official source, a manifest URL, or an old-style plain URL (`settings.sources`). A *manifest* is a `fieldbook-data.json`, format 2, listing packs with versions, sha256s and `minApp`. → [Rules packs](architecture/rules-packs.md) |
 | **rules-data archive** | `fieldbook-data-standalone-<release>.zip`: every public pack (SRD 5.2 alone), the manifest `fieldbook-data.json` and `NOTICE.md`. Attached to every release and carried in the app zip; Fieldbook opens it itself |
 | **private data** | The 2024, Xanathar's, Tasha's and Humblewood packs, which carry book text and no open licence, and Homebrew, which needs Xanathar's: in `wardmanm/RPGFieldbookPrivate`, reached as `_private-data`, released privately as `fieldbook-data-private-<ver>.zip`. → [Private data](data/private-data.md) |
@@ -232,3 +240,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-26 — `89-extensions.js` joins the code map (JS fragment count 37→38), after `89-rules-merge.js`; the layout gains `releases/data/`; the glossary gains extension, source and manifest. → ledger L7428, #102
 - 2026-10-28 — Homebrew moves to the private repo: the pack table, layout and glossary say SRD 5.2 is the one public pack. → ledger L7858, #125
 - 2026-10-29 — `87-combat-end.js` joins the code map (JS fragment count 38→39): the End of combat window, placed after `87-trackers.js`, whose renderers it calls. → ledger L7921, #105
+- 2026-10-29 — The layout gains the pre-release docs (`specs/<ver>/` and `plans/<ver>/`, `archive/<ver>/`, `qa/smoke.md`, the record and the checklist), `pre-release-record.js` and `move-docs.js`, and names every project skill; the glossary gains pre-release. → ledger L8070, #127

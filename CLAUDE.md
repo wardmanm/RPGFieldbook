@@ -49,7 +49,8 @@ src/                     THE SOURCE OF TRUTH — edit here, never the built file
   css/*.css              9 fragments, concatenated into the single <style>
   icons/icons.json       hand-authored emblem map → scripts/fetch-icons.js → js/05-icons.js
   tests/                 the suites — ./src/tests/run.sh
-  docs/                  dev docs (never ship): wiki/, specs/, plans/, UNRELEASED.md, …
+  docs/                  dev docs (never ship): wiki/, specs/ and plans/ (filed into specs/<ver>/
+                         and plans/<ver>/ once shipped), archive/<ver>/, qa/, UNRELEASED.md, …
 dist/fieldbook.html      BUILD ARTIFACT, tracked. Never hand-edit
 data/<system>/*.json     rules data: srd52/ only; data/packs.json registers each pack;
                          bundled into dist/*_full.json
@@ -87,6 +88,10 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
   say a release is ready, and stop. **Mike typing `/release` is the exception:** the `release` skill
   (`.claude/skills/release/`) runs the release, cutting only after he confirms the exact version and
   publishing only after he says "publish". Procedure: [RELEASING](src/docs/RELEASING.md).
+  **An app release needs `/pre-release <ver>` first** (`.claude/skills/pre-release/`, Mike types
+  it): docs filed by version, loose ends and QA bugs filed as issues, release notes checked, each
+  step recorded in `src/docs/PRE-RELEASE.md`. `./build.sh --release` refuses until that record is
+  complete for exactly that version.
 - **Screenshots are required for any UI-affecting change** — each affected tab, before and after for
   a change to existing UI, via the project's Playwright MCP server (`.mcp.json`), never a
   plugin-provided one (it refuses `file://`). Tab names are lowercase; `newCharacter(name, system)`
@@ -186,7 +191,7 @@ At the end of any task that changed behaviour, data, the converter, the build or
 
 Keep `.claude/status.md` current so Mike's daily update knows where this project stands. Update it before every push and before ending a session, even if no code changed, with the `status` skill (`/status`). It is written on main only: worktree branches never touch it, so it never conflicts in a merge (#108).
 
-A commit that changes only this file goes straight to main (docs(repo): status). It's the one exception to working on a branch (Mike, 2026-10-19).
+A commit that changes only this file goes straight to main (docs(repo): status). It's the one exception to working on a branch (Mike, 2026-10-19), besides release preparation: `/pre-release` commits its steps on main, and `/release` its release commit.
 
 Keep the file under ~60 lines, in this structure:
 

@@ -176,11 +176,12 @@ release_menu() {
   local notes; notes=$(pending_notes)
   if [ "$notes" -eq 0 ]; then
     printf '\n%sNo pending notes in src/docs/UNRELEASED.md — release.js will refuse.%s\n' "$YEL" "$OFF"
-    printf 'Add a bullet per player-visible change first.\n'
+    printf 'Add a bullet per player-visible change first, then run /pre-release X.Y.Z in Claude Code.\n'
     return 0
   fi
   printf '\nThis folds %s note(s) into the changelog, bumps APP_VERSION and rebuilds.\n' "$notes"
   printf 'It does NOT commit, tag or publish — the exact commands are printed afterwards.\n'
+  printf 'It refuses unless /pre-release is complete for exactly the new version (RELEASING.md §0).\n'
   printf '\nProceed with --release %s? [y/N] ' "$lvl"
   local ok; read -r ok
   case "$ok" in
@@ -422,6 +423,7 @@ checklist() {
   cat <<EOF
 
   ${B}Release checklist${OFF}
+    0. /pre-release X.Y.Z in Claude Code — every step done (release.js refuses otherwise)
     1. Every player-visible change has a bullet in src/docs/UNRELEASED.md
     2. Menu 4 — tests pass
     3. git status --porcelain — NOTHING untracked (??). The tag is built in a

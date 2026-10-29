@@ -239,3 +239,149 @@ CLAUDE.md. No UNRELEASED bullet: nothing a player sees.
 - Gating data and private data releases.
 - Keeping a history of QA checklists (rebuilt each run, as asked).
 - Changing `/release`'s two gates; this adds a precondition before them.
+
+## As built
+
+Built 2026-10-29 in six tasks on `issue/127-pre-release` (`2d97fab..`), each reviewed. The code is the
+truth, and the wiki pages in §11 describe it (ledger "Pre-release (#127, 2026-10-29)"). This section
+records where the code lives, every deviation and ruling with what it costs if it is wrong, and what
+was deferred.
+
+### Where it lives
+
+- `scripts/move-docs.js`: step 1.3's script (`findRefs()`, `rewriteText()`, `checkMoves()`,
+  `planMoves()`, `applyPlan()`, `scanFiles()`, `SCAN`), with `--dry-run` and `--root`.
+- `scripts/pre-release-record.js`: the record's parser and the gate's words (`parseRecord()`,
+  `recordProblem()`, `gateProblem()`, `archiveRecord()`, `STEPS`), and the CLI
+  `node scripts/pre-release-record.js [X.Y.Z]` that `/release`'s preflight runs.
+- The gate in `scripts/release.js`: after the version resolves and the "must be higher" check,
+  before anything is written; the record is filed last, after the notebook is emptied.
+- The skill, `.claude/skills/pre-release/SKILL.md`; `/release`'s preflight in
+  `.claude/skills/release/SKILL.md`.
+- The standing list, `src/docs/qa/smoke.md`.
+- Tests: `src/tests/pre-release.js` (a new suite, eleven in all), the gate's cases in
+  `src/tests/data-kit.py`, and three blocks in `src/tests/docs.js` (the link check of §6, the smoke
+  list's areas, the skills against the gate).
+- Docs: RELEASING §0 (and undoing a cut), CLAUDE.md, `dev.sh`'s checklist and Release item,
+  `build.sh`'s closing line, the wiki's building-and-ci, testing, overview, decisions and index.
+
+### Deviations from the text above (accepted at plan review)
+
+- **Two extra files**: `scripts/pre-release-record.js`, so the gate, its CLI and its tests share
+  one parser, and `src/tests/pre-release.js`. The gate inside `release.js` is tested in
+  `data-kit.py`, beside the other `release.js` cases, on a scratch git checkout.
+- **`move-docs.js` searches more than §4.3 lists**: also `.github/workflows/`, `data/packs.json`,
+  `scripts/`, `tools/data-kit/`, the suites, README.md, `build.sh`, `dev.sh` and `.githooks/`, since
+  paths to specs already sit there and decision 2 says "everywhere".
+- **§6's check is scoped** to real claims: it skips `src/tests/` (invented fixtures); a relative link
+  counts only outside fenced blocks, and only when it names `specs/`, `plans/` or `archive/` or a
+  dated doc; an `X.Y.Z`, `YYYY` or `example-` path is an illustration. Without this, 23 false alarms.
+- **The gate checks the resolved version** (`patch` becomes a number first) **and refuses a version
+  cut before**. Its words are fixed in the plan's Global Constraints.
+- **Step 1 rebuilds and commits `dist/fieldbook.html`** when a moved path sat in a `src/js/`
+  comment: main carries the artifact, and its CI fails on a stale one.
+- **A ticked `✗ Claude` line counts as dismissed** in step 4.
+- **Step 5 also flags markdown**, which "What's new" shows as typed (`openChangelog()`).
+- **`dev.sh`'s checklist gains step 0**, `/pre-release`, or it would send Mike straight to a cut
+  `release.js` refuses; `dev.sh`'s Release item and `build.sh`'s closing line name it too.
+- **CLAUDE.md's main-branch exception** names release preparation: `/pre-release` commits its steps
+  on main, and `/release` its release commit.
+- **`smoke.md` before the skill** (Task 4, then 5): the skill's checklist copies its areas.
+- **`QA-CHECKLIST.md` is not archived at the cut**: it is rebuilt by each run (§12).
+
+### Rulings
+
+Each with what it costs if it is wrong.
+
+1. The `checkout()` copy-loop edit moved into Task 3's step 3, so step 2 failed with FAIL lines.
+   Cost: none.
+2. `move-docs.js`'s test writes its move list in its own temp dir and removes it. Cost: none.
+3. The usage test passes `--root`, never defaulting to the real repo. Cost: none.
+4. Every `move-docs.js` error path ends "nothing was written". Cost: none.
+5. Both skills keep their own open-P0 query, since each must run alone; `docs.js` asserts the two
+   are identical. Cost: none.
+6. A P0 loose end is filed in the milestone with Priority P0 and no fix-version label, and step 4's
+   P0 check holds the release (decisions 5 and 6). Cost: none.
+7. When no merge names a doc's issue, its version comes from the commit that added it (`git log
+   --diff-filter=A`, the earliest `v*` tag containing it), and Mike confirms. Cost if wrong: a doc
+   filed one version off, caught at confirmation.
+8. `/pre-release` checks the branch and refuses off main; it never switches. `/release`'s own
+   preflight still switches. Cost: none.
+9. testing.md's suite count, in its Open list, becomes eleven too. Cost: none.
+10. RELEASING's two new "What `--release` does" bullets each say where they go. Cost: none.
+11. building-and-ci's Decisions table keeps its three columns; §2's `#` column is dropped. Cost: none.
+12. Every "writes nothing" check also asserts `git status --porcelain` (exactly the test's own record
+    when it wrote one). Cost: none.
+13. The plan's line numbers are pre-edit; edits go in by quoted text. Cost: none.
+14. `parseRecord()` matches step rows by number. Cost: none.
+15. `move-docs.js` also searches README.md, `build.sh`, `dev.sh` and `.githooks/`. Cost: none.
+16. The link check counts a folder link (`../specs/`) as resolving when the folder exists, and
+    `move-docs.js` rewrites folder links too. Cost if wrong: a link to a vanished folder still fails;
+    a link to an existing folder never does.
+17. "Cut before" means the tag `vX.Y.Z` exists or the archived record is tracked in git. An untracked
+    archived record with no tag is an abandoned cut, refused with the exact command that puts it
+    back (`mv src/docs/archive/X.Y.Z/PRE-RELEASE.md src/docs/PRE-RELEASE.md`), never moved
+    automatically. Cost if wrong: one extra command after an abandoned cut.
+18. A duplicated or missing step row makes the record invalid, refused naming the row: the gate
+    fails closed. Cost: none.
+19. The preflight's clean-tree check allows exactly `src/docs/PRE-RELEASE.md` and
+    `src/docs/QA-CHECKLIST.md` (modified or untracked); a resume commits them first
+    (`docs: pre-release X.Y.Z — record`); the moved-main check ignores commits touching only those
+    two; a step-3 rebuild asks first and carries Mike's marks forward on every unchanged line. Cost
+    if wrong: a resume asks one extra question.
+20. Steps are strictly ordered: reopening any step reopens every later step. A rerun with all five
+    done re-checks main and open P0s, and if nothing changed says "complete — run /release X.Y.Z"
+    and changes nothing. Cost: none.
+21. (Amended.) Only an open issue keeps a doc at the top level. A doc whose issue is closed but has
+    no merge naming it, or that names no issue, uses the add-commit fallback (Ruling 7) and is listed
+    for Mike to confirm. Cost if wrong: Mike corrects a version on the move list.
+22. The filing block takes the confirmed priority; a P0 gets no fix-version label. Cost: none.
+23. Step 2's write-backs (issue numbers into `known-issues.md`, an As built, `.claude/status.md`) go
+    into step 2's own commit straight after filing, so none is left uncommitted between sessions.
+    Cost: none.
+
+The implementers' own, upheld: `pre-release-record.js` is mode 644 like every other script, run as
+`node scripts/…`; step 3 restores the build files before its commit; archiving never cuts a section
+from the ledger; `/release` looks for the roadmap page under `archive/` too; a declined rebuild
+records "Kept at `<sha>`" under the checklist's header as the next moved-main baseline (cost if
+wrong: one header line).
+
+### Pending: the final fix wave
+
+Not known issues: these are to be fixed before the branch merges.
+
+- `move-docs.js`: a write failing midway leaves a half-moved tree, a raw stack trace, and a success
+  summary already printed. Validate everything, then write, and report a failure honestly.
+- `release.js`: a failed record move after the cut leaves a half-cut tree and a raw stack trace.
+- The record CLI: with no version it reports complete for a heading like `# Pre-release vX.Y.Z`,
+  which `release.js` refuses; it takes `--help` as a version; its refusal reads
+  "pre-release: pre-release …".
+- The skill: the issue body file has no stated location (put it in a `mktemp` file outside the repo,
+  so `git add -A` cannot take it).
+- `/release` looks for one fixed archived roadmap name, while step 1's archive name is conditional.
+- The skill's `PICK` guard prints "stop" but does not stop, and `PRIORITY` is not checked before
+  `gh issue create`.
+- Routine `docs(repo): status` commits count as "main moved", so every resume across sessions asks
+  the rebuild question; the moved-main check should also ignore commits touching only
+  `.claude/status.md`.
+
+### Deferred minors
+
+- `move-docs.js`: the `SCAN` test does not cover Ruling 15's four roots; the test tree has no file
+  under `src/docs/archive/`; a backup like `foo.md.orig` is rewritten as `foo.md`; `LINK_TARGET`
+  stops at a space or `(` even inside `<…>`. (The unused `RECORD_JS` constant is used since Task 3.)
+- The link check: its archive branch is only self-tested until `src/docs/archive/` exists.
+- The gate: no test for `--release patch` or `minor` succeeding, or for a CRLF record;
+  `data-kit.py`'s undone-cut case extracts the `mv` command by splitting the refusal's wording.
+- `smoke.md`: the ancestry/background/class line and the trade window line each bundle several
+  checks.
+- The skill: the P0 check leaves comparing two lists to the reader; a resume with a missing or
+  doubled record row is undefined (the gate refuses such a record anyway); step 1's rebuild trigger
+  is narrower than the build's inputs; `--grep` also matches body lines; a second "Kept at" line
+  picks the older sha; a stale dirty `QA-CHECKLIST.md` can enter step 1's commit; all steps done
+  plus a declined rebuild is not spelled out.
+
+### Not yet run
+
+The first `/pre-release 1.9.0` is the backfill and the skill's first exercise (§8, §10): Mike's, on
+main, after the merge. Nothing in this branch moved a spec, plan or wiki page.
