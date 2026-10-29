@@ -32,17 +32,47 @@ function endFightShow(){
   endFightWire();
   return true;
 }
-/* ×/Escape: nothing to ask yet (the XP box arrives with Task 4). */
-function endFightGuard(){return null;}
-/* The window has closed for good: drop its memory. */
-function endFightClose(add,levelUp){
-  endFightLive();_endFight=null;
-  return false;
+/* ×/Escape (dismissModal()). With XP typed it refuses this dismissal (true)
+   and asks "Add 112 XP?" in the app's warning window; either answer closes the
+   window — Add XP exactly as Done (the level-up included), Don't add (or
+   Escape) without it. Nothing typed: no question; the hand-on closes it.
+   The answer acts only on the window it was asked about: still this state,
+   and its Done still in the open dialog (closeModal() wipes #mBody, so the
+   Done exists nowhere else). Otherwise it does nothing. */
+function endFightGuard(){
+  const st=endFightLive();if(!st)return null;
+  const n=endFightXpToAdd(st,character);if(!(n>0))return null;
+  if(st.asking)return true;
+  st.asking=true;
+  askConfirm({title:`Add ${endFightN(n)} XP?`,message:"You typed XP but didn't press Done.",ok:"Add XP",cancel:"Don't add"})
+    .then(yes=>{
+      st.asking=false;
+      if(endFightLive()!==st||!document.getElementById("ecDone"))return;
+      closeModal();endFightClose(!!yes,true);
+    });
+  return true;
 }
+/* The window has closed for good: drop its memory and, when `add`, write the
+   XP (character.xp becomes a number). `levelUp` (Done only) opens the level-up
+   when this XP made it ready, by the level ring's own path. Returns whether
+   XP was added. */
+function endFightClose(add,levelUp){
+  const st=endFightLive();_endFight=null;
+  if(!st||!add)return false;
+  const n=endFightXpToAdd(st,character);if(!(n>0))return false;
+  const lv=endFightReadyLevel(character,n);
+  character.xp=endFightXpBase(character)+n;
+  renderLevelBadge();scheduleSave();
+  if(lv&&levelUp)doLevelUp();
+  return true;
+}
+/* Done: adds the XP (its share when split), closes the window, and opens the
+   level-up when that XP reached a level. Returns whether it closed. */
 function endFightDone(){
   if(!endFightLive())return false;
   closeModal();
-  return endFightClose(true,true);
+  endFightClose(true,true);
+  return true;
 }
 
 /* ---- markup: pure strings over (state, character), so the harness can assert every state ---- */
@@ -69,9 +99,77 @@ function endFightAmmoSection(st,c){
     body:lines.map(t=>`<p class="ec-line">${esc(t)}</p>`).join("")+
       (can?(a.undone?`<p class="ec-done">Recovery undone</p>`:`<button type="button" class="tbtn" id="ecUndoAmmo">Undo recovery</button>`):"")};
 }
+/* ---- Experience (spec §4.3): shown only when the character levels by XP ---- */
+function endFightN(n){return Math.max(0,Math.floor(num(n))).toLocaleString("en-US");}
+/* The box's number: whole, 0 to 1,000,000; anything else is 0. */
+function endFightXpInt(v){
+  const s=String(v==null?"":v).trim();if(!s)return 0;
+  const n=Math.floor(Number(s));
+  return isFinite(n)&&n>0?Math.min(1000000,n):0;
+}
+/* What Done adds: the typed number, or its share, rounded down. */
+function endFightXpMath(typed,split,party){
+  const t=endFightXpInt(typed),n=split?Math.max(1,Math.floor(num(party))):1;
+  return {typed:t,n,each:Math.floor(t/n)};
+}
+/* The Party roster (#91) plus this character. */
+function endFightPartySize(c){return cleanParty(c&&c.party).length+1;}
+/* The XP Done adds to: xpNumber() reads "6,350"; blank or text counts as 0. */
+function endFightXpBase(c){const v=xpNumber(c&&c.xp);return v===null?0:v;}
+/* The level the XP would make ready — only when the level-up is not ready
+   before and is after, the rule Done opens it by. */
+function endFightReadyLevel(c,add){
+  if(advancementOf(c)!=="xp"||!(add>0))return null;
+  const base=endFightXpBase(c),b=xpProgress(Object.assign({},c,{xp:base})),a=xpProgress(Object.assign({},c,{xp:base+add}));
+  return a&&a.ready&&!(b&&b.ready)?a.level+1:null;
+}
+function endFightXpView(st,c){
+  if(advancementOf(c)!=="xp")return null;
+  const party=endFightPartySize(c),split=!!c&&c.xpSplit===true&&party>1,m=endFightXpMath(st.xp,split,party);
+  const p=xpProgress(Object.assign({},c,{xp:endFightXpBase(c)})),lv=endFightReadyLevel(c,m.each);
+  const status=m.each>0?`+${endFightN(m.each)} XP`:!p?"XP":p.next===null?`XP ${endFightN(p.xp)}`:`XP ${endFightN(p.xp)} / ${endFightN(p.next)}`;
+  return {party,split,m,status,
+    line:split&&m.typed>0?`${endFightN(m.typed)} ÷ ${m.n} = ${endFightN(m.each)} each`:"",
+    ready:lv?`Level ${lv} ready — the level-up opens when you press Done.`:""};
+}
+function endFightXpToAdd(st,c){const x=endFightXpView(st,c);return x?x.m.each:0;}
+function endFightXpSection(st,c){
+  const x=endFightXpView(st,c);if(!x)return null;
+  return {status:x.status,body:
+    `<div class="field ec-xp"><label class="f" for="ecXp">XP</label><input id="ecXp" type="number" inputmode="numeric" min="0" max="1000000" step="1" value="${esc(st.xp)}" autocomplete="off"></div>`+
+    (x.party>1?`<div class="toggle"><div><div class="t-lbl">Split among ${esc(x.party)}</div></div>`+
+      `<button type="button" class="switch${x.split?" on":""}" id="ecSplit" role="switch" aria-checked="${x.split?"true":"false"}" aria-label="Split among ${esc(x.party)}"></button></div>`:"")+
+    `<p class="hint" id="ecXpLine"${x.line?"":" hidden"}>${esc(x.line)}</p>`+
+    `<p class="ec-ready" id="ecXpReady"${x.ready?"":" hidden"}>${esc(x.ready)}</p>`};
+}
+/* Typing patches the status, the split line and the ready line in place, so
+   the box keeps its caret. */
+function endFightSetXp(v){
+  const st=endFightLive();if(!st)return false;
+  st.xp=String(v==null?"":v).slice(0,12);
+  endFightXpPatch(st);
+  return true;
+}
+/* A row's one-line status, set in place. The id is built per row, as
+   endFightSectionHTML() renders it. */
+function endFightSetStatus(k,text){const s=document.getElementById("ecSt-"+k);if(s)s.textContent=text;}
+function endFightXpPatch(st){
+  const x=endFightXpView(st,character);if(!x)return;
+  endFightSetStatus("xp",x.status);
+  const l=document.getElementById("ecXpLine");if(l){l.textContent=x.line;l.hidden=!x.line;}
+  const r=document.getElementById("ecXpReady");if(r){r.textContent=x.ready;r.hidden=!x.ready;}
+}
+/* Split among N: saved on the character at once (xpSplit). */
+function endFightSetSplit(on){
+  if(!endFightLive())return false;
+  character.xpSplit=!!on;scheduleSave();
+  endFightRepaintSection("xp","#ecSplit");
+  return character.xpSplit;
+}
 /* One row's {status, body}, or null to leave it out. */
 function endFightSection(k,st,c){
   if(k==="ammo")return endFightAmmoSection(st,c);
+  if(k==="xp")return endFightXpSection(st,c);
   return null;
 }
 /* Every attribute interpolates esc(k) whole: rules-data.js's attribute scan
@@ -129,10 +227,12 @@ function endFightClick(e){
   const t=e&&e.target;if(!t||!t.closest)return;let m;
   if((m=t.closest("[data-ecrow]"))){endFightToggle(m.dataset.ecrow);return;}
   if(t.closest("#ecUndoAmmo")){endFightUndoAmmo();return;}
+  if(t.closest("#ecSplit")){endFightSetSplit(character.xpSplit!==true);return;}
   if(t.closest("#ecDone")){endFightDone();return;}
 }
 function endFightWire(){
   const body=document.getElementById("mBody");if(!body||body.dataset.ecWired)return;
   body.dataset.ecWired="1";
   body.addEventListener("click",endFightClick);
+  body.addEventListener("input",e=>{if(endFightLive()&&e.target&&e.target.id==="ecXp")endFightSetXp(e.target.value);});
 }

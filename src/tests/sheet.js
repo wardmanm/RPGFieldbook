@@ -8199,7 +8199,7 @@ async function t105End() {
     ck('#105 ...once', ctx.endFightUndoAmmo() === false);
     // Done, and ×
     let closes = 0; ctx.closeModal = () => { closes++; };
-    ck('#105 Done closes the window and drops its state', ctx.endFightDone() === false && closes === 1 && X._endFight === null);
+    ck('#105 Done closes the window and drops its state', ctx.endFightDone() === true && closes === 1 && X._endFight === null);
     ck('#105 ...a second Done does nothing', ctx.endFightDone() === false && closes === 1);
     ctx.closeModal = keep.cm;
     ctx.openEndOfCombat({rounds: 2, sec: 12, combatants: []});
@@ -8242,4 +8242,80 @@ async function t105End() {
   }
 }
 
-t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+/* ---------- #105 Experience: the box, the split, Done, the level-up, the guard */
+async function t105Xp() {
+  const keep = {om: ctx.openModal, cm: ctx.closeModal, lu: ctx.doLevelUp, ask: ctx.askConfirm, ch: X.character, conf: state.confirm};
+  const levelUps = [];
+  let closes = 0;
+  try {
+    ctx.closeModal = () => { closes++; };
+    ctx.doLevelUp = i => { levelUps.push(i); };
+    const c = X.blankChar(); X.character = c; c.classes = [{name: 'Fighter', level: 4}]; c.level = 4; c.xp = '6,350';
+    const open = () => ctx.openEndOfCombat({rounds: 3, sec: 18, combatants: []});
+    open();
+    let h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 XP: the row reads the progress', /id="ecSt-xp">XP 6,350 \/ 6,500</.test(h), h);
+    ck('#105 XP: a whole-number box, 0 to 1,000,000', /id="ecXp" type="number" inputmode="numeric" min="0" max="1000000" step="1"/.test(h));
+    ck('#105 XP: no roster, no split', !/id="ecSplit"/.test(h));
+    ctx.endFightSetXp('450');
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 XP: typed, the row reads +450 XP', /id="ecSt-xp">\+450 XP</.test(h), h);
+    ck('#105 XP: reaching a level says so', h.includes('Level 5 ready — the level-up opens when you press Done.'));
+    c.party = [{id: 'a', name: 'Brindle'}, {id: 'b', name: 'Olvin'}, {id: 'c', name: 'Pip'}];
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 split: shown with a roster, N is the roster plus you, off by default', /id="ecSplit" role="switch" aria-checked="false"/.test(h) && />Split among 4</.test(h), h);
+    ck('#105 split: on is saved on the character', ctx.endFightSetSplit(true) === true && c.xpSplit === true);
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 split: the line, and the share is what Done adds', /450 ÷ 4 = 112 each/.test(h) && /id="ecSt-xp">\+112 XP</.test(h), h);
+    ck('#105 split: 112 does not reach level 5, so no ready line', !/Level 5 ready/.test(h));
+    ck('#105 Done adds the share and writes a number', ctx.endFightDone() === true && c.xp === 6462 && closes === 1 && X._endFight === null, c.xp);
+    ck('#105 ...no level reached, no level-up', levelUps.length === 0);
+    ck('#105 ...and Done again does nothing', ctx.endFightDone() === false && c.xp === 6462 && levelUps.length === 0);
+    open(); ctx.endFightSetSplit(false); ctx.endFightSetXp('100'); ctx.endFightDone();
+    ck('#105 Done that reaches a level opens the level-up, by the ring\'s path', c.xp === 6562 && levelUps.length === 1 && levelUps[0] === undefined, levelUps);
+    open(); ctx.endFightSetXp('10'); ctx.endFightDone();
+    ck('#105 ...but not when the level-up was already ready', c.xp === 6572 && levelUps.length === 1);
+    open(); ctx.endFightDone();
+    ck('#105 Done with nothing typed leaves the XP alone', c.xp === 6572);
+    ck('#105 split rounding is down', JSON.stringify(ctx.endFightXpMath('450', true, 4)) === JSON.stringify({typed: 450, n: 4, each: 112}) &&
+       ctx.endFightXpMath('7', true, 2).each === 3 && ctx.endFightXpMath('7', false, 2).each === 7);
+    ck('#105 the box takes whole numbers 0 to 1,000,000 only',
+       ['', 'abc', '-3', '12.9', '1e3', '2000000', null].map(v => ctx.endFightXpInt(v)).join() === '0,0,0,12,1000,1000000,0');
+    ck('#105 party size is the roster plus you', ctx.endFightPartySize({party: [{name: 'a'}, {name: 'b'}]}) === 3 && ctx.endFightPartySize({}) === 1 && ctx.endFightPartySize({party: [{name: ''}]}) === 1);
+    ck('#105 a split left on with the roster emptied adds the whole', ctx.endFightXpToAdd({xp: '450'}, {advancement: 'xp', xpSplit: true, party: [], classes: [{level: 1}]}) === 450);
+    c.xp = 'lots'; open(); ctx.endFightSetXp('50'); ctx.endFightDone();
+    ck('#105 XP holding text: Done writes a number', c.xp === 50, c.xp);
+    // the dismiss guard: the app's warning window, answered by the test
+    ctx.closeModal = keep.cm;
+    const asked = []; let answer = false;
+    ctx.askConfirm = o => { asked.push(o); return Promise.resolve(answer); };
+    const tick = () => new Promise(r => Promise.resolve().then(() => Promise.resolve().then(r)));
+    open(); ctx.endFightSetXp('112'); answer = false;
+    ctx.dismissModal();
+    ck('#105 × with XP typed asks "Add 112 XP?" in the warning window, and the window stays meanwhile',
+       asked.length === 1 && asked[0].title === 'Add 112 XP?' && asked[0].ok === 'Add XP' && asked[0].cancel === "Don't add" && X._endFight !== null, asked);
+    ctx.dismissModal();
+    ck('#105 ...a second × while asking asks nothing new', asked.length === 1);
+    await tick();
+    ck("#105 ...Don't add closes without it", c.xp === 50 && X._endFight === null);
+    c.xp = 6400; open(); ctx.endFightSetXp('200'); answer = true;
+    ctx.dismissModal(); await tick();
+    ck('#105 ...Add XP adds it and closes, opening the level-up as Done does', c.xp === 6600 && X._endFight === null && levelUps.length === 2, levelUps);
+    open(); asked.length = 0; ctx.dismissModal();
+    ck('#105 with nothing typed, × simply closes', asked.length === 0 && X._endFight === null);
+    c.xp = 162;
+    // milestone
+    c.advancement = 'milestone'; open();
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 a milestone character has no Experience row, nothing about XP', !/data-ecrow="xp"/.test(h) && !/XP/.test(h), h);
+    ctx.endFightSetXp('500'); ctx.closeModal = () => {}; ctx.endFightDone();
+    ck('#105 ...and Done adds nothing', c.xp === 162);
+  } catch (err) {
+    ck('#105 t105Xp ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.openModal = keep.om; ctx.closeModal = keep.cm; ctx.doLevelUp = keep.lu; ctx.askConfirm = keep.ask; state.confirm = keep.conf;
+    X.character = keep.ch; X._endFight = null;
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

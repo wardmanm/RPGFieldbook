@@ -464,3 +464,5 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .m-body .ec-done{color:var(--ink-soft);margin:0}
 .ec-foot{flex:none;margin-top:0;padding:10px 0 14px;border-top:1px dotted var(--hair)}
 .ec-foot .tbtn{min-height:44px}
+.ec-xp input{max-width:200px}
+.m-body .ec-ready{color:var(--accent-2);font-weight:700;margin:4px 0 0}
