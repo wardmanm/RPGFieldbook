@@ -7559,6 +7559,42 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = keep;
 }
 
+/* ---------- #105 quiet recovery: applyAmmoRecovery({quiet}) hands back {lines, undo} */
+{
+  const keep = {ch: X.character, toast: ctx.toast};
+  const toasts = []; ctx.toast = (m, a) => { toasts.push({m: String(m), a}); return null; };
+  const mk = () => {
+    const c = X.blankChar(); X.character = c;
+    c.inventory = [{id: 's1', name: 'Arrow', qty: 7, ammo: {kind: 'arrow'}}];
+    c.ammoSpent = {s1: {n: 13, kind: 'arrow'},
+                   s2: {n: 4, kind: 'bolt', snap: {id: 's2', name: 'Bolt', qty: 1, ammo: {kind: 'bolt'}}},
+                   s3: {n: 1, kind: 'needle'}};
+    return c;
+  };
+  const qty = c => c.inventory.map(i => i.id + ':' + i.qty).join();
+  const loud = mk(), a = ctx.applyAmmoRecovery();
+  const quiet = mk(), logged = [{kind: 'arrow', e: {title: 'Arrows: 13 fired, 6 recovered', meta: {fired: 13, back: 6}}}];
+  const b = ctx.applyAmmoRecovery({quiet: true, logged});
+  ck('#104 without quiet it behaves as today', a && a.text === 'recovered 6 of 13 arrows, 2 of 4 bolts' && !!a.rec && Array.isArray(a.list), a);
+  ck('#105 quiet recovers exactly what the toast path recovers', qty(quiet) === qty(loud) && JSON.stringify(quiet.ammoSpent) === '{}', [qty(quiet), qty(loud)]);
+  ck('#105 ...and hands back {lines, undo}', b && Array.isArray(b.lines) && typeof b.undo === 'function' &&
+     b.lines.map(r => r.kind + ':' + r.back).join() === a.list.map(r => r.kind + ':' + r.back).join() && toasts.length === 0, b);
+  ck("#105 undo restores what the toast's Undo restores, and corrects the log line",
+     b.undo() === true && quiet.inventory.find(i => i.id === 's1').qty === 7 && !quiet.inventory.some(i => i.id === 's2') &&
+     quiet.ammoSpent.s1.n === 13 && quiet.ammoSpent.s3.n === 1 && logged[0].e.meta.back === 0 && logged[0].e.title === 'Arrows: 13 fired, 0 recovered', logged[0].e);
+  ck('#105 ...quietly: no "Recovery undone" toast', !toasts.some(t => /Recovery undone/.test(t.m)), toasts);
+  ck('#105 ...once', b.undo() === false);
+  ck("#105 the toast's own Undo still says so", (() => { const k = mk(), rec = {}; X.recoverAmmo(k, null, rec); toasts.length = 0;
+     return ctx.undoRecoveryTap(rec, k) === true && toasts.some(t => t.m === 'Recovery undone'); })());
+  ck('#105 quiet with nothing counted: no lines, no undo', (() => { X.character = X.blankChar(); const r = ctx.applyAmmoRecovery({quiet: true});
+     return !!r && r.lines.length === 0 && r.undo === null; })());
+  ck('#105 quiet under None: the counts are cleared, nothing back, no undo', (() => { const k = mk(); k.ammoRecovery = 'none';
+     const r = ctx.applyAmmoRecovery({quiet: true}); return r.lines.length === 0 && r.undo === null && JSON.stringify(k.ammoSpent) === '{}'; })());
+  ck('#105 the quiet undo belongs to its own sheet', (() => { const k = mk(); const r = ctx.applyAmmoRecovery({quiet: true});
+     X.character = X.blankChar(); return r.undo() === false && k.inventory[0].qty === 13; })());
+  ctx.toast = keep.toast; X.character = keep.ch;
+}
+
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
    A real timer (Node's), borrowed for this block only: the harness's setTimeout
    never fires, and settling is a setTimeout(0). The modal's open state is

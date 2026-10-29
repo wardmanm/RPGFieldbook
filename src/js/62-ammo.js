@@ -747,19 +747,28 @@ function recoverWeaponAmmo(itemId,viaKey){
    needs — that Undo restores every entry it cleared, the ones that gave
    nothing included. When nothing came back the counts are cleared quietly and
    this returns null: no toast words, no Undo. Shots fired outside a tracked
-   fight are swept up too, as the row's Recover does. */
-function applyAmmoRecovery(){
-  if(!Object.keys(ammoSpentMap(character)).length)return null;
-  const list=ammoRecoverable(character), rec={};
+   fight are swept up too, as the row's Recover does.
+   #105: `opts.quiet` is End combat's path now: the same recovery, but instead
+   of toast words it hands back {lines, undo} — `lines` what came back per kind
+   (empty when nothing did), `undo` the toast's own Undo (undoRecoveryTap(),
+   quiet) or null — for the End of combat window to show and offer.
+   `opts.logged` is End combat's log lines, which that Undo corrects. Never
+   null when quiet. Without `quiet`, exactly as before. */
+function applyAmmoRecovery(opts){
+  const o=opts||{};
+  if(!Object.keys(ammoSpentMap(character)).length)return o.quiet?{lines:[],undo:null}:null;
+  const list=ammoRecoverable(character), rec={}, who=character;
   recoverAmmo(character,null,rec);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
+  if(o.quiet)return {lines:list,undo:list.length?()=>undoRecoveryTap(rec,who,{lines:Array.isArray(o.logged)?o.logged:[],list},{quiet:true}):null};
   return list.length?{text:`recovered ${ammoSummaryText(list)}`,rec,list}:null;
 }
 /* The End combat toast's Undo recovery: only for the character it was shown for.
    `amend` ({lines, list}) is End combat's log lines and what its recovery gave
-   per kind: undone, that comes back off each line's "recovered" (#47). */
-function undoRecoveryTap(rec,who,amend){
+   per kind: undone, that comes back off each line's "recovered" (#47).
+   `opts.quiet` (#105): no toast — the End of combat window says it itself. */
+function undoRecoveryTap(rec,who,amend,opts){
   if(!character||character!==who)return false;
   if(!undoRecovery(character,rec))return false;
   if(amend&&Array.isArray(amend.lines)&&Array.isArray(amend.list))amend.list.forEach(r=>{
@@ -767,6 +776,6 @@ function undoRecoveryTap(rec,who,amend){
     l.e.meta.back=Math.max(0,num(l.e.meta.back)-num(r.back));l.e.title=ammoLogTitle(r.kind,num(l.e.meta.fired),l.e.meta.back);});
   scheduleSave();
   renderInventory();renderAttacks();recompute();
-  toast("Recovery undone");
+  if(!(opts&&opts.quiet))toast("Recovery undone");
   return true;
 }
