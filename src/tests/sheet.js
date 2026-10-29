@@ -2468,12 +2468,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const c = X.blankChar(); c.combatRound = 4; X.character = c;
   X.startCombatNow();
   ck('Start combat, from the header, begins at round 1', X.inCombat(c) && c.combatRound === 1);
-  c.combatRound = 7; state.confirm = false;
-  ck('End combat asks first, naming the round',
-     X.endCombatAsk() === false && state.lastConfirm === 'End combat at round 7?');
-  ck('...and saying no leaves the fight running', X.inCombat(c) && c.combatRound === 7);
-  state.confirm = true;
-  ck('saying yes ends it', X.endCombatAsk() === true && !X.inCombat(c) && c.combatRound === 0);
+  c.combatRound = 7;
+  ck('saying yes ends it (#105: the asking is t105End\'s)', !!ctx.endCombatNow() && !X.inCombat(c) && c.combatRound === 0);
 }
 
 /* ---- arranging ---- */
@@ -3077,7 +3073,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
 {
   const c = X.blankChar(); X.character = c;
   c.trackers = [{id: 'b', name: 'Codex', type: 'counter', value: 5, goal: 20, autoClose: true}];
-  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector};
+  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector, querySelectorAll: doc.querySelectorAll};
   let draws = 0;
   const attrs = {}, fill = {style: {}};
   const bar = {setAttribute: (k, v) => { attrs[k] = String(v); }, querySelector: s => s === 'span' ? fill : null};
@@ -3086,6 +3082,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const list = {set innerHTML(v) { draws++; }, get innerHTML() { return ''; }};
   doc.getElementById = id => id === 'trkList' ? list : null;
   doc.querySelector = s => s === '[data-trk="b"]' ? row : s === '[data-trkval="b"]' ? box : null;
+  /* #105: trkPatchRow() patches every copy of the row (the Journal tab's and the End of combat window's) */
+  doc.querySelectorAll = s => s === '[data-trk="b"]' ? [row] : [];
   box.value = '9';
   ctx.commitTrackerValue(box, false);
   ck('a typed count is stored', c.trackers[0].value === 9, c.trackers[0].value);
@@ -3116,7 +3114,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   c.trackers = [{id: 'g', name: 'Goblins', type: 'counter', tag: 'Kills', value: 5},
     {id: 'o', name: 'Orcs', type: 'counter', tag: 'kills', value: 2, closed: true, closedAt: 1}];
   c.trackerTotals = {kills: true};
-  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector};
+  const doc = ctx.document, saved = {getElementById: doc.getElementById, querySelector: doc.querySelector, querySelectorAll: doc.querySelectorAll};
   let draws = 0;
   const total = {textContent: '· 7'};
   const group = {querySelector: s => s === '.trk-total' ? total : null};
@@ -3125,6 +3123,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const list = {set innerHTML(v) { draws++; }, get innerHTML() { return ''; }};
   doc.getElementById = id => id === 'trkList' ? list : null;
   doc.querySelector = s => s === '[data-trk="g"]' ? row : s === '[data-trkval="g"]' ? box : null;
+  /* #105: trkPatchRow() patches every copy of the row (the Journal tab's and the End of combat window's) */
+  doc.querySelectorAll = s => s === '[data-trk="g"]' ? [row] : [];
   box.value = '9';
   let err = null;
   try { ctx.commitTrackerValue(box, false); } catch (e) { err = e; }
@@ -4307,10 +4307,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     X.startCombatNow();
     return c;
   };
-  let c = mk(); state.confirm = true; state.lastConfirm = null;
-  ck('#104 End combat asks only about ending, then recovers half of each kind',
-     X.endCombatAsk() === true && state.lastConfirm === 'End combat at round 1?' &&
-     c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, [state.lastConfirm, c.inventory]);
+  let c = mk();
+  ck('#104 End combat recovers half of each kind once the fight has ended',
+     !!ctx.endCombatNow() && c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, c.inventory);
   ck('#104 ...and the lone needle, which gives nothing back, is spent: cleared', JSON.stringify(c.ammoSpent) === '{}', c.ammoSpent);
   c = mk(); const rec = {}; X.recoverAmmo(c, ['arrow', 'bolt'], rec);
   ck("#104 the toast's Undo recovery puts it all back",
@@ -4319,11 +4318,11 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
      (() => { const k = mk(), r = {}; X.recoverAmmo(k, ['arrow'], r); X.character = X.blankChar(); return ctx.undoRecoveryTap(r, k) === false && k.inventory[0].qty === 13; })());
   c = mk(); c.ammoRecovery = 'none';
   {
-    const realToast = ctx.toast; let offer = 'none yet', said = '';
-    ctx.toast = (msg, action) => { said = msg; offer = action; return null; };
+    const realToast = ctx.toast; const said = [];
+    ctx.toast = (msg, action) => { said.push({msg, action}); return null; };
     ck('#104 with nothing recoverable, End combat recovers nothing and clears the counts',
-       X.endCombatAsk() === true && c.inventory[0].qty === 7 && JSON.stringify(c.ammoSpent) === '{}', c.ammoSpent);
-    ck('#104 ...quietly: no recovery in the toast, and no Undo recovery', !/recovered/.test(said) && offer === undefined, [said, offer]);
+       !!ctx.endCombatNow() && c.inventory[0].qty === 7 && JSON.stringify(c.ammoSpent) === '{}', c.ammoSpent);
+    ck('#105 ...hands the window no Undo recovery, and nothing is toasted', X._endFight && X._endFight.ammo.undo === null && said.length === 0, said);
     ctx.toast = realToast;
   }
   ck('#104 applyAmmoRecovery says nothing when there is nothing', (() => { X.character = X.blankChar(); return ctx.applyAmmoRecovery() === null; })());
@@ -4335,7 +4334,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     const k = X.blankChar(); X.character = k; k.ammoRecovery = 'none';
     k.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
                    {id: 's1', name: 'Arrow', qty: 40, ammo: {kind: 'arrow'}}];
-    for (let f = 0; f < 3; f++) { X.startCombatNow(); for (let i = 0; i < 10; i++) X.fireWeapon('w1', false); X.endCombatAsk(); }
+    for (let f = 0; f < 3; f++) { X.startCombatNow(); for (let i = 0; i < 10; i++) X.fireWeapon('w1', false); ctx.endCombatNow(); }
     ck('#104 three fights under None: 30 arrows spent, nothing left on record',
        k.inventory[1].qty === 10 && JSON.stringify(k.ammoSpent) === '{}', [k.inventory[1].qty, k.ammoSpent]);
     k.ammoRecovery = 'all';
@@ -4345,17 +4344,63 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   /* ...and Undo recovery restores every entry that End combat cleared, the
      ones that gave nothing back included */
   {
-    const k = mk(); let offer = null;
-    const realToast = ctx.toast; ctx.toast = (msg, action) => { if (action) offer = action; return null; };
-    X.endCombatAsk();
-    ctx.toast = realToast;
-    ck('#104 End combat that recovered something offers Undo recovery, which clears the needle too',
-       !!offer && offer.label === 'Undo recovery' && JSON.stringify(k.ammoSpent) === '{}', offer);
+    const k = mk();
+    ctx.endCombatNow();
+    const undo = X._endFight && X._endFight.ammo.undo;
+    ck('#105 End combat that recovered something hands the window its Undo recovery, the needle cleared too',
+       typeof undo === 'function' && JSON.stringify(k.ammoSpent) === '{}', X._endFight && X._endFight.ammo);
     ck('#104 ...and Undo recovery brings the needle back with the rest',
-       !!offer && offer.run() === true && k.ammoSpent.s3 && k.ammoSpent.s3.n === 1 && k.ammoSpent.s1.n === 13 && k.ammoSpent.s2.n === 4 &&
+       typeof undo === 'function' && undo() === true && k.ammoSpent.s3 && k.ammoSpent.s3.n === 1 && k.ammoSpent.s1.n === 13 && k.ammoSpent.s2.n === 4 &&
        k.inventory.find(i => i.id === 's1').qty === 7, k.ammoSpent);
   }
   ck('#104 a spent entry no longer carries asked', !('asked' in X.ammoSpentEntry({ammoSpent: {a: {n: 2, kind: 'arrow', asked: 1}}}, 'a')));
+}
+
+/* ---- #105 review fix 1: End combat has no toast of its own, so the last
+   Fire's toast and its Undo must not outlive the fight it belonged to ---- */
+{
+  const keep = {toast: ctx.toast, hide: ctx.hideToast, gid: ctx.document.getElementById, ch: X.character};
+  let last = null; const hid = [];
+  ctx.toast = (m, a) => { if (a) last = a; return null; };
+  ctx.hideToast = now => { hid.push(now); };
+  const mk = () => {
+    const c = X.blankChar(); X.character = c;
+    c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                   {id: 's1', name: 'Arrow', qty: 20, ammo: {kind: 'arrow'}}];
+    return c;
+  };
+  try {
+    let c = mk(); X.startCombatNow();
+    for (let i = 0; i < 9; i++) X.fireWeapon('w1', false);
+    const shotUndo = last; hid.length = 0;
+    ctx.endCombatNow();
+    ck('#105 Fire, then End combat: the Fire toast is hidden at once', hid.length === 1 && hid[0] === true, hid);
+    const qty = c.inventory.find(i => i.id === 's1').qty, spent = JSON.stringify(c.ammoSpent), log = JSON.stringify(c.invLog);
+    ck('#105 ...and its Undo, reached anyway, refuses and changes nothing',
+       !!shotUndo && shotUndo.label === 'Undo' && shotUndo.run() === false &&
+       c.inventory.find(i => i.id === 's1').qty === qty && qty === 15 && JSON.stringify(c.ammoSpent) === spent && spent === '{}' && JSON.stringify(c.invLog) === log,
+       [qty, c.ammoSpent]);
+    c = mk(); last = null;
+    X.fireWeapon('w1', false);
+    ck('#105 a shot with no fight running still undoes', !X.inCombat(c) && !!last && last.run() === true && c.inventory[1].qty === 20 && !('s1' in c.ammoSpent), c.ammoSpent);
+    c = mk(); X.startCombatNow(); last = null;
+    X.fireWeapon('w1', false); X.fireWeapon('w1', false);
+    ck('#105 a shot in a fight still undoes while the fight runs', X.inCombat(c) && !!last && last.run() === true && c.inventory[1].qty === 19 && c.ammoSpent.s1.n === 1, c.ammoSpent);
+    c = mk(); last = null;
+    X.fireWeapon('w1', false); const before = last;
+    X.startCombatNow(); ctx.endCombatNow();
+    const q0 = c.inventory[1].qty;
+    ck('#105 a shot fired before the fight, swept up by its End combat, no longer undoes',
+       before.run() === false && c.inventory[1].qty === q0 && JSON.stringify(c.ammoSpent) === '{}', [q0, c.inventory[1].qty, c.ammoSpent]);
+    c = mk(); X.startCombatNow(); hid.length = 0;
+    ctx.document.getElementById = id => id === 'toast' ? {classList: {contains: k => k === 'err'}} : keep.gid(id);
+    ctx.endCombatNow();
+    ctx.document.getElementById = keep.gid;
+    ck('#105 an error toast is left up: a save that did not land must never vanish unread', hid.length === 0, hid);
+  } finally {
+    ctx.toast = keep.toast; ctx.hideToast = keep.hide; ctx.document.getElementById = keep.gid;
+    X.character = keep.ch; X._endFight = null;
+  }
 }
 
 /* ---- the item editor's kind lists (#8) ---- */
@@ -6871,21 +6916,20 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     X.recoverWeaponAmmo('bow', false);
     ck('#47 I2 a row Recover writes no line of its own', X.character.invLog.length === 0 && X.character.inventory[1].qty === 18);
     for (let i = 0; i < 2; i++) X.fireAmmo(X.character, X.character.inventory[0]);
-    let offer = null; ctx.toast = (msg, action) => { offer = action; return null; };
-    X.endCombatAsk();
+    ctx.endCombatNow();
     const am = top();
     ck('#47 I2 End combat\'s line includes what the row recovered', am.kind === 'ammo' && am.title === 'Arrows: 6 fired, 3 recovered', am.title);
     ck('#47 M9 ...and reads "Fight of N rounds"', am.lines.length === 1 && am.lines[0].text === 'Fight of 3 rounds' && am.meta.rounds === 3, am.lines);
     ck('#47 I2 ...the tally is cleared with the fight', JSON.stringify(X.character.ammoFight) === '{}');
-    ck('#47 I2 Undo recovery on the toast takes End combat\'s recovery back off the line', offer && offer.run() === true && am.title === 'Arrows: 6 fired, 2 recovered' && X.character.invLog.length === 1, am.title);
+    ck('#47 I2 Undo recovery in the window takes End combat\'s recovery back off the line', X._endFight.ammo.undo() === true && am.title === 'Arrows: 6 fired, 2 recovered' && X.character.invLog.length === 1, am.title);
     ck('#47 I2 a new character has an empty fight tally', JSON.stringify(X.blankChar().ammoFight) === '{}' && JSON.stringify(X.migrate({abilities: {}, ammoFight: 'x'}).ammoFight) === '{}');
     fresh(); X.character.inventory = [{id: 'bow', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
       {id: 'ar', name: 'Arrow', qty: 20, ammo: {kind: 'arrow'}}];
     X.startCombatNow(); X.character.combatRound = 1;
     for (let i = 0; i < 2; i++) X.fireAmmo(X.character, X.character.inventory[0]);
-    X.recoverWeaponAmmo('bow', false); offer = 'none';
-    X.endCombatAsk();
-    ck('#47 I2 every shot recovered by the row still gets its line at End combat', top().kind === 'ammo' && top().title === 'Arrows: 2 fired, 1 recovered' && top().lines[0].text === 'Fight of 1 round' && offer === undefined, top());
+    X.recoverWeaponAmmo('bow', false);
+    ctx.endCombatNow();
+    ck('#47 I2 every shot recovered by the row still gets its line at End combat', top().kind === 'ammo' && top().title === 'Arrows: 2 fired, 1 recovered' && top().lines[0].text === 'Fight of 1 round' && X._endFight.ammo.undo === null, top());
     ctx.toast = () => null;
 
     /* ---- M1: lowering the log size asks first when lines would go ---- */
@@ -7511,6 +7555,90 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = keep;
 }
 
+/* ---------- #105 the data: xpSplit, endCombatOpen, afterCombat on trackers and pages */
+{
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const src105 = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
+  const keep = X.character;
+  const b = X.blankChar();
+  ck('#105 a new character: no split, every row folded', b.xpSplit === false && same(b.endCombatOpen, {}));
+  const m = X.migrate({abilities: {}, xpSplit: 'yes', endCombatOpen: {ammo: true, xp: 1, loot: 'true', after: true, later: true},
+    trackers: [{id: 't1', name: 'Goblins', afterCombat: true}, {id: 't2', name: 'Pages', afterCombat: 'yes'}],
+    journal: [{id: 'p1', title: 'Loot list', afterCombat: true}, {id: 'p2', title: 'Notes', afterCombat: false}]});
+  ck('#105 migrate: anything but true is no split', m.xpSplit === false && X.migrate({abilities: {}, xpSplit: true}).xpSplit === true);
+  ck('#105 migrate: open rows keep only true values, any key', same(m.endCombatOpen, {ammo: true, after: true, later: true}), m.endCombatOpen);
+  ck('#105 migrate: open rows that are not a plain object become {}',
+     same(X.migrate({abilities: {}, endCombatOpen: ['ammo']}).endCombatOpen, {}) && same(X.migrate({abilities: {}, endCombatOpen: 'x'}).endCombatOpen, {}) &&
+     same(X.migrate({abilities: {}}).endCombatOpen, {}) && same(X.migrate({abilities: {}, endCombatOpen: null}).endCombatOpen, {}));
+  ck('#105 migrate: a tracker keeps afterCombat only when true', m.trackers[0].afterCombat === true && !('afterCombat' in m.trackers[1]));
+  ck('#105 migrate: a page likewise', m.journal[0].afterCombat === true && !('afterCombat' in m.journal[1]));
+  const back = X.migrate(JSON.parse(JSON.stringify(m)));
+  ck('#105 a save → load round trip keeps all four', back.xpSplit === false && same(back.endCombatOpen, m.endCombatOpen) &&
+     back.trackers[0].afterCombat === true && back.journal[0].afterCombat === true && !('afterCombat' in back.trackers[1]) && !('afterCombat' in back.journal[1]));
+  ck('#105 ...and a split that is on stays on', X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {xpSplit: true})))).xpSplit === true);
+  // the tracker form
+  const f = X.trackerFormHTML({id: 't', type: 'counter', afterCombat: true}, [], false);
+  ck('#105 the tracker form has Show after combat, on when set', /id="tkAfter" role="switch" aria-checked="true"/.test(f) && />Show after combat</.test(f), f);
+  ck('#105 ...off by default', /id="tkAfter" role="switch" aria-checked="false"/.test(X.trackerFormHTML({type: 'counter', autoClose: true}, [], true)));
+  ck('#105 the form writes it, and takes it away',
+     X.trkFromForm({}, {afterCombat: true}).afterCombat === true && !('afterCombat' in X.trkFromForm({afterCombat: true}, {afterCombat: false})));
+  ck('#105 the tracker form wires and reads the switch',
+     /\$\("tkAfter"\)\.addEventListener\("click"/.test(src105('87-trackers.js')) && /afterCombat:\$\("tkAfter"\)\.classList\.contains\("on"\)/.test(src105('87-trackers.js')));
+  // the page editor
+  const ed = X.journalEditorHTML({id: 'p', title: 't', tag: '', text: '', afterCombat: true}, []);
+  ck('#105 the page editor has Show after combat', /data-jnlac role="switch" aria-checked="true"/.test(ed) && />Show after combat</.test(ed), ed);
+  ck('#105 ...off by default', /data-jnlac role="switch" aria-checked="false"/.test(X.journalEditorHTML({id: 'p', title: '', tag: '', text: ''}, [])));
+  ck('#105 the switch is wired in the dispatcher', /t\.closest\("\[data-jnlac\]"\)\)return jnlToggleAfterCombat\(\)/.test(src105('90-boot.js')));
+  const c = X.blankChar(); X.character = c;
+  c.journal = [{id: 'p1', title: 'Loot list', tag: '', text: 'x', at: 1, editedAt: 1}];
+  ctx.renderJournal(); ctx.jnlStartEdit('p1', 1, 'jnlText');
+  ck('#105 on a saved page the switch writes the page', ctx.jnlToggleAfterCombat() === true && c.journal[0].afterCombat === true && c.journal[0].editedAt === 1);
+  ck('#105 ...and off removes the key', ctx.jnlToggleAfterCombat() === false && !('afterCombat' in c.journal[0]));
+  ctx.jnlNewPage();
+  ck('#105 on a draft it is held until the page exists', ctx.jnlToggleAfterCombat() === true && c.journal.length === 1);
+  ck('#105 ...and the new page takes it', X.jnlSavePage(c, {id: 'n1', afterCombat: true}, {title: 'New'}, 5).afterCombat === true &&
+     !('afterCombat' in X.jnlSavePage(c, {id: 'n2'}, {title: 'Other'}, 6)));
+  ctx.jnlReset();
+  ck('#105 not while nothing is being edited', ctx.jnlToggleAfterCombat() === false);
+  X.character = keep;
+}
+
+/* ---------- #105 quiet recovery: applyAmmoRecovery({quiet}) hands back {lines, undo} */
+{
+  const keep = {ch: X.character, toast: ctx.toast};
+  const toasts = []; ctx.toast = (m, a) => { toasts.push({m: String(m), a}); return null; };
+  const mk = () => {
+    const c = X.blankChar(); X.character = c;
+    c.inventory = [{id: 's1', name: 'Arrow', qty: 7, ammo: {kind: 'arrow'}}];
+    c.ammoSpent = {s1: {n: 13, kind: 'arrow'},
+                   s2: {n: 4, kind: 'bolt', snap: {id: 's2', name: 'Bolt', qty: 1, ammo: {kind: 'bolt'}}},
+                   s3: {n: 1, kind: 'needle'}};
+    return c;
+  };
+  const qty = c => c.inventory.map(i => i.id + ':' + i.qty).join();
+  const loud = mk(), a = ctx.applyAmmoRecovery();
+  const quiet = mk(), logged = [{kind: 'arrow', e: {title: 'Arrows: 13 fired, 6 recovered', meta: {fired: 13, back: 6}}}];
+  const b = ctx.applyAmmoRecovery({quiet: true, logged});
+  ck('#104 without quiet it behaves as today', a && a.text === 'recovered 6 of 13 arrows, 2 of 4 bolts' && !!a.rec && Array.isArray(a.list), a);
+  ck('#105 quiet recovers exactly what the toast path recovers', qty(quiet) === qty(loud) && JSON.stringify(quiet.ammoSpent) === '{}', [qty(quiet), qty(loud)]);
+  ck('#105 ...and hands back {lines, undo}', b && Array.isArray(b.lines) && typeof b.undo === 'function' &&
+     b.lines.map(r => r.kind + ':' + r.back).join() === a.list.map(r => r.kind + ':' + r.back).join() && toasts.length === 0, b);
+  ck("#105 undo restores what the toast's Undo restores, and corrects the log line",
+     b.undo() === true && quiet.inventory.find(i => i.id === 's1').qty === 7 && !quiet.inventory.some(i => i.id === 's2') &&
+     quiet.ammoSpent.s1.n === 13 && quiet.ammoSpent.s3.n === 1 && logged[0].e.meta.back === 0 && logged[0].e.title === 'Arrows: 13 fired, 0 recovered', logged[0].e);
+  ck('#105 ...quietly: no "Recovery undone" toast', !toasts.some(t => /Recovery undone/.test(t.m)), toasts);
+  ck('#105 ...once', b.undo() === false);
+  ck("#105 the toast's own Undo still says so", (() => { const k = mk(), rec = {}; X.recoverAmmo(k, null, rec); toasts.length = 0;
+     return ctx.undoRecoveryTap(rec, k) === true && toasts.some(t => t.m === 'Recovery undone'); })());
+  ck('#105 quiet with nothing counted: no lines, no undo', (() => { X.character = X.blankChar(); const r = ctx.applyAmmoRecovery({quiet: true});
+     return !!r && r.lines.length === 0 && r.undo === null; })());
+  ck('#105 quiet under None: the counts are cleared, nothing back, no undo', (() => { const k = mk(); k.ammoRecovery = 'none';
+     const r = ctx.applyAmmoRecovery({quiet: true}); return r.lines.length === 0 && r.undo === null && JSON.stringify(k.ammoSpent) === '{}'; })());
+  ck('#105 the quiet undo belongs to its own sheet', (() => { const k = mk(); const r = ctx.applyAmmoRecovery({quiet: true});
+     X.character = X.blankChar(); return r.undo() === false && k.inventory[0].qty === 13; })());
+  ctx.toast = keep.toast; X.character = keep.ch;
+}
+
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
    A real timer (Node's), borrowed for this block only: the harness's setTimeout
    never fires, and settling is a setTimeout(0). The modal's open state is
@@ -8015,4 +8143,476 @@ async function t118UndoUnderWarning() {
   }
 }
 
-t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+/* ---------- #105 End combat asks in the app's own window, then opens End of combat.
+   askConfirm is the test's (the #118 seam); openModal is wrapped so each
+   window's title, body and options are recorded while the real one runs. */
+async function t105End() {
+  const keep = {ask: ctx.askConfirm, om: ctx.openModal, cm: ctx.closeModal, ch: X.character, toast: ctx.toast};
+  const asks = [], opened = [], toasts = [];
+  let answer = true;
+  try {
+    ctx.askConfirm = o => { asks.push(o); return Promise.resolve(answer); };
+    ctx.openModal = function (t, h, i, o) { opened.push({title: t, html: h, opts: o}); return keep.om.apply(null, arguments); };
+    ctx.toast = (m, a) => { toasts.push({m: String(m), a}); return null; };
+    const mk = () => {
+      const c = X.blankChar(); X.character = c; c.name = 'Tess';
+      c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                     {id: 's1', name: 'Arrow', qty: 20, ammo: {kind: 'arrow'}}];
+      X.startCombatNow(); c.combatRound = 5;
+      return c;
+    };
+    // the warning
+    let c = mk(); answer = false;
+    let r = await X.endCombatAsk();
+    ck('#105 End combat asks through the app\'s warning window',
+       asks.length === 1 && asks[0].title === 'End combat?' && asks[0].cancel === 'Keep fighting' && asks[0].ok === 'End combat', asks);
+    ck('#105 ...nothing fired: just the round', asks[0].message === 'End the fight at round 5?', asks[0].message);
+    ck('#105 Keep fighting changes nothing', r === false && X.inCombat(c) && c.combatRound === 5 && c.invLog.length === 0 && opened.length === 0);
+    for (let i = 0; i < 9; i++) X.fireWeapon('w1', false);
+    const spent = JSON.stringify(c.ammoSpent);
+    r = await X.endCombatAsk();
+    ck('#105 ...something fired: the recovery sentence', asks[1].message === 'End the fight at round 5? Ammunition comes back under your recovery rule.', asks[1].message);
+    ck('#105 ...Keep fighting leaves the shots counted and logs nothing', r === false && JSON.stringify(c.ammoSpent) === spent && c.invLog.length === 0 && X.inCombat(c));
+    c.ammoRecovery = 'none'; await X.endCombatAsk();
+    ck('#105 ...under None the second sentence is left out', asks[2].message === 'End the fight at round 5?', asks[2].message);
+    c.ammoRecovery = 'half';
+    // End combat
+    toasts.length = 0;   /* the fireWeapon() calls above toast with an Undo of their own (PF1) */
+    answer = true;
+    r = await X.endCombatAsk();
+    ck('#105 End combat ends the fight', r === true && !X.inCombat(c) && c.combatRound === 0);
+    ck('#105 ...logs the kind and recovers, quietly: no toast, no Undo there',
+       c.invLog.length === 1 && c.invLog[0].title === 'Arrows: 9 fired, 4 recovered' && c.inventory.find(i => i.id === 's1').qty === 15 && !toasts.some(t => t.a), [c.invLog[0] && c.invLog[0].title, toasts]);
+    ck('#105 ...and opens End of combat, wide, with the time under the title',
+       opened.length === 1 && opened[0].title === 'End of combat' && opened[0].opts && opened[0].opts.wide === true && opened[0].html.includes('<p class="ec-time">Round 5 · 30 sec</p>'), opened[0]);
+    const st = X._endFight;
+    ck('#105 the window\'s state is in memory, tied to this sheet', !!st && st.who === c && st.rounds === 5 && st.sec === 30 && typeof st.ammo.undo === 'function' && st.ammo.undone === false);
+    let h = opened[0].html;
+    ck('#105 Ammunition: a folded row with the log line\'s words',
+       /data-ecrow="ammo" aria-expanded="false" aria-controls="ecBody-ammo"/.test(h) && /id="ecSt-ammo">Arrows: 9 fired, 4 recovered</.test(h) && /id="ecBody-ammo" hidden/.test(h), h);
+    ck('#105 ...with Undo recovery', /id="ecUndoAmmo">Undo recovery</.test(h));
+    ck('#105 Done', /id="ecDone">Done</.test(h));
+    ck('#105 a row opens on a tap and remembers it on the character', ctx.endFightToggle('ammo') === true && c.endCombatOpen.ammo === true &&
+       /data-ecrow="ammo" aria-expanded="true"/.test(ctx.endFightHTML(X._endFight, c)) && !/id="ecBody-ammo" hidden/.test(ctx.endFightHTML(X._endFight, c)));
+    ck('#105 ...and folds again', ctx.endFightToggle('ammo') === false && !('ammo' in c.endCombatOpen));
+    ck('#105 an unknown row is refused', ctx.endFightToggle('nope') === false && !('nope' in c.endCombatOpen));
+    ck('#105 Undo recovery in the window does what the toast\'s did', ctx.endFightUndoAmmo() === true &&
+       c.inventory.find(i => i.id === 's1').qty === 11 && c.invLog[0].title === 'Arrows: 9 fired, 0 recovered' && X._endFight.ammo.undone === true, c.invLog[0].title);
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 ...then reads "Recovery undone", with no toast', /Recovery undone/.test(h) && !/id="ecUndoAmmo"/.test(h) && !toasts.some(t => /Recovery undone/.test(t.m)));
+    ck('#105 ...once', ctx.endFightUndoAmmo() === false);
+    // Done, and ×
+    let closes = 0; ctx.closeModal = () => { closes++; };
+    ck('#105 Done closes the window and drops its state', ctx.endFightDone() === true && closes === 1 && X._endFight === null);
+    ck('#105 ...a second Done does nothing', ctx.endFightDone() === false && closes === 1);
+    ctx.closeModal = keep.cm;
+    ctx.openEndOfCombat({rounds: 2, sec: 12, combatants: []});
+    ctx.dismissModal();
+    ck('#105 × and Escape close it and drop its state', X._endFight === null);
+    ctx.openEndOfCombat({rounds: 2, sec: 12, combatants: []});
+    X.character = X.blankChar();
+    ck('#105 a change of character drops it', ctx.endFightLive() === null && X._endFight === null);
+    // the summary
+    c = mk();
+    c.combatants = [{id: 'y', kind: 'you', name: 'Tess', init: 15}, {id: 'g1', kind: 'foe', name: 'Goblin 1', init: 14, band: 4},
+                    {id: 'p', kind: 'party', name: 'Brindle', init: 12, dead: false}, {id: 'b', kind: 'foe', name: 'Bugbear <b>', init: 9, band: 2}];
+    opened.length = 0; await X.endCombatAsk();
+    h = opened[0].html;
+    ck('#105 the summary: a chip per combatant in initiative order, this character left out',
+       /<ul class="ec-chips">/.test(h) && h.indexOf('Goblin 1') < h.indexOf('Brindle') && h.indexOf('Brindle') < h.indexOf('Bugbear') && !h.includes('>Tess<'), h);
+    ck('#105 ...the fallen struck through, "fell" in their name', h.includes('<li class="ec-chip fell"><s>Goblin 1</s><span class="sh-vh">, fell</span></li>') && h.includes('<li class="ec-chip">Brindle</li>'));
+    ck('#105 ...escaped', h.includes('Bugbear &lt;b&gt;') && !h.includes('Bugbear <b>'));
+    c = mk(); opened.length = 0; await X.endCombatAsk();
+    ck('#105 a quiet fight: the time alone, no chips, no Ammunition row', !/ec-chips/.test(opened[0].html) && !/data-ecrow="ammo"/.test(opened[0].html), opened[0].html);
+    c = mk(); for (let i = 0; i < 9; i++) X.fireWeapon('w1', false); c.ammoRecovery = 'none';
+    opened.length = 0; await X.endCombatAsk();
+    h = opened[0].html;
+    ck('#105 under None: the row says none come back, and there is no Undo',
+       /id="ecSt-ammo">Arrows: 9 fired, none come back \(recovery: None\)</.test(h) && !/id="ecUndoAmmo"/.test(h) && X._endFight.ammo.undo === null, h);
+    // pressed twice
+    c = mk(); opened.length = 0;
+    let release = null; ctx.askConfirm = o => { asks.push(o); return new Promise(res => { release = res; }); };
+    const p1 = X.endCombatAsk(), p2 = X.endCombatAsk();
+    release(true);
+    const a1 = await p1, a2 = await p2;
+    ck('#105 End combat pressed twice ends once', a1 === true && a2 === false && opened.length === 1);
+    const src105 = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
+    ck('#105 the browser\'s confirm() is gone from End combat', !/confirm\(`End combat/.test(src105('87-combat.js')) && /t\.closest\("#cvEnd"\)\)return endCombatAsk\(\)/.test(src105('90-boot.js')));
+  } catch (err) {
+    ck('#105 t105End ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askConfirm = keep.ask; ctx.openModal = keep.om; ctx.closeModal = keep.cm; ctx.toast = keep.toast;
+    X.character = keep.ch; X._endFight = null;
+  }
+}
+
+/* ---------- #105 Experience: the box, the split, Done, the level-up, the guard */
+async function t105Xp() {
+  const keep = {om: ctx.openModal, cm: ctx.closeModal, lu: ctx.doLevelUp, ask: ctx.askConfirm, ch: X.character, conf: state.confirm};
+  const levelUps = [];
+  let closes = 0;
+  try {
+    ctx.closeModal = () => { closes++; };
+    ctx.doLevelUp = i => { levelUps.push(i); };
+    const c = X.blankChar(); X.character = c; c.classes = [{name: 'Fighter', level: 4}]; c.level = 4; c.xp = '6,350';
+    const open = () => ctx.openEndOfCombat({rounds: 3, sec: 18, combatants: []});
+    open();
+    let h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 XP: the row reads the progress', /id="ecSt-xp">XP 6,350 \/ 6,500</.test(h), h);
+    ck('#105 XP: a text box with the number keypad, never type=number (Safari lets letters into one and reads them as blank)',
+       /id="ecXp" type="text" inputmode="numeric" maxlength="12"/.test(h) && !/type="number"/.test(h), h);
+    ck('#105 XP: no roster, no split', !/id="ecSplit"/.test(h));
+    ctx.endFightSetXp('450');
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 XP: typed, the row reads +450 XP', /id="ecSt-xp">\+450 XP</.test(h), h);
+    ck('#105 XP: reaching a level says so', h.includes('Level 5 ready — the level-up opens when you press Done.'));
+    c.party = [{id: 'a', name: 'Brindle'}, {id: 'b', name: 'Olvin'}, {id: 'c', name: 'Pip'}];
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 split: shown with a roster, N is the roster plus you, off by default', /id="ecSplit" role="switch" aria-checked="false"/.test(h) && />Split among 4</.test(h), h);
+    ck('#105 split: on is saved on the character', ctx.endFightSetSplit(true) === true && c.xpSplit === true);
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 split: the line, and the share is what Done adds', /450 ÷ 4 = 112 each/.test(h) && /id="ecSt-xp">\+112 XP</.test(h), h);
+    ck('#105 split: 112 does not reach level 5, so no ready line', !/Level 5 ready/.test(h));
+    ck('#105 Done adds the share and writes a number', ctx.endFightDone() === true && c.xp === 6462 && closes === 1 && X._endFight === null, c.xp);
+    ck('#105 ...no level reached, no level-up', levelUps.length === 0);
+    ck('#105 ...and Done again does nothing', ctx.endFightDone() === false && c.xp === 6462 && levelUps.length === 0);
+    open(); ctx.endFightSetSplit(false); ctx.endFightSetXp('100'); ctx.endFightDone();
+    ck('#105 Done that reaches a level opens the level-up, by the ring\'s path', c.xp === 6562 && levelUps.length === 1 && levelUps[0] === undefined, levelUps);
+    open(); ctx.endFightSetXp('10'); ctx.endFightDone();
+    ck('#105 ...but not when the level-up was already ready', c.xp === 6572 && levelUps.length === 1);
+    open(); ctx.endFightDone();
+    ck('#105 Done with nothing typed leaves the XP alone', c.xp === 6572);
+    ck('#105 split rounding is down', JSON.stringify(ctx.endFightXpMath('450', true, 4)) === JSON.stringify({typed: 450, n: 4, each: 112}) &&
+       ctx.endFightXpMath('7', true, 2).each === 3 && ctx.endFightXpMath('7', false, 2).each === 7);
+    ck('#105 the box reads digits and thousands commas only: blank is 0, over 1,000,000 is 1,000,000, the rest is not a number',
+       ['', 'abc', '-3', '12.9', '1e3', '2000000', null, '6,350', '1,000,000', '1,2,3', ' 450 ', '450xp', '4S0', '+5']
+         .map(v => String(ctx.endFightXpInt(v))).join() === '0,null,null,null,null,1000000,0,6350,1000000,null,450,null,null,null',
+       ['', 'abc', '-3', '12.9', '1e3', '2000000', null, '6,350', '1,000,000', '1,2,3', ' 450 ', '450xp', '4S0', '+5'].map(v => String(ctx.endFightXpInt(v))).join());
+    ck('#105 party size is the roster plus you', ctx.endFightPartySize({party: [{name: 'a'}, {name: 'b'}]}) === 3 && ctx.endFightPartySize({}) === 1 && ctx.endFightPartySize({party: [{name: ''}]}) === 1);
+    ck('#105 a split left on with the roster emptied adds the whole', ctx.endFightXpToAdd({xp: '450'}, {advancement: 'xp', xpSplit: true, party: [], classes: [{level: 1}]}) === 450);
+    // Ruling 21: XP the sheet can't read is never overwritten
+    for (const odd of ['6350 xp', 'lots']) {
+      c.xp = odd; open(); h = ctx.endFightHTML(X._endFight, c);
+      ck(`#105 XP reading "${odd}": no box, the row says why, status "XP"`,
+         !/id="ecXp"/.test(h) && h.includes("<p class=\"hint\" id=\"ecXpUnread\">Your XP on the sheet isn't a number, so it can't be added to here.</p>") && /id="ecSt-xp">XP</.test(h), h);
+      ctx.endFightSetXp('5000');
+      ck(`#105 ..."${odd}": nothing to add, no ready line`, ctx.endFightXpToAdd(X._endFight, c) === 0 && ctx.endFightReadyLevel(c, 5000) === null &&
+         !/Level \d+ ready/.test(ctx.endFightHTML(X._endFight, c)));
+      ck(`#105 ..."${odd}" survives Done unchanged`, ctx.endFightDone() === true && c.xp === odd && X._endFight === null && levelUps.length === 1, c.xp);
+    }
+    c.xp = '6,350'; open(); ctx.endFightSetXp('100'); ctx.endFightDone();
+    ck('#105 XP reading "6,350" still adds', c.xp === 6450, c.xp);
+    c.xp = ''; open(); ctx.endFightSetXp('50'); ctx.endFightDone();
+    ck('#105 blank XP counts as 0 and adds', c.xp === 50, c.xp);
+    // a box holding something that isn't a whole number
+    {
+      const gid = ctx.document.getElementById, focused = [];
+      const box = {id: 'ecXp', attrs: {}, focus() { focused.push('ecXp'); }, setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; }};
+      const line = {textContent: '', hidden: true};
+      ctx.document.getElementById = id => id === 'ecXp' ? box : id === 'ecXpErr' ? line : gid(id);
+      try {
+        c.endCombatOpen = {xp: true}; open(); const n0 = closes; ctx.endFightSetXp('4S0');
+        h = ctx.endFightHTML(X._endFight, c);
+        ck('#105 letters in the box: "Whole numbers only" under it, the status as if nothing were typed',
+           line.textContent === 'Whole numbers only' && line.hidden === false && box.attrs['aria-invalid'] === 'true' &&
+           /id="ecSt-xp">XP 50 \/ 6,500</.test(h) && /aria-describedby="ecXpErr" aria-invalid="true"><\/div><p class="hint ec-err" id="ecXpErr">Whole numbers only<\/p>/.test(h) && /id="ecXpLine" hidden><\/p>/.test(h) && /aria-invalid="true"/.test(h), [line, h]);
+        ck('#105 ...Done refuses: the window stays, focus in the box, nothing added', ctx.endFightDone() === false && closes === n0 && X._endFight !== null && c.xp === 50 && focused.length === 1);
+        delete c.endCombatOpen.xp; let opened = 0; const tg = ctx.endFightToggle; ctx.endFightToggle = k => { opened++; return tg(k); };
+        ctx.endFightDone(); ctx.endFightToggle = tg;
+        ck('#105 ...and opens the Experience row first if it was folded', opened === 1 && c.endCombatOpen.xp === true && focused.length === 2);
+        ctx.endFightSetXp('450');
+        ck('#105 ...fixed, the line and the flag go', line.textContent === '' && line.hidden === true && !('aria-invalid' in box.attrs) && ctx.endFightXpToAdd(X._endFight, c) === 450, [line, box.attrs]);
+        ctx.endFightSetXp('45O');
+        // Enter in the box is Done (M8), refused here like Done
+        let prevented = 0; const ev = (k, more) => Object.assign({key: k, target: {id: 'ecXp', closest: () => null}, preventDefault() { prevented++; }, stopPropagation() {}}, more || {});
+        ctx.endFightKey(ev('Enter'));
+        ck('#105 Enter in the box with letters: refused like Done', prevented === 1 && X._endFight !== null && closes === n0);
+        ctx.endFightSetXp('450'); ctx.endFightKey(ev('Enter', {repeat: true}));
+        ck('#105 ...a held Enter does not repeat Done', X._endFight !== null && c.xp === 50);
+        ctx.endFightKey(ev('Enter', {isComposing: true}));
+        ck('#105 ...nor does Enter while an input method composes', X._endFight !== null && c.xp === 50);
+        ctx.endFightKey(ev('Enter'));
+        ck('#105 Enter in the XP box does what Done does', X._endFight === null && c.xp === 500 && closes === n0 + 1, c.xp);
+        c.xp = 50;
+      } finally { ctx.document.getElementById = gid; }
+    }
+    // the dismiss guard: the app's warning window, answered by the test
+    ctx.closeModal = keep.cm;
+    const asked = []; let answer = false;
+    ctx.askConfirm = o => { asked.push(o); return Promise.resolve(answer); };
+    const tick = () => new Promise(r => Promise.resolve().then(() => Promise.resolve().then(r)));
+    open(); ctx.endFightSetXp('112'); answer = false;
+    ctx.dismissModal();
+    ck('#105 × with XP typed asks "Add 112 XP?" in the warning window, and the window stays meanwhile',
+       asked.length === 1 && asked[0].title === 'Add 112 XP?' && asked[0].ok === 'Add XP' && asked[0].cancel === "Don't add" && X._endFight !== null, asked);
+    ctx.dismissModal();
+    ck('#105 ...a second × while asking asks nothing new', asked.length === 1);
+    await tick();
+    ck("#105 ...Don't add closes without it", c.xp === 50 && X._endFight === null);
+    open(); asked.length = 0; ctx.endFightSetXp('12x'); ctx.dismissModal();
+    ck('#105 × with letters in the box asks nothing and closes without adding', asked.length === 0 && X._endFight === null && c.xp === 50);
+    c.xp = 'lots'; open(); asked.length = 0; ctx.endFightSetXp('200'); ctx.dismissModal();
+    ck('#105 × with XP the sheet can\'t read asks nothing', asked.length === 0 && X._endFight === null && c.xp === 'lots');
+    c.xp = 50; asked.length = 1;
+    c.xp = 6400; open(); ctx.endFightSetXp('200'); answer = true;
+    ctx.dismissModal(); await tick();
+    ck('#105 ...Add XP adds it and closes, opening the level-up as Done does', c.xp === 6600 && X._endFight === null && levelUps.length === 2, levelUps);
+    open(); asked.length = 0; ctx.dismissModal();
+    ck('#105 with nothing typed, × simply closes', asked.length === 0 && X._endFight === null);
+    c.xp = 162;
+    // milestone
+    c.advancement = 'milestone'; open();
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 a milestone character has no Experience row, nothing about XP', !/data-ecrow="xp"/.test(h) && !/XP/.test(h), h);
+    ctx.endFightSetXp('500'); ctx.closeModal = () => {}; ctx.endFightDone();
+    ck('#105 ...and Done adds nothing', c.xp === 162);
+  } catch (err) {
+    ck('#105 t105Xp ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.openModal = keep.om; ctx.closeModal = keep.cm; ctx.doLevelUp = keep.lu; ctx.askConfirm = keep.ask; state.confirm = keep.conf;
+    X.character = keep.ch; X._endFight = null;
+  }
+}
+
+/* ---------- #105 Loot: a trade from the window, and back */
+async function t105Loot() {
+  const keep = {om: ctx.openModal, ot: ctx.openTrade, ch: X.character, toast: ctx.toast, conf: state.confirm};
+  const opened = [], trades = [];
+  try {
+    ctx.openModal = function (t, h) { opened.push({t, h}); return keep.om.apply(null, arguments); };
+    ctx.toast = () => null;
+    const c = X.blankChar(); X.character = c; c.classes = [{name: 'Fighter', level: 4}]; c.level = 4;
+    const foes = [{id: 'y', kind: 'you', name: 'Tess'}, {id: 'g', kind: 'foe', name: 'Goblin 1', band: 4},
+                  {id: 'g2', kind: 'foe', name: 'Goblin 2', band: 1}, {id: 'b', kind: 'foe', name: 'Bugbear', band: 4}];
+    ck('#105 Loot: the other party is the fallen, joined with commas', ctx.endFightLootWith(foes) === 'Goblin 1, Bugbear');
+    ck('#105 ...a fallen party member is never named', ctx.endFightLootWith(foes.concat([{id: 'p', kind: 'party', name: 'Brindle', dead: true}])) === 'Goblin 1, Bugbear');
+    ck('#105 ...or "Combat loot" when none fell or nobody was tracked', ctx.endFightLootWith([foes[0], foes[2]]) === 'Combat loot' && ctx.endFightLootWith([]) === 'Combat loot');
+    // M7: the trade's With box holds 60 characters, and a seeded value gets past maxlength
+    {
+      const fallen = names => names.map((n, i) => ({id: 'f' + i, kind: 'foe', name: n, band: 4}));
+      const hob = Array.from({length: 8}, (_, i) => 'Hobgoblin Captain ' + (i + 1));
+      const w8 = ctx.endFightLootWith(fallen(hob));
+      ck('#105 Loot\'s name is cut at a name, the rest counted, within 60', w8 === 'Hobgoblin Captain 1, Hobgoblin Captain 2, … and 6 more' && w8.length <= 60, w8);
+      const gob = ['Goblin Skirmisher 1', 'Goblin Skirmisher 2', 'Goblin Skirmisher 3', 'Goblin Boss', 'Wolf'];
+      const w5 = ctx.endFightLootWith(fallen(gob));
+      ck('#105 ...as many names as fit', w5 === 'Goblin Skirmisher 1, Goblin Skirmisher 2, … and 3 more' && w5.length <= 60, w5);
+      const sixty = ['A'.repeat(28), 'B'.repeat(30)];
+      ck('#105 ...exactly 60 is kept whole', ctx.endFightLootWith(fallen(sixty)) === sixty.join(', ') && sixty.join(', ').length === 60);
+      const long1 = ctx.endFightLootWith(fallen(['X'.repeat(80)])), long3 = ctx.endFightLootWith(fallen(['Y'.repeat(70), 'Orc', 'Orc 2']));
+      ck('#105 ...one name too long on its own is cut inside it', long1 === 'X'.repeat(59) + '…' && long1.length === 60, long1);
+      ck('#105 ...and still counts the rest', long3.length <= 60 && /^Y+… and 2 more$/.test(long3), long3);
+      const emo = ctx.endFightLootWith(fallen(['\u{1F409}'.repeat(40)]));
+      ck('#105 ...never cut through a character', emo.length <= 60 && !/[\uD800-\uDBFF]…/.test(emo), emo);
+    }
+    ctx.openEndOfCombat({rounds: 3, sec: 18, combatants: foes});
+    let h = opened[opened.length - 1].h;
+    ck('#105 Loot is always shown, reading "Open trade…"', /data-ecrow="loot"/.test(h) && /id="ecSt-loot">Open trade…</.test(h) && /id="ecTrade">Open trade</.test(h) &&
+       h.includes("<p>Coins and items from the fight go through a trade, so they're in your inventory log.</p>"), h);
+    ctx.endFightSetXp('450'); ctx.endFightToggle('xp'); ctx.endFightToggle('loot');
+    ctx.openTrade = o => { trades.push(o); };
+    ck('#105 Open trade passes the fallen as the other party, and an onClose', ctx.endFightOpenLoot() === true && trades.length === 1 && trades[0].with === 'Goblin 1, Bugbear' && typeof trades[0].onClose === 'function', trades);
+    opened.length = 0; trades[0].onClose(null);
+    h = opened.length ? opened[0].h : '';
+    ck('#105 a cancelled trade brings the window back, its state intact', opened.length === 1 && opened[0].t === 'End of combat' &&
+       /id="ecXp"[^>]*value="450"/.test(h) && /data-ecrow="xp" aria-expanded="true"/.test(h) && /data-ecrow="loot" aria-expanded="true"/.test(h) && /id="ecSt-loot">Open trade…</.test(h), h);
+    opened.length = 0; trades[0].onClose({title: 'Traded with Goblin 1, Bugbear'});
+    ck('#105 after a completed trade the row reads "Traded with …"', /id="ecSt-loot">Traded with Goblin 1, Bugbear</.test(opened[0].h));
+    ck('#105 ...and another trade is allowed', ctx.endFightOpenLoot() === true && trades.length === 2);
+    X.character = X.blankChar(); opened.length = 0; trades[1].onClose(null);
+    ck('#105 a character change while trading drops the window; nothing reopens', opened.length === 0 && X._endFight === null);
+    // the real trade window's onClose
+    ctx.openTrade = keep.ot; X.character = c;
+    let calls = [];
+    ctx.openTrade({with: 'Goblin 1', onClose: d => calls.push(d)});
+    ctx.dismissModal();
+    ck('#105 × on the trade runs onClose, with null', calls.length === 1 && calls[0] === null, calls);
+    ctx.dismissModal();
+    ck('#105 ...once', calls.length === 1);
+    calls = []; ctx.openTrade({with: 'x', get: {coins: {gp: 5}}, onClose: d => calls.push(d)});
+    state.confirm = false; state.lastConfirm = null; ctx.dismissModal();
+    ck('#105 declining "Discard this trade?" keeps it open: no onClose', calls.length === 0 && state.lastConfirm === 'Discard this trade?');
+    state.confirm = true; ctx.dismissModal();
+    ck('#105 ...accepting it hands back', calls.length === 1);
+    calls = []; ctx.openTrade({onClose: d => calls.push(d)}); const e = {title: 'Traded with x'};
+    ctx.tradeClosed(e); ctx.tradeClosed(null);
+    ck('#105 tradeClosed hands the completed line on, once', calls.length === 1 && calls[0] === e);
+    /* PF8: a trade opened without onClose drops an earlier opener's hook, closes, and reopens nothing */
+    calls = []; ctx.openTrade({onClose: d => calls.push(d)});
+    let closes = 0; const cmKeep = ctx.closeModal; ctx.closeModal = function () { closes++; return cmKeep.apply(null, arguments); };
+    opened.length = 0; ctx.openTrade({}); ctx.dismissModal(); ctx.tradeClosed(null);
+    ctx.closeModal = cmKeep;
+    ck('#105 a trade with no onClose closes as before: it closes, no earlier onClose runs, nothing reopens',
+       closes === 1 && calls.length === 0 && opened.length === 1 && opened[0].t === 'Trade', {closes, calls, opened: opened.map(o => o.t)});
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '67-trade.js'), 'utf8');
+    ck('#105 Cancel and Complete Trade both hand back through onClose',
+       /#trCancel"\)\)\{closeModal\(\);tradeClosed\(null\);return;\}/.test(src) && /const done=completeTrade\(d\);closeModal\(\);\s*if\(done\)toast\([^\n]*\n\s*tradeClosed\(done\);/.test(src));
+    // end to end: the real trade over the real window, and back
+    ctx.openEndOfCombat({rounds: 1, sec: 6, combatants: foes}); ctx.endFightSetXp('30');
+    opened.length = 0; ctx.endFightOpenLoot();
+    ck('#105 the trade window replaces this one, with the fallen in its With box', opened.length === 1 && opened[0].t === 'Trade' && /id="trWith" value="Goblin 1, Bugbear"/.test(opened[0].h));
+    ctx.dismissModal();
+    ck('#105 ...and closing it brings End of combat back, state intact', opened.length === 2 && opened[1].t === 'End of combat' && /id="ecXp"[^>]*value="30"/.test(opened[1].h));
+    const asked = []; const askKeep = ctx.askConfirm; ctx.askConfirm = o => { asked.push(o); return new Promise(() => {}); };
+    ctx.dismissModal(); ctx.askConfirm = askKeep;
+    ck('#105 ...with its dismiss guard set again: × asks "Add 30 XP?"', asked.length === 1 && asked[0].title === 'Add 30 XP?' && X._endFight !== null, asked);
+    X._endFight.asking = false;
+    trades.length = 0; ctx.openTrade = o => { trades.push(o); };
+    ctx.endFightClick({target: {closest: s => s === '#ecTrade' ? {} : null}});
+    ck('#105 the Open trade button opens the trade', trades.length === 1 && trades[0].with === 'Goblin 1, Bugbear');
+    const gid = ctx.document.getElementById;
+    ctx.document.getElementById = id => id === 'modal' ? {classList: {contains: k => k === 'open'}} : id === 'ecDone' ? null : gid(id);
+    opened.length = 0; const back = trades[0].onClose(null);
+    ctx.document.getElementById = gid;
+    ck('#105 if another dialog took the modal meanwhile, nothing is drawn over it and the state goes', back === false && opened.length === 0 && X._endFight === null);
+    // M2: focus after the trade's round trip
+    {
+      const opener = {id: 'cvEnd'}, focused = [];
+      ctx.document.activeElement = opener;
+      ctx.openEndOfCombat({rounds: 1, sec: 6, combatants: foes});
+      ck('#105 the window records what opened it', X._endFight.opener === opener && X._modalOpener === opener && X._endFight.openerSel === '[id="cvEnd"]');
+      trades.length = 0; ctx.endFightOpenLoot();
+      ctx.document.activeElement = {id: 'btnTrade'};   /* what a finder round trip left focused */
+      ctx.document.getElementById = id => id === 'ecTrade' ? {focus() { focused.push('ecTrade'); }} : gid(id);
+      try { trades[0].onClose({title: 'Traded with Goblin 1, Bugbear'}); } finally { ctx.document.getElementById = gid; delete ctx.document.activeElement; }
+      ck('#105 back from the trade, focus lands on Open trade', focused.length === 1 && focused[0] === 'ecTrade', focused);
+      ck('#105 ...and the window keeps its first opener for the final close', X._modalOpener === opener && X._modalOpenerSel === '[id="cvEnd"]', [X._modalOpener, X._modalOpenerSel]);
+    }
+    // tradeFind()'s back(): to the Equipment card's Trade only for a trade opened there
+    {
+      const ob = ctx.openBrowse, rl = X.rules.items, cfgs = [], bt = [];
+      ctx.openBrowse = cfg => { cfgs.push(cfg); };
+      X.rules.items = [{name: 'Rope'}];
+      ctx.document.getElementById = id => id === 'btnTrade' ? {getClientRects: () => [1], focus() { bt.push(1); }} : gid(id);
+      ctx.openTrade = keep.ot;
+      try {
+        ctx.openTrade({with: 'x', onClose: () => {}}); ctx.tradeFind(); cfgs[0].onClose();
+        ck('#105 the finder hands back to a trade with an onClose without focusing the Equipment card\'s Trade', bt.length === 0);
+        ctx.tradeClosed(null);
+        ctx.openTrade({}); ctx.tradeFind(); cfgs[1].onClose();
+        ck('#105 ...and still does for a trade opened there', bt.length === 1);
+        ctx.tradeClosed(null);
+      } finally { ctx.openBrowse = ob; X.rules.items = rl; ctx.document.getElementById = gid; }
+    }
+  } catch (err) {
+    ck('#105 t105Loot ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.openModal = keep.om; ctx.openTrade = keep.ot; ctx.toast = keep.toast; state.confirm = keep.conf;
+    X.character = keep.ch; X._endFight = null;
+  }
+}
+
+/* ---------- #105 After combat: flagged trackers and pages, live */
+async function t105After() {
+  const keep = {om: ctx.openModal, ch: X.character, gid: ctx.document.getElementById, qsa: ctx.document.querySelectorAll, toast: ctx.toast};
+  try {
+    ctx.toast = () => null;
+    const c = X.blankChar(); X.character = c;
+    c.trackers = [{id: 't1', name: 'Goblins slain', type: 'counter', tag: 'Kills', value: 3, goal: 0, autoClose: true, afterCombat: true},
+                  {id: 't2', name: 'Unflagged', type: 'counter', value: 1},
+                  {id: 't3', name: 'Closed one', type: 'counter', value: 5, goal: 5, closed: true, afterCombat: true}];
+    c.journal = [{id: 'p1', title: 'Loot list <i>', tag: '', text: '[ ] Search the bodies\n[x] Count the coins', at: 2, editedAt: 2, afterCombat: true},
+                 {id: 'p2', title: 'Diary', tag: '', text: 'x', at: 1, editedAt: 1}];
+    /* PF8: through End combat itself, so a bump on the way would show */
+    const before = JSON.stringify([c.trackers, c.journal]);
+    X.startCombatNow(); c.combatRound = 1; ctx.endCombatNow();
+    ck('#105 ending a fight bumps no tracker and ticks no box', !!X._endFight && !X.inCombat(c) && JSON.stringify([c.trackers, c.journal]) === before &&
+       c.trackers[0].value === 3 && c.journal[0].text === '[ ] Search the bodies\n[x] Count the coins', JSON.stringify([c.trackers, c.journal]));
+    let h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 After combat: flagged open trackers and flagged pages only', /data-ecrow="after"/.test(h) && /id="ecSt-after">1 tracker · 1 page</.test(h) &&
+       h.includes('data-trk="t1"') && !h.includes('data-trk="t2"') && !h.includes('data-trk="t3"') && h.includes('data-ecpage="p1"') && !h.includes('data-ecpage="p2"'), h);
+    ck('#105 a tile without its edit pen, + and − live', /data-trkinc="t1"/.test(h) && /data-trkdec="t1"/.test(h) && !/data-trkedit="t1"/.test(h) && /id="ecTrkList"/.test(h));
+    ck('#105 a page: its title, escaped, and its rendered, tickable text', h.includes('Loot list &lt;i&gt;') && !h.includes('Loot list <i>') &&
+       /aria-checked="false" data-ck="0"/.test(h) && /aria-checked="true" data-ck="1"/.test(h));
+    c.showTrackers = false; h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 trackers switched off: no tiles, the pages stay', !h.includes('data-trk="t1"') && /id="ecSt-after">1 page</.test(h));
+    c.showTrackers = true; c.hiddenTabs = ['journal']; h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 a hidden Journal tab: no After combat row', !/data-ecrow="after"/.test(h));
+    c.hiddenTabs = [];
+    c.trackers.push({id: 't4', name: 'Arrows found', type: 'counter', value: 0, afterCombat: true});
+    ck('#105 the status counts plurals', /id="ecSt-after">2 trackers · 1 page</.test(ctx.endFightHTML(X._endFight, c)));
+    c.trackers.pop();
+    // a tick in the window
+    ck('#105 a tick in the window rewrites that page\'s line', ctx.endFightTick('p1', 0) === true && c.journal[0].text === '[x] Search the bodies\n[x] Count the coins' && c.journal[0].editedAt > 2);
+    ctx.renderJournal(); ctx.jnlStartEdit('p1', 2, 'jnlText');
+    const said = []; ctx.toast = m => { said.push(String(m)); return null; };
+    ck('#105 ...not a page the Journal tab is editing', ctx.endFightTick('p1', 0) === false && c.journal[0].text.startsWith('[x] Search'));
+    ck('#105 ...and it says why, the title as text (toast() sets textContent)', said.length === 1 && said[0] === 'Finish editing “Loot list <i>” first.', said);
+    ctx.toast = () => null;
+    ctx.jnlReset();
+    const src105 = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
+    ck('#105 the checkbox dispatcher sends a tick in the window to its page',
+       /ep=m\.closest\("\[data-ecpage\]"\);if\(ep\)endFightTick\(ep\.dataset\.ecpage,n\);else if\(m\.closest\("#jnlBody"\)\)jnlToggleCheckbox\(n\)/.test(src105('90-boot.js')));
+    // + in the window: both copies redrawn
+    const boxes = {trkList: {innerHTML: '', contains: () => false, querySelector: () => null}, ecTrkList: {innerHTML: '', contains: () => false, querySelector: () => null}};
+    ctx.document.getElementById = id => boxes[id] || keep.gid(id);
+    ctx.trkAct('t1', (x, now) => X.trkStep(x, 1, now), false);
+    ck('#105 + changes the counter and redraws both copies of the tile', c.trackers[0].value === 4 &&
+       /data-trkval="t1"[^>]*value="4"/.test(boxes.trkList.innerHTML) && /data-trkval="t1"[^>]*value="4"/.test(boxes.ecTrkList.innerHTML) && !/data-trkedit/.test(boxes.ecTrkList.innerHTML), boxes.ecTrkList.innerHTML);
+    ctx.document.getElementById = keep.gid;
+    // a typed count patches every copy
+    const mkRow = () => { const v = {value: '3'}, fill = {style: {}}, bar = {attrs: {}, setAttribute(k, x) { this.attrs[k] = x; }, querySelector: () => fill};
+      return {v, fill, querySelector: s => s === '[data-trkval]' ? v : s === '.trk-bar' ? bar : null, closest: () => null}; };
+    const rows = [mkRow(), mkRow()];
+    ctx.document.querySelectorAll = sel => sel === '[data-trk="t1"]' ? rows : keep.qsa(sel);
+    c.trackers[0].value = 7; c.trackers[0].goal = 10;
+    ck('#105 a typed count patches every copy of the tile', ctx.trkPatchRow(c.trackers[0]) === true && rows.every(r => r.v.value === '7' && r.fill.style.width === '70%'));
+    ctx.document.querySelectorAll = keep.qsa;
+    // chips are inert in the window (Review Focus 1)
+    let stopped = 0, prevented = 0;
+    const chipEv = key => ({key, target: {closest: s => s === '.ec-page .kw,.ec-page .tblref' ? {} : null}, stopPropagation() { stopped++; }, preventDefault() { prevented++; }});
+    ctx.endFightClick(chipEv());
+    ctx.endFightKey(chipEv('Enter'));
+    ck('#105 chips are inert in the window: a tap or Enter on a rules term or table link stops there', stopped === 2 && prevented === 2);
+    ctx.endFightKey(chipEv('Escape'));
+    ck('#105 ...Escape still reaches the dialog', stopped === 2);
+    ck('#105 the Journal tab\'s own tiles keep their pen', /data-trkedit="t1"/.test(X.trackersHTML(c, false)));
+    // M3/M4: a tracker closing from inside the window, and its Undo
+    {
+      const focused = [], undos = [];
+      const ctl = name => ({focus() { focused.push(name); }, getClientRects: () => [1]});
+      const mkBox = () => ({innerHTML: '', hidden: false, contains: () => false, querySelector(sel) { return sel === '[data-trkinc="t1"]' && /data-trkinc="t1"/.test(this.innerHTML) ? ctl('ecInc') : null; }});
+      const boxes = {trkList: mkBox(), ecTrkList: mkBox(), 'ecSt-after': {textContent: ''}, ecDone: ctl('ecDone'), addTracker: ctl('addTracker')};
+      ctx.document.getElementById = id => boxes[id] || keep.gid(id);
+      ctx.toast = (m, a) => { if (a) undos.push(a); return null; };
+      try {
+        c.trackers = [{id: 't1', name: 'Goblins slain', type: 'counter', value: 4, goal: 5, autoClose: true, afterCombat: true}];
+        X.startCombatNow(); c.combatRound = 2; ctx.endCombatNow();
+        ck('#105 the window opened with a tracker keeps its list', X._endFight.trk === true);
+        ctx.trkAct('t1', (x, now) => X.trkStep(x, 1, now), true);
+        ck('#105 a tracker closing in the window leaves its list, and the row\'s status follows', c.trackers[0].closed === true &&
+           !/data-trk="t1"/.test(boxes.ecTrkList.innerHTML) && boxes.ecTrkList.hidden === true && boxes['ecSt-after'].textContent === '1 page', [boxes.ecTrkList, boxes['ecSt-after']]);
+        ck('#105 ...Tab or Esc from its Undo stays in the window (no tile left: Done), not the Journal tab\'s + Tracker',
+           undos.length === 1 && undos[0].back() === boxes.ecDone);
+        undos[0].run({detail: 0});
+        ck('#105 its Undo puts it back in the window and on the Journal tab', c.trackers[0].closed !== true && c.trackers[0].value === 4 &&
+           /data-trk="t1"/.test(boxes.ecTrkList.innerHTML) && boxes.ecTrkList.hidden === false && /data-trk="t1"/.test(boxes.trkList.innerHTML) &&
+           boxes['ecSt-after'].textContent === '1 tracker · 1 page', [boxes['ecSt-after'].textContent]);
+        ck('#105 ...from the keyboard, focus on the tile\'s + (the window\'s tiles have no pen)', focused[focused.length - 1] === 'ecInc', focused);
+        // with no page below it: the row reads "All done"
+        delete c.journal[0].afterCombat;
+        ctx.trkAct('t1', (x, now) => X.trkStep(x, 1, now), true);
+        ck('#105 the last tracker closed and no page left: "Nothing here is still open.", status "All done"',
+           boxes.ecTrkList.innerHTML === '<p class="hint">Nothing here is still open.</p>' && boxes.ecTrkList.hidden === false && boxes['ecSt-after'].textContent === 'All done', boxes);
+        const h2 = ctx.endFightHTML(X._endFight, c);
+        ck('#105 ...and so it reads when the window is drawn again (after a trade)', /id="ecSt-after">All done</.test(h2) && /id="ecTrkList">\s*<p class="hint">Nothing here is still open\.<\/p>/.test(h2), h2);
+        undos[undos.length - 1].run({detail: 1});
+        ck('#105 ...and Undo still has its list to come back to', /data-trk="t1"/.test(boxes.ecTrkList.innerHTML) && boxes['ecSt-after'].textContent === '1 tracker');
+        X._endFight = null;
+        ck('#105 with the window gone, focus after a close goes to + Tracker as before', ctx.trkNextControl(['t9']) === boxes.addTracker);
+        c.journal[0].afterCombat = true;
+      } finally { ctx.document.getElementById = keep.gid; ctx.toast = () => null; }
+    }
+    {
+      const css = require('fs').readFileSync(require('path').join(__dirname, '..', 'css', '50-modal.css'), 'utf8');
+      ck('#105 Ruling 19: the window fits its content up to the wide modal\'s height, and its body may shrink so the rows scroll and Done stays',
+         css.includes('.modal.wide:has(.ec-wrap){height:auto;max-height:min(680px,90dvh)}') && css.includes('.modal.wide:has(.ec-wrap) .m-body{min-height:0}'));
+    }
+  } catch (err) {
+    ck('#105 t105After ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.openModal = keep.om; ctx.document.getElementById = keep.gid; ctx.document.querySelectorAll = keep.qsa; ctx.toast = keep.toast;
+    ctx.jnlReset(); X.character = keep.ch; X._endFight = null;
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

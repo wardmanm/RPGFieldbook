@@ -108,6 +108,7 @@ function trkFromForm(t,f){
   delete t.items;delete t.done;
   t.autoClose=f.autoClose!==false;
   t.value=trkInt(t.value);
+  if(f.afterCombat===true)t.afterCombat=true;else delete t.afterCombat;   /* #105 */
   return t;
 }
 
@@ -140,17 +141,20 @@ function trkAfter(c,id){
 /* ---- markup: pure strings, so the harness can assert every state ----
    Names and items are the player's plain words: esc() only, no glossary pass. A
    chip inside a checkbox button would be a button in a button, and every −/+
-   would pay for a highlight() of the whole card. */
+   would pay for a highlight() of the whole card.
+   `opts.noEdit` (#105): no pen, for the End of combat window, where the form
+   would replace the window. */
 const TRK_PEN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
 function trkEditHTML(t){return `<button type="button" class="icon ed" data-trkedit="${esc(t.id)}" aria-label="${esc("Edit "+trkName(t))}" title="Edit">${TRK_PEN}</button>`;}
-function trackerRowHTML(t){
+function trackerRowHTML(t,opts){
+  const o=opts||{};
   const pr=trkProgress(t),name=trkName(t),g=trkInt(t.goal);
   const body=`<div class="trk-ctl"><button type="button" class="res-btn" data-trkdec="${esc(t.id)}" aria-label="${esc("One less — "+name)}">−</button>`+
     `<input class="trk-val" data-trkval="${esc(t.id)}" inputmode="numeric" value="${esc(pr.done)}" aria-label="${esc(name+" — count")}">`+
     `<button type="button" class="res-btn" data-trkinc="${esc(t.id)}" aria-label="${esc("One more — "+name)}">+</button>`+
     (g?`<span class="trk-of">of ${esc(g)}</span>`:"")+`</div>`+
     (g?`<div class="trk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(g)}" aria-valuenow="${esc(Math.min(pr.done,g))}" aria-label="${esc(name)}"><span style="width:${esc(pr.pct)}%"></span></div>`:"");
-  return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(name)}</span>${trkEditHTML(t)}</div>${body}</div>`;
+  return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(name)}</span>${o.noEdit?"":trkEditHTML(t)}</div>${body}</div>`;
 }
 /* In Completed: what it came to, when it closed, and the way back. */
 function trkSummary(t){const pr=trkProgress(t);return trkInt(t.goal)?pr.done+" / "+trkInt(t.goal):String(pr.done);}
@@ -170,7 +174,7 @@ function trackersHTML(c,completedOpen){
       caret(o)+`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span>`+
       (on?`<span class="trk-total">· ${esc(trkGroupTotal(c,g.key))}</span>`:"")+
       `<button type="button" class="icon trk-sum${on?" on":""}" data-trktotal="${esc(g.key)}" aria-pressed="${on?"true":"false"}" aria-label="${esc("Total for "+g.label)}" title="Total">Σ</button></div>`+
-      `<div class="trk-group"${o?"":` style="display:none"`}>${g.items.map(trackerRowHTML).join("")}</div></div>`;
+      `<div class="trk-group"${o?"":` style="display:none"`}>${g.items.map(t=>trackerRowHTML(t)).join("")}</div></div>`;
   }).join(""):`<div class="empty">Nothing open — everything here is done.</div>`;
   if(s.closed.length)h+=`<div class="fgroup trk-done"><div class="fghead" data-trkcompleted role="button" tabindex="0" aria-expanded="${completedOpen?"true":"false"}">`+
     caret(completedOpen)+`<span class="fgname">Completed</span><span class="cnt">(${s.closed.length})</span></div>`+
@@ -186,6 +190,8 @@ function trackerFormHTML(t,tags,isNew){
     `<div class="field"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
     `<div class="toggle" id="tkAutoRow"><div><div class="t-lbl">Close when complete</div><div class="t-sub">Move it to Completed once it's done. You get an Undo.</div></div>`+
       `<button type="button" class="switch ${auto?"on":""}" id="tkAuto" role="switch" aria-checked="${auto?"true":"false"}" aria-label="Close when complete"></button></div>`+
+    `<div class="toggle"><div><div class="t-lbl">Show after combat</div></div>`+
+      `<button type="button" class="switch ${t.afterCombat===true?"on":""}" id="tkAfter" role="switch" aria-checked="${t.afterCombat===true?"true":"false"}" aria-label="Show after combat"></button></div>`+
     `<div class="m-actions">`+(isNew?"":`<button type="button" class="tbtn danger" id="tkDel" style="margin-right:auto">Delete</button>`+
       `<button type="button" class="tbtn" id="tkCloseNow">${t.closed===true?"Reopen":"Close now"}</button>`)+
     `<button type="button" class="tbtn" id="tkCancel">Cancel</button><button type="button" class="tbtn primary" id="tkSave">${isNew?"Add":"Save"}</button></div>`;
@@ -205,9 +211,14 @@ function renderTrackers(){
   const el=document.getElementById("trkList");if(!el)return;
   if(trkWho!==character){trkWho=character;trkCompletedOpen=false;}
   const card=document.getElementById("trackersCard");if(card)card.style.display=showTrackers(character)?"":"none";
-  const a=document.activeElement,sel=(a&&el.contains&&el.contains(a))?openerSelector(a):null;
+  /* #105: the End of combat window may hold the same tiles (#ecTrkList). Both
+     are redrawn, and focus goes back inside whichever held it — the same hook
+     exists in both, so the search must stay inside its own box. */
+  const ec=document.getElementById("ecTrkList"),a=document.activeElement;
+  const host=[el,ec].find(b=>b&&a&&b.contains&&b.contains(a))||null,sel=host?openerSelector(a):null;
   el.innerHTML=trackersHTML(character,trkCompletedOpen);
-  if(sel){const b=document.querySelector(sel);if(b&&b.focus)b.focus({preventScroll:true});}
+  if(ec)endFightPaintTrackers(ec);
+  if(sel){const b=host.querySelector(sel);if(b&&b.focus)b.focus({preventScroll:true});}
   /* Shown or hidden, it may be the only card in an open combat view, whose
      "Add sections…" hint has to follow it. */
   if(combatViewOpen())renderCombatEmpty();
@@ -218,13 +229,16 @@ function trkById(id){return trkList(character).find(t=>t.id===id)||null;}
    goal and the "of N" can't change from the row. false when there is no row,
    for the caller to redraw instead. */
 function trkPatchRow(t){
-  const row=document.querySelector(attrSel("data-trk",t.id));if(!row)return false;
+  /* #105: every copy — the Journal tab's tile and the End of combat window's */
+  const rows=[...document.querySelectorAll(attrSel("data-trk",t.id))];if(!rows.length)return false;
   const pr=trkProgress(t),g=trkInt(t.goal);
-  const v=row.querySelector("[data-trkval]");if(v)v.value=String(pr.done);
-  const bar=row.querySelector(".trk-bar");
-  if(bar){bar.setAttribute("aria-valuenow",String(Math.min(pr.done,g)));const f=bar.querySelector("span");if(f)f.style.width=pr.pct+"%";}
-  const grp=row.closest&&row.closest(".fgroup"),tot=grp&&grp.querySelector(".trk-total");
-  if(tot)tot.textContent="· "+trkGroupTotal(character,tagKey(t.tag));
+  rows.forEach(row=>{
+    const v=row.querySelector("[data-trkval]");if(v)v.value=String(pr.done);
+    const bar=row.querySelector(".trk-bar");
+    if(bar){bar.setAttribute("aria-valuenow",String(Math.min(pr.done,g)));const f=bar.querySelector("span");if(f)f.style.width=pr.pct+"%";}
+    const grp=row.closest&&row.closest(".fgroup"),tot=grp&&grp.querySelector(".trk-total");
+    if(tot)tot.textContent="· "+trkGroupTotal(character,tagKey(t.tag));
+  });
   return true;
 }
 /* One tap on a row. When it finishes a tracker set to close, the toast offers an
@@ -252,13 +266,24 @@ function trkAct(id,fn,viaKey,inPlace){
   if(viaKey&&undo)undo.focus();
   return true;
 }
+/* #105: while the End of combat window is open, its list (#ecTrkList) is
+   where a tracker's focus belongs — the Journal tab's copy sits under the
+   modal, inert, or on a hidden tab. null when the window isn't open. */
+function trkFocusScope(){
+  if(typeof endFightLive!=="function"||!endFightLive()||!document.getElementById("ecDone"))return null;
+  return document.getElementById("ecTrkList")||null;
+}
 /* The first control of the first of `ids` still open and on screen — the rows
-   may have moved on since the toast went up — or else + Tracker. */
+   may have moved on since the toast went up — or else + Tracker. Inside the
+   End of combat window: only its own tiles, or else its first control left,
+   or else Done. */
 function trkNextControl(ids){
+  const sc=trkFocusScope(),root=sc||document;
   for(const id of ids){
-    const row=document.querySelector(".trk:not(.trk-closed)"+attrSel("data-trk",id)),f=row&&row.querySelector("button,input");
+    const row=root.querySelector(".trk:not(.trk-closed)"+attrSel("data-trk",id)),f=row&&row.querySelector("button,input");
     if(f&&f.getClientRects().length)return f;
   }
+  if(sc)return sc.querySelector("button,input")||document.getElementById("ecDone");
   return document.getElementById("addTracker");
 }
 /* `who` is the character object the toast was shown for: its Undo belongs to
@@ -269,7 +294,12 @@ function undoTrackerChange(snap,who,viaKey){
   if(!trkRestore(character,snap))return false;
   renderTrackers();scheduleSave();
   toast(`“${trkName(snap)}” is back`);
-  if(viaKey){const b=document.querySelector(attrSel("data-trkedit",snap.id));if(b&&b.focus)b.focus();}
+  if(viaKey){
+    /* the window's tiles have no pen: there, the tile's + */
+    const sc=trkFocusScope();
+    const b=sc?(sc.querySelector(attrSel("data-trkinc",snap.id))||document.getElementById("ecDone")):document.querySelector(attrSel("data-trkedit",snap.id));
+    if(b&&b.focus)b.focus();
+  }
   return true;
 }
 /* The count box commits on change or Enter, like the coin and HP boxes
@@ -278,13 +308,18 @@ function undoTrackerChange(snap,who,viaKey){
    - A change patches the row in place (trkAct()'s `inPlace`), and a count that
      isn't one is simply put back, in place too.
    - Enter redraws. If it completes the tracker, its row leaves for Completed
-     and trkAct() moves focus to the toast's Undo instead. */
+     and trkAct() moves focus to the toast's Undo instead.
+   The box returned is found inside the list the typed one sat in, taken
+   before the redraw replaces it: the same tile can be both on the Journal tab
+   and in the End of combat window (#105), and the tab's copy comes first in
+   the page. */
 function commitTrackerValue(inp,viaKey){
   const id=inp.dataset.trkval,n=trkParse(inp.value);
+  const host=(inp.closest&&inp.closest("#ecTrkList,#trkList"))||document;
   if(n!==null)trkAct(id,(t,now)=>trkSetValue(t,n,now),!!viaKey,!viaKey);
   else if(viaKey)renderTrackers();
   else{const t=trkById(id);if(t)inp.value=String(trkProgress(t).done);else renderTrackers();}
-  return document.querySelector(attrSel("data-trkval",id));
+  return host.querySelector(attrSel("data-trkval",id));
 }
 function toggleTrkGroup(key){
   if(!character.trackerCollapse||typeof character.trackerCollapse!=="object"||Array.isArray(character.trackerCollapse))character.trackerCollapse={};
@@ -315,13 +350,14 @@ function openTrackerForm(existing){
   const sync=()=>{$("tkAutoRow").hidden=!trkInt($("tkGoal").value);};
   $("tkGoal").addEventListener("input",sync);sync();
   $("tkAuto").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
+  $("tkAfter").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
   $("tkCancel").addEventListener("click",closeModal);
   /* The tracker as stored NOW. The toast sits outside the modal's inert, so its
      Undo can land while this form is open and swap the stored object for its
      snapshot — `t` would then be a copy no longer in the list. A new tracker
      has no stored copy: Save adds `t` itself. */
   const cur=()=>isNew?t:trkById(t.id);
-  const fields=()=>({name:$("tkName").value,tag:$("tkTag").value,goal:$("tkGoal").value,autoClose:$("tkAuto").classList.contains("on")});
+  const fields=()=>({name:$("tkName").value,tag:$("tkTag").value,goal:$("tkGoal").value,autoClose:$("tkAuto").classList.contains("on"),afterCombat:$("tkAfter").classList.contains("on")});
   const done=()=>{closeModal();renderTrackers();scheduleSave();};
   {const d=$("tkDel");if(d)d.addEventListener("click",()=>{
     if(!confirm(`Delete the tracker “${trkName(cur()||t)}”?`))return;

@@ -256,7 +256,7 @@ function openInvLog(){
    A draft holds the trade until Complete applies it as one step, logged as one
    `trade` line whose undo has three parts: give (always clean), add (what you
    got must still be there) and coins (the net change). Spec §6.2 and §8. */
-let _trade=null,_trPick=false;
+let _trade=null,_trPick=false,_trOnClose=null;
 function newTradeDraft(opts){
   const o=opts||{},arr=a=>Array.isArray(a)?a:[],coins=c=>Object.assign({},(c&&typeof c==="object")?c:{});
   const give=o.give||{},get=o.get||{};
@@ -430,14 +430,26 @@ function tradeRefresh(){
 }
 function showTrade(){
   openModal("Trade",tradeHTML(_trade,character),"",{wide:true});
-  setDismissGuard(()=>_trade&&!tradeEmpty(_trade)?"Discard this trade?":null);
+  /* × / Escape / a backdrop tap: after "Discard this trade?" (when it holds
+     something), the dismissal hands on to tradeClosed() (#105) */
+  setDismissGuard(()=>_trade&&!tradeEmpty(_trade)?"Discard this trade?":null,()=>tradeClosed(null));
+}
+/* The trade window has closed for good: Cancel, Complete Trade, or a
+   dismissal. Never for the finder, which steps aside and brings it back
+   (tradeFind()). Runs the opener's onClose once (#105: the End of combat
+   window comes back), with the completed trade's log line or null. */
+function tradeClosed(done){
+  const f=_trOnClose;_trOnClose=null;_trade=null;
+  if(f)f(done||null);
 }
 /* The finder is its own full-screen layer UNDER the modal, so the trade window
    steps aside while it is up and comes back from the draft either way. */
 function tradeFind(){
   const lib=rules.items||[];
   if(!lib.length){toast("No rules items are loaded. Add a custom item instead.");return;}
-  const back=()=>{const bt=document.getElementById("btnTrade");if(bt&&bt.getClientRects().length)bt.focus({preventScroll:true});if(_trade)showTrade();};
+  /* Focus to the Equipment card's Trade only for a trade opened there: one
+     with an onClose (#105) hands focus to its own opener when it closes. */
+  const back=()=>{const bt=!_trOnClose&&document.getElementById("btnTrade");if(bt&&bt.getClientRects().length)bt.focus({preventScroll:true});if(_trade)showTrade();};
   closeModal();
   openBrowse(Object.assign(itemBrowseCfg(lib),{
     added:x=>!!_trade&&_trade.get.items.some(g=>!g.custom&&String(g.name).toLowerCase()===String(x.name||"").toLowerCase()),
@@ -455,6 +467,7 @@ function tradeFind(){
   }));
 }
 function openTrade(opts){
+  _trOnClose=(opts&&typeof opts.onClose==="function")?opts.onClose:null;   /* #105 */
   _trade=newTradeDraft(opts);_trPick=false;
   showTrade();
   const body=document.getElementById("mBody");if(!body||body.dataset.trWired)return;
@@ -486,13 +499,14 @@ function openTrade(opts){
     }
     if(t.closest("#trCustom")){const k=uid();d.get.items.push({key:k,name:"",qty:1,cost:0,def:null,custom:true});d.tab="get";return tradePaint(attrSel("data-trname",k));}
     if(t.closest("#trFind"))return tradeFind();
-    if(t.closest("#trCancel")){_trade=null;closeModal();return;}
+    if(t.closest("#trCancel")){closeModal();tradeClosed(null);return;}
     if(t.closest("#trComplete")){
       if(tradeEmpty(d))return;
       const b=tradeBalance(d,character);
       if(b.short&&!confirm(`You're ${cpToGpText(-b.diff)} short. Complete the trade anyway?`))return;
-      const done=completeTrade(d);_trade=null;closeModal();
+      const done=completeTrade(d);closeModal();
       if(done)toast(done.title+". It's in the log.");
+      tradeClosed(done);
       return;
     }
   });

@@ -264,6 +264,13 @@ function ammoSpentEntry(c,id){
   return {n,hits,misses,kind:ok?ammoKindOf(e.kind):"",
           snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null};
 }
+/* #105: how many times End combat has settled the ammunition on this page
+   (endCombatNow() counts it). Every shot's record carries the count from when
+   it was fired, and its toast's Undo refuses once End combat has settled since
+   (undoFireTap()): the shot was recovered or spent with the rest, and taking it
+   back then counted it as spent again, to be recovered twice. Not saved: a
+   reload leaves no toast to tap. */
+let _ammoSettled=0;
 /* One shot onto `st`'s spent entry: one more on its count, one more Hit or
    Miss when the question was answered (#104), and a one-piece copy of the item
    for recovery to rebuild from. The entry is rebuilt every shot, so the
@@ -272,7 +279,7 @@ function ammoSpentEntry(c,id){
 function ammoRecordShot(c,st,kind,outcome){
   if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
   const undo={stack:JSON.parse(JSON.stringify(st)),at:c.inventory.indexOf(st),
-              spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null};
+              spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null,settled:_ammoSettled};
   const p=ammoSpentEntry(c,st.id);
   c.ammoSpent[st.id]={n:p.n+1,hits:p.hits+(outcome==="hit"?1:0),misses:p.misses+(outcome==="miss"?1:0),
     kind,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
@@ -682,9 +689,12 @@ function shotDone(r,itemId,viaKey,msg){
   if(undo)undo.addEventListener("keydown",e=>{if(e.repeat)e.preventDefault();});
   if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();else if(undo)undo.focus();}
 }
-/* The toast's Undo: only for the character it was shown for. */
+/* The toast's Undo: only for the character it was shown for, and only until
+   End combat settles the ammunition (#105, _ammoSettled). A shot fired with no
+   fight running undoes as before, until an End combat sweeps it up too. */
 function undoFireTap(rec,who,viaKey,itemId){
   if(!character||character!==who)return false;
+  if(!rec||!rec.undo||rec.undo.settled!==_ammoSettled)return false;
   if(!undoFire(character,rec))return false;
   scheduleSave();
   renderInventory();renderAttacks();recompute();
@@ -747,19 +757,28 @@ function recoverWeaponAmmo(itemId,viaKey){
    needs — that Undo restores every entry it cleared, the ones that gave
    nothing included. When nothing came back the counts are cleared quietly and
    this returns null: no toast words, no Undo. Shots fired outside a tracked
-   fight are swept up too, as the row's Recover does. */
-function applyAmmoRecovery(){
-  if(!Object.keys(ammoSpentMap(character)).length)return null;
-  const list=ammoRecoverable(character), rec={};
+   fight are swept up too, as the row's Recover does.
+   #105: `opts.quiet` is End combat's path now: the same recovery, but instead
+   of toast words it hands back {lines, undo} — `lines` what came back per kind
+   (empty when nothing did), `undo` the toast's own Undo (undoRecoveryTap(),
+   quiet) or null — for the End of combat window to show and offer.
+   `opts.logged` is End combat's log lines, which that Undo corrects. Never
+   null when quiet. Without `quiet`, exactly as before. */
+function applyAmmoRecovery(opts){
+  const o=opts||{};
+  if(!Object.keys(ammoSpentMap(character)).length)return o.quiet?{lines:[],undo:null}:null;
+  const list=ammoRecoverable(character), rec={}, who=character;
   recoverAmmo(character,null,rec);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
+  if(o.quiet)return {lines:list,undo:list.length?()=>undoRecoveryTap(rec,who,{lines:Array.isArray(o.logged)?o.logged:[],list},{quiet:true}):null};
   return list.length?{text:`recovered ${ammoSummaryText(list)}`,rec,list}:null;
 }
 /* The End combat toast's Undo recovery: only for the character it was shown for.
    `amend` ({lines, list}) is End combat's log lines and what its recovery gave
-   per kind: undone, that comes back off each line's "recovered" (#47). */
-function undoRecoveryTap(rec,who,amend){
+   per kind: undone, that comes back off each line's "recovered" (#47).
+   `opts.quiet` (#105): no toast — the End of combat window says it itself. */
+function undoRecoveryTap(rec,who,amend,opts){
   if(!character||character!==who)return false;
   if(!undoRecovery(character,rec))return false;
   if(amend&&Array.isArray(amend.lines)&&Array.isArray(amend.list))amend.list.forEach(r=>{
@@ -767,6 +786,6 @@ function undoRecoveryTap(rec,who,amend){
     l.e.meta.back=Math.max(0,num(l.e.meta.back)-num(r.back));l.e.title=ammoLogTitle(r.kind,num(l.e.meta.fired),l.e.meta.back);});
   scheduleSave();
   renderInventory();renderAttacks();recompute();
-  toast("Recovery undone");
+  if(!(opts&&opts.quiet))toast("Recovery undone");
   return true;
 }

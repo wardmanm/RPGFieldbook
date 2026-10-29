@@ -10,14 +10,16 @@ covered by [Story & notes](story-and-notes.md).
 **Code:** `jnlPages()`, `tagLabel()`, `tagKey()`, `groupByTag()`, `attrSel()`, `jnlSort()`,
 `jnlMatch()`, `jnlSnippet()`, `jnlSavePage()`, `jnlDeletePage()`, `jnlTagList()`,
 `jnlGroupOpen()`, `jnlStampText()`, `insertLine()`, `insertMarker()`, `insertCheckboxInto()`,
-`insertJournalCheckbox()`, `jnlToggleCheckbox()`, `renderJournal()`, `jnlOpen()`, `jnlBack()`,
+`insertJournalCheckbox()`, `jnlTogglePage()`, `jnlToggleCheckbox()`, `jnlToggleAfterCombat()`, `renderJournal()`, `jnlOpen()`, `jnlBack()`,
 `jnlNewPage()`, `jnlEdit()`, `jnlDone()`, `jnlInput()`, `jnlDelete()`, `insertJournalStamp()`,
 `toggleJnlGroup()` in `87-journal.js` · `groupFieldHTML()` in `80-modal-forms.js` · `TRK_TYPES`, `trkProgress()`, `trkApply()`, `trkStep()`,
 `trkSetValue()`, `trkClose()`, `trkReopen()`, `trkSnapshot()`,
-`trkRestore()`, `trkFromForm()`, `trkSplit()`, `trkAfter()`, `showTrackers()`, `migrateTrackerPages()`,
+`trkRestore()`, `trkFromForm()`, `trackerRowHTML()`, `trkSplit()`, `trkAfter()`, `showTrackers()`, `migrateTrackerPages()`,
 `trkTotalOn()`, `trkGroupTotal()`, `toggleTrkTotal()`,
 `renderTrackers()`, `trkPatchRow()`, `trkAct()`, `trkNextControl()`, `undoTrackerChange()`,
 `commitTrackerValue()`, `openTrackerForm()`, `reopenTracker()` in `87-trackers.js` ·
+`endFightAfterLists()`, `endFightAfterSection()`, `endFightPaintTrackers()`, `endFightTick()` in
+`87-combat-end.js` ·
 `NOTE_SECTIONS`, `noteCheckboxes()`, `toggleCheckbox()`, `noteProgress()`, `noteToggleCheckbox()` in
 `87-notes.js` · `openerSelector()` in `80-modal-forms.js` · `commitBox()` in
 `90-boot.js` ·
@@ -29,7 +31,8 @@ markup `src/html/60-journal.html` · `47-journal.css` ·
 
 ## How it works
 
-**Pages.** `character.journal` is a list of `{id, title, tag, text, at, editedAt}`. A page exists
+**Pages.** `character.journal` is a list of `{id, title, tag, text, at, editedAt}`, plus
+`afterCombat:true` on a page flagged "Show after combat" (#105; absent when off). A page exists
 only while its title or its text has something in it, which is the section notes' rule.
 `jnlSavePage()` applies it. Given the draft being edited (`{id, at}`) and the three fields, it:
 
@@ -73,10 +76,15 @@ guard reaches only the top level.
 grammar as the section notes ([Rich text](../architecture/rich-text.md) §3). `noteCheckboxes(text)`
 lists them in order; `toggleCheckbox(text,n)` flips the `n`th (0-based, counted over the checkbox
 lines of the whole text) and leaves every other byte alone; `noteProgress(text)` is `{done,total}`
-over them. A tap on `[data-ck]` in the page's read view calls `jnlToggleCheckbox(n)`: it rewrites
-that line, stamps `editedAt`, saves, redraws and puts focus back on the same box. It is refused
-while the page is being edited — the text is in a textarea then, and no box is on screen — and
-when the page the tap belonged to is gone (another tab switched, an import). Section notes and
+over them. A tap on `[data-ck]` in the page's read view calls `jnlToggleCheckbox(n)`, which goes
+through `jnlTogglePage(id, n)` (#105): it rewrites that line, stamps `editedAt`, saves and redraws,
+and `jnlToggleCheckbox()` puts focus back on the same box. It is refused while the page is being
+edited — the text is in a textarea then, and no box is on screen — and when the page the tap
+belonged to is gone (another tab switched, an import). `jnlTogglePage()` is the one writer for a
+page by id, so the End of combat window ticks through it too (below); it refuses while **that** page
+is open in the editor, whose next keystroke (`jnlInput()`) would write the textarea's old text back
+over the tick, and says so: "Finish editing “Loot list” first." (the editor stays open across a
+fight, so the window's tap would otherwise do nothing silently). Section notes and
 the Bio tab's rich-text fields tick the same way ([Story & notes](story-and-notes.md)); a box in
 a pack's description is drawn and does nothing. Each box is named by its item in plain words
 (`noteCkLabel()`), its state left to `aria-checked`. The page list
@@ -89,7 +97,8 @@ item; the section-note editor offers the same button on `#noteText`. Both share 
 caret lands.
 
 **Trackers.** `character.trackers` is a list of
-`{id, name, type, tag, value, goal, autoClose, closed, closedAt, at}`, with
+`{id, name, type, tag, value, goal, autoClose, closed, closedAt, at}`, plus `afterCombat:true` when
+flagged (#105), with
 `trackerCollapse` (shut tag groups), `trackerTotals` (per-tag group totals, #93) and `showTrackers`
 (read as `!== false`). Every tracker is a counter:
 
@@ -167,8 +176,9 @@ lists the open trackers drawn after this one, taken before the tap while it stil
 skipping shut groups. `trkNextControl()` returns the first control of the first of them still open
 and on screen, for the toast to focus. With none left, it returns + Tracker.
 
-**The form** (`openTrackerForm()`) holds Name, Tag (the group field with the tags in use), Goal, and
-Close when complete — the last shows only once there is a goal to complete. An existing tracker
+**The form** (`openTrackerForm()`) holds Name, Tag (the group field with the tags in use), Goal,
+Close when complete — which shows only once there is a goal to complete — and **Show after combat**
+(`#tkAfter`, #105), saved through `trkFromForm()` as `afterCombat:true` or no field at all. An existing tracker
 also has **Close now** (or **Reopen**) and
 **Delete**. The toast sits outside the modal's inert, so its Undo can land while the form is open
 and swap the stored tracker for its snapshot. So Save, Close now and Delete act on the tracker as
@@ -185,6 +195,29 @@ one hook both forms carry.
 registry requires. Trackers is an entry in `NOTE_SECTIONS` (tab `journal`), so it takes a
 section note and can be added to the combat view like any registered card. Hidden, it is skipped
 by the combat view.
+
+**Show after combat (#105).** A page or an open tracker with `afterCombat:true` appears in the
+[End of combat window](combat-view.md)'s After combat row when a fight ends — unless the Journal tab
+is hidden (#52), and trackers only while the sheet shows them (`showTrackers`).
+- **Tiles without the pen.** The window draws `trackerRowHTML(t, {noEdit:true})`: the tracker form
+  would replace the window (the modal has one layer) and lose what it holds. `trackersHTML()` maps
+  with `t=>trackerRowHTML(t)`, so the index never arrives as `opts`.
+- **Every copy patched.** `trkPatchRow()` writes into every `[data-trk]` tile with that id, and
+  `renderTrackers()` redraws the window's copy (`#ecTrkList`, through `endFightPaintTrackers()`)
+  beside the tab's, putting focus back inside whichever list held it. `commitTrackerValue()` notes
+  which list the typed box sat in and returns to the box in that same list, since both lists carry
+  the same hooks. So + in the window moves the Journal tab's tile too.
+- **Focus stays in the window.** While it is open, `trkFocusScope()` is its list: a tracker that
+  closes there sends Tab or Esc from the toast's Undo to the next tile in the window (else its first
+  control, else Done), never the Journal tab's inert copy or + Tracker, and the Undo focuses the
+  tile's + (the window's tiles have no pen). The list stays once the window opened with trackers,
+  reading "Nothing here is still open." (the row "All done") when none is left open, so the Undo has
+  somewhere to put the tile back.
+- **Pages tick there.** A page shows its title and `noteHTML()` text, scrolling inside its box when
+  long. The `[data-ck]` dispatcher (`90-boot.js`) sends a box inside `[data-ecpage]` to
+  `endFightTick()`, which writes through `jnlTogglePage()` (so the tab redraws too) and redraws that
+  page's body, focus back on the same box.
+- **Nothing changes on its own.** Ending a fight never bumps a tracker or ticks a box.
 
 **The card.** `#journalCard` is the first card on the Journal tab, with **+ Page** (`#jnlNew`) in
 its heading. `renderJournal()` draws `#jnlBody` in one of three views, held in the session-only
@@ -206,7 +239,11 @@ the same way. The three views:
   ([Sections & layout](../ui/sections-and-layout.md));
 - **the editor** (`journalEditorHTML()`): title, tag with the tags in use as suggestions (the group
   field, `groupFieldHTML()`, which the feature form's Source and the item form's Category share), the
-  text, **Insert timestamp**, the formatting key (`NOTE_FMT_HINT`) and Done. Every keystroke calls
+  text, **Insert timestamp**, **Insert checkbox**, a **Show after combat** switch (`[data-jnlac]`,
+  #105), the formatting key (`NOTE_FMT_HINT`) and Done. The switch (`jnlToggleAfterCombat()`) is
+  patched in place, never rebuilding the editor. A saved page takes it at once and keeps its
+  `editedAt` (a flag is not content); a draft that is not a page yet holds it until its first
+  keystroke makes the page (`jnlSavePage()` carries `draft.afterCombat` over). Every keystroke calls
   `jnlInput()`, which writes through `jnlSavePage()` and schedules a save. There is no live
   preview.
 
@@ -249,6 +286,10 @@ entry in the list.
 - **Only `migrateTrackerPages()` reads a tracker's raw `type`; everything else reads `trkType()`,
   which is `counter`.** A hand-edited `"type":"checklist"` added after #95 shipped still migrates on
   its next load, and anything else — junk included — reads as a counter, as it always did.
+- **A page's tick goes through `jnlTogglePage()`, from either surface (#105),** and is refused, with
+  a toast that says why, while that page is open in the editor.
+- **Every copy of a tracker tile is patched (#105).** A selector that finds the first tile only would
+  leave the Journal tab's or the End of combat window's copy stale.
 - **A tap on a checkbox rewrites one line and nothing else; `toggleCheckbox()` is the only
   writer.** It flips the `n`th checkbox line and leaves every other byte — bullet, indent, the rest
   of the text — exactly as it was.
@@ -275,6 +316,7 @@ entry in the list.
 | Closing at 100% | Close when complete, on by default, only on the step to complete, with an Undo of the whole tap | Offer a Close button: a tap on every completion. Always automatic: no way to keep a finished checklist in view |
 | Hiding the card | Per character, in Settings → Sheet display | App-wide: the sheet's other display choices are per character |
 | Trackers in the combat view | A registered section, so it also takes a section note | A combat-only list beside the registry: a second list of sections to keep in step |
+| The post-combat flag (#105) | **A per-tracker and per-page switch, "Show after combat"**: flagged open counters appear in the End of combat window as their tiles, flagged pages as their text with tickable boxes; nothing changes automatically | Prompting a value per tracker: the tile's + already does it. Titles as links: closes the window to act |
 | Tracker text | Plain, `esc()` only | The notes grammar: a glossary pass per tap, and a chip inside a checkbox button |
 | Tracker layout (#93, #94) | Compact tiles in a wrapping row per tag group; Completed stays a list of rows | A total tile: looks tappable. A sideways scroller: hides tiles on a phone. Tiles for Completed too: it's a record, not a dashboard |
 | What a group total counts (#93) | Every counter with that tag, open or closed, so completing one never drops the total; shown as the bare total in the group header, switched by a Σ button, stored in `trackerTotals[tagKey]` | Open only: closing a counter subtracts it. "42 of 60" when all have goals: the form changes as counters are added |
@@ -299,3 +341,5 @@ entry in the list.
 - 2026-10-19 — The Journal card's pencil hides a page's Edit and Delete; a blank page's empty line drops "— tap Edit" while they're hidden. → ledger L6248, #97
 - 2026-10-23 — The Story tab is Bio; By ability's hidden Skills card is gone. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired; a hidden Trackers card is skipped by the combat view only. → ledger L6804, #103
+- 2026-10-29 — "Show after combat" on trackers and pages (`afterCombat`); the End of combat window shows the flagged tiles without the pen and the flagged pages, tickable through `jnlTogglePage()`; every copy of a tile is patched. → ledger L7921, #105
+- 2026-10-29 — A tick refused while its page is in the editor says so; a tracker closed in the End of combat window keeps focus there, and its list stays ("All done"). → ledger L8025, #105

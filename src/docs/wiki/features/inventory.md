@@ -19,7 +19,7 @@ can carry the player's own fields (quantity, origin, favourite, filing) alongsid
 `logInv()`, `cleanInvLog()`, `logGrant()`, `logFinderAdd()`, `logItemSave()`, `logCoins()`,
 `invSame()`, `invUndoShape()`, `invRemoveQty()`, `invRestore()`, `invUndoCheck()`, `invUndo()`,
 `invLogHTML()`, `openInvLog()`, `setInvLogSize()`, `INV_FILTERS`, `coinsToCp()`, `cpToGpText()`, `itemWorthCp()`, `newTradeDraft()`,
-`tradeClamp()`, `tradeBalance()`, `tradeHTML()`, `completeTrade()`, `openTrade()` in `67-trade.js` ·
+`tradeClamp()`, `tradeBalance()`, `tradeHTML()`, `completeTrade()`, `showTrade()`, `tradeClosed()`, `openTrade()` in `67-trade.js` ·
 `grantItemByName()` in `50-classrace.js` · markup `src/html/10-inventory.html` · **Data:**
 [rules-schema §6.8](../../../../docs/rules-schema.md) · **Tests:** `sheet.js`, `char-update.js`,
 `rules-data.js` · **See also:** [Armor & AC](armor-and-ac.md), [Attacks & damage](attacks-and-damage.md),
@@ -174,10 +174,12 @@ new id if the old one is taken, and — when it was granted by a source that has
 (`grantSidLive()`) — as an ordinary item, its `grant` dropped and its origin kept. `cleanInvLog()`
 drops an `undo` whose shape doesn't fit its kind (`invUndoShape()`), keeping the line, and
 `invUndoCheck()` never throws. `grant` and `ammo` lines have no Undo: removing the source reverts a
-grant, and End combat's recovery has its own Undo.
+grant, and End combat's recovery has its own Undo, in the End of combat window (#105).
 
 **The trade window (#47).** **⇄ Trade** on the Equipment card opens `openTrade(opts)`, a wide
-dialog over a draft (`newTradeDraft()`; `opts` may seed `{with, give, get}`, for #105's loot).
+dialog over a draft (`newTradeDraft()`; `opts` may seed `{with, give, get}`). `opts.onClose` (#105)
+is run once when the trade window closes for good, however it closes; the End of combat window's
+Loot uses both, seeding `with` with the fallen and coming back on close (below).
 - **With**: free text, and chips from the Party card and the names of earlier trades.
 - **You give**: items picked from the inventory, each with a − / + stepper capped at what you own
   and its worth; a coin box per `coinKeys()` denomination, capped at what you hold; and an **Apply
@@ -196,6 +198,17 @@ dialog over a draft (`newTradeDraft()`; `opts` may seed `{with, give, get}`, for
   `addLibraryItems()` with origin Traded and the agreed cost, custom items with origin Custom
   ("traded from *who*"), then one `trade` line, a render and a save. An empty trade can't be
   completed; × and Escape on a non-empty draft ask "Discard this trade?".
+- **Closing, and `onClose` (#105).** Cancel is `closeModal()` then `tradeClosed(null)`; Complete
+  Trade is `completeTrade()`, `closeModal()`, the toast, then `tradeClosed(done)` with the trade's log
+  line; ×, Escape and a backdrop tap reach it as the dismiss guard's hand-on (`setDismissGuard(…,
+  ()=>tradeClosed(null))` in `showTrade()`), after "Discard this trade?" when the draft holds
+  something — declining that keeps the trade open and runs nothing. `tradeClosed()` takes the hook
+  (`_trOnClose`), clears it and the draft, and runs the hook once. The finder (`tradeFind()`) steps
+  aside with `closeModal()`, never a dismissal, so it never runs it, and on its way back focuses the
+  Equipment card's ⇄ Trade only for a trade with no `onClose` (one with an opener of its own hands
+  focus back there). `openTrade()` with no `onClose` drops any earlier opener's hook. The End of
+  combat window's seeded `with` is capped at the With box's 60 characters, since a seeded value gets
+  past `maxlength`.
 - **Layout**: the two sides side by side above 700px, with Cancel and Complete Trade at the foot;
   at 700px and under, tabs "You give · n" and "You get · n" and a ✓ button labelled "Complete
   trade". The balance is always in view. Every target is at least 44px.
@@ -382,3 +395,5 @@ the inventory and recompute, because coins have weight.
 - 2026-10-25 — Final review: Undo never succeeds while restoring nothing; an unchanged form Save writes no line; removing a source and a row's Recover are logged; costs, pp → cp and "what is left" in the lines; the log scrolls in its own box; the size confirm. → ledger L7339, #47
 - 2026-10-25 — Re-review: an `add` undo sums the records that stacked onto one row; Use's refusals stated in full. → ledger L7387, #47
 - 2026-10-25 — Edit lines keep only what changed; coins received never make a trade red; grant lines that moved gold file under Coins. → ledger L7401, #47
+- 2026-10-29 — `openTrade({onClose})` and `tradeClosed()`: the hook runs once however the trade closes (Cancel, Complete Trade, ×, Escape, a backdrop tap), never for the finder; the End of combat window's Loot seeds `with` with the fallen and comes back on close. → ledger L7921, #105
+- 2026-10-29 — The finder's way back focuses ⇄ Trade only for a trade with no `onClose`; Loot's seeded `with` is capped at 60 characters. → ledger L8025, #105

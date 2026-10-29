@@ -146,7 +146,11 @@ One `#modal` backdrop holds `.modal` (`role="dialog"`, `aria-modal`, `tabindex="
   `armChoiceDismissGuard()` after `openModal()`
   ([Character building](../features/character-building.md)), and so does the install plan while
   its files download (#102): its guard returns `true` and says "Installing… please wait.", since
-  closing can't stop an install already under way.
+  closing can't stop an install already under way. **The End of combat window's guard (#105) is the
+  first to answer through `askConfirm()`** instead of a `confirm` message: with XP typed,
+  `endFightGuard()` returns `true` (refusing this dismissal, silently) and starts the warning "Add
+  112 XP?"; on the answer it closes the window itself, adding the XP or not
+  ([Combat view](../features/combat-view.md)). A second × while the warning is open does nothing new.
 - **What a dismissal hands on.** `setDismissGuard(fn, then)` may also register `then`, and
   `dismissModal()` runs it after `closeModal()`. The choice windows use it to open the windows still
   queued behind them, so a dismissed window costs only its own picks. Because every open and close
@@ -213,9 +217,11 @@ can only say OK and Cancel. Callers `await` it.
   `askCancel()`, because the window or sheet it asked about is gone. The toast stays reachable over
   a warning, so its Undo is the live case.
 
-The choice windows' Done uses it for its two warnings
-([Character building](../features/character-building.md)). The other `confirm` calls, including
-`dismissModal()`'s, are #126's to convert. The browser's own prompt when a tab closes can't be
+Its users: the choice windows' Done, for its two warnings
+([Character building](../features/character-building.md)); **End combat** (#105, `endCombatAsk()`:
+"End combat?", Keep fighting / End combat); and the **End of combat window's dismiss guard** (#105,
+"Add 112 XP?", Don't add / Add XP), which answers a dismissal through it — see Dismissal above. The
+other `confirm` calls, including `dismissModal()`'s own message prompt, are #126's to convert. The browser's own prompt when a tab closes can't be
 replaced, and stays.
 
 ### The browse picker
@@ -472,3 +478,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-27 — The warning window: `askConfirm()`, a second layer over the dialog with named buttons, Escape that stops there, and focus back; `openModal()` and `closeModal()` answer it no. → ledger L7710, #118
 - 2026-10-27 — Fix round 1: the warning's backdrop follows the dialog's rule (off by default; with it on, a 400 ms grace after opening), and `undoLevelUp()` and every `closeModal()` answer an open warning no. → ledger L7710, #118
 - 2026-10-27 — Fix round 2: a pointer click on either button is ignored for 400 ms after opening (`ASK_CLICK_GRACE`), so a double-click can't accept it unread. → ledger L7710, #118
+- 2026-10-29 — `askConfirm()` gains two users, End combat and the End of combat window's "Add N XP?"; that window's guard is the first to answer a dismissal through it, returning `true` and closing the window itself on the answer. → ledger L7921, #105

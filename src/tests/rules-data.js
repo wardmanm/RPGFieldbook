@@ -443,8 +443,9 @@ for(const sys of ['srd52']){
      hooks.filter(h => !js.includes('closest("[' + h + ']")')));
   ck('...and every one the handler names is drawn', hooks.every(h => new RegExp(h + '="\\$\\{esc\\(').test(js)));
   ck('deleting an item forgets its spent count', /\[data-del-item\][^\n]*forgetAmmo\(character,it\.id\)/.test(js));
-  ck('#104 End combat recovers the ammunition once the fight has ended, with an Undo recovery',
-     /combatEnd\(character\)[\s\S]{0,200}applyAmmoRecovery\(\)/.test(js) && /label:"Undo recovery",run:\(\)=>undoRecoveryTap\(/.test(js));
+  ck('#104 End combat recovers the ammunition once the fight has ended — quietly, for the End of combat window (#105)',
+     /combatEnd\(character\)[\s\S]{0,200}applyAmmoRecovery\(\{quiet:true,logged\}\)/.test(js) && /openEndOfCombat\(Object\.assign\(\{\},s,\{ammo:/.test(js) &&
+     !/label:"Undo recovery"/.test(js));
   ck('#104 Settings → Sheet display has the Ammo recovery select, wired to the character',
      /id="setAmmoRec"/.test(js) && /getElementById\("setAmmoRec"\)[^\n]*addEventListener\("change"[^\n]*character\.ammoRecovery=/.test(js));
   ck('#104 the item editor has a Recovery select, saved as item.recover',

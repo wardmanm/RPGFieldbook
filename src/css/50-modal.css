@@ -446,3 +446,34 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .ft-plus{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .ft-chip{min-height:44px;padding:4px 14px;border:1.3px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
 .ft-chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+/* #105 the End of combat window (87-combat-end.js). It opens wide, so like the
+   trade window it fills the fixed-height box: the rows scroll, Done stays. */
+/* Ruling 19: the window fits its content, up to the wide modal's height — a
+   quiet fight is short. min-height:0 lets the body shrink below its content so
+   the rows scroll (.ec-scroll) and Done stays in view. */
+.modal.wide:has(.ec-wrap){height:auto;max-height:min(680px,90dvh)}
+.modal.wide:has(.ec-wrap) .m-body{min-height:0}
+.ec-wrap{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding-right:14px}
+.m-body .ec-time{margin:0 0 8px;font-family:var(--head);font-size:13px;color:var(--ink-soft)}
+.ec-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 2px 8px}
+.ec-chips{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;padding:0}
+.ec-chip{border:1.3px solid var(--hair);border-radius:999px;padding:3px 10px;background:var(--field);color:var(--ink);font-size:14px}
+.ec-chip.fell{color:var(--ink-soft)}
+.ec-sec{border-top:1px dotted var(--hair)}
+.ec-row{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 2px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.ec-lbl{flex:none;font-family:var(--head);font-weight:700;font-size:14px}
+.ec-st{flex:1;min-width:0;text-align:right;color:var(--ink-soft);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ec-body{padding:2px 2px 12px}
+.ec-body .tbtn{min-height:44px}
+.m-body .ec-line{margin:0 0 6px}
+.m-body .ec-done{color:var(--ink-soft);margin:0}
+.ec-foot{flex:none;margin-top:0;padding:10px 0 14px;border-top:1px dotted var(--hair)}
+.ec-foot .tbtn{min-height:44px}
+.ec-xp input{max-width:200px}
+.m-body .ec-err{color:var(--brick);margin:4px 0 8px}
+.m-body .ec-ready{color:var(--accent-2);font-weight:700;margin:4px 0 0}
+.ec-trk{padding:4px 0 6px}
+.ec-page{border:1px solid var(--hair);border-radius:8px;padding:6px 10px;margin-top:8px;background:var(--field)}
+.ec-ph{margin:0 0 4px;font-family:var(--head);font-size:14px}
+.ec-page .n-body{max-height:220px;overflow-y:auto;margin-top:0}
+.ec-page .kw,.ec-page .tblref{cursor:text}

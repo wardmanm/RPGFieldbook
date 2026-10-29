@@ -225,3 +225,225 @@ into a level-up) and say what was driven and what wasn't.
 - The app's other `confirm()` boxes (#126).
 - The pending #104 ammunition decisions.
 - Party members' XP: the split tells this character its share; other sheets are their own.
+
+## As built
+
+Built 2026-10-29 on `issue/105-end-of-combat` in seven tasks and a final fix wave
+([the plan](../plans/2026-10-29-end-of-combat.md); ledger "End of combat (#105, 2026-10-29)" and
+"End of combat: the final fix wave (#105, 2026-10-29)").
+How it works now: [Combat view](../wiki/features/combat-view.md), with
+[Ammunition](../wiki/features/ammunition.md), [Journal](../wiki/features/journal.md),
+[Inventory](../wiki/features/inventory.md), [Shell](../wiki/ui/shell.md) and
+[Character model](../wiki/architecture/character-model.md).
+
+### Where the code lives
+
+- **`src/js/87-combat-end.js`**, a new fragment after `87-trackers.js` (JS fragments 38 → 39): the
+  window (`openEndOfCombat()`, `endFightShow()`, `endFightHTML()`), its state (`_endFight`,
+  `endFightLive()`), the rows (`EC_ROWS`, `endFightSection()`, `endFightToggle()`), each section's
+  helpers (`endFightAmmo*`, `endFightXp*`, `endFightLoot*`, `endFightAfter*`), Done
+  (`endFightDone()`, `endFightClose()`), the dismiss guard (`endFightGuard()`), the reopen hook
+  (`endFightReopen()`), the tick (`endFightTick()`), the inert chips (`EC_INERT`, `endFightKey()`),
+  and the wiring on `#mBody` (`endFightClick()`, `endFightWire()`).
+- **`87-combat.js`:** `endCombatAsk()` is async and asks through `askConfirm()`; the ending is
+  `endCombatNow()`, which the old synchronous tests call directly.
+- **`62-ammo.js`:** `applyAmmoRecovery({quiet, logged})`, `undoRecoveryTap(…, {quiet})`, and
+  `_ammoSettled`, which `undoFireTap()` checks.
+- **`67-trade.js`:** `openTrade({onClose})` and `tradeClosed(done)`; `tradeFind()`'s way back focuses
+  the Equipment card's Trade only for a trade with no `onClose`.
+- **`87-journal.js`:** `jnlTogglePage(id, n)`, the one writer for a page's tick, shared by the Journal
+  tab and the window; `jnlToggleAfterCombat()` for the editor's switch.
+- **`87-trackers.js`:** `trackerRowHTML(t, {noEdit})`, every copy patched (`trkPatchRow()`,
+  `renderTrackers()`), the form's `#tkAfter`; `trkFocusScope()`, which keeps `trkNextControl()` and
+  `undoTrackerChange()` inside the window while it is open.
+- **`90-boot.js`:** the `[data-ck]` dispatcher's `[data-ecpage]` branch, and `[data-jnlac]`.
+- **`00-constants.js`, `71-char-io.js`:** the §6 fields, `cleanEndCombatOpen()`.
+- **`50-modal.css`:** the `.ec-*` rules, tokens only. `47-journal.css` needed nothing.
+
+### Deviations, and why
+
+- **"Arrows: 9 fired, 4 recovered", not "4 came back"** (§4.2). The spec names the log line's own
+  wording, `ammoLogTitle()`, which says "recovered"; the window and the log read the same.
+- **"Round 5 · 30 sec", not "30 seconds"** (§4). The spec names `fmtCombatTime()`, which writes "sec".
+- **`_endFight` is tied to the character object, not its id** (§4.4). Import → Replace keeps the id and
+  swaps the sheet, so an id-keyed state would survive it; the object is the codebase's rule for every
+  toast Undo, `jnlUI.who` and `trkWho`.
+- **`applyAmmoRecovery()` takes `opts.logged` as well as `opts.quiet`, and `undoRecoveryTap()` takes
+  `opts.quiet`** (§5). The window's Undo must still correct End combat's log lines, which are written
+  before recovery; and its "Recovery undone" toast would sit over a window that says it itself.
+- **The window's tiles have no edit pen, and the rules chips in its pages are inert** (§4.5). The modal
+  has one layer: the tracker form, a glossary entry or a table would replace the window and lose the
+  typed XP and the Undo. Inert chips keep `role="button"` and a tab stop from `highlight()`, so a
+  screen reader announces a button that does nothing there (accepted).
+- **The dismiss guard answers through `askConfirm()`** (§3.4, Ruling 2). `dismissModal()`'s guard is
+  synchronous and its Cancel keeps the window open, where the spec wants Cancel to close without the
+  XP, and #105 adds no new browser `confirm()`. So with XP typed the guard returns `true` (refusing
+  the dismissal) and asks; on the answer it closes the window itself. **Add XP behaves exactly as
+  Done**, the level-up included. A second × while asking does nothing new; the answer acts only if
+  that window is still the one open (Ruling 16).
+- **The guard's wording:** title "Add 112 XP?", message "You typed XP but didn't press Done.", buttons
+  "Add XP" and "Don't add" (Ruling 17).
+- **Loot names the fallen foes only** (§4.4, Ruling 1). `combatantDead()` also covers a party member
+  marked dead, but the loot came from the foes; a fallen party member is struck through in the summary
+  and never named in the trade.
+- **The "Show after combat" switches are the house `.switch` (50×28)**, like every Settings and
+  tracker switch, not the plan's 44 px target (Ruling 9).
+- **The window does not reopen over another dialog** (Task 5). If something else holds the modal when
+  the trade closes, the window is not drawn over it and its state is dropped, as on ×.
+- **End combat hides the last Fire toast, and a shot's Undo refuses once End combat has settled it**
+  (Task 3 review fix). With End combat's own toast gone, the Fire toast stayed up over the window and
+  its Undo re-spent shots in an ended fight. An error toast is left up. Ruling 18: a shot fired outside
+  a fight also stops undoing once a later End combat sweeps it up, since undoing it then would recover
+  it twice.
+- **End combat's screen-reader announcement** (`#cvLive`) says only "Combat ended after 5 rounds
+  (30 sec)", no longer what was recovered, and it lands in a region the window makes inert the same
+  moment, so a screen reader may not speak it (Task 3 minor, accepted; the window's Ammunition row
+  shows what came back).
+- **`endFightDone()` returns whether it closed**; `endFightClose()` returns whether XP was added.
+- **XP the sheet can't read is never overwritten** (§4.3, Ruling 21). The spec's "Done writes
+  `xpNumber(character.xp) + n`" left text it can't read undefined; Done wrote just the added amount.
+  Now blank is 0 and anything `xpNumber()` reads as `null` ("6350 xp", "lots") is left alone: the
+  Experience row says "Your XP on the sheet isn't a number, so it can't be added to here." in place of
+  the box (no split switch: nothing would be added), status "XP", no ready line, × asks nothing.
+- **The XP box is a text box with a strict parse** (§4.3). `type="number"` let desktop Safari take
+  letters and report them as blank, dropping the XP silently. The box is `type="text"
+  inputmode="numeric" maxlength="12"`; `endFightXpInt()` accepts digits or digits in thousands groups
+  ("6,350"; "1,2,3" is not one), blank as 0, over 1,000,000 as 1,000,000, and anything else as `null`.
+  Then "Whole numbers only" shows in its own line directly under the box (`#ecXpErr`, `--brick`, with
+  `aria-invalid` and `aria-describedby`), not in the split line under the switch; the status reads as
+  if nothing were typed; Done refuses, opening the row if folded and focusing the box; × closes
+  without adding and asks nothing.
+- **Enter in the XP box is Done** (review M8), once per press (a held key's repeats are ignored) and
+  never while an input method is composing; it lives in `endFightKey()` beside the inert chips.
+- **The window keeps its opener across a trade** (review M2). `openEndOfCombat()` records the
+  modal's opener; `endFightReopen()` restores it (element and selector, `null` included, so the final
+  close falls back as the first open would) and focuses Open trade.
+- **The After combat list stays for the window's life** once it opened with trackers (`st.trk`,
+  `endFightTrkList()`), across a trade's round trip too: with none left open it reads "Nothing here is
+  still open." and the row "All done"; with pages still below it the empty list hides instead, since
+  "nothing is still open" above pages with open boxes would mislead.
+- **A tick refused while its page is in the Journal editor toasts** "Finish editing “<title>” first."
+  from `jnlTogglePage()`, the one writer, with the saved title. `toast()` sets text, so the title is
+  not `esc()`'d (that would show entities) and is never markup. The review's optional "Open in the
+  Journal's editor" hint on the page in the window was not added.
+- **The window sizes to its content** up to the wide modal's height (Ruling 19).
+- **Loot's seeded name is capped at 60 characters** (review M7), the With box's `maxlength`, which a
+  seeded value gets past: cut at a name with the rest counted ("Goblin 1, Goblin 2, … and 3 more"); a
+  first name too long alone is cut inside it, by characters, never mid-surrogate ("Name… and 2
+  more"). The review's second half — marking loot trades so they stay out of the With suggestions —
+  was not in the fix brief and is not done.
+
+### Tests
+
+`sheet.js`: the #105 data block, the quiet-recovery block, `t105End()`, the review-fix block,
+`t105Xp()`, `t105Loot()`, `t105After()`; the #41/#93 typed-count blocks stub `querySelectorAll`. The
+fix wave adds: unreadable XP ("6350 xp", "lots") surviving Done, "6,350" and blank still adding, the
+strict parse, "Whole numbers only" and Done's refusal, Enter (refused, held, composing, adding), ×
+asking nothing for letters or unreadable XP, the opener and Open trade's focus after a trade, the
+finder's way back, the name cap, a tracker closing in the window and its Undo (list, status, focus),
+"All done", the editor-tick toast and the Ruling 19 CSS. `harness.js` gains `_modalOpener` and
+`_modalOpenerSel` in `MUTABLE`. The suites end at 8104 checks.
+Two existing text checks changed: `rules-data.js`'s #104 check (quiet recovery and
+`openEndOfCombat(`, no "Undo recovery" toast label), and `sheet.js`'s #104 and #47 End combat checks,
+which call `endCombatNow()`. `harness.js`: `_endFight` in `MUTABLE`. Throwaway Node checks: the split
+arithmetic (16,008 cases) and `endFightLootWith()`.
+
+### Browser QA (Task 7)
+
+Project Playwright MCP, `file://`, the built artifact; shots in
+`.claude/qa/in-progress/105-end-of-combat/`. Before: main's End combat (the browser's `confirm`, then
+the toast with Undo recovery), classic at 1280 and Humblewood at 390. After, driven with real clicks
+and typing: the warning, Keep fighting (the fight still running, nothing spent or logged), End combat,
+the folded window, Ammunition's Undo recovery (arrows 15 → 11, "Recovery undone"), 450 split among 4
+("450 ÷ 4 = 112 each"), Open trade ("Goblin 1, Bugbear"), 5 gp and Complete Trade (back with "Traded
+with Goblin 1, Bugbear", 450 and the split kept), After combat's + (3 → 4, both copies) and a tick, the
+split off and 200 typed ("Level 5 ready — …"), Done into the level-up, the Journal tab after (4, the
+box ticked); Humblewood at 390 for the warning, the folded window, the split, the window after a trade
+and After combat, with nothing scrolling sideways and a long status ellipsizing; both skins folded and
+open in dark; the guard both ways (Add XP 6,350 → 6,462; Don't add and Escape on the warning add
+nothing; Add XP that reaches a level opens the level-up; × with nothing typed simply closes); a
+milestone character (no Experience row), a hidden Journal tab (no After combat row), a quiet fight
+(no chips, no Ammunition row, the warning's second sentence left out); both "Show after combat"
+switches, driven and saved. The console held only the two boot-time network errors both builds show.
+Not driven: touch, real devices, print, a backdrop tap, the finder's round trip from a loot trade, a
+character switch with the window open, a reload with it open.
+
+**Final fix wave**, shots `105-fix-*.png`: a quiet fight at 1280 (the box fits its two rows, 260 px
+tall); "4S0" typed for real and Done clicked (the window stays, focus in the box, "Whole numbers
+only" in red under it), in light classic and both dark skins; the box cleared, 100 typed and Enter
+(6,350 → 6,450, the window closed); "6350 xp" on the sheet (the row's sentence, status "XP", Done left
+it as it was); + on the window's last tracker ("Nothing here is still open.", "All done"), then the
+toast's Undo (the tile back in the window and on the Journal tab); Open trade ("Goblin 1, Goblin 2"),
++ Find an item, the finder's Close, the trade's Cancel (focus on Open trade, the opener still the
+combat header's button), then Done (focus back there); Enter on a window tile's + that closes it,
+Tab from the Undo (focus on the next tile in the window), and Enter on Undo (focus on the tile's +);
+a tick on a page open in the Journal editor ("Finish editing “Loot list <i>” first.", nothing
+ticked); everything open at 1280 and 390 (capped at 680 px, the rows scrolling, Done in view, nothing
+scrolling sideways) and folded at 390. Not driven: Safari itself (the box's type is what changed),
+touch, real devices.
+
+### Deferred
+
+**Fixed in the final fix wave** (each above, under Deviations): XP held as text the app can't read
+was overwritten by Done (data loss; Ruling 21); desktop Safari let letters into the XP box; focus did
+not return to Open trade after a trade; a tracker closed from the window sent focus to the Journal
+tab's inert copy; the After combat row went blank when its last tracker closed; a tick on a page open
+in the editor was refused silently; the window kept the wide modal's fixed height (Ruling 19); Loot's
+seeded name could exceed 60 characters; Enter in the XP box did nothing.
+
+**Not done, for Mike:** loot trades still feed the trade window's With suggestions (the review's M7
+second half: mark them `meta.loot` and skip them there).
+
+**Accepted minors:**
+- `t105End()` has no check for a character switch while the warning is open (the code handles it).
+- `hideToast()` runs after `applyAmmoRecovery()`; `undoFireTap()` folds two guards into one boolean.
+- A classless character is told "Level 2 ready", then Done's "Add a class first".
+- No test of a warning answered late (the harness can't remove `#ecDone`).
+- `#ecXpReady` has no `aria-live`.
+- `endFightReopen()`'s safety branch drops typed XP silently.
+- The `onClose` hand-back check and the `[data-ck]` dispatcher check are source regexes.
+- The inert chips look tappable and announce as buttons (above).
+- A comment nit in `endFightGuard()` ("the hand-on closes it").
+
+### Rulings
+
+Every ruling taken while building it, in the order taken (the controller's ledger has the detail).
+
+1. Loot's other party names fallen **foes** only (`kind:"foe"`); a fallen party member is struck
+   through in the summary only.
+2. The × guard with XP typed asks through `askConfirm()` (Add XP / Don't add), refuses the dismissal
+   and closes on the answer; Add XP behaves exactly as Done, the level-up included.
+3. End combat's tests empty the toast list before its await, so "no toast" tests only End combat.
+4. Attribute interpolations use `${esc(k)}` inline, never a pre-escaped variable (rules-data's scan).
+5. The #41/#93 typed-count tests stub `querySelectorAll` alongside `querySelector`.
+6. The plan's quoted test replacements win over its line numbers.
+7. The guard's QA drives the app's warning window and shoots it; no browser dialog.
+8. Task 7 may commit `docs(#105)` and `style(#105)`.
+9. The "Show after combat" switches are the house `.switch` (50×28), not the 44 px target.
+10. Tightened: a trade with no `onClose` closes as before, and ending a fight bumps no tracker; an
+    unfalsifiable "with no toast" clause dropped.
+11. `commitTrackerValue()` queries inside the list the input came from.
+12. The Ammunition lines use `ammoKindLabel()`; one `EC_INERT` for the inert-chip selector.
+13. `endFightDone()` carries its comment.
+14. Line numbers drift; the plan's quoted code and content are authoritative.
+15. A "watch it fail" step may fail with a TypeError at top level instead of FAIL lines.
+16. The guard's late answer closes only if `#ecDone` is still the open dialog and `_endFight` is still
+    the state it asked about.
+17. The guard's message is "You typed XP but didn't press Done."
+18. A shot fired outside a fight is no longer undoable once a later End combat's recovery has swept
+    it (`recoverAmmo` consumes every entry); undoing it then would recover it twice.
+19. The window sizes to its content up to the wide modal's height, scrolling inside only when it
+    needs to.
+20. The window-height item, logged after Task 7 was dispatched, is folded into the final fix wave,
+    which records every fix-wave item here and in its ledger entry.
+21. XP the app can't read (`xpNumber()` null on non-blank text) is never overwritten: the Experience
+    section says so and adds nothing, no ready line, no guard question.
+
+The final fix wave's own calls (its report has each): over 1,000,000 still reads 1,000,000 rather than
+"not a number"; thousands commas must group by three; "Whole numbers only" has its own line under the
+box; unreadable XP shows no split switch; Done's refusal opens a folded Experience row; the box's
+`maxlength` matches the 12 characters the state keeps; the restored opener may be `null`; a tracker's
+focus in the window falls back to its first control, then Done; the After combat list stays for the
+window's life and hides, rather than reading "Nothing here is still open.", when pages remain; the
+editor-tick toast uses the saved title, unescaped because `toast()` sets text; a first name over 60 is
+cut inside it.

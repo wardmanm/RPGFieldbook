@@ -157,6 +157,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `87-initiative.js` | the initiative tracker: party, combatants, turns, bands, the strip and dialogs | [Combat view](features/combat-view.md), [Story & notes](features/story-and-notes.md) |
 | `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
 | `87-trackers.js` | the Trackers card: counters, grouped-tag tiles, totals, the close rule, `migrateTrackerPages()` | [Journal](features/journal.md) |
+| `87-combat-end.js` | the End of combat window: summary, folded rows, ammunition Undo, XP, loot, after-combat tiles and pages | [Combat view](features/combat-view.md) |
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()`, pack credits (`rulesCreditsHTML()`), the settings conversion (`foldLegacySettings()`) | [Settings & updates](features/settings-and-updates.md), [Data archive](architecture/data-archive.md) |
 | `89-zip.js` | the zip reader: `readDataArchive()`, `inflateRaw()`, `zipEntries()` — pure | [Data archive](architecture/data-archive.md) |
 | `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, a plain source's fetch (`fetchAllRules()`), import of packs and zips (`importRulesPayloads()`, `importPack()`) | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
@@ -230,3 +231,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-25 — `67-trade.js` joins the code map (JS fragment count 36→37): the inventory log, its undo and dialog, and the trade window, placed right after `66-coins-hp.js`. → ledger L7291, #47
 - 2026-10-26 — `89-extensions.js` joins the code map (JS fragment count 37→38), after `89-rules-merge.js`; the layout gains `releases/data/`; the glossary gains extension, source and manifest. → ledger L7428, #102
 - 2026-10-28 — Homebrew moves to the private repo: the pack table, layout and glossary say SRD 5.2 is the one public pack. → ledger L7858, #125
+- 2026-10-29 — `87-combat-end.js` joins the code map (JS fragment count 38→39): the End of combat window, placed after `87-trackers.js`, whose renderers it calls. → ledger L7921, #105
