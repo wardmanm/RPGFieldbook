@@ -487,6 +487,22 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   // spec §7: it runs on main and refuses elsewhere; it never switches branch (#127 ruling 8)
   ck('#127 /pre-release refuses off main and never switches branch',
      pre.includes('git branch --show-current') && !pre.includes('git switch'));
+  // #127 ruling 19: the clean-tree check lets through exactly the two files a
+  // pre-release keeps between sessions, the record and Mike's marked checklist
+  const preflight = fenced(pre.split(/^## 0\. Preflight/m)[1] || '')[0] || '';
+  const porcelain = preflight.split('\n').filter(l => l.includes('git status --porcelain'));
+  const allowed = porcelain.flatMap(l => [...l.matchAll(/':!([^']+)'/g)].map(m => m[1])).sort();
+  ck('#127 /pre-release\'s clean-tree check allows exactly the record and the checklist',
+     porcelain.length === 1 && JSON.stringify(allowed) === JSON.stringify(['src/docs/PRE-RELEASE.md', 'src/docs/QA-CHECKLIST.md']), allowed);
+  // #127 ruling 22: filing uses the priority Mike confirmed, and a P0 never gets
+  // the fix-version label (spec decision 6), in the commands, not just the prose
+  const filing = fenced(pre).filter(b => b.includes('gh issue create') || b.includes('single-select-option-id')).join('\n');
+  const p0Branch = (/if \[ "\$PRIORITY" = P0 \]; then([\s\S]*?)\nelse\n/.exec(filing) || [])[1];
+  ck('#127 the filing commands hard-code no priority, and the P0 path has no fix-version label',
+     filing.includes('gh issue create') && !/"P[012]"/.test(filing) && filing.includes('select(.name==\\"$PRIORITY\\")') &&
+     p0Branch !== undefined && !p0Branch.includes('$NEXT'));
+  // #127 ruling 20: steps are strictly ordered
+  ck('#127 reopening a step reopens every later step', pre.includes('reopens every later step'));
 }
 
 ck.done();
