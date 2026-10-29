@@ -53,6 +53,7 @@
     "src/js/87-initiative.js",
     "src/js/87-journal.js",
     "src/js/87-trackers.js",
+    "src/js/87-combat-end.js",
     "src/js/88-settings.js",
     "src/js/89-zip.js",
     "src/js/89-rules-merge.js",

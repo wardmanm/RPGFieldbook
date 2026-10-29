@@ -15,6 +15,7 @@ its own tab. Leaving the tab never ends combat.
 `renderCombatHeader()`, `setCombatLive()`, `toggleCombatSection()`, `undoCombatRemove()`,
 `cvNeighbours()`, `syncCombatView()`, `startCombatNow()`, `endCombatAsk()`, `startCombatDrag()`,
 `moveCombatCard()`, `setCombatOrder()`, `combatHeaderHTML()` in `87-combat.js` ·
+**the End of combat window** (#105), in `87-combat-end.js`: `openEndOfCombat()`, `endFightShow()`, `endFightHTML()`, `endFightToggle()`, `endFightUndoAmmo()`, `endFightDone()`; `endCombatNow()` in `87-combat.js` ·
 **the initiative tracker** (#91), in `87-initiative.js`: `cleanParty()`, `cleanCombatants()`,
 `combatantDead()`, `initSort()`, `initFirstAlive()`, `initNextTurn()`, `bandOfShare()`,
 `combatantBar()`, `initRollCheck()`, `initRollLine()`, `initModOf()`, `youAC()`,

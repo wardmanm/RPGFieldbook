@@ -1,0 +1,138 @@
+/* ================= the End of combat window (#105) =================
+   Opened by endCombatNow() (87-combat.js) once End combat is confirmed and
+   the fight has ended. One wide modal: the time, a chip per combatant, then
+   folded rows (Ammunition, Experience, Loot, After combat), each a label and
+   a one-line status that opens on a tap, remembered per character
+   (endCombatOpen). A row with nothing to show is left out. Done closes it.
+   Its memory, `_endFight`, is never saved: it belongs to the character OBJECT
+   it was opened for (`who`), like every toast Undo here, and is dropped on
+   Done, on ×/Escape and when the character changes (endFightLive()).
+   After 87-journal.js and 87-trackers.js in the manifest: it draws their tiles
+   and pages. Design: src/docs/specs/2026-10-29-end-of-combat-design.md */
+const EC_ROWS=["ammo","xp","loot","after"];
+const EC_LABEL={ammo:"Ammunition",xp:"Experience",loot:"Loot",after:"After combat"};
+let _endFight=null;
+function endFightLive(){if(_endFight&&_endFight.who!==character)_endFight=null;return _endFight;}
+function endCombatOpenOf(c){const m=c&&c.endCombatOpen;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
+function openEndOfCombat(r){
+  const o=r||{},a=(o.ammo&&typeof o.ammo==="object")?o.ammo:{};
+  _endFight={who:character,rounds:Math.max(0,num(o.rounds)),sec:Math.max(0,num(o.sec)),
+    combatants:Array.isArray(o.combatants)?o.combatants:[],
+    ammo:{logged:Array.isArray(a.logged)?a.logged:[],lines:Array.isArray(a.lines)?a.lines:[],undo:typeof a.undo==="function"?a.undo:null,undone:false},
+    xp:"",traded:"",asking:false};
+  endFightShow();
+  return _endFight;
+}
+/* (Re)opens the window from _endFight: first from End combat, again after a
+   trade. openModal() clears any guard, so it is set again every time. */
+function endFightShow(){
+  const st=endFightLive();if(!st)return false;
+  openModal("End of combat",endFightHTML(st,character),"",{wide:true});
+  setDismissGuard(endFightGuard,()=>endFightClose(false,false));
+  endFightWire();
+  return true;
+}
+/* ×/Escape: nothing to ask yet (the XP box arrives with Task 4). */
+function endFightGuard(){return null;}
+/* The window has closed for good: drop its memory. */
+function endFightClose(add,levelUp){
+  endFightLive();_endFight=null;
+  return false;
+}
+function endFightDone(){
+  if(!endFightLive())return false;
+  closeModal();
+  return endFightClose(true,true);
+}
+
+/* ---- markup: pure strings over (state, character), so the harness can assert every state ---- */
+function endFightSummaryHTML(st){
+  const list=(st.combatants||[]).filter(r=>r&&typeof r==="object"&&r.kind!=="you");
+  if(!list.length)return "";
+  return `<ul class="ec-chips">`+list.map(r=>{const nm=String(r.name||"");
+    return combatantDead(r)?`<li class="ec-chip fell"><s>${esc(nm)}</s><span class="sh-vh">, fell</span></li>`:`<li class="ec-chip">${esc(nm)}</li>`;}).join("")+`</ul>`;
+}
+/* Per kind, the log line's own words (ammoLogTitle()), read from the line's
+   meta so an Undo shows at once; under None, what that rule means. */
+function endFightAmmoLines(st,c){
+  const none=ammoRecoveryOf(c)==="none";
+  return ((st.ammo&&st.ammo.logged)||[]).filter(l=>l&&l.e&&l.e.meta).map(l=>{
+    const fired=Math.max(0,num(l.e.meta.fired)),back=Math.max(0,num(l.e.meta.back));
+    if(none&&back===0)return `${ammoKindLabel(ammoPlural(l.kind))}: ${fired} fired, none come back (recovery: None)`;
+    return ammoLogTitle(l.kind,fired,back);
+  });
+}
+function endFightAmmoSection(st,c){
+  const lines=endFightAmmoLines(st,c);if(!lines.length)return null;
+  const a=st.ammo||{},can=typeof a.undo==="function"&&(a.lines||[]).length>0;
+  return {status:lines.join(" · "),
+    body:lines.map(t=>`<p class="ec-line">${esc(t)}</p>`).join("")+
+      (can?(a.undone?`<p class="ec-done">Recovery undone</p>`:`<button type="button" class="tbtn" id="ecUndoAmmo">Undo recovery</button>`):"")};
+}
+/* One row's {status, body}, or null to leave it out. */
+function endFightSection(k,st,c){
+  if(k==="ammo")return endFightAmmoSection(st,c);
+  return null;
+}
+/* Every attribute interpolates esc(k) whole: rules-data.js's attribute scan
+   accepts nothing pre-escaped. */
+function endFightSectionHTML(k,st,c){
+  const s=endFightSection(k,st,c);if(!s)return "";
+  const open=endCombatOpenOf(c)[k]===true;
+  return `<section class="ec-sec" id="ecSec-${esc(k)}">`+
+    `<button type="button" class="ec-row" data-ecrow="${esc(k)}" aria-expanded="${open?"true":"false"}" aria-controls="ecBody-${esc(k)}">`+
+    `<svg class="fcaret${open?"":" c"}" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`+
+    `<span class="ec-lbl">${esc(EC_LABEL[k]||k)}</span><span class="ec-st" id="ecSt-${esc(k)}">${esc(s.status)}</span></button>`+
+    `<div class="ec-body" id="ecBody-${esc(k)}"${open?"":" hidden"}>${s.body}</div></section>`;
+}
+function endFightHTML(st,c){
+  return `<div class="ec-wrap"><p class="ec-time">${esc(`Round ${st.rounds} · ${fmtCombatTime(st.sec)}`)}</p>`+
+    `<div class="ec-scroll">${endFightSummaryHTML(st)}${EC_ROWS.map(k=>endFightSectionHTML(k,st,c)).join("")}</div>`+
+    `<div class="m-actions ec-foot"><button type="button" class="tbtn primary" id="ecDone">Done</button></div></div>`;
+}
+
+/* ---- the DOM layer ---- */
+/* A row opens or folds in place (never a rebuild: the XP box keeps its caret),
+   remembered on the character. Returns whether it is now open. */
+function endFightToggle(k){
+  if(EC_ROWS.indexOf(k)<0||!endFightLive())return false;
+  if(!character.endCombatOpen||typeof character.endCombatOpen!=="object"||Array.isArray(character.endCombatOpen))character.endCombatOpen={};
+  const m=character.endCombatOpen;
+  if(m[k]===true)delete m[k];else m[k]=true;
+  const on=m[k]===true;
+  scheduleSave();
+  const b=document.querySelector(attrSel("data-ecrow",k)),body=document.getElementById("ecBody-"+k);
+  if(b){b.setAttribute("aria-expanded",on?"true":"false");const cr=b.querySelector(".fcaret");if(cr)cr.classList.toggle("c",!on);}
+  if(body)body.hidden=!on;
+  return on;
+}
+/* One section redrawn from the state, focus put back by selector. */
+function endFightRepaintSection(k,focusSel){
+  const st=endFightLive(),el=document.getElementById("ecSec-"+k);if(!st||!el)return;
+  el.outerHTML=endFightSectionHTML(k,st,character);
+  if(focusSel){const f=document.querySelector(focusSel);if(f&&f.focus)f.focus({preventScroll:true});}
+}
+/* The toast's Undo recovery (undoRecoveryTap(), via applyAmmoRecovery's
+   undo), offered only while this window is open; once. */
+function endFightUndoAmmo(){
+  const st=endFightLive(),a=st&&st.ammo;
+  if(!a||a.undone||typeof a.undo!=="function")return false;
+  if(!a.undo())return false;
+  a.undone=true;
+  endFightRepaintSection("ammo",attrSel("data-ecrow","ammo"));
+  return true;
+}
+/* Wired once on #mBody, like the trade window's listener (67-trade.js), and
+   idle unless this window is the one open. */
+function endFightClick(e){
+  if(!endFightLive()||!document.getElementById("ecDone"))return;
+  const t=e&&e.target;if(!t||!t.closest)return;let m;
+  if((m=t.closest("[data-ecrow]"))){endFightToggle(m.dataset.ecrow);return;}
+  if(t.closest("#ecUndoAmmo")){endFightUndoAmmo();return;}
+  if(t.closest("#ecDone")){endFightDone();return;}
+}
+function endFightWire(){
+  const body=document.getElementById("mBody");if(!body||body.dataset.ecWired)return;
+  body.dataset.ecWired="1";
+  body.addEventListener("click",endFightClick);
+}

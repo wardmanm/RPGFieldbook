@@ -2468,12 +2468,8 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   const c = X.blankChar(); c.combatRound = 4; X.character = c;
   X.startCombatNow();
   ck('Start combat, from the header, begins at round 1', X.inCombat(c) && c.combatRound === 1);
-  c.combatRound = 7; state.confirm = false;
-  ck('End combat asks first, naming the round',
-     X.endCombatAsk() === false && state.lastConfirm === 'End combat at round 7?');
-  ck('...and saying no leaves the fight running', X.inCombat(c) && c.combatRound === 7);
-  state.confirm = true;
-  ck('saying yes ends it', X.endCombatAsk() === true && !X.inCombat(c) && c.combatRound === 0);
+  c.combatRound = 7;
+  ck('saying yes ends it (#105: the asking is t105End\'s)', !!ctx.endCombatNow() && !X.inCombat(c) && c.combatRound === 0);
 }
 
 /* ---- arranging ---- */
@@ -4307,10 +4303,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     X.startCombatNow();
     return c;
   };
-  let c = mk(); state.confirm = true; state.lastConfirm = null;
-  ck('#104 End combat asks only about ending, then recovers half of each kind',
-     X.endCombatAsk() === true && state.lastConfirm === 'End combat at round 1?' &&
-     c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, [state.lastConfirm, c.inventory]);
+  let c = mk();
+  ck('#104 End combat recovers half of each kind once the fight has ended',
+     !!ctx.endCombatNow() && c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, c.inventory);
   ck('#104 ...and the lone needle, which gives nothing back, is spent: cleared', JSON.stringify(c.ammoSpent) === '{}', c.ammoSpent);
   c = mk(); const rec = {}; X.recoverAmmo(c, ['arrow', 'bolt'], rec);
   ck("#104 the toast's Undo recovery puts it all back",
@@ -4319,11 +4314,11 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
      (() => { const k = mk(), r = {}; X.recoverAmmo(k, ['arrow'], r); X.character = X.blankChar(); return ctx.undoRecoveryTap(r, k) === false && k.inventory[0].qty === 13; })());
   c = mk(); c.ammoRecovery = 'none';
   {
-    const realToast = ctx.toast; let offer = 'none yet', said = '';
-    ctx.toast = (msg, action) => { said = msg; offer = action; return null; };
+    const realToast = ctx.toast; const said = [];
+    ctx.toast = (msg, action) => { said.push({msg, action}); return null; };
     ck('#104 with nothing recoverable, End combat recovers nothing and clears the counts',
-       X.endCombatAsk() === true && c.inventory[0].qty === 7 && JSON.stringify(c.ammoSpent) === '{}', c.ammoSpent);
-    ck('#104 ...quietly: no recovery in the toast, and no Undo recovery', !/recovered/.test(said) && offer === undefined, [said, offer]);
+       !!ctx.endCombatNow() && c.inventory[0].qty === 7 && JSON.stringify(c.ammoSpent) === '{}', c.ammoSpent);
+    ck('#105 ...hands the window no Undo recovery, and nothing is toasted', X._endFight && X._endFight.ammo.undo === null && said.length === 0, said);
     ctx.toast = realToast;
   }
   ck('#104 applyAmmoRecovery says nothing when there is nothing', (() => { X.character = X.blankChar(); return ctx.applyAmmoRecovery() === null; })());
@@ -4335,7 +4330,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     const k = X.blankChar(); X.character = k; k.ammoRecovery = 'none';
     k.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
                    {id: 's1', name: 'Arrow', qty: 40, ammo: {kind: 'arrow'}}];
-    for (let f = 0; f < 3; f++) { X.startCombatNow(); for (let i = 0; i < 10; i++) X.fireWeapon('w1', false); X.endCombatAsk(); }
+    for (let f = 0; f < 3; f++) { X.startCombatNow(); for (let i = 0; i < 10; i++) X.fireWeapon('w1', false); ctx.endCombatNow(); }
     ck('#104 three fights under None: 30 arrows spent, nothing left on record',
        k.inventory[1].qty === 10 && JSON.stringify(k.ammoSpent) === '{}', [k.inventory[1].qty, k.ammoSpent]);
     k.ammoRecovery = 'all';
@@ -4345,14 +4340,13 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   /* ...and Undo recovery restores every entry that End combat cleared, the
      ones that gave nothing back included */
   {
-    const k = mk(); let offer = null;
-    const realToast = ctx.toast; ctx.toast = (msg, action) => { if (action) offer = action; return null; };
-    X.endCombatAsk();
-    ctx.toast = realToast;
-    ck('#104 End combat that recovered something offers Undo recovery, which clears the needle too',
-       !!offer && offer.label === 'Undo recovery' && JSON.stringify(k.ammoSpent) === '{}', offer);
+    const k = mk();
+    ctx.endCombatNow();
+    const undo = X._endFight && X._endFight.ammo.undo;
+    ck('#105 End combat that recovered something hands the window its Undo recovery, the needle cleared too',
+       typeof undo === 'function' && JSON.stringify(k.ammoSpent) === '{}', X._endFight && X._endFight.ammo);
     ck('#104 ...and Undo recovery brings the needle back with the rest',
-       !!offer && offer.run() === true && k.ammoSpent.s3 && k.ammoSpent.s3.n === 1 && k.ammoSpent.s1.n === 13 && k.ammoSpent.s2.n === 4 &&
+       typeof undo === 'function' && undo() === true && k.ammoSpent.s3 && k.ammoSpent.s3.n === 1 && k.ammoSpent.s1.n === 13 && k.ammoSpent.s2.n === 4 &&
        k.inventory.find(i => i.id === 's1').qty === 7, k.ammoSpent);
   }
   ck('#104 a spent entry no longer carries asked', !('asked' in X.ammoSpentEntry({ammoSpent: {a: {n: 2, kind: 'arrow', asked: 1}}}, 'a')));
@@ -6871,21 +6865,20 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     X.recoverWeaponAmmo('bow', false);
     ck('#47 I2 a row Recover writes no line of its own', X.character.invLog.length === 0 && X.character.inventory[1].qty === 18);
     for (let i = 0; i < 2; i++) X.fireAmmo(X.character, X.character.inventory[0]);
-    let offer = null; ctx.toast = (msg, action) => { offer = action; return null; };
-    X.endCombatAsk();
+    ctx.endCombatNow();
     const am = top();
     ck('#47 I2 End combat\'s line includes what the row recovered', am.kind === 'ammo' && am.title === 'Arrows: 6 fired, 3 recovered', am.title);
     ck('#47 M9 ...and reads "Fight of N rounds"', am.lines.length === 1 && am.lines[0].text === 'Fight of 3 rounds' && am.meta.rounds === 3, am.lines);
     ck('#47 I2 ...the tally is cleared with the fight', JSON.stringify(X.character.ammoFight) === '{}');
-    ck('#47 I2 Undo recovery on the toast takes End combat\'s recovery back off the line', offer && offer.run() === true && am.title === 'Arrows: 6 fired, 2 recovered' && X.character.invLog.length === 1, am.title);
+    ck('#47 I2 Undo recovery in the window takes End combat\'s recovery back off the line', X._endFight.ammo.undo() === true && am.title === 'Arrows: 6 fired, 2 recovered' && X.character.invLog.length === 1, am.title);
     ck('#47 I2 a new character has an empty fight tally', JSON.stringify(X.blankChar().ammoFight) === '{}' && JSON.stringify(X.migrate({abilities: {}, ammoFight: 'x'}).ammoFight) === '{}');
     fresh(); X.character.inventory = [{id: 'bow', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
       {id: 'ar', name: 'Arrow', qty: 20, ammo: {kind: 'arrow'}}];
     X.startCombatNow(); X.character.combatRound = 1;
     for (let i = 0; i < 2; i++) X.fireAmmo(X.character, X.character.inventory[0]);
-    X.recoverWeaponAmmo('bow', false); offer = 'none';
-    X.endCombatAsk();
-    ck('#47 I2 every shot recovered by the row still gets its line at End combat', top().kind === 'ammo' && top().title === 'Arrows: 2 fired, 1 recovered' && top().lines[0].text === 'Fight of 1 round' && offer === undefined, top());
+    X.recoverWeaponAmmo('bow', false);
+    ctx.endCombatNow();
+    ck('#47 I2 every shot recovered by the row still gets its line at End combat', top().kind === 'ammo' && top().title === 'Arrows: 2 fired, 1 recovered' && top().lines[0].text === 'Fight of 1 round' && X._endFight.ammo.undo === null, top());
     ctx.toast = () => null;
 
     /* ---- M1: lowering the log size asks first when lines would go ---- */
@@ -8099,4 +8092,107 @@ async function t118UndoUnderWarning() {
   }
 }
 
-t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+/* ---------- #105 End combat asks in the app's own window, then opens End of combat.
+   askConfirm is the test's (the #118 seam); openModal is wrapped so each
+   window's title, body and options are recorded while the real one runs. */
+async function t105End() {
+  const keep = {ask: ctx.askConfirm, om: ctx.openModal, cm: ctx.closeModal, ch: X.character, toast: ctx.toast};
+  const asks = [], opened = [], toasts = [];
+  let answer = true;
+  try {
+    ctx.askConfirm = o => { asks.push(o); return Promise.resolve(answer); };
+    ctx.openModal = function (t, h, i, o) { opened.push({title: t, html: h, opts: o}); return keep.om.apply(null, arguments); };
+    ctx.toast = (m, a) => { toasts.push({m: String(m), a}); return null; };
+    const mk = () => {
+      const c = X.blankChar(); X.character = c; c.name = 'Tess';
+      c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                     {id: 's1', name: 'Arrow', qty: 20, ammo: {kind: 'arrow'}}];
+      X.startCombatNow(); c.combatRound = 5;
+      return c;
+    };
+    // the warning
+    let c = mk(); answer = false;
+    let r = await X.endCombatAsk();
+    ck('#105 End combat asks through the app\'s warning window',
+       asks.length === 1 && asks[0].title === 'End combat?' && asks[0].cancel === 'Keep fighting' && asks[0].ok === 'End combat', asks);
+    ck('#105 ...nothing fired: just the round', asks[0].message === 'End the fight at round 5?', asks[0].message);
+    ck('#105 Keep fighting changes nothing', r === false && X.inCombat(c) && c.combatRound === 5 && c.invLog.length === 0 && opened.length === 0);
+    for (let i = 0; i < 9; i++) X.fireWeapon('w1', false);
+    const spent = JSON.stringify(c.ammoSpent);
+    r = await X.endCombatAsk();
+    ck('#105 ...something fired: the recovery sentence', asks[1].message === 'End the fight at round 5? Ammunition comes back under your recovery rule.', asks[1].message);
+    ck('#105 ...Keep fighting leaves the shots counted and logs nothing', r === false && JSON.stringify(c.ammoSpent) === spent && c.invLog.length === 0 && X.inCombat(c));
+    c.ammoRecovery = 'none'; await X.endCombatAsk();
+    ck('#105 ...under None the second sentence is left out', asks[2].message === 'End the fight at round 5?', asks[2].message);
+    c.ammoRecovery = 'half';
+    // End combat
+    toasts.length = 0;   /* the fireWeapon() calls above toast with an Undo of their own (PF1) */
+    answer = true;
+    r = await X.endCombatAsk();
+    ck('#105 End combat ends the fight', r === true && !X.inCombat(c) && c.combatRound === 0);
+    ck('#105 ...logs the kind and recovers, quietly: no toast, no Undo there',
+       c.invLog.length === 1 && c.invLog[0].title === 'Arrows: 9 fired, 4 recovered' && c.inventory.find(i => i.id === 's1').qty === 15 && !toasts.some(t => t.a), [c.invLog[0] && c.invLog[0].title, toasts]);
+    ck('#105 ...and opens End of combat, wide, with the time under the title',
+       opened.length === 1 && opened[0].title === 'End of combat' && opened[0].opts && opened[0].opts.wide === true && opened[0].html.includes('<p class="ec-time">Round 5 · 30 sec</p>'), opened[0]);
+    const st = X._endFight;
+    ck('#105 the window\'s state is in memory, tied to this sheet', !!st && st.who === c && st.rounds === 5 && st.sec === 30 && typeof st.ammo.undo === 'function' && st.ammo.undone === false);
+    let h = opened[0].html;
+    ck('#105 Ammunition: a folded row with the log line\'s words',
+       /data-ecrow="ammo" aria-expanded="false" aria-controls="ecBody-ammo"/.test(h) && /id="ecSt-ammo">Arrows: 9 fired, 4 recovered</.test(h) && /id="ecBody-ammo" hidden/.test(h), h);
+    ck('#105 ...with Undo recovery', /id="ecUndoAmmo">Undo recovery</.test(h));
+    ck('#105 Done', /id="ecDone">Done</.test(h));
+    ck('#105 a row opens on a tap and remembers it on the character', ctx.endFightToggle('ammo') === true && c.endCombatOpen.ammo === true &&
+       /data-ecrow="ammo" aria-expanded="true"/.test(ctx.endFightHTML(X._endFight, c)) && !/id="ecBody-ammo" hidden/.test(ctx.endFightHTML(X._endFight, c)));
+    ck('#105 ...and folds again', ctx.endFightToggle('ammo') === false && !('ammo' in c.endCombatOpen));
+    ck('#105 an unknown row is refused', ctx.endFightToggle('nope') === false && !('nope' in c.endCombatOpen));
+    ck('#105 Undo recovery in the window does what the toast\'s did', ctx.endFightUndoAmmo() === true &&
+       c.inventory.find(i => i.id === 's1').qty === 11 && c.invLog[0].title === 'Arrows: 9 fired, 0 recovered' && X._endFight.ammo.undone === true, c.invLog[0].title);
+    h = ctx.endFightHTML(X._endFight, c);
+    ck('#105 ...then reads "Recovery undone", with no toast', /Recovery undone/.test(h) && !/id="ecUndoAmmo"/.test(h) && !toasts.some(t => /Recovery undone/.test(t.m)));
+    ck('#105 ...once', ctx.endFightUndoAmmo() === false);
+    // Done, and ×
+    let closes = 0; ctx.closeModal = () => { closes++; };
+    ck('#105 Done closes the window and drops its state', ctx.endFightDone() === false && closes === 1 && X._endFight === null);
+    ck('#105 ...a second Done does nothing', ctx.endFightDone() === false && closes === 1);
+    ctx.closeModal = keep.cm;
+    ctx.openEndOfCombat({rounds: 2, sec: 12, combatants: []});
+    ctx.dismissModal();
+    ck('#105 × and Escape close it and drop its state', X._endFight === null);
+    ctx.openEndOfCombat({rounds: 2, sec: 12, combatants: []});
+    X.character = X.blankChar();
+    ck('#105 a change of character drops it', ctx.endFightLive() === null && X._endFight === null);
+    // the summary
+    c = mk();
+    c.combatants = [{id: 'y', kind: 'you', name: 'Tess', init: 15}, {id: 'g1', kind: 'foe', name: 'Goblin 1', init: 14, band: 4},
+                    {id: 'p', kind: 'party', name: 'Brindle', init: 12, dead: false}, {id: 'b', kind: 'foe', name: 'Bugbear <b>', init: 9, band: 2}];
+    opened.length = 0; await X.endCombatAsk();
+    h = opened[0].html;
+    ck('#105 the summary: a chip per combatant in initiative order, this character left out',
+       /<ul class="ec-chips">/.test(h) && h.indexOf('Goblin 1') < h.indexOf('Brindle') && h.indexOf('Brindle') < h.indexOf('Bugbear') && !h.includes('>Tess<'), h);
+    ck('#105 ...the fallen struck through, "fell" in their name', h.includes('<li class="ec-chip fell"><s>Goblin 1</s><span class="sh-vh">, fell</span></li>') && h.includes('<li class="ec-chip">Brindle</li>'));
+    ck('#105 ...escaped', h.includes('Bugbear &lt;b&gt;') && !h.includes('Bugbear <b>'));
+    c = mk(); opened.length = 0; await X.endCombatAsk();
+    ck('#105 a quiet fight: the time alone, no chips, no Ammunition row', !/ec-chips/.test(opened[0].html) && !/data-ecrow="ammo"/.test(opened[0].html), opened[0].html);
+    c = mk(); for (let i = 0; i < 9; i++) X.fireWeapon('w1', false); c.ammoRecovery = 'none';
+    opened.length = 0; await X.endCombatAsk();
+    h = opened[0].html;
+    ck('#105 under None: the row says none come back, and there is no Undo',
+       /id="ecSt-ammo">Arrows: 9 fired, none come back \(recovery: None\)</.test(h) && !/id="ecUndoAmmo"/.test(h) && X._endFight.ammo.undo === null, h);
+    // pressed twice
+    c = mk(); opened.length = 0;
+    let release = null; ctx.askConfirm = o => { asks.push(o); return new Promise(res => { release = res; }); };
+    const p1 = X.endCombatAsk(), p2 = X.endCombatAsk();
+    release(true);
+    const a1 = await p1, a2 = await p2;
+    ck('#105 End combat pressed twice ends once', a1 === true && a2 === false && opened.length === 1);
+    const src105 = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
+    ck('#105 the browser\'s confirm() is gone from End combat', !/confirm\(`End combat/.test(src105('87-combat.js')) && /t\.closest\("#cvEnd"\)\)return endCombatAsk\(\)/.test(src105('90-boot.js')));
+  } catch (err) {
+    ck('#105 t105End ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.askConfirm = keep.ask; ctx.openModal = keep.om; ctx.closeModal = keep.cm; ctx.toast = keep.toast;
+    X.character = keep.ch; X._endFight = null;
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

@@ -351,24 +351,42 @@ function syncCombatView(){
    opens Roll initiative, which starts through startInitFight()); sheet.js's
    combat-view and ammunition (#104) tests call it to begin a fight. */
 function startCombatNow(){combatStart(character);renderActiveSpells();renderCombatChrome();scheduleSave();}
-/* Asked first: the round count is the one thing here a stray tap would lose. */
-function endCombatAsk(){
+/* Asked first (#105), in the app's own warning window: "Keep fighting" or
+   "End combat" — the round count is what a stray tap would lose. Its second
+   sentence only when something was fired since Start and the rule gives
+   something back. One question at a time: a second press while it is open is
+   refused (_endAsking). Resolves true when the fight ended. */
+let _endAsking=false;
+async function endCombatAsk(){
+  if(_endAsking||!inCombat(character))return false;
+  const who=character,r=num(character.combatRound);
+  const ammo=ammoFightTotals(character).length>0&&ammoRecoveryOf(character)!=="none";
+  _endAsking=true;
+  let ok=false;
+  try{ok=await askConfirm({title:"End combat?",message:`End the fight at round ${r}?`+(ammo?" Ammunition comes back under your recovery rule.":""),cancel:"Keep fighting",ok:"End combat"});}
+  finally{_endAsking=false;}
+  if(!ok||character!==who||!inCombat(character))return false;
+  endCombatNow();
+  return true;
+}
+/* What End combat does once confirmed (spec §3.2), in this order. First, one
+   log line per ammunition kind fired this fight (#47), read before combatEnd()
+   or the recovery touch ammoSpent, counting what the rows' Recover already
+   gave back (ammoFight). Then the fight ends, the chrome is redrawn and saved,
+   the ammunition is recovered quietly (#104's rule, no toast), and the End of
+   combat window opens with what came back and its Undo. Returns combatEnd()'s
+   {rounds, sec, combatants}. */
+function endCombatNow(){
   const r=num(character.combatRound);
-  if(!confirm(`End combat at round ${r}?`))return false;
-  /* one log line per ammunition kind fired this fight (#47) — read before
-     combatEnd/applyAmmoRecovery below ever touch ammoSpent, and counting what
-     the rows' Recover already gave back (ammoFight). No undo of its own; the
-     toast's Undo recovery takes its recovery back off the line. */
   const logged=ammoFightTotals(character).map(a=>({kind:a.kind,e:logInv({kind:"ammo",title:ammoLogTitle(a.kind,a.fired,a.back),
     lines:[{dir:"",text:`Fight of ${r} round${r===1?"":"s"}`}],undo:null,meta:{rounds:r,kind:a.kind,fired:a.fired,back:a.back}})}));
   character.ammoFight={};
   const s=combatEnd(character);
   renderActiveSpells();renderCombatChrome();scheduleSave();
-  /* then the ammunition (#104): recovered by the rule, with an Undo recovery on the toast */
-  const got=applyAmmoRecovery(), who=character;
-  const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`+(got?` · ${got.text}`:"");
-  toast(msg,got?{label:"Undo recovery",run:()=>undoRecoveryTap(got.rec,who,{lines:logged,list:got.list})}:undefined);setCombatLive(msg);
-  return true;
+  const got=applyAmmoRecovery({quiet:true,logged});
+  setCombatLive(`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`);
+  openEndOfCombat(Object.assign({},s,{ammo:{logged,lines:got.lines,undo:got.undo}}));
+  return s;
 }
 
 /* ---- arranging ----

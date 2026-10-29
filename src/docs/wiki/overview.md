@@ -157,6 +157,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `87-initiative.js` | the initiative tracker: party, combatants, turns, bands, the strip and dialogs | [Combat view](features/combat-view.md), [Story & notes](features/story-and-notes.md) |
 | `87-journal.js` | the Journal card: pages, tags, search, the page rule, the editor | [Journal](features/journal.md) |
 | `87-trackers.js` | the Trackers card: counters, grouped-tag tiles, totals, the close rule, `migrateTrackerPages()` | [Journal](features/journal.md) |
+| `87-combat-end.js` | the End of combat window: summary, folded rows, ammunition Undo, XP, loot, after-combat tiles and pages | [Combat view](features/combat-view.md) |
 | `88-settings.js` | the Settings modal, rules status, `dataStatus()`, pack credits (`rulesCreditsHTML()`), the settings conversion (`foldLegacySettings()`) | [Settings & updates](features/settings-and-updates.md), [Data archive](architecture/data-archive.md) |
 | `89-zip.js` | the zip reader: `readDataArchive()`, `inflateRaw()`, `zipEntries()` — pure | [Data archive](architecture/data-archive.md) |
 | `89-rules-merge.js` | `requires` checking, `mergeRules()`, `ruleById()`, a plain source's fetch (`fetchAllRules()`), import of packs and zips (`importRulesPayloads()`, `importPack()`) | [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
