@@ -83,7 +83,8 @@ edited — the text is in a textarea then, and no box is on screen — and when 
 belonged to is gone (another tab switched, an import). `jnlTogglePage()` is the one writer for a
 page by id, so the End of combat window ticks through it too (below); it refuses while **that** page
 is open in the editor, whose next keystroke (`jnlInput()`) would write the textarea's old text back
-over the tick. Section notes and
+over the tick, and says so: "Finish editing “Loot list” first." (the editor stays open across a
+fight, so the window's tap would otherwise do nothing silently). Section notes and
 the Bio tab's rich-text fields tick the same way ([Story & notes](story-and-notes.md)); a box in
 a pack's description is drawn and does nothing. Each box is named by its item in plain words
 (`noteCkLabel()`), its state left to `aria-checked`. The page list
@@ -206,6 +207,12 @@ is hidden (#52), and trackers only while the sheet shows them (`showTrackers`).
   beside the tab's, putting focus back inside whichever list held it. `commitTrackerValue()` notes
   which list the typed box sat in and returns to the box in that same list, since both lists carry
   the same hooks. So + in the window moves the Journal tab's tile too.
+- **Focus stays in the window.** While it is open, `trkFocusScope()` is its list: a tracker that
+  closes there sends Tab or Esc from the toast's Undo to the next tile in the window (else its first
+  control, else Done), never the Journal tab's inert copy or + Tracker, and the Undo focuses the
+  tile's + (the window's tiles have no pen). The list stays once the window opened with trackers,
+  reading "Nothing here is still open." (the row "All done") when none is left open, so the Undo has
+  somewhere to put the tile back.
 - **Pages tick there.** A page shows its title and `noteHTML()` text, scrolling inside its box when
   long. The `[data-ck]` dispatcher (`90-boot.js`) sends a box inside `[data-ecpage]` to
   `endFightTick()`, which writes through `jnlTogglePage()` (so the tab redraws too) and redraws that
@@ -279,8 +286,8 @@ entry in the list.
 - **Only `migrateTrackerPages()` reads a tracker's raw `type`; everything else reads `trkType()`,
   which is `counter`.** A hand-edited `"type":"checklist"` added after #95 shipped still migrates on
   its next load, and anything else — junk included — reads as a counter, as it always did.
-- **A page's tick goes through `jnlTogglePage()`, from either surface (#105),** and is refused while
-  that page is open in the editor.
+- **A page's tick goes through `jnlTogglePage()`, from either surface (#105),** and is refused, with
+  a toast that says why, while that page is open in the editor.
 - **Every copy of a tracker tile is patched (#105).** A selector that finds the first tile only would
   leave the Journal tab's or the End of combat window's copy stale.
 - **A tap on a checkbox rewrites one line and nothing else; `toggleCheckbox()` is the only
@@ -335,3 +342,4 @@ entry in the list.
 - 2026-10-23 — The Story tab is Bio; By ability's hidden Skills card is gone. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired; a hidden Trackers card is skipped by the combat view only. → ledger L6804, #103
 - 2026-10-29 — "Show after combat" on trackers and pages (`afterCombat`); the End of combat window shows the flagged tiles without the pen and the flagged pages, tickable through `jnlTogglePage()`; every copy of a tile is patched. → ledger L7921, #105
+- 2026-10-29 — A tick refused while its page is in the editor says so; a tracker closed in the End of combat window keeps focus there, and its list stays ("All done"). → ledger L8025, #105

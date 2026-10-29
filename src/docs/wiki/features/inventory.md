@@ -204,8 +204,11 @@ Loot uses both, seeding `with` with the fallen and coming back on close (below).
   ()=>tradeClosed(null))` in `showTrade()`), after "Discard this trade?" when the draft holds
   something — declining that keeps the trade open and runs nothing. `tradeClosed()` takes the hook
   (`_trOnClose`), clears it and the draft, and runs the hook once. The finder (`tradeFind()`) steps
-  aside with `closeModal()`, never a dismissal, so it never runs it. `openTrade()` with no `onClose`
-  drops any earlier opener's hook.
+  aside with `closeModal()`, never a dismissal, so it never runs it, and on its way back focuses the
+  Equipment card's ⇄ Trade only for a trade with no `onClose` (one with an opener of its own hands
+  focus back there). `openTrade()` with no `onClose` drops any earlier opener's hook. The End of
+  combat window's seeded `with` is capped at the With box's 60 characters, since a seeded value gets
+  past `maxlength`.
 - **Layout**: the two sides side by side above 700px, with Cancel and Complete Trade at the foot;
   at 700px and under, tabs "You give · n" and "You get · n" and a ✓ button labelled "Complete
   trade". The balance is always in view. Every target is at least 44px.
@@ -362,9 +365,6 @@ the inventory and recompute, because coins have weight.
 - Humblewood species all read Medium until the extractor learns sizes.
 - **The log's Use, give and delete lines each keep one whole copy of the item** (#47), so a long
   log of them is still large — see [Known issues](../roadmap/known-issues.md).
-- **The With box can hold more than its 60-character typing limit** (#105). `maxlength` limits only
-  typing, so a loot trade seeded with many fallen names shows them all, but can't be added to until
-  it is cut below 60.
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -396,3 +396,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-25 — Re-review: an `add` undo sums the records that stacked onto one row; Use's refusals stated in full. → ledger L7387, #47
 - 2026-10-25 — Edit lines keep only what changed; coins received never make a trade red; grant lines that moved gold file under Coins. → ledger L7401, #47
 - 2026-10-29 — `openTrade({onClose})` and `tradeClosed()`: the hook runs once however the trade closes (Cancel, Complete Trade, ×, Escape, a backdrop tap), never for the finder; the End of combat window's Loot seeds `with` with the fallen and comes back on close. → ledger L7921, #105
+- 2026-10-29 — The finder's way back focuses ⇄ Trade only for a trade with no `onClose`; Loot's seeded `with` is capped at 60 characters. → ledger L8025, #105

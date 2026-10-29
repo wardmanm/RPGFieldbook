@@ -15,20 +15,21 @@ its own tab. Leaving the tab never ends combat.
 `renderCombatHeader()`, `setCombatLive()`, `toggleCombatSection()`, `undoCombatRemove()`,
 `cvNeighbours()`, `syncCombatView()`, `startCombatNow()`, `endCombatAsk()`, `startCombatDrag()`,
 `moveCombatCard()`, `setCombatOrder()`, `combatHeaderHTML()` in `87-combat.js` ·
-**the End of combat window** (#105), in `87-combat-end.js`: `EC_ROWS`, `EC_LABEL`, `EC_INERT`,
+**the End of combat window** (#105), in `87-combat-end.js`: `EC_ROWS`, `EC_LABEL`, `EC_INERT`, `EC_WITH_MAX`,
 `_endFight`, `endFightLive()`, `endCombatOpenOf()`, `openEndOfCombat()`, `endFightShow()`,
 `endFightGuard()`, `endFightClose()`, `endFightDone()`; the markup `endFightSummaryHTML()`,
 `endFightAmmoLines()`, `endFightAmmoSection()`, `endFightSection()`, `endFightSectionHTML()`,
 `endFightHTML()`; Experience `endFightN()`, `endFightXpInt()`, `endFightXpMath()`,
 `endFightPartySize()`, `endFightXpBase()`, `endFightReadyLevel()`, `endFightXpView()`,
 `endFightXpToAdd()`, `endFightXpSection()`, `endFightSetXp()`, `endFightSetStatus()`,
-`endFightXpPatch()`, `endFightSetSplit()`; Loot `endFightLootWith()`, `endFightLootSection()`,
+`endFightXpPatch()`, `endFightSetSplit()`; Loot `endFightLootWith()`, `endFightNamesCap()`, `endFightLootSection()`,
 `endFightOpenLoot()`, `endFightReopen()`; After combat `endFightAfterLists()`,
 `endFightAfterStatus()`, `endFightTrkList()`, `endFightAfterSection()`,
 `endFightPaintTrackers()`, `endFightTick()`, `endFightKey()`; the DOM layer `endFightToggle()`,
 `endFightRepaintSection()`, `endFightUndoAmmo()`, `endFightClick()`, `endFightWire()` ·
-`endCombatNow()` in `87-combat.js` · `openTrade()`, `tradeClosed()` in `67-trade.js` ·
-`jnlTogglePage()` in `87-journal.js` · `askConfirm()` in `80-modal-forms.js` ·
+`endCombatNow()` in `87-combat.js` · `openTrade()`, `tradeClosed()`, `tradeFind()` in `67-trade.js` ·
+`jnlTogglePage()` in `87-journal.js` · `trkFocusScope()`, `trkNextControl()`, `undoTrackerChange()` in
+`87-trackers.js` · `askConfirm()` in `80-modal-forms.js` ·
 **the initiative tracker** (#91), in `87-initiative.js`: `cleanParty()`, `cleanCombatants()`,
 `combatantDead()`, `initSort()`, `initFirstAlive()`, `initNextTurn()`, `bandOfShare()`,
 `combatantBar()`, `initRollCheck()`, `initRollLine()`, `initModOf()`, `youAC()`,
@@ -244,8 +245,10 @@ re-spend shots in an ended fight (an error toast is left up: a save that did not
 vanish unread), and the settlement is counted (`_ammoSettled`) so that Undo refuses even if it is
 reached. `#cvLive` says "Combat ended after 5 rounds (30 sec)". Then `openEndOfCombat()`.
 
-**The window** is `openModal("End of combat", …, {wide:true})`: wide on a desktop, and like the trade
-window it fills the fixed-height box, its rows scrolling in `.ec-scroll` with Done pinned at the foot.
+**The window** is `openModal("End of combat", …, {wide:true})`: wide on a desktop, and sized to its
+content up to the wide modal's height (Ruling 19: `.modal.wide:has(.ec-wrap)` is `height:auto` with
+the wide box's `max-height`, and its `.m-body` may shrink), so a quiet fight is a short box and a long
+one scrolls its rows in `.ec-scroll` with Done pinned at the foot.
 Under the title, "Round 5 · 30 sec" (`fmtCombatTime()`); then a chip per combatant in initiative
 order (`endFightSummaryHTML()`), this character left out, the fallen (`combatantDead()`) struck
 through with ", fell" in their accessible name. Then the folded rows, each a `<button>` with a label
@@ -261,8 +264,14 @@ in `endCombatOpen`; the first time every row is folded.
   toast's Undo did, log lines corrected — once, then reads "Recovery undone". Offered only while the
   window is open, and only when something came back.
 - **Experience** (only when `advancementOf(c)==="xp"`): status "XP 6,350 / 6,500", or "+112 XP" once
-  something is typed. A whole-number box, 0 to 1,000,000 (`endFightXpInt()`: blank, text, negatives
-  read 0; `12.9` reads 12). **Split among N** (N = the Party roster plus this character,
+  something is typed. The sheet's XP is read with its own `xpNumber()` (`endFightXpBase()`, Ruling 21):
+  blank is 0, and text it can't read ("6350 xp", "lots") is never overwritten — the row shows "Your
+  XP on the sheet isn't a number, so it can't be added to here." in place of the box, status "XP",
+  and Done adds nothing. The box is `type="text" inputmode="numeric"` (Safari's number box lets
+  letters in and reports them as blank) with a strict parse (`endFightXpInt()`): digits, or digits in
+  thousands groups, blank 0, over 1,000,000 read as 1,000,000, anything else `null`. Then "Whole
+  numbers only" shows under the box (`#ecXpErr`, `aria-invalid`), the status reads as if nothing were
+  typed, and Done refuses: the row opens if folded and focus goes to the box. **Split among N** (N = the Party roster plus this character,
   `endFightPartySize()`), shown only with a roster, is a house `.switch` saved at once in `xpSplit`;
   on, the line reads "450 ÷ 4 = 112 each", rounded down (`endFightXpMath()`). When the XP would make
   the level-up ready, "Level 5 ready — the level-up opens when you press Done."
@@ -270,23 +279,33 @@ in `endCombatOpen`; the first time every row is folded.
 - **Loot** (always): "Open trade…", then **Open trade** (`endFightOpenLoot()`), which calls
   `openTrade({with, onClose: endFightReopen})` ([Inventory](inventory.md)). `with` is the fallen
   **foes'** names joined with commas, or "Combat loot" (`endFightLootWith()`): a fallen party member is
-  struck through but never named, since the loot came from the foes. The trade replaces the window
+  struck through but never named, since the loot came from the foes. It is capped at the With box's
+  60 characters (`endFightNamesCap()`): cut at a name, the rest counted, "Goblin 1, Goblin 2, … and
+  3 more". The trade replaces the window
   (the modal has one layer); however it closes, `tradeClosed()` runs `endFightReopen()`, which redraws
-  the window from `_endFight` with everything as it was. After a completed trade the row reads the
+  the window from `_endFight` with everything as it was, puts back the window's first opener (recorded
+  by `openEndOfCombat()`) for the final close, and focuses **Open trade**. After a completed trade the row reads the
   trade's log title, "Traded with Goblin 1, Bugbear". If another dialog has taken the modal
   meanwhile, nothing is drawn over it and the window's state is dropped.
 - **After combat** (when an open tracker or a page has `afterCombat` and the Journal tab is not hidden,
   #52): status "1 tracker · 1 page" (`endFightAfterStatus()`). The open flagged trackers, as tiles
   without the pen (`trackerRowHTML(t, {noEdit:true})`) — the form would replace the window — and only
   while the sheet shows trackers; + and − work exactly as on the Journal tab, which patches both copies
-  ([Journal](journal.md)). Each flagged page's title and text (`noteHTML()`), its checkboxes tickable
-  there (`endFightTick()` → `jnlTogglePage()`); a long page scrolls inside its box. Rules terms and table
+  ([Journal](journal.md)). The list (`#ecTrkList`, `endFightTrkList()`) stays for the window's life
+  once it opened with trackers (`st.trk`), across a trade's round trip too, so a closed tile's Undo
+  can paint it back: with none left open it reads "Nothing here is still open." and the row "All
+  done"; with pages below it, the empty list hides. While the window is open, a tracker's focus
+  stays inside it (`trkFocusScope()`): Tab or Esc from a close's Undo goes to the next tile there (else
+  its first control, else Done), and the Undo itself focuses the tile's +. Each flagged page's title
+  and text (`noteHTML()`), its checkboxes tickable there (`endFightTick()` → `jnlTogglePage()`); a
+  tick on a page open in the Journal tab's editor is refused with "Finish editing “Loot list”
+  first."; a long page scrolls inside its box. Rules terms and table
   links in a page are inert (`EC_INERT`, `endFightKey()`), for the same reason. Nothing changes on its
   own: ending a fight never bumps a tracker or ticks a box.
 
-**Done** (`endFightDone()`) closes the window, adds the XP (`endFightClose()`: `character.xp` becomes a
+**Done** (`endFightDone()`, or Enter in the XP box, `endFightKey()`) closes the window, adds the XP (`endFightClose()`: `character.xp` becomes a
 number, its share when split) and, when that XP made the level-up ready, opens it through
-`doLevelUp()`, the level ring's own path. **× and Escape** with nothing typed simply close. With XP
+`doLevelUp()`, the level ring's own path. **× and Escape** with nothing typed, letters typed or XP the sheet can't read simply close. With XP
 typed, the dismiss guard (`endFightGuard()`) refuses that dismissal and asks, in the warning window,
 "Add 112 XP?" / "You typed XP but didn't press Done." / **Add XP** / **Don't add**. Either answer
 closes the window: Add XP exactly as Done, the level-up included; Don't add, or Escape on the warning,
@@ -445,7 +464,7 @@ Settled in the [End of combat spec](../../specs/2026-10-29-end-of-combat-design.
   same moment, so a screen reader may not speak it at all (#105, an accepted minor).
 - **The End of combat window's rules chips stay buttons to assistive tech**: inert there, they keep
   `role="button"` and a tab stop from `highlight()` (#105, accepted).
-- The #105 minors left for its final fix wave are listed in the spec's As built.
+- The #105 accepted minors are listed in the spec's As built.
 - More in [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -472,3 +491,4 @@ Settled in the [End of combat spec](../../specs/2026-10-29-end-of-combat-design.
 - 2026-10-25 — The initiative tracker: Roll initiative on Start combat, a strip of chips with a ▾ table under the header, a dialog per combatant, Turns/Rounds, Show rolls, and `87-initiative.js` as a new fragment. → ledger L7097, #91
 - 2026-10-25 — The final review's fixes: your chip follows your HP, the actor stays in view, Start commits a typed roll, a wrap on Dead or Remove advances the round, the dialog keeps focus and shows the clamped HP, the round is said once, and `combatEnd()` hands back the fight. → ledger L7212, #91
 - 2026-10-29 — End combat asks in the app's warning window and opens the End of combat window: the time and the fallen, folded rows for Ammunition (Undo recovery), Experience (Split among N, Done into the level-up, "Add N XP?" on close), Loot (a trade with the fallen, and back) and After combat (flagged tiles and pages); `endCombatNow()`, `87-combat-end.js`. → ledger L7921, #105
+- 2026-10-29 — The final fix wave: XP the sheet can't read is never overwritten (Ruling 21); a strict text box with "Whole numbers only", Enter is Done; focus back on Open trade after a trade; tracker focus stays in the window; After combat reads "All done"; the window fits its content (Ruling 19); Loot's name capped at 60. → ledger L8025, #105

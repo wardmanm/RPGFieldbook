@@ -8021,3 +8021,48 @@ Pages: [combat view](../wiki/features/combat-view.md), [ammunition](../wiki/feat
 [shell](../wiki/ui/shell.md), [character model](../wiki/architecture/character-model.md),
 [decisions](../wiki/decisions.md), [known issues](../wiki/roadmap/known-issues.md),
 [1.9.0](../wiki/roadmap/1.9.0.md), [overview](../wiki/overview.md).
+
+## End of combat: the final fix wave (#105, 2026-10-29)
+
+The whole-branch review of the End of combat window (above) found one Important issue and eight
+minors; this wave fixes all of them, with tests (`8184a54`).
+
+1. **XP the sheet can't read is never overwritten** (Important; Ruling 21). The window reads XP with
+   the sheet's own `xpNumber()` (`endFightXpBase()` now returns `null` for non-blank text it can't
+   read, 0 for blank). For "6350 xp" or "lots" the Experience row shows "Your XP on the sheet isn't a
+   number, so it can't be added to here." in place of the box (status "XP"); Done adds nothing,
+   there is no ready line and × asks nothing. Before, Done wrote just the added amount.
+2. **The XP box is a text box** (`type="text" inputmode="numeric" maxlength="12"`): Safari's number
+   box let letters in and reported them as blank, so the XP was dropped silently. `endFightXpInt()`
+   parses strictly — digits, or digits in thousands groups — and returns `null` for anything else
+   (over 1,000,000 still reads 1,000,000). Then "Whole numbers only" shows directly under the box
+   (`#ecXpErr`, `aria-invalid`), the status reads as if nothing were typed, Done refuses (opening the
+   row if folded, focus in the box) and × closes without adding or asking.
+3. **Enter in the XP box is Done** (`endFightKey()`), once per press, never mid-composition.
+4. **Focus after a trade.** `openEndOfCombat()` records the window's opener (`st.opener`,
+   `st.openerSel`); `endFightReopen()` puts it back as the modal's opener and focuses Open trade.
+   `tradeFind()`'s `back()` focuses the Equipment card's Trade only for a trade with no `onClose`.
+5. **Tracker focus inside the window.** `trkFocusScope()` (87-trackers.js) is `#ecTrkList` while the
+   window is open: `trkNextControl()` searches only there (else its first control, else Done), and
+   `undoTrackerChange()` focuses the tile's + (the window's tiles have no pen).
+6. **The After combat list stays for the window's life** once it opened with trackers (`st.trk`,
+   `endFightTrkList()`, which replaces `endFightTrackersHTML()`), across a trade's round trip too, so
+   the toast's Undo can paint a tile back. With nothing left open it reads "Nothing here is still
+   open." and the row "All done"; with pages below it, the empty list hides.
+7. **A tick refused while its page is open in the Journal editor says so**: `jnlTogglePage()` toasts
+   "Finish editing “<title>” first." (`toast()` sets text, so the title is never markup).
+8. **The window fits its content** up to the wide modal's height (Ruling 19):
+   `.modal.wide:has(.ec-wrap){height:auto;max-height:min(680px,90dvh)}` and its `.m-body` may shrink
+   (`min-height:0`), so the rows scroll and Done stays in view.
+9. **Loot's seeded name fits the With box's 60 characters** (`endFightNamesCap()`, `EC_WITH_MAX`):
+   cut at a name, the rest counted ("Hobgoblin Captain 1, Hobgoblin Captain 2, … and 6 more"); a first
+   name too long alone is cut inside it.
+
+Tests: `t105Xp()`, `t105Loot()` and `t105After()` gain the unreadable and blank XP, the strict parse,
+"Whole numbers only", Enter, the opener and Open trade focus, the finder's `back()`, the name cap, a
+tracker closing in the window and its Undo, "All done", the editor-tick toast and the CSS rule.
+`harness.js`: `_modalOpener` and `_modalOpenerSel` join `MUTABLE`. The suites end at 8104 checks.
+QA: `105-fix-*.png` in `.claude/qa/in-progress/105-end-of-combat/`.
+
+Pages: [combat view](../wiki/features/combat-view.md), [journal](../wiki/features/journal.md),
+[inventory](../wiki/features/inventory.md), [known issues](../wiki/roadmap/known-issues.md).

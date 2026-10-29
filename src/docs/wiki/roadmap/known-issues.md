@@ -107,9 +107,6 @@ Known behaviour that is accepted for now.
 - **A reload with the End of combat window open loses the typed XP** (#105). The fight had already
   ended and saved; the window's state (`_endFight`) is never saved, as any unsaved form isn't. →
   ledger L7921, and [Combat view](../features/combat-view.md)
-- **A loot trade's With box can exceed its 60-character typing limit** with many fallen foes (#105):
-  `maxlength` limits typing only, so the seeded names all show but can't be added to until cut below
-  60. → ledger L7921, and [Inventory](../features/inventory.md)
 - **A shot's Undo refuses once End combat has settled it** (#105, by design): its toast is hidden at
   End combat, and a shot fired outside a fight stops undoing once a later End combat sweeps it up.
   The window's Undo recovery is the way back. → ledger L7921, and
@@ -555,3 +552,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-27 — Added: a fixed species or background feat's `ability` increase is not applied (the final review's M4; the player docs now say so). → ledger L7657, #118
 - 2026-10-28 — Homebrew is private: its Xanathar's spells resolve in the private archive, and `LEFT_FOR_PRIVATE` names it too. → ledger L7858, #125
 - 2026-10-29 — Added: a reload loses the End of combat window's typed XP; a loot trade's With can exceed its typing limit; a shot's Undo refuses once End combat has settled it. Undo recovery's home-joined gap stays unreachable, now because the window keeps the sheet inert. → ledger L7921, #105
+- 2026-10-29 — Removed: a loot trade's With can no longer exceed its typing limit; the End of combat window caps it at 60 characters. → ledger L8025, #105
