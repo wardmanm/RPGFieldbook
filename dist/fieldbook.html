@@ -1833,6 +1833,37 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .ft-plus{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .ft-chip{min-height:44px;padding:4px 14px;border:1.3px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
 .ft-chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+/* #105 the End of combat window (87-combat-end.js). It opens wide, so like the
+   trade window it fills the fixed-height box: the rows scroll, Done stays. */
+/* Ruling 19: the window fits its content, up to the wide modal's height — a
+   quiet fight is short. min-height:0 lets the body shrink below its content so
+   the rows scroll (.ec-scroll) and Done stays in view. */
+.modal.wide:has(.ec-wrap){height:auto;max-height:min(680px,90dvh)}
+.modal.wide:has(.ec-wrap) .m-body{min-height:0}
+.ec-wrap{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;padding-right:14px}
+.m-body .ec-time{margin:0 0 8px;font-family:var(--head);font-size:13px;color:var(--ink-soft)}
+.ec-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 2px 8px}
+.ec-chips{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;padding:0}
+.ec-chip{border:1.3px solid var(--hair);border-radius:999px;padding:3px 10px;background:var(--field);color:var(--ink);font-size:14px}
+.ec-chip.fell{color:var(--ink-soft)}
+.ec-sec{border-top:1px dotted var(--hair)}
+.ec-row{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:8px 2px;border:0;background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
+.ec-lbl{flex:none;font-family:var(--head);font-weight:700;font-size:14px}
+.ec-st{flex:1;min-width:0;text-align:right;color:var(--ink-soft);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ec-body{padding:2px 2px 12px}
+.ec-body .tbtn{min-height:44px}
+.m-body .ec-line{margin:0 0 6px}
+.m-body .ec-done{color:var(--ink-soft);margin:0}
+.ec-foot{flex:none;margin-top:0;padding:10px 0 14px;border-top:1px dotted var(--hair)}
+.ec-foot .tbtn{min-height:44px}
+.ec-xp input{max-width:200px}
+.m-body .ec-err{color:var(--brick);margin:4px 0 8px}
+.m-body .ec-ready{color:var(--accent-2);font-weight:700;margin:4px 0 0}
+.ec-trk{padding:4px 0 6px}
+.ec-page{border:1px solid var(--hair);border-radius:8px;padding:6px 10px;margin-top:8px;background:var(--field)}
+.ec-ph{margin:0 0 4px;font-family:var(--head);font-size:14px}
+.ec-page .n-body{max-height:220px;overflow-y:auto;margin-top:0}
+.ec-page .kw,.ec-page .tblref{cursor:text}
 </style>
 </head>
 <body>
@@ -2342,6 +2373,10 @@ function blankChar(){
        before it shows it. `trackerTotals` maps a tag key to `true` where the
        group shows its total (#93). */
     trackers:[], trackerCollapse:{}, trackerTotals:{}, showTrackers:true,
+    /* #105: the End of combat window (87-combat-end.js): whether its XP box
+       splits among the party, and which of its folded rows are open (row key ->
+       true). Trackers and pages carry their own optional afterCombat:true. */
+    xpSplit:false, endCombatOpen:{},
     /* Ammunition fired since the last recovery (62-ammo.js): stack or thrown
        weapon id -> {n, hits, misses, kind, snap}. `ammoInit` is NOT defaulted:
        the one-time pass sets it. `ammoRecovery` is the character's rule for what
@@ -7185,6 +7220,13 @@ function ammoSpentEntry(c,id){
   return {n,hits,misses,kind:ok?ammoKindOf(e.kind):"",
           snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null};
 }
+/* #105: how many times End combat has settled the ammunition on this page
+   (endCombatNow() counts it). Every shot's record carries the count from when
+   it was fired, and its toast's Undo refuses once End combat has settled since
+   (undoFireTap()): the shot was recovered or spent with the rest, and taking it
+   back then counted it as spent again, to be recovered twice. Not saved: a
+   reload leaves no toast to tap. */
+let _ammoSettled=0;
 /* One shot onto `st`'s spent entry: one more on its count, one more Hit or
    Miss when the question was answered (#104), and a one-piece copy of the item
    for recovery to rebuild from. The entry is rebuilt every shot, so the
@@ -7193,7 +7235,7 @@ function ammoSpentEntry(c,id){
 function ammoRecordShot(c,st,kind,outcome){
   if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
   const undo={stack:JSON.parse(JSON.stringify(st)),at:c.inventory.indexOf(st),
-              spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null};
+              spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null,settled:_ammoSettled};
   const p=ammoSpentEntry(c,st.id);
   c.ammoSpent[st.id]={n:p.n+1,hits:p.hits+(outcome==="hit"?1:0),misses:p.misses+(outcome==="miss"?1:0),
     kind,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
@@ -7603,9 +7645,12 @@ function shotDone(r,itemId,viaKey,msg){
   if(undo)undo.addEventListener("keydown",e=>{if(e.repeat)e.preventDefault();});
   if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();else if(undo)undo.focus();}
 }
-/* The toast's Undo: only for the character it was shown for. */
+/* The toast's Undo: only for the character it was shown for, and only until
+   End combat settles the ammunition (#105, _ammoSettled). A shot fired with no
+   fight running undoes as before, until an End combat sweeps it up too. */
 function undoFireTap(rec,who,viaKey,itemId){
   if(!character||character!==who)return false;
+  if(!rec||!rec.undo||rec.undo.settled!==_ammoSettled)return false;
   if(!undoFire(character,rec))return false;
   scheduleSave();
   renderInventory();renderAttacks();recompute();
@@ -7668,19 +7713,28 @@ function recoverWeaponAmmo(itemId,viaKey){
    needs — that Undo restores every entry it cleared, the ones that gave
    nothing included. When nothing came back the counts are cleared quietly and
    this returns null: no toast words, no Undo. Shots fired outside a tracked
-   fight are swept up too, as the row's Recover does. */
-function applyAmmoRecovery(){
-  if(!Object.keys(ammoSpentMap(character)).length)return null;
-  const list=ammoRecoverable(character), rec={};
+   fight are swept up too, as the row's Recover does.
+   #105: `opts.quiet` is End combat's path now: the same recovery, but instead
+   of toast words it hands back {lines, undo} — `lines` what came back per kind
+   (empty when nothing did), `undo` the toast's own Undo (undoRecoveryTap(),
+   quiet) or null — for the End of combat window to show and offer.
+   `opts.logged` is End combat's log lines, which that Undo corrects. Never
+   null when quiet. Without `quiet`, exactly as before. */
+function applyAmmoRecovery(opts){
+  const o=opts||{};
+  if(!Object.keys(ammoSpentMap(character)).length)return o.quiet?{lines:[],undo:null}:null;
+  const list=ammoRecoverable(character), rec={}, who=character;
   recoverAmmo(character,null,rec);
   scheduleSave();
   renderInventory();renderAttacks();recompute();
+  if(o.quiet)return {lines:list,undo:list.length?()=>undoRecoveryTap(rec,who,{lines:Array.isArray(o.logged)?o.logged:[],list},{quiet:true}):null};
   return list.length?{text:`recovered ${ammoSummaryText(list)}`,rec,list}:null;
 }
 /* The End combat toast's Undo recovery: only for the character it was shown for.
    `amend` ({lines, list}) is End combat's log lines and what its recovery gave
-   per kind: undone, that comes back off each line's "recovered" (#47). */
-function undoRecoveryTap(rec,who,amend){
+   per kind: undone, that comes back off each line's "recovered" (#47).
+   `opts.quiet` (#105): no toast — the End of combat window says it itself. */
+function undoRecoveryTap(rec,who,amend,opts){
   if(!character||character!==who)return false;
   if(!undoRecovery(character,rec))return false;
   if(amend&&Array.isArray(amend.lines)&&Array.isArray(amend.list))amend.list.forEach(r=>{
@@ -7688,7 +7742,7 @@ function undoRecoveryTap(rec,who,amend){
     l.e.meta.back=Math.max(0,num(l.e.meta.back)-num(r.back));l.e.title=ammoLogTitle(r.kind,num(l.e.meta.fired),l.e.meta.back);});
   scheduleSave();
   renderInventory();renderAttacks();recompute();
-  toast("Recovery undone");
+  if(!(opts&&opts.quiet))toast("Recovery undone");
   return true;
 }
 /* death + slots visual */
@@ -8628,7 +8682,7 @@ function openInvLog(){
    A draft holds the trade until Complete applies it as one step, logged as one
    `trade` line whose undo has three parts: give (always clean), add (what you
    got must still be there) and coins (the net change). Spec §6.2 and §8. */
-let _trade=null,_trPick=false;
+let _trade=null,_trPick=false,_trOnClose=null;
 function newTradeDraft(opts){
   const o=opts||{},arr=a=>Array.isArray(a)?a:[],coins=c=>Object.assign({},(c&&typeof c==="object")?c:{});
   const give=o.give||{},get=o.get||{};
@@ -8802,14 +8856,26 @@ function tradeRefresh(){
 }
 function showTrade(){
   openModal("Trade",tradeHTML(_trade,character),"",{wide:true});
-  setDismissGuard(()=>_trade&&!tradeEmpty(_trade)?"Discard this trade?":null);
+  /* × / Escape / a backdrop tap: after "Discard this trade?" (when it holds
+     something), the dismissal hands on to tradeClosed() (#105) */
+  setDismissGuard(()=>_trade&&!tradeEmpty(_trade)?"Discard this trade?":null,()=>tradeClosed(null));
+}
+/* The trade window has closed for good: Cancel, Complete Trade, or a
+   dismissal. Never for the finder, which steps aside and brings it back
+   (tradeFind()). Runs the opener's onClose once (#105: the End of combat
+   window comes back), with the completed trade's log line or null. */
+function tradeClosed(done){
+  const f=_trOnClose;_trOnClose=null;_trade=null;
+  if(f)f(done||null);
 }
 /* The finder is its own full-screen layer UNDER the modal, so the trade window
    steps aside while it is up and comes back from the draft either way. */
 function tradeFind(){
   const lib=rules.items||[];
   if(!lib.length){toast("No rules items are loaded. Add a custom item instead.");return;}
-  const back=()=>{const bt=document.getElementById("btnTrade");if(bt&&bt.getClientRects().length)bt.focus({preventScroll:true});if(_trade)showTrade();};
+  /* Focus to the Equipment card's Trade only for a trade opened there: one
+     with an onClose (#105) hands focus to its own opener when it closes. */
+  const back=()=>{const bt=!_trOnClose&&document.getElementById("btnTrade");if(bt&&bt.getClientRects().length)bt.focus({preventScroll:true});if(_trade)showTrade();};
   closeModal();
   openBrowse(Object.assign(itemBrowseCfg(lib),{
     added:x=>!!_trade&&_trade.get.items.some(g=>!g.custom&&String(g.name).toLowerCase()===String(x.name||"").toLowerCase()),
@@ -8827,6 +8893,7 @@ function tradeFind(){
   }));
 }
 function openTrade(opts){
+  _trOnClose=(opts&&typeof opts.onClose==="function")?opts.onClose:null;   /* #105 */
   _trade=newTradeDraft(opts);_trPick=false;
   showTrade();
   const body=document.getElementById("mBody");if(!body||body.dataset.trWired)return;
@@ -8858,13 +8925,14 @@ function openTrade(opts){
     }
     if(t.closest("#trCustom")){const k=uid();d.get.items.push({key:k,name:"",qty:1,cost:0,def:null,custom:true});d.tab="get";return tradePaint(attrSel("data-trname",k));}
     if(t.closest("#trFind"))return tradeFind();
-    if(t.closest("#trCancel")){_trade=null;closeModal();return;}
+    if(t.closest("#trCancel")){closeModal();tradeClosed(null);return;}
     if(t.closest("#trComplete")){
       if(tradeEmpty(d))return;
       const b=tradeBalance(d,character);
       if(b.short&&!confirm(`You're ${cpToGpText(-b.diff)} short. Complete the trade anyway?`))return;
-      const done=completeTrade(d);_trade=null;closeModal();
+      const done=completeTrade(d);closeModal();
       if(done)toast(done.title+". It's in the log.");
+      tradeClosed(done);
       return;
     }
   });
@@ -9322,6 +9390,13 @@ function migrateSheet103(c){
   if(c.langLifted!==true){liftLanguages(c);c.langLifted=true;}
   ensureDefaultLanguages(c);
 }
+/* #105: which End of combat rows are open — key -> true; any other value is
+   dropped. Not a whitelist of keys: a row added later keeps its state. */
+function cleanEndCombatOpen(v){
+  const o={};
+  if(v&&typeof v==="object"&&!Array.isArray(v))Object.keys(v).forEach(k=>{if(v[k]===true&&k!=="__proto__")o[k]=true;});
+  return o;
+}
 function migrate(s){
   s=s||{};
   const base=blankChar(), blank=blankChar();
@@ -9375,6 +9450,12 @@ function migrate(s){
   base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
   base.hiddenTabs=cleanHiddenTabs(s.hiddenTabs);   /* #52 */
   base.featsAllowed=typeof s.featsAllowed==="boolean"?s.featsAllowed:true;   /* #118 */
+  /* #105: the End of combat window's settings, and "Show after combat" on
+     trackers and pages, kept only when true — absent is off */
+  base.xpSplit=s.xpSplit===true;
+  base.endCombatOpen=cleanEndCombatOpen(s.endCombatOpen);
+  base.trackers.forEach(t=>{if(t.afterCombat!==true)delete t.afterCombat;});
+  base.journal.forEach(p=>{if(p.afterCombat!==true)delete p.afterCombat;});
   /* #118: well-formed level records only; the rest are dropped. A kept record
      keeps every key, and the parts Level down reads are made safe: features
      objects with a string id (lvRecFeats), each with a grants array; grants
@@ -12732,24 +12813,48 @@ function syncCombatView(){
    opens Roll initiative, which starts through startInitFight()); sheet.js's
    combat-view and ammunition (#104) tests call it to begin a fight. */
 function startCombatNow(){combatStart(character);renderActiveSpells();renderCombatChrome();scheduleSave();}
-/* Asked first: the round count is the one thing here a stray tap would lose. */
-function endCombatAsk(){
+/* Asked first (#105), in the app's own warning window: "Keep fighting" or
+   "End combat" — the round count is what a stray tap would lose. Its second
+   sentence only when something was fired since Start and the rule gives
+   something back. One question at a time: a second press while it is open is
+   refused (_endAsking). Resolves true when the fight ended. */
+let _endAsking=false;
+async function endCombatAsk(){
+  if(_endAsking||!inCombat(character))return false;
+  const who=character,r=num(character.combatRound);
+  const ammo=ammoFightTotals(character).length>0&&ammoRecoveryOf(character)!=="none";
+  _endAsking=true;
+  let ok=false;
+  try{ok=await askConfirm({title:"End combat?",message:`End the fight at round ${r}?`+(ammo?" Ammunition comes back under your recovery rule.":""),cancel:"Keep fighting",ok:"End combat"});}
+  finally{_endAsking=false;}
+  if(!ok||character!==who||!inCombat(character))return false;
+  endCombatNow();
+  return true;
+}
+/* What End combat does once confirmed (spec §3.2), in this order. First, one
+   log line per ammunition kind fired this fight (#47), read before combatEnd()
+   or the recovery touch ammoSpent, counting what the rows' Recover already
+   gave back (ammoFight). Then the fight ends, the chrome is redrawn and saved,
+   the ammunition is recovered quietly (#104's rule, no toast), and the End of
+   combat window opens with what came back and its Undo. Returns combatEnd()'s
+   {rounds, sec, combatants}.
+   No toast of its own any more, so the last Fire's toast would stay up over the
+   window with its Undo live: it is hidden here, and the settlement is counted
+   (_ammoSettled) so that Undo refuses even if it is reached. An error toast is
+   left up — a save that did not land must never vanish unread. */
+function endCombatNow(){
   const r=num(character.combatRound);
-  if(!confirm(`End combat at round ${r}?`))return false;
-  /* one log line per ammunition kind fired this fight (#47) — read before
-     combatEnd/applyAmmoRecovery below ever touch ammoSpent, and counting what
-     the rows' Recover already gave back (ammoFight). No undo of its own; the
-     toast's Undo recovery takes its recovery back off the line. */
   const logged=ammoFightTotals(character).map(a=>({kind:a.kind,e:logInv({kind:"ammo",title:ammoLogTitle(a.kind,a.fired,a.back),
     lines:[{dir:"",text:`Fight of ${r} round${r===1?"":"s"}`}],undo:null,meta:{rounds:r,kind:a.kind,fired:a.fired,back:a.back}})}));
   character.ammoFight={};
   const s=combatEnd(character);
   renderActiveSpells();renderCombatChrome();scheduleSave();
-  /* then the ammunition (#104): recovered by the rule, with an Undo recovery on the toast */
-  const got=applyAmmoRecovery(), who=character;
-  const msg=`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`+(got?` · ${got.text}`:"");
-  toast(msg,got?{label:"Undo recovery",run:()=>undoRecoveryTap(got.rec,who,{lines:logged,list:got.list})}:undefined);setCombatLive(msg);
-  return true;
+  _ammoSettled++;
+  const got=applyAmmoRecovery({quiet:true,logged});
+  const tw=document.getElementById("toast");if(!(tw&&tw.classList.contains("err")))hideToast(true);
+  setCombatLive(`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`);
+  openEndOfCombat(Object.assign({},s,{ammo:{logged,lines:got.lines,undo:got.undo}}));
+  return s;
 }
 
 /* ---- arranging ----
@@ -13357,6 +13462,7 @@ function jnlSavePage(c,draft,fields,now){
   if(i<0){
     if(!draft.at)draft.at=now;
     const p={id:draft.id,title,tag,text,at:draft.at,editedAt:now};
+    if(draft.afterCombat===true)p.afterCombat=true;   /* #105: set on the draft before the page existed */
     c.journal.push(p);return p;
   }
   const p=c.journal[i];
@@ -13458,6 +13564,8 @@ function journalEditorHTML(p,tags){
     `<div class="field"><label class="f" for="jnlText">Page</label>`+
     `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
     `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button><button type="button" class="tbtn" data-jnlck>Insert checkbox</button></div>`+
+    `<div class="toggle"><div><div class="t-lbl">Show after combat</div></div>`+
+      `<button type="button" class="switch ${p.afterCombat===true?"on":""}" data-jnlac role="switch" aria-checked="${p.afterCombat===true?"true":"false"}" aria-label="Show after combat"></button></div>`+
     NOTE_FMT_HINT+(when?`<p class="hint">${esc(when)}</p>`:"");
 }
 
@@ -13538,6 +13646,20 @@ function jnlInput(){
   jnlSavePage(character,jnlUI.draft,{title:v("jnlTitle"),tag:v("jnlTag"),text:v("jnlText")},Date.now());
   scheduleSave();
 }
+/* "Show after combat" (#105), from the editor. A saved page takes it at once,
+   and it is not content, so editedAt stays. A draft that is not a page yet
+   (jnlSavePage()'s rule) holds it until its first keystroke makes the page. The
+   switch is patched in place: the editor is never rebuilt while open. */
+function jnlToggleAfterCombat(){
+  if(!jnlUI.editing||!jnlUI.draft)return false;
+  const p=jnlPages(character).find(x=>x.id===jnlUI.draft.id);
+  const on=!((p||jnlUI.draft).afterCombat===true);
+  if(on)jnlUI.draft.afterCombat=true;else delete jnlUI.draft.afterCombat;
+  if(p){if(on)p.afterCombat=true;else delete p.afterCombat;scheduleSave();}
+  const b=document.querySelector("[data-jnlac]");
+  if(b){b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");}
+  return on;
+}
 function jnlDelete(id){
   const p=jnlPages(character).find(x=>x.id===id);if(!p)return false;
   if(!confirm(`Delete the page “${jnlTitle(p)}”? This can't be undone.`))return false;
@@ -13565,13 +13687,27 @@ function insertJournalCheckbox(){insertCheckboxInto("jnlText");}
    the text (toggleCheckbox()), stamps editedAt, saves and redraws, with focus
    back on the same box. Refused while editing (the text is in the textarea
    then, and no box is on screen), and when the page is gone. */
-function jnlToggleCheckbox(n){
-  if(!jnlUI.open||jnlUI.editing)return false;
-  const p=jnlPages(character).find(x=>x.id===jnlUI.open);if(!p)return false;
+/* #105: the n-th checkbox of a page by id — the Journal tab's open page, or a
+   page shown in the End of combat window. Refused while that page is in the
+   editor: its text is the textarea's then, and the next keystroke
+   (jnlInput()) would write the old text back over the tick. */
+/* Not a page open in the Journal tab's editor: its next keystroke would write
+   the old text back. The editor stays open across a fight, so a tick from the
+   End of combat window (#105) can land here: say why nothing happened. toast()
+   sets its text as textContent, so the title is never markup. */
+function jnlTogglePage(id,n){
+  const p=jnlPages(character).find(x=>x.id===id);
+  if(jnlUI.who===character&&jnlUI.editing&&jnlUI.open===id){toast(`Finish editing “${jnlTitle(p)}” first.`);return false;}
+  if(!p)return false;
   const cur=jnlStr(p.text),t=toggleCheckbox(cur,n);
   if(t===cur)return false;
   p.text=t;p.editedAt=Date.now();
   scheduleSave();renderJournal();
+  return true;
+}
+function jnlToggleCheckbox(n){
+  if(!jnlUI.open||jnlUI.editing)return false;
+  if(!jnlTogglePage(jnlUI.open,n))return false;
   const b=document.querySelector(`#jnlBody [data-ck="${num(n)}"]`);if(b&&b.focus)b.focus({preventScroll:true});
   return true;
 }
@@ -13691,6 +13827,7 @@ function trkFromForm(t,f){
   delete t.items;delete t.done;
   t.autoClose=f.autoClose!==false;
   t.value=trkInt(t.value);
+  if(f.afterCombat===true)t.afterCombat=true;else delete t.afterCombat;   /* #105 */
   return t;
 }
 
@@ -13723,17 +13860,20 @@ function trkAfter(c,id){
 /* ---- markup: pure strings, so the harness can assert every state ----
    Names and items are the player's plain words: esc() only, no glossary pass. A
    chip inside a checkbox button would be a button in a button, and every −/+
-   would pay for a highlight() of the whole card. */
+   would pay for a highlight() of the whole card.
+   `opts.noEdit` (#105): no pen, for the End of combat window, where the form
+   would replace the window. */
 const TRK_PEN=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>`;
 function trkEditHTML(t){return `<button type="button" class="icon ed" data-trkedit="${esc(t.id)}" aria-label="${esc("Edit "+trkName(t))}" title="Edit">${TRK_PEN}</button>`;}
-function trackerRowHTML(t){
+function trackerRowHTML(t,opts){
+  const o=opts||{};
   const pr=trkProgress(t),name=trkName(t),g=trkInt(t.goal);
   const body=`<div class="trk-ctl"><button type="button" class="res-btn" data-trkdec="${esc(t.id)}" aria-label="${esc("One less — "+name)}">−</button>`+
     `<input class="trk-val" data-trkval="${esc(t.id)}" inputmode="numeric" value="${esc(pr.done)}" aria-label="${esc(name+" — count")}">`+
     `<button type="button" class="res-btn" data-trkinc="${esc(t.id)}" aria-label="${esc("One more — "+name)}">+</button>`+
     (g?`<span class="trk-of">of ${esc(g)}</span>`:"")+`</div>`+
     (g?`<div class="trk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(g)}" aria-valuenow="${esc(Math.min(pr.done,g))}" aria-label="${esc(name)}"><span style="width:${esc(pr.pct)}%"></span></div>`:"");
-  return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(name)}</span>${trkEditHTML(t)}</div>${body}</div>`;
+  return `<div class="trk" data-trk="${esc(t.id)}"><div class="trk-top"><span class="trk-name">${esc(name)}</span>${o.noEdit?"":trkEditHTML(t)}</div>${body}</div>`;
 }
 /* In Completed: what it came to, when it closed, and the way back. */
 function trkSummary(t){const pr=trkProgress(t);return trkInt(t.goal)?pr.done+" / "+trkInt(t.goal):String(pr.done);}
@@ -13753,7 +13893,7 @@ function trackersHTML(c,completedOpen){
       caret(o)+`<span class="fgname">${esc(g.label)}</span><span class="cnt">(${g.items.length})</span>`+
       (on?`<span class="trk-total">· ${esc(trkGroupTotal(c,g.key))}</span>`:"")+
       `<button type="button" class="icon trk-sum${on?" on":""}" data-trktotal="${esc(g.key)}" aria-pressed="${on?"true":"false"}" aria-label="${esc("Total for "+g.label)}" title="Total">Σ</button></div>`+
-      `<div class="trk-group"${o?"":` style="display:none"`}>${g.items.map(trackerRowHTML).join("")}</div></div>`;
+      `<div class="trk-group"${o?"":` style="display:none"`}>${g.items.map(t=>trackerRowHTML(t)).join("")}</div></div>`;
   }).join(""):`<div class="empty">Nothing open — everything here is done.</div>`;
   if(s.closed.length)h+=`<div class="fgroup trk-done"><div class="fghead" data-trkcompleted role="button" tabindex="0" aria-expanded="${completedOpen?"true":"false"}">`+
     caret(completedOpen)+`<span class="fgname">Completed</span><span class="cnt">(${s.closed.length})</span></div>`+
@@ -13769,6 +13909,8 @@ function trackerFormHTML(t,tags,isNew){
     `<div class="field"><label class="f" for="tkGoal">Goal</label><input id="tkGoal" type="number" min="0" inputmode="numeric" value="${esc(g||"")}" placeholder="None — count forever"></div>`+
     `<div class="toggle" id="tkAutoRow"><div><div class="t-lbl">Close when complete</div><div class="t-sub">Move it to Completed once it's done. You get an Undo.</div></div>`+
       `<button type="button" class="switch ${auto?"on":""}" id="tkAuto" role="switch" aria-checked="${auto?"true":"false"}" aria-label="Close when complete"></button></div>`+
+    `<div class="toggle"><div><div class="t-lbl">Show after combat</div></div>`+
+      `<button type="button" class="switch ${t.afterCombat===true?"on":""}" id="tkAfter" role="switch" aria-checked="${t.afterCombat===true?"true":"false"}" aria-label="Show after combat"></button></div>`+
     `<div class="m-actions">`+(isNew?"":`<button type="button" class="tbtn danger" id="tkDel" style="margin-right:auto">Delete</button>`+
       `<button type="button" class="tbtn" id="tkCloseNow">${t.closed===true?"Reopen":"Close now"}</button>`)+
     `<button type="button" class="tbtn" id="tkCancel">Cancel</button><button type="button" class="tbtn primary" id="tkSave">${isNew?"Add":"Save"}</button></div>`;
@@ -13788,9 +13930,14 @@ function renderTrackers(){
   const el=document.getElementById("trkList");if(!el)return;
   if(trkWho!==character){trkWho=character;trkCompletedOpen=false;}
   const card=document.getElementById("trackersCard");if(card)card.style.display=showTrackers(character)?"":"none";
-  const a=document.activeElement,sel=(a&&el.contains&&el.contains(a))?openerSelector(a):null;
+  /* #105: the End of combat window may hold the same tiles (#ecTrkList). Both
+     are redrawn, and focus goes back inside whichever held it — the same hook
+     exists in both, so the search must stay inside its own box. */
+  const ec=document.getElementById("ecTrkList"),a=document.activeElement;
+  const host=[el,ec].find(b=>b&&a&&b.contains&&b.contains(a))||null,sel=host?openerSelector(a):null;
   el.innerHTML=trackersHTML(character,trkCompletedOpen);
-  if(sel){const b=document.querySelector(sel);if(b&&b.focus)b.focus({preventScroll:true});}
+  if(ec)endFightPaintTrackers(ec);
+  if(sel){const b=host.querySelector(sel);if(b&&b.focus)b.focus({preventScroll:true});}
   /* Shown or hidden, it may be the only card in an open combat view, whose
      "Add sections…" hint has to follow it. */
   if(combatViewOpen())renderCombatEmpty();
@@ -13801,13 +13948,16 @@ function trkById(id){return trkList(character).find(t=>t.id===id)||null;}
    goal and the "of N" can't change from the row. false when there is no row,
    for the caller to redraw instead. */
 function trkPatchRow(t){
-  const row=document.querySelector(attrSel("data-trk",t.id));if(!row)return false;
+  /* #105: every copy — the Journal tab's tile and the End of combat window's */
+  const rows=[...document.querySelectorAll(attrSel("data-trk",t.id))];if(!rows.length)return false;
   const pr=trkProgress(t),g=trkInt(t.goal);
-  const v=row.querySelector("[data-trkval]");if(v)v.value=String(pr.done);
-  const bar=row.querySelector(".trk-bar");
-  if(bar){bar.setAttribute("aria-valuenow",String(Math.min(pr.done,g)));const f=bar.querySelector("span");if(f)f.style.width=pr.pct+"%";}
-  const grp=row.closest&&row.closest(".fgroup"),tot=grp&&grp.querySelector(".trk-total");
-  if(tot)tot.textContent="· "+trkGroupTotal(character,tagKey(t.tag));
+  rows.forEach(row=>{
+    const v=row.querySelector("[data-trkval]");if(v)v.value=String(pr.done);
+    const bar=row.querySelector(".trk-bar");
+    if(bar){bar.setAttribute("aria-valuenow",String(Math.min(pr.done,g)));const f=bar.querySelector("span");if(f)f.style.width=pr.pct+"%";}
+    const grp=row.closest&&row.closest(".fgroup"),tot=grp&&grp.querySelector(".trk-total");
+    if(tot)tot.textContent="· "+trkGroupTotal(character,tagKey(t.tag));
+  });
   return true;
 }
 /* One tap on a row. When it finishes a tracker set to close, the toast offers an
@@ -13835,13 +13985,24 @@ function trkAct(id,fn,viaKey,inPlace){
   if(viaKey&&undo)undo.focus();
   return true;
 }
+/* #105: while the End of combat window is open, its list (#ecTrkList) is
+   where a tracker's focus belongs — the Journal tab's copy sits under the
+   modal, inert, or on a hidden tab. null when the window isn't open. */
+function trkFocusScope(){
+  if(typeof endFightLive!=="function"||!endFightLive()||!document.getElementById("ecDone"))return null;
+  return document.getElementById("ecTrkList")||null;
+}
 /* The first control of the first of `ids` still open and on screen — the rows
-   may have moved on since the toast went up — or else + Tracker. */
+   may have moved on since the toast went up — or else + Tracker. Inside the
+   End of combat window: only its own tiles, or else its first control left,
+   or else Done. */
 function trkNextControl(ids){
+  const sc=trkFocusScope(),root=sc||document;
   for(const id of ids){
-    const row=document.querySelector(".trk:not(.trk-closed)"+attrSel("data-trk",id)),f=row&&row.querySelector("button,input");
+    const row=root.querySelector(".trk:not(.trk-closed)"+attrSel("data-trk",id)),f=row&&row.querySelector("button,input");
     if(f&&f.getClientRects().length)return f;
   }
+  if(sc)return sc.querySelector("button,input")||document.getElementById("ecDone");
   return document.getElementById("addTracker");
 }
 /* `who` is the character object the toast was shown for: its Undo belongs to
@@ -13852,7 +14013,12 @@ function undoTrackerChange(snap,who,viaKey){
   if(!trkRestore(character,snap))return false;
   renderTrackers();scheduleSave();
   toast(`“${trkName(snap)}” is back`);
-  if(viaKey){const b=document.querySelector(attrSel("data-trkedit",snap.id));if(b&&b.focus)b.focus();}
+  if(viaKey){
+    /* the window's tiles have no pen: there, the tile's + */
+    const sc=trkFocusScope();
+    const b=sc?(sc.querySelector(attrSel("data-trkinc",snap.id))||document.getElementById("ecDone")):document.querySelector(attrSel("data-trkedit",snap.id));
+    if(b&&b.focus)b.focus();
+  }
   return true;
 }
 /* The count box commits on change or Enter, like the coin and HP boxes
@@ -13861,13 +14027,18 @@ function undoTrackerChange(snap,who,viaKey){
    - A change patches the row in place (trkAct()'s `inPlace`), and a count that
      isn't one is simply put back, in place too.
    - Enter redraws. If it completes the tracker, its row leaves for Completed
-     and trkAct() moves focus to the toast's Undo instead. */
+     and trkAct() moves focus to the toast's Undo instead.
+   The box returned is found inside the list the typed one sat in, taken
+   before the redraw replaces it: the same tile can be both on the Journal tab
+   and in the End of combat window (#105), and the tab's copy comes first in
+   the page. */
 function commitTrackerValue(inp,viaKey){
   const id=inp.dataset.trkval,n=trkParse(inp.value);
+  const host=(inp.closest&&inp.closest("#ecTrkList,#trkList"))||document;
   if(n!==null)trkAct(id,(t,now)=>trkSetValue(t,n,now),!!viaKey,!viaKey);
   else if(viaKey)renderTrackers();
   else{const t=trkById(id);if(t)inp.value=String(trkProgress(t).done);else renderTrackers();}
-  return document.querySelector(attrSel("data-trkval",id));
+  return host.querySelector(attrSel("data-trkval",id));
 }
 function toggleTrkGroup(key){
   if(!character.trackerCollapse||typeof character.trackerCollapse!=="object"||Array.isArray(character.trackerCollapse))character.trackerCollapse={};
@@ -13898,13 +14069,14 @@ function openTrackerForm(existing){
   const sync=()=>{$("tkAutoRow").hidden=!trkInt($("tkGoal").value);};
   $("tkGoal").addEventListener("input",sync);sync();
   $("tkAuto").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
+  $("tkAfter").addEventListener("click",e=>{const b=e.currentTarget,on=!b.classList.contains("on");b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");});
   $("tkCancel").addEventListener("click",closeModal);
   /* The tracker as stored NOW. The toast sits outside the modal's inert, so its
      Undo can land while this form is open and swap the stored object for its
      snapshot — `t` would then be a copy no longer in the list. A new tracker
      has no stored copy: Save adds `t` itself. */
   const cur=()=>isNew?t:trkById(t.id);
-  const fields=()=>({name:$("tkName").value,tag:$("tkTag").value,goal:$("tkGoal").value,autoClose:$("tkAuto").classList.contains("on")});
+  const fields=()=>({name:$("tkName").value,tag:$("tkTag").value,goal:$("tkGoal").value,autoClose:$("tkAuto").classList.contains("on"),afterCombat:$("tkAfter").classList.contains("on")});
   const done=()=>{closeModal();renderTrackers();scheduleSave();};
   {const d=$("tkDel");if(d)d.addEventListener("click",()=>{
     if(!confirm(`Delete the tracker “${trkName(cur()||t)}”?`))return;
@@ -13924,6 +14096,399 @@ function openTrackerForm(existing){
     if(isNew){if(!Array.isArray(character.trackers))character.trackers=[];character.trackers.push(x);}
     done();
   });
+}
+/* ================= the End of combat window (#105) =================
+   Opened by endCombatNow() (87-combat.js) once End combat is confirmed and
+   the fight has ended. One wide modal: the time, a chip per combatant, then
+   folded rows (Ammunition, Experience, Loot, After combat), each a label and
+   a one-line status that opens on a tap, remembered per character
+   (endCombatOpen). A row with nothing to show is left out. Done closes it.
+   Its memory, `_endFight`, is never saved: it belongs to the character OBJECT
+   it was opened for (`who`), like every toast Undo here, and is dropped on
+   Done, on ×/Escape and when the character changes (endFightLive()).
+   After 87-journal.js and 87-trackers.js in the manifest: it draws their tiles
+   and pages. Design: src/docs/specs/2026-10-29-end-of-combat-design.md */
+const EC_ROWS=["ammo","xp","loot","after"];
+const EC_LABEL={ammo:"Ammunition",xp:"Experience",loot:"Loot",after:"After combat"};
+/* A rules term or table link inside a page shown here (After combat): inert,
+   see endFightKey(). One selector for the click and the key; the CSS that
+   drops their pointer (50-modal.css) spells the same two out. */
+const EC_INERT=".ec-page .kw,.ec-page .tblref";
+/* The trade's With box's maxlength (67-trade.js): Loot's seeded name fits it. */
+const EC_WITH_MAX=60;
+let _endFight=null;
+function endFightLive(){if(_endFight&&_endFight.who!==character)_endFight=null;return _endFight;}
+function endCombatOpenOf(c){const m=c&&c.endCombatOpen;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
+function openEndOfCombat(r){
+  const o=r||{},a=(o.ammo&&typeof o.ammo==="object")?o.ammo:{};
+  _endFight={who:character,rounds:Math.max(0,num(o.rounds)),sec:Math.max(0,num(o.sec)),
+    combatants:Array.isArray(o.combatants)?o.combatants:[],
+    ammo:{logged:Array.isArray(a.logged)?a.logged:[],lines:Array.isArray(a.lines)?a.lines:[],undo:typeof a.undo==="function"?a.undo:null,undone:false},
+    xp:"",traded:"",asking:false,opener:null,openerSel:null,
+    trk:endFightAfterLists(character).trackers.length>0};   /* the After combat list stays for the window's life (endFightTrkList()) */
+  endFightShow();
+  /* What opened it, for focus to go back to on the final close: the trade's
+     round trip reopens the window over whatever the trade left focused. */
+  if(_endFight){_endFight.opener=_modalOpener;_endFight.openerSel=_modalOpenerSel;}
+  return _endFight;
+}
+/* (Re)opens the window from _endFight: first from End combat, again after a
+   trade. openModal() clears any guard, so it is set again every time. */
+function endFightShow(){
+  const st=endFightLive();if(!st)return false;
+  openModal("End of combat",endFightHTML(st,character),"",{wide:true});
+  setDismissGuard(endFightGuard,()=>endFightClose(false,false));
+  endFightWire();
+  return true;
+}
+/* ×/Escape (dismissModal()). With XP typed it refuses this dismissal (true)
+   and asks "Add 112 XP?" in the app's warning window; either answer closes the
+   window — Add XP exactly as Done (the level-up included), Don't add (or
+   Escape) without it. Nothing typed: no question; the hand-on closes it.
+   The answer acts only on the window it was asked about: still this state,
+   and its Done still in the open dialog (closeModal() wipes #mBody, so the
+   Done exists nowhere else). Otherwise it does nothing. */
+function endFightGuard(){
+  const st=endFightLive();if(!st)return null;
+  const n=endFightXpToAdd(st,character);if(!(n>0))return null;
+  if(st.asking)return true;
+  st.asking=true;
+  askConfirm({title:`Add ${endFightN(n)} XP?`,message:"You typed XP but didn't press Done.",ok:"Add XP",cancel:"Don't add"})
+    .then(yes=>{
+      st.asking=false;
+      if(endFightLive()!==st||!document.getElementById("ecDone"))return;
+      closeModal();endFightClose(!!yes,true);
+    });
+  return true;
+}
+/* The window has closed for good: drop its memory and, when `add`, write the
+   XP (character.xp becomes a number). `levelUp` (Done only) opens the level-up
+   when this XP made it ready, by the level ring's own path. Returns whether
+   XP was added. */
+function endFightClose(add,levelUp){
+  const st=endFightLive();_endFight=null;
+  if(!st||!add)return false;
+  const n=endFightXpToAdd(st,character),base=endFightXpBase(character);
+  if(!(n>0)||base===null)return false;   /* XP the sheet can't read is never overwritten (Ruling 21) */
+  const lv=endFightReadyLevel(character,n);
+  character.xp=base+n;
+  renderLevelBadge();scheduleSave();
+  if(lv&&levelUp)doLevelUp();
+  return true;
+}
+/* Done: adds the XP (its share when split), closes the window, and opens the
+   level-up when that XP reached a level. Returns whether it closed. Not while
+   the box holds something that isn't a whole number: the row opens if it was
+   folded and focus goes to the box, under its "Whole numbers only". */
+function endFightDone(){
+  const st=endFightLive();if(!st)return false;
+  const x=endFightXpView(st,character);
+  if(x&&x.bad){
+    if(endCombatOpenOf(character).xp!==true)endFightToggle("xp");
+    const b=document.getElementById("ecXp");if(b&&b.focus)b.focus({preventScroll:true});
+    return false;
+  }
+  closeModal();
+  endFightClose(true,true);
+  return true;
+}
+
+/* ---- markup: pure strings over (state, character), so the harness can assert every state ---- */
+function endFightSummaryHTML(st){
+  const list=(st.combatants||[]).filter(r=>r&&typeof r==="object"&&r.kind!=="you");
+  if(!list.length)return "";
+  return `<ul class="ec-chips">`+list.map(r=>{const nm=String(r.name||"");
+    return combatantDead(r)?`<li class="ec-chip fell"><s>${esc(nm)}</s><span class="sh-vh">, fell</span></li>`:`<li class="ec-chip">${esc(nm)}</li>`;}).join("")+`</ul>`;
+}
+/* Per kind, the log line's own words (ammoLogTitle()), read from the line's
+   meta so an Undo shows at once; under None, what that rule means. */
+function endFightAmmoLines(st,c){
+  const none=ammoRecoveryOf(c)==="none";
+  return ((st.ammo&&st.ammo.logged)||[]).filter(l=>l&&l.e&&l.e.meta).map(l=>{
+    const fired=Math.max(0,num(l.e.meta.fired)),back=Math.max(0,num(l.e.meta.back));
+    if(none&&back===0)return `${ammoKindLabel(ammoPlural(l.kind))}: ${fired} fired, none come back (recovery: None)`;
+    return ammoLogTitle(l.kind,fired,back);
+  });
+}
+function endFightAmmoSection(st,c){
+  const lines=endFightAmmoLines(st,c);if(!lines.length)return null;
+  const a=st.ammo||{},can=typeof a.undo==="function"&&(a.lines||[]).length>0;
+  return {status:lines.join(" · "),
+    body:lines.map(t=>`<p class="ec-line">${esc(t)}</p>`).join("")+
+      (can?(a.undone?`<p class="ec-done">Recovery undone</p>`:`<button type="button" class="tbtn" id="ecUndoAmmo">Undo recovery</button>`):"")};
+}
+/* ---- Experience (spec §4.3): shown only when the character levels by XP ---- */
+function endFightN(n){return Math.max(0,Math.floor(num(n))).toLocaleString("en-US");}
+/* The box's number. A text box, not type=number: Safari's number box lets
+   letters in and then reports them as blank, which dropped the XP silently.
+   So the parse is strict: digits, or digits in thousands groups ("6,350"),
+   and nothing else. Blank is 0; above 1,000,000 is 1,000,000; anything else
+   is null — not a number, and the window says so. */
+function endFightXpInt(v){
+  const s=String(v==null?"":v).trim();if(!s)return 0;
+  if(!/^(\d+|\d{1,3}(,\d{3})+)$/.test(s))return null;
+  return Math.min(1000000,parseInt(s.replace(/,/g,""),10));
+}
+/* What Done adds: the typed number, or its share, rounded down. */
+function endFightXpMath(typed,split,party){
+  const t=endFightXpInt(typed)||0,n=split?Math.max(1,Math.floor(num(party))):1;
+  return {typed:t,n,each:Math.floor(t/n)};
+}
+/* The Party roster (#91) plus this character. */
+function endFightPartySize(c){return cleanParty(c&&c.party).length+1;}
+/* The XP Done adds to, read by the sheet's own xpNumber() so the window and
+   the sheet agree (Ruling 21): "6,350" is 6350 and blank is 0. Text it can't
+   read ("6350 xp", "lots") is null: Done never overwrites it. */
+function endFightXpBase(c){
+  const v=c&&c.xp;
+  if(v==null||(typeof v==="string"&&!v.trim()))return 0;
+  return xpNumber(v);
+}
+/* The level the XP would make ready — only when the level-up is not ready
+   before and is after, the rule Done opens it by. */
+function endFightReadyLevel(c,add){
+  if(advancementOf(c)!=="xp"||!(add>0))return null;
+  const base=endFightXpBase(c);if(base===null)return null;
+  const b=xpProgress(Object.assign({},c,{xp:base})),a=xpProgress(Object.assign({},c,{xp:base+add}));
+  return a&&a.ready&&!(b&&b.ready)?a.level+1:null;
+}
+/* The Experience row's view. `unread`: the sheet's XP is text xpNumber()
+   can't read, so there is no box and nothing to add. `bad`: the box holds
+   something that isn't a whole number — "Whole numbers only" under it, the
+   status as if nothing were typed, and Done refuses until it is fixed. */
+function endFightXpView(st,c){
+  if(advancementOf(c)!=="xp")return null;
+  const party=endFightPartySize(c),split=!!c&&c.xpSplit===true&&party>1;
+  if(endFightXpBase(c)===null)return {party,split,m:{typed:0,n:1,each:0},status:"XP",err:"",line:"",ready:"",bad:false,unread:true};
+  const bad=endFightXpInt(st.xp)===null,m=endFightXpMath(bad?"":st.xp,split,party);
+  const p=xpProgress(Object.assign({},c,{xp:endFightXpBase(c)})),lv=endFightReadyLevel(c,m.each);
+  const status=m.each>0?`+${endFightN(m.each)} XP`:!p?"XP":p.next===null?`XP ${endFightN(p.xp)}`:`XP ${endFightN(p.xp)} / ${endFightN(p.next)}`;
+  return {party,split,m,status,bad,unread:false,
+    err:bad?"Whole numbers only":"",
+    line:split&&m.typed>0?`${endFightN(m.typed)} ÷ ${m.n} = ${endFightN(m.each)} each`:"",
+    ready:lv?`Level ${lv} ready — the level-up opens when you press Done.`:""};
+}
+function endFightXpToAdd(st,c){const x=endFightXpView(st,c);return x?x.m.each:0;}
+function endFightXpSection(st,c){
+  const x=endFightXpView(st,c);if(!x)return null;
+  if(x.unread)return {status:x.status,body:`<p class="hint" id="ecXpUnread">Your XP on the sheet isn't a number, so it can't be added to here.</p>`};
+  return {status:x.status,body:
+    `<div class="field ec-xp"><label class="f" for="ecXp">XP</label><input id="ecXp" type="text" inputmode="numeric" maxlength="12" value="${esc(st.xp)}" autocomplete="off" aria-describedby="ecXpErr"${x.bad?` aria-invalid="true"`:""}></div>`+
+    `<p class="hint ec-err" id="ecXpErr"${x.err?"":" hidden"}>${esc(x.err)}</p>`+
+    (x.party>1?`<div class="toggle"><div><div class="t-lbl">Split among ${esc(x.party)}</div></div>`+
+      `<button type="button" class="switch${x.split?" on":""}" id="ecSplit" role="switch" aria-checked="${x.split?"true":"false"}" aria-label="Split among ${esc(x.party)}"></button></div>`:"")+
+    `<p class="hint" id="ecXpLine"${x.line?"":" hidden"}>${esc(x.line)}</p>`+
+    `<p class="ec-ready" id="ecXpReady"${x.ready?"":" hidden"}>${esc(x.ready)}</p>`};
+}
+/* Typing patches the status, the split line and the ready line in place, so
+   the box keeps its caret. */
+function endFightSetXp(v){
+  const st=endFightLive();if(!st)return false;
+  st.xp=String(v==null?"":v).slice(0,12);
+  endFightXpPatch(st);
+  return true;
+}
+/* A row's one-line status, set in place. The id is built per row, as
+   endFightSectionHTML() renders it. */
+function endFightSetStatus(k,text){const s=document.getElementById("ecSt-"+k);if(s)s.textContent=text;}
+function endFightXpPatch(st){
+  const x=endFightXpView(st,character);if(!x)return;
+  endFightSetStatus("xp",x.status);
+  const l=document.getElementById("ecXpLine");if(l){l.textContent=x.line;l.hidden=!x.line;}
+  const er=document.getElementById("ecXpErr");if(er){er.textContent=x.err;er.hidden=!x.err;}
+  const b=document.getElementById("ecXp");if(b&&b.setAttribute){if(x.bad)b.setAttribute("aria-invalid","true");else if(b.removeAttribute)b.removeAttribute("aria-invalid");}
+  const r=document.getElementById("ecXpReady");if(r){r.textContent=x.ready;r.hidden=!x.ready;}
+}
+/* Split among N: saved on the character at once (xpSplit). */
+function endFightSetSplit(on){
+  if(!endFightLive())return false;
+  character.xpSplit=!!on;scheduleSave();
+  endFightRepaintSection("xp","#ecSplit");
+  return character.xpSplit;
+}
+/* ---- Loot (spec §4.4): always shown; a trade, so it lands in the inventory log ---- */
+/* The trade's other party: the fallen FOES, by name (a fallen party member is
+   struck through in the summary but never named: the loot came from the
+   foes), or "Combat loot". Raw text: the trade window escapes it where drawn. */
+function endFightLootWith(list){
+  const names=(Array.isArray(list)?list:[]).filter(r=>r&&typeof r==="object"&&r.kind==="foe"&&combatantDead(r)).map(r=>String(r.name||"").trim()).filter(Boolean);
+  return names.length?endFightNamesCap(names,EC_WITH_MAX):"Combat loot";
+}
+/* The trade's With box holds 60 characters (maxlength, 67-trade.js), and a
+   seeded value would get past it. So the names are cut at a name, with the
+   rest counted: "Goblin 1, Goblin 2, … and 3 more". A first name too long on
+   its own is cut inside it ("…"). Cut by characters, never mid-surrogate. */
+function endFightNamesCap(names,max){
+  const all=names.join(", ");if(all.length<=max)return all;
+  for(let k=names.length-1;k>=1;k--){const s=names.slice(0,k).join(", ")+`, … and ${names.length-k} more`;if(s.length<=max)return s;}
+  const tail=names.length>1?` and ${names.length-1} more`:"",cs=Array.from(names[0]);
+  let cut="";for(const ch of cs){if((cut+ch).length+1+tail.length>max)break;cut+=ch;}
+  return cut+"…"+tail;
+}
+function endFightLootSection(st){
+  return {status:st.traded||"Open trade…",
+    body:`<p>Coins and items from the fight go through a trade, so they're in your inventory log.</p>`+
+      `<button type="button" class="tbtn" id="ecTrade">Open trade</button>`};
+}
+/* The trade window replaces this one (the modal has one layer); its onClose
+   brings this back from _endFight, as it was. */
+function endFightOpenLoot(){
+  const st=endFightLive();if(!st)return false;
+  openTrade({with:endFightLootWith(st.combatants),onClose:endFightReopen});
+  return true;
+}
+/* The trade's onClose (tradeClosed() runs it once, however the trade closed).
+   Back only for the character it was opened for (endFightLive()), and only
+   onto a free modal, or onto this window itself: if something else has taken
+   the modal meanwhile, the window is not drawn over it and its state goes, as
+   on ×. endFightShow() sets the dismiss guard again. */
+function endFightReopen(done){
+  const st=endFightLive();if(!st)return false;
+  const m=document.getElementById("modal");
+  if(m&&m.classList&&m.classList.contains("open")&&!document.getElementById("ecDone")){_endFight=null;return false;}
+  if(done&&typeof done==="object"&&done.title)st.traded=String(done.title);
+  if(!endFightShow())return false;
+  /* openModal() took whatever the trade left focused as this window's opener;
+     put back the one it had, and the player back on Open trade. */
+  _modalOpener=st.opener;_modalOpenerSel=st.openerSel;
+  const b=document.getElementById("ecTrade");if(b&&b.focus)b.focus({preventScroll:true});
+  return true;
+}
+/* ---- After combat (spec §4.5): the open trackers and the pages flagged
+   "Show after combat" — none while the Journal tab is hidden (#52), and no
+   trackers while the sheet's trackers are switched off. Nothing changes on
+   its own: the tiles' + and − and the pages' boxes are the player's. ---- */
+function endFightAfterLists(c){
+  if(isTabHidden("journal",c))return {trackers:[],pages:[]};
+  return {trackers:showTrackers(c)?trkList(c).filter(t=>t.closed!==true&&t.afterCombat===true):[],
+    pages:jnlSort(jnlPages(c).filter(p=>p.afterCombat===true))};
+}
+function endFightAfterStatus(l){
+  const n=(k,w)=>k?`${k} ${w}${k===1?"":"s"}`:"";
+  return [n(l.trackers.length,"tracker"),n(l.pages.length,"page")].filter(Boolean).join(" · ");
+}
+/* The tracker list's content. Once the window opened with trackers, the list
+   stays for its life (st.trk), so the toast's Undo can paint a closed tile
+   back into it — across a trade's round trip too. With none left open it reads
+   "Nothing here is still open." (the row "All done"), or, with pages below
+   it, simply hides. */
+function endFightTrkList(l){
+  if(l.trackers.length)return {html:l.trackers.map(t=>trackerRowHTML(t,{noEdit:true})).join(""),hidden:false};
+  return l.pages.length?{html:"",hidden:true}:{html:`<p class="hint">Nothing here is still open.</p>`,hidden:false};
+}
+function endFightAfterSection(st,c){
+  if(isTabHidden("journal",c))return null;
+  const l=endFightAfterLists(c),keep=l.trackers.length>0||(!!(st&&st.trk)&&showTrackers(c));
+  if(!keep&&!l.pages.length)return null;
+  const t=endFightTrkList(l);
+  return {status:endFightAfterStatus(l)||"All done",
+    body:(keep?`<div class="trk-group ec-trk" id="ecTrkList"${t.hidden?" hidden":""}>${t.html}</div>`:"")+
+      l.pages.map(p=>{const b=noteHTML(jnlStr(p.text));
+        return `<div class="ec-page" data-ecpage="${esc(p.id)}"><h4 class="ec-ph">${esc(jnlTitle(p))}</h4>${b?`<div class="n-body">${b}</div>`:""}</div>`;}).join("")};
+}
+/* renderTrackers() calls this for the window's copy of the tiles. */
+function endFightPaintTrackers(box){
+  const l=endFightAfterLists(character),t=endFightTrkList(l);
+  box.innerHTML=t.html;box.hidden=t.hidden;
+  endFightSetStatus("after",endFightAfterStatus(l)||"All done");
+}
+/* A tick on a page shown here: that page's line, as on the Journal tab
+   (jnlTogglePage(), which also redraws the tab), then this page's body, with
+   focus back on the same box. */
+function endFightTick(id,n){
+  if(!endFightLive())return false;
+  if(!jnlTogglePage(id,n))return false;
+  const p=jnlPages(character).find(x=>x.id===id),box=document.querySelector(attrSel("data-ecpage",id)+" .n-body");
+  if(box&&p){box.innerHTML=noteHTML(jnlStr(p.text));const b=box.querySelector(`[data-ck="${num(n)}"]`);if(b&&b.focus)b.focus({preventScroll:true});}
+  return true;
+}
+/* A rules term or table link in a page here would open its own dialog over
+   this one — the modal has one layer — and lose what the window holds. Here
+   they are words: the tap or the key stops at the window (#mBody's listeners
+   run before the document's dispatchers, so stopPropagation() is enough).
+   And Enter in the XP box is Done, as in any one-field form — once per press
+   (a held key repeats), never while an input method is composing. */
+function endFightKey(e){
+  if(!e||!(e.key==="Enter"||e.key===" "))return;
+  const t=e.target;if(!t)return;
+  if(e.key==="Enter"&&t.id==="ecXp"){if(e.isComposing)return;e.preventDefault();if(!e.repeat)endFightDone();return;}
+  if(!t.closest)return;
+  if(t.closest(EC_INERT)){e.preventDefault();e.stopPropagation();}
+}
+/* One row's {status, body}, or null to leave it out. */
+function endFightSection(k,st,c){
+  if(k==="ammo")return endFightAmmoSection(st,c);
+  if(k==="xp")return endFightXpSection(st,c);
+  if(k==="loot")return endFightLootSection(st,c);
+  if(k==="after")return endFightAfterSection(st,c);
+  return null;
+}
+/* Every attribute interpolates esc(k) whole: rules-data.js's attribute scan
+   accepts nothing pre-escaped. */
+function endFightSectionHTML(k,st,c){
+  const s=endFightSection(k,st,c);if(!s)return "";
+  const open=endCombatOpenOf(c)[k]===true;
+  return `<section class="ec-sec" id="ecSec-${esc(k)}">`+
+    `<button type="button" class="ec-row" data-ecrow="${esc(k)}" aria-expanded="${open?"true":"false"}" aria-controls="ecBody-${esc(k)}">`+
+    `<svg class="fcaret${open?"":" c"}" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`+
+    `<span class="ec-lbl">${esc(EC_LABEL[k]||k)}</span><span class="ec-st" id="ecSt-${esc(k)}">${esc(s.status)}</span></button>`+
+    `<div class="ec-body" id="ecBody-${esc(k)}"${open?"":" hidden"}>${s.body}</div></section>`;
+}
+function endFightHTML(st,c){
+  return `<div class="ec-wrap"><p class="ec-time">${esc(`Round ${st.rounds} · ${fmtCombatTime(st.sec)}`)}</p>`+
+    `<div class="ec-scroll">${endFightSummaryHTML(st)}${EC_ROWS.map(k=>endFightSectionHTML(k,st,c)).join("")}</div>`+
+    `<div class="m-actions ec-foot"><button type="button" class="tbtn primary" id="ecDone">Done</button></div></div>`;
+}
+
+/* ---- the DOM layer ---- */
+/* A row opens or folds in place (never a rebuild: the XP box keeps its caret),
+   remembered on the character. Returns whether it is now open. */
+function endFightToggle(k){
+  if(EC_ROWS.indexOf(k)<0||!endFightLive())return false;
+  if(!character.endCombatOpen||typeof character.endCombatOpen!=="object"||Array.isArray(character.endCombatOpen))character.endCombatOpen={};
+  const m=character.endCombatOpen;
+  if(m[k]===true)delete m[k];else m[k]=true;
+  const on=m[k]===true;
+  scheduleSave();
+  const b=document.querySelector(attrSel("data-ecrow",k)),body=document.getElementById("ecBody-"+k);
+  if(b){b.setAttribute("aria-expanded",on?"true":"false");const cr=b.querySelector(".fcaret");if(cr)cr.classList.toggle("c",!on);}
+  if(body)body.hidden=!on;
+  return on;
+}
+/* One section redrawn from the state, focus put back by selector. */
+function endFightRepaintSection(k,focusSel){
+  const st=endFightLive(),el=document.getElementById("ecSec-"+k);if(!st||!el)return;
+  el.outerHTML=endFightSectionHTML(k,st,character);
+  if(focusSel){const f=document.querySelector(focusSel);if(f&&f.focus)f.focus({preventScroll:true});}
+}
+/* The toast's Undo recovery (undoRecoveryTap(), via applyAmmoRecovery's
+   undo), offered only while this window is open; once. */
+function endFightUndoAmmo(){
+  const st=endFightLive(),a=st&&st.ammo;
+  if(!a||a.undone||typeof a.undo!=="function")return false;
+  if(!a.undo())return false;
+  a.undone=true;
+  endFightRepaintSection("ammo",attrSel("data-ecrow","ammo"));
+  return true;
+}
+/* Wired once on #mBody, like the trade window's listener (67-trade.js), and
+   idle unless this window is the one open. */
+function endFightClick(e){
+  if(!endFightLive()||!document.getElementById("ecDone"))return;
+  const t=e&&e.target;if(!t||!t.closest)return;let m;
+  if(t.closest(EC_INERT)){e.preventDefault();e.stopPropagation();return;}
+  if((m=t.closest("[data-ecrow]"))){endFightToggle(m.dataset.ecrow);return;}
+  if(t.closest("#ecUndoAmmo")){endFightUndoAmmo();return;}
+  if(t.closest("#ecSplit")){endFightSetSplit(character.xpSplit!==true);return;}
+  if(t.closest("#ecTrade")){endFightOpenLoot();return;}
+  if(t.closest("#ecDone")){endFightDone();return;}
+}
+function endFightWire(){
+  const body=document.getElementById("mBody");if(!body||body.dataset.ecWired)return;
+  body.dataset.ecWired="1";
+  body.addEventListener("click",endFightClick);
+  body.addEventListener("input",e=>{if(endFightLive()&&e.target&&e.target.id==="ecXp")endFightSetXp(e.target.value);});
+  body.addEventListener("keydown",e=>{if(endFightLive()&&document.getElementById("ecDone"))endFightKey(e);});
 }
 /* ================= settings modal =================
    A sidebar of categories beside one page at a time (#107). It replaced five
@@ -16430,10 +16995,11 @@ function wire(){
     if((m=t.closest("[data-jnldel]"))){jnlDelete(m.dataset.jnldel);return;}
     if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
     if(t.closest("[data-jnlck]"))return insertJournalCheckbox();
-    /* a checkbox in a rendered page, a Story field or a section note (#95):
-       only those three surfaces answer it — a box drawn in an item description
-       does nothing */
-    if((m=t.closest("[data-ck]"))){const n=num(m.dataset.ck),rt=m.closest('[id^="rt-"]');if(m.closest("#jnlBody"))jnlToggleCheckbox(n);else if(rt)rtToggleCheckbox(rt.id.slice(3),n);else{const ne=m.closest("#notesList .item"),ed=ne&&ne.querySelector("[data-noteedit]");if(ed)noteToggleCheckbox(ed.dataset.noteedit,n);}return;}
+    if(t.closest("[data-jnlac]"))return jnlToggleAfterCombat();
+    /* a checkbox in a rendered page, a Story field, a section note (#95), or a
+       page in the End of combat window (#105): only those surfaces answer it —
+       a box drawn in an item description does nothing */
+    if((m=t.closest("[data-ck]"))){const n=num(m.dataset.ck),rt=m.closest('[id^="rt-"]'),ep=m.closest("[data-ecpage]");if(ep)endFightTick(ep.dataset.ecpage,n);else if(m.closest("#jnlBody"))jnlToggleCheckbox(n);else if(rt)rtToggleCheckbox(rt.id.slice(3),n);else{const ne=m.closest("#notesList .item"),ed=ne&&ne.querySelector("[data-noteedit]");if(ed)noteToggleCheckbox(ed.dataset.noteedit,n);}return;}
     if((m=t.closest("[data-jnlgroup]"))){toggleJnlGroup(m.dataset.jnlgroup);return;}
     // trackers (87-trackers.js). The tap's own `t` is the target, so the tracker is `x`.
     if((m=t.closest("[data-trkdec]")))return trkAct(m.dataset.trkdec,(x,now)=>trkStep(x,-1,now),e.detail===0);
