@@ -8,7 +8,7 @@ them. The first version was written from the wiki's feature pages (#127).
 
 ## Home
 - Open the app with no characters: the home screen offers New character and Import.
-- Make a new character, then go back Home: its card shows its name and emblem.
+- Make a new character, then go back Home: its card shows its name, system badge and a relative time.
 - Star a character as autoload and reload the page: that character opens by itself.
 - Save a character to a `.json` file, delete it, then Import the file: it comes back whole.
 - Import a file whose character you already have: the app offers Replace, Import as copy, or Cancel.
