@@ -39,7 +39,9 @@ const FILES = {
     '', '```bash', 'cat src/docs/specs/example-alpha-design.md', 'echo "[Journal](features/example-journal.md)"', '```',
     'A wiki line quoted for a page: [Alpha](../../specs/example-alpha-design.md).', ''].join('\n'),
   'src/docs/wiki/example-page.md': [
-    '# Example page', '', 'Design: [the spec](../specs/example-alpha-design.md), and `src/docs/specs/example-alpha-design.md`.', ''].join('\n'),
+    '# Example page', '', 'Design: [the spec](../specs/example-alpha-design.md), and `src/docs/specs/example-alpha-design.md`.',
+    'Read [x](<../specs/example-alpha-design.md>) end.',
+    'Both src/docs/specs/example-alpha-design.md and [again](../specs/example-alpha-design.md) on one line.', ''].join('\n'),
   'src/docs/EXAMPLE.md': 'See [Alpha](specs/example-alpha-design.md) and [./ form](./specs/example-alpha-design.md).\n',
   'src/docs/_claude/WIRING-LEDGER.md': LEDGER_LINES.join('\n'),
   'src/js/10-example.js': '/* Design: src/docs/specs/example-alpha-design.md §3; specs/example-alpha-design.md §4 */\nfunction example(){}\n',
@@ -133,6 +135,11 @@ const rd = (d, rel) => fs.readFileSync(path.join(d, rel), 'utf8');
      plan.includes('[Alpha](../../specs/example-alpha-design.md).'), plan);
   ck('#127 the wiki: a relative link and a path in a code span',
      rd(d, 'src/docs/wiki/example-page.md').includes('[the spec](../specs/1.9.0/example-alpha-design.md), and `src/docs/specs/1.9.0/example-alpha-design.md`'));
+  ck('#127 an angle-bracket link target resolves correctly, not doubled (#127 fix round 2, finding 1)',
+     rd(d, 'src/docs/wiki/example-page.md').includes('Read [x](<../specs/1.9.0/example-alpha-design.md>) end.'));
+  ck('#127 a bare path and a link to the same file on one line both rewrite, once each',
+     rd(d, 'src/docs/wiki/example-page.md').includes(
+       'Both src/docs/specs/1.9.0/example-alpha-design.md and [again](../specs/1.9.0/example-alpha-design.md) on one line.'));
   ck('#127 src/docs/*.md: a link relative to src/docs, with and without ./',
      rd(d, 'src/docs/EXAMPLE.md') === 'See [Alpha](specs/1.9.0/example-alpha-design.md) and [./ form](./specs/1.9.0/example-alpha-design.md).\n', rd(d, 'src/docs/EXAMPLE.md'));
   ck('#127 a code comment: the repo path and the docs-rooted one',

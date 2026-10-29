@@ -64,12 +64,18 @@ function scanFiles(root) {
    [{line (1-based), index, token, kind: 'repo'|'docs'|'rel', target, prefix, fenced}]
    in the order they appear. Two passes per line, merged by index:
    TOKEN finds repo- and docs-rooted bare mentions (always .md/.html, anywhere in the
-   text) and, outside any `](…)`, a bare ./- or ../-prefixed .md/.html mention (a
-   reference-style link or a quoted example) — gated on the extension so it can never
+   text) and, outside any `](…)` or `](<…`, a bare ./- or ../-prefixed .md/.html mention
+   (a reference-style link or a quoted example) — gated on the extension so it can never
    match a fragment of a link's own label text, such as the "./" in "[./ form]".
    LINK_TARGET finds every markdown link/image target, whatever its extension, but only
-   inside `](…)`, so it never strays into label text either; a target that is itself a
-   src/docs/ mention, a URL or an absolute path is left to TOKEN or left alone. */
+   inside `](…)` or the angle-bracket form `](<…>)`, so it never strays into label text
+   either; a target that is itself a src/docs/ mention, a URL or an absolute path is left
+   to TOKEN or left alone.
+   The two passes are designed never to match the same span (inLink recognises both the
+   plain and angle-bracket openers so TOKEN defers to LINK_TARGET for either), but a
+   same-span duplicate is still de-duplicated here by (index, token length) as a second,
+   independent safety net — any future pattern that overlaps fails safe here, not by
+   corrupting a line (#127 fix round 2, finding 1). */
 function findRefs(text, file) {
   const refs = [];
   let fenced = false;
@@ -79,7 +85,7 @@ function findRefs(text, file) {
     for (const m of line.matchAll(TOKEN)) {
       const token = m[0];
       const before = line.slice(0, m.index);
-      const inLink = /\]\($/.test(before);
+      const inLink = /\]\(<?$/.test(before); // `](` or the angle-bracket opener `](<`
       const repo = REPO_PATTERN.exec(token);
       if (repo) { cands.push({ index: m.index, token, kind: "repo", target: repo[2], prefix: repo[1] || "" }); continue; }
       if (inLink) continue; // a link target, any extension: left to LINK_TARGET below
@@ -100,14 +106,23 @@ function findRefs(text, file) {
       cands.push({ index, token, kind: "rel", target, prefix: "" });
     }
     cands.sort((a, b) => a.index - b.index);
-    for (const c of cands) refs.push({ line: i + 1, index: c.index, token: c.token, kind: c.kind, target: c.target, prefix: c.prefix, fenced });
+    const seen = new Set();
+    for (const c of cands) {
+      const key = c.index + ":" + c.token.length;
+      if (seen.has(key)) continue; // a same-span duplicate: keep the first, drop the rest
+      seen.add(key);
+      refs.push({ line: i + 1, index: c.index, token: c.token, kind: c.kind, target: c.target, prefix: c.prefix, fenced });
+    }
   });
   return refs;
 }
 
 /* `text` from `fileOld`, rewritten for its home `fileNew` and the moves in `map`
    (old repo path -> new); exists(p) says whether repo path p is a file.
-   Returns {text, count}. */
+   Returns {text, count}. Throws if two edits on one line would overlap — findRefs
+   already de-duplicates an exact-span duplicate, but this is the independent backstop:
+   nothing is ever double-spliced, whatever produced the overlap (#127 fix round 2,
+   finding 1). */
 function rewriteText(text, fileOld, fileNew, map, exists) {
   const moved = fileOld !== fileNew;
   const lines = text.split("\n");
@@ -128,6 +143,12 @@ function rewriteText(text, fileOld, fileNew, map, exists) {
     byLine.get(r.line).push([r.index, r.token.length, next]);
   }
   for (const [n, edits] of byLine) {
+    const byStart = [...edits].sort((a, b) => a[0] - b[0]);
+    for (let k = 1; k < byStart.length; k++) {
+      if (byStart[k][0] < byStart[k - 1][0] + byStart[k - 1][1]) {
+        throw new Error("overlapping edits on " + fileOld + " line " + n + " — refusing to write it");
+      }
+    }
     let s = lines[n - 1];
     edits.sort((a, b) => b[0] - a[0]).forEach(([at, len, rep]) => { s = s.slice(0, at) + rep + s.slice(at + len); count++; });
     lines[n - 1] = s;
@@ -222,7 +243,13 @@ function main(argv) {
     console.error("move-docs: nothing was written");
     return 1;
   }
-  const plan = planMoves(root, moves);
+  let plan;
+  try { plan = planMoves(root, moves); }
+  catch (e) {
+    console.error("move-docs: " + e.message);
+    console.error("move-docs: nothing was written");
+    return 1;
+  }
   if (plan.errors.length) { plan.errors.forEach(e => console.error("move-docs: " + e)); console.error("move-docs: nothing was written"); return 1; }
   for (const m of moves) console.log("move  " + m.from + " -> " + m.to);
   let refs = 0, files = 0;
