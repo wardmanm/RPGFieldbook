@@ -138,18 +138,20 @@ The tree was clean at preflight, so `git add -A` takes only this step's work. Ne
      fetched once): it stays at the top level. Specs and plans are committed on main before their
      branch merges, so an open issue is work still in progress;
    - the merge that shipped it: the oldest merge naming its issue branch,
-     `git log main --merges --format='%H %s' | grep -E "issue/<n>-" | tail -1`. **No such merge
-     into main:** it stays at the top level;
-   - **a doc that names no issue at all:** the only case that falls back to the commit that added
-     the file, `git log main --diff-filter=A --format=%H -- <file> | tail -1`. Mark its line "no
-     issue: from the commit that added it" and leave it for Mike to place;
+     `git log main --merges --format='%H %s' | grep -E "issue/<n>-" | tail -1`;
+   - **its issue is closed but no merge names it, or the doc names no issue at all:** fall back to
+     the commit that added the file, `git log main --diff-filter=A --format=%H -- <file> | tail -1`.
+     The issue read from the file can be the wrong one (a first `#<n>` quoted from an example), and
+     a closed issue never gains a merge, so without this the doc would stay at the top level for
+     good. Mark its line "no merge: from the commit that added it" and leave it for Mike to confirm;
    - its version: `git tag --contains <sha> --sort=v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1`
      without the `v`; no tag but merged into main (`git merge-base --is-ancestor <sha> main`) means
      `X.Y.Z`.
 
    The destination is `src/docs/specs/<ver>/<same name>` or `src/docs/plans/<ver>/<same name>`. A
    spec split across releases files by its first merge. A plan with no matching spec is listed for
-   Mike to place by hand, as is every doc that names no issue. The first run backfills every
+   Mike to place by hand, and every add-commit line waits for his confirmation. Only an open issue
+   keeps a doc at the top level. The first run backfills every
    existing document; on later runs only this release's are left at the top level. Show the whole
    list, each line with its evidence (open issue, merge or added commit, tag), and those that stay,
    and wait for Mike to confirm or change it.
@@ -214,6 +216,11 @@ and the suite is green.
    item>, from <source> (pre-release X.Y.Z)"`.
 5. **Write each number back**: into the table's Issue column, and into its source line (a
    known-issues entry gains "(#131)"; so does an As built line or a status loose end).
+6. **Commit straight after filing**, in the same session: the record and every write-back
+   (`known-issues.md`, a spec's As built, `.claude/status.md`) go into step 2's own commit,
+   `docs: pre-release X.Y.Z — step 2`, even while a "priority not set" keeps the step open (finishing
+   it later commits again under the same message). Never leave a write-back uncommitted between
+   sessions: the preflight allows only the record and the checklist to be dirty, and would refuse.
 
 **Done when** every row is marked and every "file" row has an issue with its priority set.
 
