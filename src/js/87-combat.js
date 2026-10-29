@@ -375,7 +375,11 @@ async function endCombatAsk(){
    gave back (ammoFight). Then the fight ends, the chrome is redrawn and saved,
    the ammunition is recovered quietly (#104's rule, no toast), and the End of
    combat window opens with what came back and its Undo. Returns combatEnd()'s
-   {rounds, sec, combatants}. */
+   {rounds, sec, combatants}.
+   No toast of its own any more, so the last Fire's toast would stay up over the
+   window with its Undo live: it is hidden here, and the settlement is counted
+   (_ammoSettled) so that Undo refuses even if it is reached. An error toast is
+   left up — a save that did not land must never vanish unread. */
 function endCombatNow(){
   const r=num(character.combatRound);
   const logged=ammoFightTotals(character).map(a=>({kind:a.kind,e:logInv({kind:"ammo",title:ammoLogTitle(a.kind,a.fired,a.back),
@@ -383,7 +387,9 @@ function endCombatNow(){
   character.ammoFight={};
   const s=combatEnd(character);
   renderActiveSpells();renderCombatChrome();scheduleSave();
+  _ammoSettled++;
   const got=applyAmmoRecovery({quiet:true,logged});
+  const tw=document.getElementById("toast");if(!(tw&&tw.classList.contains("err")))hideToast(true);
   setCombatLive(`Combat ended after ${s.rounds} round${s.rounds===1?"":"s"} (${fmtCombatTime(s.sec)})`);
   openEndOfCombat(Object.assign({},s,{ammo:{logged,lines:got.lines,undo:got.undo}}));
   return s;

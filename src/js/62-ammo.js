@@ -264,6 +264,13 @@ function ammoSpentEntry(c,id){
   return {n,hits,misses,kind:ok?ammoKindOf(e.kind):"",
           snap:(ok&&e.snap&&typeof e.snap==="object"&&!Array.isArray(e.snap))?e.snap:null};
 }
+/* #105: how many times End combat has settled the ammunition on this page
+   (endCombatNow() counts it). Every shot's record carries the count from when
+   it was fired, and its toast's Undo refuses once End combat has settled since
+   (undoFireTap()): the shot was recovered or spent with the rest, and taking it
+   back then counted it as spent again, to be recovered twice. Not saved: a
+   reload leaves no toast to tap. */
+let _ammoSettled=0;
 /* One shot onto `st`'s spent entry: one more on its count, one more Hit or
    Miss when the question was answered (#104), and a one-piece copy of the item
    for recovery to rebuild from. The entry is rebuilt every shot, so the
@@ -272,7 +279,7 @@ function ammoSpentEntry(c,id){
 function ammoRecordShot(c,st,kind,outcome){
   if(!c.ammoSpent||typeof c.ammoSpent!=="object"||Array.isArray(c.ammoSpent))c.ammoSpent={};
   const undo={stack:JSON.parse(JSON.stringify(st)),at:c.inventory.indexOf(st),
-              spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null};
+              spent:c.ammoSpent[st.id]?JSON.parse(JSON.stringify(c.ammoSpent[st.id])):null,settled:_ammoSettled};
   const p=ammoSpentEntry(c,st.id);
   c.ammoSpent[st.id]={n:p.n+1,hits:p.hits+(outcome==="hit"?1:0),misses:p.misses+(outcome==="miss"?1:0),
     kind,snap:Object.assign(JSON.parse(JSON.stringify(st)),{qty:1})};
@@ -682,9 +689,12 @@ function shotDone(r,itemId,viaKey,msg){
   if(undo)undo.addEventListener("keydown",e=>{if(e.repeat)e.preventDefault();});
   if(viaKey){const b=ammoFireBtn(itemId);if(b)b.focus();else if(undo)undo.focus();}
 }
-/* The toast's Undo: only for the character it was shown for. */
+/* The toast's Undo: only for the character it was shown for, and only until
+   End combat settles the ammunition (#105, _ammoSettled). A shot fired with no
+   fight running undoes as before, until an End combat sweeps it up too. */
 function undoFireTap(rec,who,viaKey,itemId){
   if(!character||character!==who)return false;
+  if(!rec||!rec.undo||rec.undo.settled!==_ammoSettled)return false;
   if(!undoFire(character,rec))return false;
   scheduleSave();
   renderInventory();renderAttacks();recompute();

@@ -4352,6 +4352,53 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('#104 a spent entry no longer carries asked', !('asked' in X.ammoSpentEntry({ammoSpent: {a: {n: 2, kind: 'arrow', asked: 1}}}, 'a')));
 }
 
+/* ---- #105 review fix 1: End combat has no toast of its own, so the last
+   Fire's toast and its Undo must not outlive the fight it belonged to ---- */
+{
+  const keep = {toast: ctx.toast, hide: ctx.hideToast, gid: ctx.document.getElementById, ch: X.character};
+  let last = null; const hid = [];
+  ctx.toast = (m, a) => { if (a) last = a; return null; };
+  ctx.hideToast = now => { hid.push(now); };
+  const mk = () => {
+    const c = X.blankChar(); X.character = c;
+    c.inventory = [{id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}},
+                   {id: 's1', name: 'Arrow', qty: 20, ammo: {kind: 'arrow'}}];
+    return c;
+  };
+  try {
+    let c = mk(); X.startCombatNow();
+    for (let i = 0; i < 9; i++) X.fireWeapon('w1', false);
+    const shotUndo = last; hid.length = 0;
+    ctx.endCombatNow();
+    ck('#105 Fire, then End combat: the Fire toast is hidden at once', hid.length === 1 && hid[0] === true, hid);
+    const qty = c.inventory.find(i => i.id === 's1').qty, spent = JSON.stringify(c.ammoSpent), log = JSON.stringify(c.invLog);
+    ck('#105 ...and its Undo, reached anyway, refuses and changes nothing',
+       !!shotUndo && shotUndo.label === 'Undo' && shotUndo.run() === false &&
+       c.inventory.find(i => i.id === 's1').qty === qty && qty === 15 && JSON.stringify(c.ammoSpent) === spent && spent === '{}' && JSON.stringify(c.invLog) === log,
+       [qty, c.ammoSpent]);
+    c = mk(); last = null;
+    X.fireWeapon('w1', false);
+    ck('#105 a shot with no fight running still undoes', !X.inCombat(c) && !!last && last.run() === true && c.inventory[1].qty === 20 && !('s1' in c.ammoSpent), c.ammoSpent);
+    c = mk(); X.startCombatNow(); last = null;
+    X.fireWeapon('w1', false); X.fireWeapon('w1', false);
+    ck('#105 a shot in a fight still undoes while the fight runs', X.inCombat(c) && !!last && last.run() === true && c.inventory[1].qty === 19 && c.ammoSpent.s1.n === 1, c.ammoSpent);
+    c = mk(); last = null;
+    X.fireWeapon('w1', false); const before = last;
+    X.startCombatNow(); ctx.endCombatNow();
+    const q0 = c.inventory[1].qty;
+    ck('#105 a shot fired before the fight, swept up by its End combat, no longer undoes',
+       before.run() === false && c.inventory[1].qty === q0 && JSON.stringify(c.ammoSpent) === '{}', [q0, c.inventory[1].qty, c.ammoSpent]);
+    c = mk(); X.startCombatNow(); hid.length = 0;
+    ctx.document.getElementById = id => id === 'toast' ? {classList: {contains: k => k === 'err'}} : keep.gid(id);
+    ctx.endCombatNow();
+    ctx.document.getElementById = keep.gid;
+    ck('#105 an error toast is left up: a save that did not land must never vanish unread', hid.length === 0, hid);
+  } finally {
+    ctx.toast = keep.toast; ctx.hideToast = keep.hide; ctx.document.getElementById = keep.gid;
+    X.character = keep.ch; X._endFight = null;
+  }
+}
+
 /* ---- the item editor's kind lists (#8) ---- */
 {
   const c = {inventory: [{name: 'Pellet Bow', weapon: {ammo: 'Dart Pellet'}}, {name: 'Stone', ammo: {kind: 'stone'}}, {name: 'Arrow', ammo: {kind: 'arrow'}}]};
