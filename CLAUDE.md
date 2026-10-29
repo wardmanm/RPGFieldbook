@@ -70,7 +70,7 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
 
 ## Build, test, QA — build freely, never release
 
-- **Tests: `./src/tests/run.sh`** (across ten suites). `srd-verbatim` needs PyMuPDF and the SRD
+- **Tests: `./src/tests/run.sh`** (across eleven suites). `srd-verbatim` needs PyMuPDF and the SRD
   PDF in `_conversion-data/srd52/`, so under the system `python3` it skips cleanly; run it with
   `.venv/bin/python src/tests/srd-verbatim.py`. `private-data` runs the private repo's suites
   against this checkout when `_private-data` is linked, and skips otherwise; put `.venv/bin` on

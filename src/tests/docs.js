@@ -57,7 +57,7 @@ suites.forEach(s => {
   ck('suite "' + s + '" exists', js || py);
 });
 const claudeSuites = /across (\w+) suites/.exec(claude);
-const WORDS = {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10};
+const WORDS = {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12};
 ck('CLAUDE.md states a suite count', !!claudeSuites);
 ck('CLAUDE.md suite count is right',
    claudeSuites && (WORDS[claudeSuites[1]] || +claudeSuites[1]) === suites.length,
