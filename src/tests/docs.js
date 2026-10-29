@@ -397,4 +397,47 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   }
 }
 
+// ---------- links to specs, plans and the archive resolve (#127, pre-release spec §6)
+// /pre-release files specs and plans by version and archives finished docs, and
+// scripts/move-docs.js rewrites every reference. This is the net under it: every
+// path or link that names src/docs/specs/, plans/ or archive/ must exist. The
+// files are move-docs.js's own list (scanFiles()) minus src/tests/, whose
+// fixtures name invented docs. A relative link counts when it names one of the
+// three folders or a dated doc, and not inside a fenced block: plans quote other
+// pages' links there, which are relative to those pages. X.Y.Z, YYYY and an
+// example- file name mark an illustration, not a claim.
+{
+  const {scanFiles, findRefs} = require('../../scripts/move-docs.js');
+  const DOC_TARGET = /^src\/docs\/(specs|plans|archive)\//;
+  const ILLUSTRATION = /X\.Y\.Z|YYYY|(^|\/)example-[^/]*$/;
+  const counts = r => r.kind !== 'rel' || (!r.fenced &&
+    (/(^|\/)(specs|plans|archive)\//.test(r.token) || /^\d{4}-\d{2}-\d{2}-/.test(path.posix.basename(r.token))));
+  const deadDocLinks = (file, text, exists) => findRefs(text, file)
+    .filter(r => DOC_TARGET.test(r.target) && !ILLUSTRATION.test(r.token) && counts(r) && !exists(r.target));
+  // A folder link (../specs/, trailing slash, no file) is a kind move-docs.js
+  // itself recognises (its "a folder" case, line 14/139) — it names the
+  // category, not a doc, and never goes stale by itself. isFile() alone flagged
+  // src/docs/wiki/index.md's own "[Specs](../specs/) and [plans](../plans/)"
+  // links dead; existsSync() accepts the directory too (#127 ruling).
+  const onDisk = p => { try { return fs.existsSync(path.join(ROOT, p)); } catch (e) { return false; } };
+
+  // seen to fail first, on invented paths against a stand-in disk that holds one
+  // doc: a dead reference of each kind, and one that resolves
+  const kept = 'src/docs/specs/' + '2026-01-01-kept-design.md', gone = '2026-01-01-gone-design.md';
+  const only = p => p === kept;
+  ck('#127 the doc-link check catches a dead repo path',
+     deadDocLinks('CLAUDE.md', 'See src/docs/specs/' + gone + '.', only).length === 1);
+  ck('#127 ...a dead relative link from the wiki',
+     deadDocLinks('src/docs/wiki/process/x.md', '[spec](../../specs/' + gone + ')', only).length === 1);
+  ck('#127 ...and a dead docs-rooted path in a code comment',
+     deadDocLinks('src/js/x.js', '/* Design: specs/' + gone + ' */', only).length === 1);
+  ck('#127 ...but passes a link that resolves, and an illustration',
+     deadDocLinks('src/docs/wiki/x.md', '[spec](../specs/' + '2026-01-01-kept-design.md) and src/docs/archive/X.Y.Z/PRE-RELEASE.md', only).length === 0);
+
+  const dead = scanFiles(ROOT).filter(f => !f.startsWith('src/tests/'))
+    .flatMap(f => deadDocLinks(f, read(f), onDisk).map(r => f + ':' + r.line + ' ' + r.token));
+  ck('every link to a spec, plan or archived doc resolves (a move missed one: scripts/move-docs.js rewrites them)',
+     dead.length === 0, dead.slice(0, 10));
+}
+
 ck.done();
