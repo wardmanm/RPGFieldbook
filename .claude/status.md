@@ -1,12 +1,19 @@
 # Status: Fieldbook
-Updated: 2026-10-29 · Branch: main
+Updated: 2026-10-30 · Branch: main
 
 ## Current focus
-1.9.0's planned items are all merged; #105, the capstone, merged 2026-10-29. Still open in the v1.9.0
-milestone: #127 (Release Process Updates, filed 2026-10-29). The thirteen `1.9.1`-labelled issues wait for
-1.9.1; #110 and #126 have no milestone. No branch open.
+1.9.0's items are all merged (#127, the pre-release process, on 2026-10-30). Next: Mike's `/pre-release 1.9.0`
+— its first run is also the one-time backfill of specs and plans into version folders — then `/release`.
+The thirteen `1.9.1`-labelled issues wait for 1.9.1; #110 and #126 have no milestone. No branch open.
 
 ## Recent changes
+- 2026-10-30: Merged #127, the pre-release process: `/pre-release <ver>` (docs filed by version with every
+  link rewritten, outstanding issues filed to the milestone with a fix label and project Priority, a QA
+  checklist Claude pre-drives, QA bugs where only a P0 blocks, release notes checked), recorded in
+  `src/docs/PRE-RELEASE.md`; `./build.sh --release` and `/release` refuse without a complete record.
+  Mike's decisions: the recorded-checklist gate, links rewritten everywhere, a one-time backfill, archive
+  not delete, filing by milestone + next-fix label + project Priority (P0 blocks), the QA pre-drive, and
+  a missing project scope files nothing (§9 amended).
 - 2026-10-29: Merged #105, the end-of-combat window: End combat asks in the app's warning window, then
   an End of combat window with folded sections — summary, ammunition with Undo recovery, XP with Split
   among N into the level-up, Loot through a trade with the fallen foes, and trackers/pages marked Show
@@ -21,11 +28,11 @@ milestone: #127 (Release Process Updates, filed 2026-10-29). The thirteen `1.9.1
 - 2026-10-27: Merged #118, feat support: feats at ASI levels (one list, ASI pinned first, prerequisites
   warn), Feats allowed per character, Epic Boons at 19, species/background feat choices, Undo level-up and a
   Level-down dialog, and the app's own warning window (`askConfirm()`; the other confirm() boxes are #126).
-- 2026-10-26: Merged #102, Extensions and manifest installs (sources, update pill, Update all, Manual install).
-- 2026-10-25: Merged #47 (trade window and inventory log) and its follow-ups; #91 (initiative tracker);
-  #52 (hide tabs per character).
 
 ## Pending decisions
+- **A permission rule for `/pre-release`'s GitHub writes** (raised 2026-10-29): no `permissions.ask` rule makes
+  Claude Code ask before `gh issue create`, `gh label create` or `gh project item-edit`; the skill's text
+  is the only guard. Options: add an ask rule / leave it. Blocks: nothing.
 - **#105's window shifts as a section opens** (raised 2026-10-29): sized to its content and centred, it
   grows from the middle, so the tapped row moves. Options: pin it to the top / back to the fixed height
   (empty space after a quiet fight) / keep. Claude's suggestion: pin to the top. Blocks: nothing.
@@ -39,6 +46,8 @@ milestone: #127 (Release Process Updates, filed 2026-10-29). The thirteen `1.9.1
   2026-10-19). Options: keep / restore it.
 
 ## Loose ends
+- #127's leftovers (release-undo and `releases/data/`, the private push check, push order, bash 3.2, and
+  the deferred minors) are in its spec's As built; `/pre-release 1.9.0` step 2 brings them to Mike to file.
 - 34 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
 - Data releases needed (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs
   (#118 feat ability increases and species feats), and Homebrew in the private repo (#125).
