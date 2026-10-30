@@ -162,8 +162,19 @@ const keep = raw.slice(0, raw.indexOf("\n## Pending"));
 fs.writeFileSync(NOTEBOOK, keep + "\n## Pending\n\n_Nothing yet._\n");
 
 /* ---------------- file the pre-release record (#127, spec §3) ----------------
-   Last, so a refusal above leaves it where /pre-release can resume it. */
-console.error(`    pre-release record filed as ${preRelease.archiveRecord(ROOT, next)}`);
+   Last, so a refusal above leaves it where /pre-release can resume it. The cut is
+   written by now, so a failed move does not undo or stop it (build.sh runs under
+   `set -e`, and stopping here would leave a half-built release): it says so, with
+   the exact command that files the record by hand, and the cut carries on.
+   archiveRecord() leaves no empty archive folder behind, and the record stays at
+   its old path, so a later gate reads the tree as it is: the tag decides "cut
+   before" once the release is tagged (#127 final fix wave). */
+try {
+  console.error(`    pre-release record filed as ${preRelease.archiveRecord(ROOT, next)}`);
+} catch (e) {
+  console.error(`release: the cut is written, but the pre-release record could not be filed (${e.message}).\n` +
+    `release: file it by hand before the release commit: ${preRelease.archiveByHand(ROOT, next)}`);
+}
 
 console.error(`    v${cur} -> v${next} (${date}), ${notes.length} note${notes.length === 1 ? "" : "s"}`);
 process.stdout.write(next);

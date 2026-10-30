@@ -7,9 +7,13 @@
  * Offline by design: the open-P0 check against GitHub is the release skill's.
  *
  *   node scripts/pre-release-record.js [X.Y.Z] [--root DIR]
+ *   node scripts/pre-release-record.js --help
  *
  * prints "pre-release X.Y.Z: complete" and exits 0, or prints what release.js
- * would refuse with and exits 1. With no version it checks the record's own.
+ * would refuse with and exits 1. With no version it checks the record's own, by
+ * the same rule: its heading must name a version X.Y.Z, so "# Pre-release v1.9.0"
+ * is refused here just as release.js refuses it. --help (-h) prints the usage and
+ * exits 0; an unknown flag or an argument that is not X.Y.Z prints it and exits 2.
  */
 "use strict";
 const fs = require("fs");
@@ -92,30 +96,70 @@ function gateProblem(root, version) {
   return recordProblem(readRecord(root), version);
 }
 
-/* move the record to src/docs/archive/<version>/; returns that path */
+/* move the record to src/docs/archive/<version>/; returns that path. On a failure
+   it removes the folder it made, if it made one and it is still empty, so nothing
+   is left that a later gate could misread, then throws. */
 function archiveRecord(root, version) {
   const dest = path.join(root, archivePath(version));
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.renameSync(path.join(root, RECORD), dest);
+  const made = fs.mkdirSync(path.dirname(dest), { recursive: true });
+  try { fs.renameSync(path.join(root, RECORD), dest); }
+  catch (e) {
+    if (made) { try { fs.rmdirSync(path.dirname(dest)); } catch (e2) { /* not empty, or not ours: leave it */ } }
+    throw e;
+  }
   return archivePath(version);
+}
+
+/* the commands that file the record by hand when archiveRecord() failed after a cut:
+   git mv when git tracks the record (as /pre-release leaves it), plain mv otherwise */
+function archiveByHand(root, version) {
+  const mv = gitOk(root, ["ls-files", "--error-unmatch", "--", RECORD]) ? "git mv" : "mv";
+  return "mkdir -p " + path.posix.dirname(archivePath(version)) + " && " + mv + " " + RECORD + " " + archivePath(version);
+}
+
+const VERSION = /^\d+\.\d+\.\d+$/;
+const USAGE = "usage: node scripts/pre-release-record.js [X.Y.Z] [--root DIR]\n" +
+  "  checks src/docs/PRE-RELEASE.md as release.js does before a cut: prints\n" +
+  "  \"pre-release X.Y.Z: complete\" and exits 0, or the refusal and exits 1.\n" +
+  "  With no version, checks the version the record's own heading names.";
+
+/* a refusal, read "pre-release …" once: the gate's own words already start with
+   "pre-release" when they name the step, and get the prefix otherwise */
+function refuse(msg) {
+  console.error(/^pre-release\b/.test(msg) ? msg : "pre-release: " + msg);
+  return 1;
 }
 
 function main(argv) {
   const args = argv.slice(2);
-  const ri = args.indexOf("--root");
-  const root = ri >= 0 ? path.resolve(args[ri + 1] || ".") : path.resolve(__dirname, "..");
-  const rest = args.filter((a, i) => ri < 0 || (i !== ri && i !== ri + 1));
+  if (args.includes("--help") || args.includes("-h")) { console.log(USAGE); return 0; }
+  const usage = why => { console.error("pre-release: " + why); console.error(USAGE); return 2; };
+  let root = path.resolve(__dirname, ".."), rest = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--root") {
+      if (i + 1 >= args.length || args[i + 1].startsWith("-")) return usage("--root needs a folder");
+      root = path.resolve(args[++i]);
+    } else if (args[i].startsWith("-")) return usage("unknown option " + args[i]);
+    else rest.push(args[i]);
+  }
+  if (rest.length > 1) return usage("one version at most, not " + rest.join(" "));
   let version = rest[0];
-  if (!version) {
+  if (version !== undefined && !VERSION.test(version)) return usage(version + " is not a version X.Y.Z");
+  if (version === undefined) {
     const text = readRecord(root);
-    if (text == null) { console.error("pre-release: no record (" + RECORD + " does not exist). Run /pre-release X.Y.Z first."); return 1; }
-    version = parseRecord(text).version || "X.Y.Z";
+    if (text == null) return refuse("no record (" + RECORD + " does not exist). Run /pre-release X.Y.Z first.");
+    const named = parseRecord(text).version;
+    if (!named) return refuse(RECORD + ' has no "# Pre-release X.Y.Z" heading. Run /pre-release X.Y.Z first.');
+    /* the same exact-heading rule release.js applies: it compares the heading with
+       the X.Y.Z it is cutting, so a heading that is not X.Y.Z never passes there */
+    if (!VERSION.test(named)) return refuse(RECORD + "'s heading names " + named + ", which is not a version X.Y.Z: release.js refuses it. Run /pre-release X.Y.Z first.");
+    version = named;
   }
   const p = gateProblem(root, version);
-  if (p) { console.error("pre-release: " + p); return 1; }
+  if (p) return refuse(p);
   console.log("pre-release " + version + ": complete");
   return 0;
 }
 
-module.exports = { RECORD, STEPS, archivePath, readRecord, parseRecord, recordProblem, gateProblem, archiveRecord };
+module.exports = { RECORD, STEPS, archivePath, readRecord, parseRecord, recordProblem, gateProblem, archiveRecord, archiveByHand, main };
 if (require.main === module) process.exit(main(process.argv));
