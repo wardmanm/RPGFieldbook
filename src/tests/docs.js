@@ -434,7 +434,10 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   ck('#127 ...but passes a link that resolves, and an illustration',
      deadDocLinks('src/docs/wiki/x.md', '[spec](../specs/' + '2026-01-01-kept-design.md) and src/docs/archive/X.Y.Z/PRE-RELEASE.md', only).length === 0);
 
-  const dead = scanFiles(ROOT).filter(f => !f.startsWith('src/tests/'))
+  // _private-data/ is left out: it is one clone shared by every checkout, so a path
+  // its allowlist names can be ahead of (or behind) this checkout's tree, and its own
+  // leak scan already fails on a stale entry (#127 ruling 24)
+  const dead = scanFiles(ROOT).filter(f => !f.startsWith('src/tests/') && !f.startsWith('_private-data/'))
     .flatMap(f => deadDocLinks(f, read(f), onDisk).map(r => f + ':' + r.line + ' ' + r.token));
   ck('every link to a spec, plan or archived doc resolves (a move missed one: scripts/move-docs.js rewrites them)',
      dead.length === 0, dead.slice(0, 10));
@@ -501,6 +504,31 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   ck('#127 the filing commands hard-code no priority, and the P0 path has no fix-version label',
      filing.includes('gh issue create') && !/"P[012]"/.test(filing) && filing.includes('select(.name==\\"$PRIORITY\\")') &&
      p0Branch !== undefined && !p0Branch.includes('$NEXT'));
+  // #127 final fix wave: Claude Code keeps no shell variables between Bash calls, so
+  // filing and the project fields are ONE block; it checks PRIORITY and looks the
+  // project ids up before it creates anything, and its guards really stop
+  const fileBlocks = fenced(pre).filter(b => b.includes('gh issue create'));
+  const fb = fileBlocks[0] || '';
+  ck('#127 filing an issue and setting its project fields is one block',
+     fileBlocks.length === 1 && fb.includes('single-select-option-id') && fenced(pre).filter(b => b.includes('single-select-option-id')).length === 1,
+     fileBlocks.length);
+  ck('#127 ...it checks PRIORITY is exactly P0, P1 or P2 and exits otherwise, before any gh call',
+     /case "\$PRIORITY" in P0\|P1\|P2\) ;; \*\)[^\n]*exit 1;; esac/.test(fb) && fb.indexOf('case "$PRIORITY"') < fb.indexOf('gh '), fb);
+  ck('#127 ...looks up the Priority option before creating the issue, and stops when it is missing',
+     fb.indexOf('PICK=') >= 0 && fb.indexOf('PICK=') < fb.indexOf('gh issue create') && /\[ -n "\$PICK" \][\s\S]{0,200}?exit 1/.test(fb), fb);
+  ck('#127 ...and passes the body on stdin, so no body file exists in the repo',
+     (fb.match(/URL=\$\(gh issue create/g) || []).length === 2 && (fb.match(/URL=\$\(gh issue create/g) || []).length === (fb.match(/--body-file - <<'BODY'/g) || []).length && !/--body-file (?!-[ `])/.test(pre), fb);
+  // the archived roadmap page has one name, the one /release reads
+  ck('#127 /pre-release archives the roadmap page under the one name /release reads',
+     pre.includes('always becomes `src/docs/archive/X.Y.Z/roadmap-X.Y.Z.md`') && rel.includes('`src/docs/archive/<version>/roadmap-<version>.md`'));
+  // #127 ruling 25: a routine status commit is not "main moved"
+  const moved = fenced(pre).filter(b => b.includes('--invert-grep'));
+  ck('#127 the moved-main check ignores the record, the checklist and the status log',
+     moved.length === 1 && [':!src/docs/PRE-RELEASE.md', ':!src/docs/QA-CHECKLIST.md', ':!.claude/status.md'].every(x => moved[0].includes("'" + x + "'")), moved);
+  // #127 ruling 24: the private allowlist is committed in step 1, and pushed by /release right after public main
+  ck('#127 a moved private allowlist is committed by /pre-release and pushed by /release after public main',
+     pre.includes('git -C _private-data commit -m "docs: pre-release X.Y.Z — paths moved"') &&
+     /git push --follow-tags`; then[^\n]*`git -C _private-data push`, right after/.test(rel));
   // #127 ruling 20: steps are strictly ordered
   ck('#127 reopening a step reopens every later step', pre.includes('reopens every later step'));
 }

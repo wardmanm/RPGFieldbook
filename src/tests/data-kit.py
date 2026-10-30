@@ -473,6 +473,58 @@ ck("#127 ...and after that command, the cut succeeds and files the record again"
    and os.path.exists(os.path.join(d, "src/docs/archive/1.9.0/PRE-RELEASE.md"))
    and 'APP_VERSION="1.9.0"' in open(os.path.join(d, "src/js/30-version.js"), encoding="utf-8").read(), r.stderr)
 shutil.rmtree(d)
+
+# ---------- #127 ruling 25: RELEASING's undo once the cut is staged. /release stages
+# with `git add -A`, and `git checkout -- .` restores from the index, so the undo
+# unstages first: `git restore --staged . && git checkout -- .`, then the mv the gate prints
+d = checkout()
+prerelease(d, "1.9.0")
+git(d, "add", "-A")
+git(d, "commit", "-qm", "pre-release 1.9.0")
+r = node(d, "scripts/release.js", "1.9.0")
+first = r.returncode
+git(d, "add", "-A")
+staged = git(d, "diff", "--cached", "--name-status").stdout
+git(d, "restore", "--staged", ".")
+git(d, "checkout", "--", ".")
+undone = untracked_all(d)
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 RELEASING's undo of a staged cut puts every tracked file back and leaves only the archived copy",
+   first == 0 and "src/docs/archive/1.9.0/PRE-RELEASE.md" in staged and undone == "?? src/docs/archive/1.9.0/PRE-RELEASE.md"
+   and git(d, "diff", "--stat").stdout.strip() == "" and r.returncode == 1 and r.stderr.rstrip().endswith(mv), (first, staged, undone, r.stderr))
+subprocess.run(mv, shell=True, cwd=d)
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 ...and after the mv the gate prints, the cut goes through again", r.returncode == 0, r.stderr)
+shutil.rmtree(d)
+
+# ---------- #127 final fix wave: the record cannot be filed after the cut. The cut is
+# written, so release.js carries on (exit 0) with no stack trace, names the exact
+# command that files the record by hand, and leaves no empty archive folder
+if not (hasattr(os, "geteuid") and os.geteuid() == 0):  # chmod means nothing to root
+    d = checkout()
+    prerelease(d, "1.9.0")
+    git(d, "add", "-A")
+    git(d, "commit", "-qm", "pre-release 1.9.0")
+    os.makedirs(os.path.join(d, "src/docs/archive"))
+    os.chmod(os.path.join(d, "src/docs"), 0o555)  # the record cannot leave src/docs
+    r = node(d, "scripts/release.js", "1.9.0")
+    os.chmod(os.path.join(d, "src/docs"), 0o755)
+    by_hand = "mkdir -p src/docs/archive/1.9.0 && git mv src/docs/PRE-RELEASE.md src/docs/archive/1.9.0/PRE-RELEASE.md"
+    ck("#127 release.js: a record it cannot file leaves the cut done, says so, and names the git mv, with no stack trace",
+       r.returncode == 0 and "release: the cut is written, but the pre-release record could not be filed" in r.stderr
+       and ("release: file it by hand before the release commit: " + by_hand + "\n") in r.stderr and "    at " not in r.stderr
+       and 'APP_VERSION="1.9.0"' in open(os.path.join(d, "src/js/30-version.js"), encoding="utf-8").read(), r.stderr)
+    ck("#127 ...the record stays where it was, and no empty archive folder is left",
+       os.path.exists(os.path.join(d, "src/docs/PRE-RELEASE.md")) and not os.path.exists(os.path.join(d, "src/docs/archive/1.9.0")),
+       untracked_all(d))
+    printed = [l.split("release commit: ", 1)[1] for l in r.stderr.splitlines() if l.startswith("release: file it by hand")]
+    if printed:  # run the command exactly as release.js printed it
+        subprocess.run(printed[0], shell=True, cwd=d)
+    ck("#127 ...and that command, run as printed, files it as a cut would",
+       not os.path.exists(os.path.join(d, "src/docs/PRE-RELEASE.md"))
+       and "R  src/docs/PRE-RELEASE.md -> src/docs/archive/1.9.0/PRE-RELEASE.md" in git(d, "status", "--porcelain").stdout,
+       git(d, "status", "--porcelain").stdout)
+    shutil.rmtree(d)
 d = checkout()
 write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 6}]})
 prerelease(d, "1.9.0")

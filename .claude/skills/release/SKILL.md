@@ -56,6 +56,10 @@ node scripts/pre-release-record.js                            # app only: the /p
   An incomplete record, a missing one, or an open P0: stop, say which, and send Mike to
   `/pre-release X.Y.Z`. Do not propose a version. Data and private releases skip both checks.
 
+- **The private repo ahead of its remote** by exactly a `docs: pre-release X.Y.Z — paths moved`
+  commit (app releases): expected. `/pre-release` step 1 made it when `move-docs.js` rewrote the
+  private leak allowlist, and it is pushed right after public main (Gate 2), never before. Anything
+  else unpushed there: say so and ask.
 - **`??` lines:** an untracked file is missing from the tagged build. Ask whether each should be
   committed first or removed, and do not propose a version until none are left.
 - **` M` lines:** list each and ask whether it belongs in this release; `git add -A` will include it.
@@ -77,7 +81,9 @@ would refuse it anyway).
 
 - **app:** `./build.sh --release X.Y.Z`, then show the new `CHANGELOG` entry and `git diff --stat`.
   `release.js` refuses without a complete record for exactly `X.Y.Z`, and after the cut files it
-  under `src/docs/archive/X.Y.Z/`; `git add -A` takes that move.
+  under `src/docs/archive/X.Y.Z/`; `git add -A` takes that move. If it says instead "the cut is
+  written, but the pre-release record could not be filed", the cut stands: show Mike the line, and
+  run the `mkdir -p … && git mv …` it prints before Gate 2's commit.
 - **data / private:** run `data-release.js` (with `--registry … --data-root …` for private) without
   `--dry-run`; show which packs moved.
 
@@ -87,7 +93,7 @@ Ask: "Publish **vX.Y.Z**? Reply **publish**." Then run, per `src/docs/RELEASING.
 
 | Kind | Commands |
 |---|---|
-| app | `git add -A && git commit -m "Release vX.Y.Z" && git tag -a vX.Y.Z -m "vX.Y.Z" && git push --follow-tags` |
+| app | `git add -A && git commit -m "Release vX.Y.Z" && git tag -a vX.Y.Z -m "vX.Y.Z" && git push --follow-tags`; then, if the preflight found the private repo's `paths moved` commit, `git -C _private-data push`, right after |
 | data | the four lines `data-release.js` printed (`data-vX.Y.Z-N`) |
 | private | its printed `git -C _private-data …` lines, only after public main is pushed |
 

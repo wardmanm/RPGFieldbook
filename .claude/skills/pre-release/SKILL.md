@@ -62,12 +62,12 @@ grep -o 'APP_VERSION="[^"]*"' src/js/30-version.js    # the current version
   Then continue at the record's first `open` step.
 - **Has main moved?** On a resume after step 3 is done, list what has reached main since the
   commit the checklist names (the last `Generated against` or `Kept at` line in its header),
-  leaving out this pre-release's own commits and any commit that
-  touches only the two files:
+  leaving out this pre-release's own commits and any commit that touches only the two files or
+  the status log, `.claude/status.md` (a routine `docs(repo): status` commit is not new work):
 
   ```bash
   git log --format='%h %s' <that commit>..HEAD --invert-grep --grep='^docs: pre-release X\.Y\.Z — ' \
-    -- . ':!src/docs/PRE-RELEASE.md' ':!src/docs/QA-CHECKLIST.md'
+    -- . ':!src/docs/PRE-RELEASE.md' ':!src/docs/QA-CHECKLIST.md' ':!.claude/status.md'
   ```
 
   Anything listed is work merged since the checklist was built (a merged P0 fix is expected
@@ -166,9 +166,10 @@ The tree was clean at preflight, so `git add -A` takes only this step's work. Ne
 
    Mike marks each **archive**, **correct** or **keep**:
    - **archive** a whole doc: add it to the move list, to `src/docs/archive/X.Y.Z/<name>.md`
-     (prefix the folder when names would collide: a wiki roadmap page becomes `roadmap-X.Y.Z.md`). An
-     archived wiki page leaves the index's topic list; its index line moves under "Elsewhere",
-     pointing at the archive.
+     (prefixed with its folder when names would collide). The release's roadmap page,
+     `src/docs/wiki/roadmap/X.Y.Z.md`, always becomes `src/docs/archive/X.Y.Z/roadmap-X.Y.Z.md`, the
+     name `/release` reads. An archived wiki page leaves the index's topic list; its index line
+     moves under "Elsewhere", pointing at the archive.
    - **archive** a section: cut it into `src/docs/archive/X.Y.Z/<doc>-<section>.md`, headed with one
      line naming where it came from, and leave a one-line pointer in its place. Never cut from the
      ledger (`src/docs/_claude/WIRING-LEDGER.md`): it is append-only, and the wiki cites its lines.
@@ -183,21 +184,40 @@ The tree was clean at preflight, so `git add -A` takes only this step's work. Ne
    ```
 
    It searches CLAUDE.md, README.md, `build.sh`, `dev.sh`, `.githooks/`, `.claude/skills/`,
-   `.github/workflows/`, `data/packs.json`, `scripts/`, `src/` (the wiki, specs, plans, archive,
-   `src/docs/*.md`, the ledger, code comments) and `tools/data-kit/`. Repo-rooted and docs-rooted
+   `.claude/status.md`, `.github/workflows/`, `data/packs.json`, `scripts/`, `src/` (the wiki,
+   specs, plans, archive, `src/docs/*.md`, the ledger, code comments), `tools/data-kit/`, and, when
+   `_private-data` is linked, the private repo's `tests/leak-allowlist.json`, which names public
+   files by path. Repo-rooted and docs-rooted
    paths are rewritten as written; relative links are recomputed from each file's own folder, and
    from a moved file's new folder; fenced blocks are included; and no file gains or loses a line, so
    every ledger `L<n>` citation stays valid. It checks the whole list first (a missing source, a
-   target that exists, a path moved twice, a changed extension): a bad list writes nothing and says
-   so. A non-text file is moved byte for byte.
+   target that exists, a path moved twice, a changed extension, a folder or file it cannot write):
+   a bad list writes nothing and says so. A non-text file is moved byte for byte. It removes the
+   moved sources last; if a write still fails part way, it stops, names what it wrote, and prints
+   the commands that undo exactly that. Show them to Mike, run them only once he agrees, then fix
+   the cause and run the same list again.
+   When the run ends "the private repo changed too", the allowlist is committed with the step (5).
 4. **If any `src/js/` file changed**, run `./build.sh --no-zip`: the step's commit takes
    `dist/fieldbook.html` with it, since main carries the built artifact and its CI fails on a stale
    one.
 5. Run the full suite, `PATH="$PWD/.venv/bin:$PATH" ./src/tests/run.sh`. The docs suite's link
-   check fails on any path to a spec, plan or archived doc that a move missed. Then commit.
+   check fails on any path to a spec, plan or archived doc that a move missed, and the
+   `private-data` suite's leak scan on an allowlist path the move missed. Then commit the step, and,
+   **if the private repo changed**, commit it there too:
+
+   ```bash
+   git -C _private-data add tests/leak-allowlist.json
+   git -C _private-data commit -m "docs: pre-release X.Y.Z — paths moved" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+   ```
+
+   Never push it here. It is pushed **right after public main, never before**, when `/release`
+   pushes (CLAUDE.md, "the private packs move with this repo"): its leak scan reads the public
+   tree, so before then its CI would look for the moved docs at paths public main does not have
+   yet. Every checkout shares the one private clone, so a worktree branched before this step reports
+   stale allowlist entries in its `private-data` suite until it merges main: say so to Mike.
 
 **Done when** the confirmed moves and archive/correct decisions are applied, every link resolves,
-and the suite is green.
+the suite is green, and a changed private allowlist is committed in the private repo (not pushed).
 
 ## Step 2 — Outstanding issues
 
@@ -234,45 +254,57 @@ and the suite is green.
 
 ### Filing an issue
 
-Set `PRIORITY` to the priority Mike confirmed for this issue. The commands branch on it: a **P0**
-gets no fix-version label (it stays in the milestone, where the open-P0 check finds it); a P1 or
-P2 carries the next fix version's label.
+One issue is **one block, run as ONE Bash call**: Claude Code keeps no shell variables between
+calls, so a block split across two calls would run its second half with `$URL` and `$PRIORITY`
+empty. Fill in the four placeholders with literal values (`PRIORITY`, `NEXT`, the title, the
+label) and the body between the `BODY` lines; nothing else changes.
+
+- `PRIORITY` is the priority Mike confirmed, exactly `P0`, `P1` or `P2` (uppercase). The block
+  checks it first and exits on anything else, before it writes anything.
+- A **P0** gets no fix-version label (it stays in the milestone, where the open-P0 check finds it);
+  a P1 or P2 carries the next fix version's label, `NEXT`.
+- The project's ids are looked up by name every time, never hard-coded, and **before** the issue
+  is created: a missing `project` scope (`gh auth refresh -s project`) or a network failure stops
+  the block with nothing filed. Fix it and run the block again.
+- The body goes in on stdin (`--body-file -`), so no body file is ever written into the repo for
+  `git add -A` to take. It cites its source (file and section, or the checklist line) and says it
+  came from the X.Y.Z pre-release.
 
 ```bash
-PRIORITY=<the priority Mike confirmed: P0, P1 or P2>
+PRIORITY=<P0, P1 or P2: the priority Mike confirmed>
 NEXT=<the next fix version>
-if [ "$PRIORITY" = P0 ]; then
-  URL=$(gh issue create --title "<title>" --body-file <body.md> --milestone "vX.Y.Z" \
-          --label <bug|task>)
-else
-  gh label list --search "$NEXT" --json name -q '.[].name' | grep -qx "$NEXT" \
-    || gh label create "$NEXT" --color aaaaaa
-  URL=$(gh issue create --title "<title>" --body-file <body.md> --milestone "vX.Y.Z" \
-          --label <bug|task> --label "$NEXT")
-fi
-```
-
-The body cites its source (file and section, or the checklist line) and says it came from the
-X.Y.Z pre-release.
-
-Then add it to project #3, "RPGFieldbook", with Status **Backlog** and that same `$PRIORITY`. Look
-the ids up by name every time; never hard-code them:
-
-```bash
+case "$PRIORITY" in P0|P1|P2) ;; *) echo "PRIORITY must be P0, P1 or P2, not '$PRIORITY': nothing filed"; exit 1;; esac
 PROJ=$(gh project view 3 --owner wardmanm --format json --jq .id)
 F() { gh project field-list 3 --owner wardmanm --format json --jq "$1"; }
 STATUS=$(F '.fields[]|select(.name=="Status")|.id')
 BACKLOG=$(F '.fields[]|select(.name=="Status")|.options[]|select(.name=="Backlog")|.id')
 PRIO=$(F '.fields[]|select(.name=="Priority")|.id')
 PICK=$(F ".fields[]|select(.name==\"Priority\")|.options[]|select(.name==\"$PRIORITY\")|.id")
-[ -n "$PICK" ] || echo "no Priority option named $PRIORITY: stop"
-ITEM=$(gh project item-add 3 --owner wardmanm --url "$URL" --format json --jq .id)
-gh project item-edit --id "$ITEM" --project-id "$PROJ" --field-id "$STATUS" --single-select-option-id "$BACKLOG"
-gh project item-edit --id "$ITEM" --project-id "$PROJ" --field-id "$PRIO" --single-select-option-id "$PICK"
+[ -n "$PROJ" ] && [ -n "$STATUS" ] && [ -n "$BACKLOG" ] && [ -n "$PRIO" ] && [ -n "$PICK" ] \
+  || { echo "project #3 lookup failed (scope, network, or no Priority option $PRIORITY): nothing filed"; exit 1; }
+if [ "$PRIORITY" = P0 ]; then
+  URL=$(gh issue create --title "<title>" --milestone "vX.Y.Z" --label <bug|task> --body-file - <<'BODY'
+<the body>
+BODY
+)
+else
+  gh label list --search "$NEXT" --json name -q '.[].name' | grep -qx "$NEXT" \
+    || gh label create "$NEXT" --color aaaaaa || exit 1
+  URL=$(gh issue create --title "<title>" --milestone "vX.Y.Z" --label <bug|task> --label "$NEXT" --body-file - <<'BODY'
+<the body>
+BODY
+)
+fi
+[ -n "$URL" ] || { echo "gh issue create failed: nothing filed"; exit 1; }
+echo "filed $URL"
+ITEM=$(gh project item-add 3 --owner wardmanm --url "$URL" --format json --jq .id) && [ -n "$ITEM" ] \
+  && gh project item-edit --id "$ITEM" --project-id "$PROJ" --field-id "$STATUS" --single-select-option-id "$BACKLOG" \
+  && gh project item-edit --id "$ITEM" --project-id "$PROJ" --field-id "$PRIO" --single-select-option-id "$PICK" \
+  || { echo "filed $URL, but its project fields were not set: record it as (priority not set)"; exit 1; }
 ```
 
-If a project write fails (a missing `project` scope: `gh auth refresh -s project`; or the network),
-the issue is still filed: record it as "#N (priority not set)" and come back to it.
+If the block ends "filed …, but its project fields were not set", the issue exists: record it as
+"#N (priority not set)" and come back to it (the step is not done until it is set).
 
 ## Step 3 — The QA checklist
 
@@ -365,5 +397,7 @@ X.Y.Z." Stop there.
 | "I'll rebuild the checklist from scratch" | His ticks and `FAIL:` notes carry forward to every unchanged line |
 | "The tree is dirty, but it's only his checklist marks" | Commit the two files as the record commit first; anything else, refuse |
 | "It's a P0, but the template adds the fix-version label" | A P0 never gets the fix-version label; set `PRIORITY` and the commands branch |
+| "I'll run the filing block in two calls" | One Bash call: variables do not survive between calls |
 | "Every step is done, I'll run /release" | Stop. `/release` is Mike's to type |
 | "I'll push the step commits" | Never: they go up with the release |
+| "The private allowlist is committed, I'll push it" | Never before public main: `/release` pushes it right after |

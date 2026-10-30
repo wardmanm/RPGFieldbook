@@ -29,7 +29,11 @@ them in `src/docs/PRE-RELEASE.md`:
    release tag after the merge that shipped them (a doc whose issue is still open stays at the top
    level; one with no merge found is dated by the commit that added it, for Mike to confirm);
    out-of-date docs are archived to `archive/<ver>/` or corrected in place; `scripts/move-docs.js`
-   rewrites every link, the ledger line for line.
+   rewrites every link, the ledger line for line. When `_private-data` is linked it also rewrites
+   the private leak scan's allowlist, which names public files by path; that change is committed in
+   the private repo (`docs: pre-release X.Y.Z — paths moved`) and pushed right after public main,
+   never before. `move-docs.js` checks it can write every file first, removes moved sources last,
+   and if a write still fails part way, prints the exact commands that undo what it wrote.
 2. **Outstanding issues.** Loose ends from the release's specs, known issues and the status log are
    filed (milestone `vX.Y.Z`, the next fix version's label, project #3 with Status Backlog and a
    Priority), merged into an existing issue, or skipped. Nothing reaches GitHub before Mike marks
@@ -40,8 +44,8 @@ them in `src/docs/PRE-RELEASE.md`:
    label, and an open P0 holds this step open.
 5. **Release notes.** The pending bullets, read as a player would, rewritten where Mike agrees.
 
-Reopening a step reopens every later step. If main moves after step 3 (a merged P0 fix, say), a
-rerun lists what arrived and asks whether to rebuild the checklist, which keeps Mike's marks on
+Reopening a step reopens every later step. If main moves after step 3 (a merged P0 fix, say; the
+pre-release's own commits and a `docs(repo): status` commit don't count), a rerun lists what arrived and asks whether to rebuild the checklist, which keeps Mike's marks on
 every unchanged line and reopens steps 3 to 5; declined, the checklist records "Kept at `<sha>`"
 and the next rerun counts from there. With every step done, a rerun changes nothing and says to
 run `/release X.Y.Z`.
@@ -53,15 +57,18 @@ step. It also refuses a version cut before: its tag `vX.Y.Z` exists, or git trac
 `src/docs/archive/X.Y.Z/PRE-RELEASE.md`. It works offline, so it does not ask GitHub about P0s:
 `/release`'s preflight does. `node scripts/pre-release-record.js X.Y.Z` prints what the gate would
 say. After the cut, `release.js` moves the record to `src/docs/archive/X.Y.Z/PRE-RELEASE.md`, and
-the release commit's `git add -A` takes the move. Data and private data releases are not gated.
+the release commit's `git add -A` takes the move. If that move fails, the cut stands: `release.js`
+says so and prints the `mkdir -p … && git mv …` that files the record by hand, to run before the
+release commit. Data and private data releases are not gated.
 
-**Undoing a cut you haven't committed.** `git checkout -- .` puts back every tracked file the cut
-changed (the committed record at its old path among them), but it leaves the record's new copy,
-`src/docs/archive/X.Y.Z/PRE-RELEASE.md`, which git does not track. Move it back before cutting
-again:
+**Undoing a cut you haven't committed.** `/release` stages the cut with `git add -A`, and
+`git checkout -- .` restores from what is staged, so unstage first. Together they put back every
+tracked file the cut changed (the committed record at its old path among them), but leave the
+record's new copy, `src/docs/archive/X.Y.Z/PRE-RELEASE.md`, which git no longer tracks. Move it back
+before cutting again:
 
 ```bash
-git checkout -- .
+git restore --staged . && git checkout -- .
 mv src/docs/archive/X.Y.Z/PRE-RELEASE.md src/docs/PRE-RELEASE.md
 ```
 
@@ -472,8 +479,8 @@ git switch -c release/1.2.x v1.2.1
 
 ## 4. Fixing a release
 
-**A cut not yet committed.** Undo it with `git checkout -- .` and put the pre-release record back
-with the `mv` in §0; `release.js` names that command if you forget.
+**A cut not yet committed.** Undo it with `git restore --staged . && git checkout -- .` and put the
+pre-release record back with the `mv` in §0; `release.js` names that command if you forget.
 
 **An upload failed but the tag is fine.** Re-run without cutting a new version:
 Actions → Release → *Run workflow* → enter the tag. It rebuilds and, once approved, re-uploads with
