@@ -211,8 +211,11 @@ misses a link fails the suite.
 - **A plan with no matching spec, or a spec with no merge found:** listed for Mike to place by hand.
 - **`git tag` has no release after a merge** (it's in this release): it goes into the version being prepared.
 - **A link inside a fenced code block** is rewritten too (they are paths people copy).
-- **The project field write fails** (scope, network): the issue is still filed; the record lists it as
-  "priority not set" and the step is not done until it is.
+- **The project's fields can't be looked up** (no `project` scope, or the network): nothing is filed.
+  The skill stops and says why (`gh auth refresh -s project`), so every issue that exists has its
+  Priority and the open-P0 gate can't miss one (Mike, 2026-10-30, amending the first text here).
+- **The project write fails after the issue exists** (adding it to the project, or setting its fields):
+  the issue stays filed; the record lists it as "priority not set" and the step is not done until it is.
 - **A rerun after more work merged** (between steps 3 and 5): step 3's checklist names the commit it was
   built against; if main has moved, the skill says so and offers to rebuild step 3, which reopens 3 and 4.
 - **`/release` for a version with no record at all:** refused, naming `/pre-release`.
@@ -426,12 +429,12 @@ The final fix wave's own (implementer's), each with its cost if wrong:
 - The filing block under macOS `/bin/bash` 3.2: a body with an unmatched `(` fails to parse (here-doc
   inside `$(…)`), so nothing is filed — it fails safe; zsh, which Claude Code uses, is unaffected.
 
-### Open for Mike
+### Decided after the build
 
-- **A missing `project` scope at filing.** Ruling e (final fix wave) looks up the project fields before
-  `gh issue create`, so a missing scope stops with nothing filed. §9 says the issue is still filed and
-  recorded as "priority not set". Options: keep the code and amend §9 (Claude's recommendation: a P0
-  filed without its Priority is invisible to the open-P0 gate) / restore §9's behaviour.
+- **A missing `project` scope at filing** (Mike, 2026-10-30): ruling e stands — the project fields are
+  looked up before `gh issue create`, so a missing scope stops with nothing filed; §9 is amended to match.
+  Rejected: filing anyway as "priority not set", because a P0 with no Priority is invisible to the
+  open-P0 gate.
 
 ### Not yet run
 
