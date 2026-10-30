@@ -25,13 +25,30 @@
  * byte or isn't valid UTF-8 is moved byte for byte and never scanned for references (#127
  * fix round 1, finding 2) — a future archive move of a whole document (an image, a PDF)
  * must not be corrupted by a UTF-8 round trip.
+ *
+ * The private repo (#127 ruling 24): when `_private-data` is linked, its leak-scan
+ * allowlist (_private-data/tests/leak-allowlist.json) names public files by repo path,
+ * so it is searched and rewritten too, through the symlink; when it is absent it is
+ * skipped without a word. A run that changes it says so: commit it in the private
+ * repo, and push that right after public main.
+ *
+ * Writing (#127 final fix wave): every folder and file a write needs is checked first,
+ * so a read-only folder refuses with nothing written. Then every new and rewritten file
+ * is written, and the moved sources are removed last, so a failure part way never loses
+ * a source. If a write still fails, the run stops, prints what it wrote and the exact
+ * commands that undo it (it runs none of them), and exits 1. The summary line is
+ * printed only once every write has landed.
  */
 "use strict";
 const fs = require("fs");
 const path = require("path");
 const P = path.posix;
 
-const SCAN = ["CLAUDE.md", "README.md", "build.sh", "dev.sh", ".githooks", ".claude/skills", ".github/workflows", "data/packs.json", "scripts", "src", "tools/data-kit"];
+/* `.claude/status.md` can cite a spec in a loose end (#127 ruling 25); the private
+   allowlist names public files by path (#127 ruling 24) and is skipped when absent */
+const PRIVATE = "_private-data";
+const SCAN = ["CLAUDE.md", "README.md", "build.sh", "dev.sh", ".githooks", ".claude/skills", ".claude/status.md", ".github/workflows",
+  "data/packs.json", "scripts", "src", "tools/data-kit", PRIVATE + "/tests/leak-allowlist.json"];
 const TEXT = /\.(md|js|py|sh|ya?ml|json|html|css|txt)$/;
 const SKIP_DIRS = new Set(["node_modules", "__pycache__", ".git"]);
 const DOCS_DIRS = ["specs", "plans", "archive", "wiki", "qa", "_claude"];
@@ -213,17 +230,90 @@ function planMoves(root, moves) {
     }
     if (r.count || to !== f) edits.push({ from: f, to, text: r.text, count: r.count });
   }
+  if (!errors.length) errors.push(...writeProblems(root, edits));
   return { errors, moves, edits };
 }
 
-function applyPlan(root, plan) {
-  for (const e of plan.edits) {
-    const dest = path.join(root, e.to);
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.writeFileSync(dest, e.buf !== undefined ? e.buf : e.text);
-    if (e.to !== e.from) fs.unlinkSync(path.join(root, e.from));
-  }
+/* the nearest folder at or above abs that exists (abs itself when it does) */
+function nearestExisting(abs) {
+  let d = abs;
+  while (!fs.existsSync(d) && path.dirname(d) !== d) d = path.dirname(d);
+  return d;
 }
+
+/* every folder and file the edits would write to or remove from, checked before
+   anything is written; returns a list of problems. A folder that does not exist yet
+   is checked at the nearest one above it that does, which mkdir would write into. */
+function writeProblems(root, edits) {
+  const errs = [], seen = new Set();
+  const rel = abs => path.relative(root, abs).split(path.sep).join("/") || ".";
+  const need = (abs, why) => {
+    if (seen.has(abs)) return;
+    seen.add(abs);
+    try { fs.accessSync(abs, fs.constants.W_OK); } catch (e) { errs.push(rel(abs) + " is not writable (" + why + ")"); }
+  };
+  for (const e of edits) {
+    if (e.to === e.from) { need(path.join(root, e.to), "a reference in it is rewritten"); continue; }
+    const dir = nearestExisting(path.dirname(path.join(root, e.to)));
+    if (!fs.statSync(dir).isDirectory()) { errs.push(rel(dir) + " is a file, so " + e.to + " cannot be written under it"); continue; }
+    need(dir, e.to + " is written in it");
+    need(path.dirname(path.join(root, e.from)), e.from + " is removed from it");
+  }
+  return errs;
+}
+
+/* write the plan: every new and rewritten file first, then remove the moved sources,
+   last, so a failure part way never loses a source. Returns {written, created,
+   removed} (repo paths: rewritten in place, new copies, sources removed). On a
+   failure it throws the error with .progress (the same three lists, as far as it
+   got, and `failed`: the write that threw, which may have left its file truncated)
+   and .total (the number of writes the plan needed). */
+function applyPlan(root, plan) {
+  const progress = { written: [], created: [], removed: [], failed: null };
+  const moved = plan.edits.filter(e => e.to !== e.from);
+  try {
+    for (const e of plan.edits) {
+      progress.failed = e;
+      const dest = path.join(root, e.to);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.writeFileSync(dest, e.buf !== undefined ? e.buf : e.text);
+      (e.to === e.from ? progress.written : progress.created).push(e.to);
+    }
+    progress.failed = null;
+    for (const e of moved) { fs.unlinkSync(path.join(root, e.from)); progress.removed.push(e.from); }
+  } catch (err) {
+    err.progress = progress;
+    err.total = plan.edits.length + moved.length;
+    throw err;
+  }
+  delete progress.failed;
+  return progress;
+}
+
+/* a path quoted for a POSIX shell only when it needs it */
+const shq = p => /^[A-Za-z0-9_.\/@%+=:,-]+$/.test(p) ? p : "'" + p.replace(/'/g, "'\\''") + "'";
+
+/* the commands that undo a partial run, given applyPlan's progress: git puts back
+   every tracked file it rewrote or removed (the private repo's through git -C), and
+   rm takes away every new copy it wrote. Each file is named, never `.`: a tree-wide
+   checkout would also throw away step 1's corrections, and a clean would delete an
+   untracked record. */
+function undoCommands(progress) {
+  /* the write that threw counts as written: it may have truncated its file */
+  const f = progress.failed;
+  const written = f && f.to === f.from ? progress.written.concat(f.to) : progress.written;
+  const created = f && f.to !== f.from ? progress.created.concat(f.to) : progress.created;
+  const back = written.concat(progress.removed);
+  const pub = back.filter(f => !f.startsWith(PRIVATE + "/"));
+  const priv = back.filter(f => f.startsWith(PRIVATE + "/")).map(f => f.slice(PRIVATE.length + 1));
+  const out = [];
+  if (pub.length) out.push("git checkout -- " + pub.map(shq).join(" "));
+  if (priv.length) out.push("git -C " + PRIVATE + " checkout -- " + priv.map(shq).join(" "));
+  if (created.length) out.push("rm -f " + created.map(shq).join(" "));
+  return out;
+}
+
+const USAGE = "usage: node scripts/move-docs.js <moves.json> [--dry-run] [--root DIR]";
 
 function main(argv) {
   const args = argv.slice(2);
@@ -232,7 +322,7 @@ function main(argv) {
   const root = ri >= 0 ? path.resolve(args[ri + 1] || "") : path.resolve(__dirname, "..");
   const list = args.filter((a, i) => !a.startsWith("--") && (ri < 0 || i !== ri + 1))[0];
   if (!list) {
-    console.error("move-docs: usage: node scripts/move-docs.js <moves.json> [--dry-run] [--root DIR]");
+    console.error("move-docs: " + USAGE);
     console.error("move-docs: nothing was written");
     return 1;
   }
@@ -254,10 +344,36 @@ function main(argv) {
   for (const m of moves) console.log("move  " + m.from + " -> " + m.to);
   let refs = 0, files = 0;
   for (const e of plan.edits) if (e.count) { console.log("edit  " + e.to + " (" + e.count + ")"); refs += e.count; files++; }
-  console.log(moves.length + " moved, " + refs + " references rewritten in " + files + " files" + (dry ? " (dry run: nothing written)" : ""));
-  if (!dry) applyPlan(root, plan);
+  const summary = moves.length + " moved, " + refs + " references rewritten in " + files + " files";
+  const priv = plan.edits.some(e => e.to.startsWith(PRIVATE + "/"));
+  if (dry) {
+    console.log(summary + " (dry run: nothing written)");
+    return 0;
+  }
+  try { applyPlan(root, plan); }
+  catch (e) {
+    const p = e.progress || { written: [], created: [], removed: [] };
+    const n = p.written.length + p.created.length + p.removed.length;
+    console.error("move-docs: failed after " + n + " of " + (e.total || "?") + " writes: " + e.message);
+    console.error("move-docs: rewrote " + p.written.length + " files in place, wrote " + p.created.length + " moved copies, removed " +
+      p.removed.length + " of " + plan.edits.filter(x => x.to !== x.from).length + " sources" +
+      (p.removed.length ? "" : ": every source is still where it was"));
+    const undo = undoCommands(p);
+    if (undo.length) {
+      console.error("move-docs: to undo what it wrote, run these (it has run none of them):");
+      undo.forEach(c => console.error("  " + c));
+    } else console.error("move-docs: nothing was written");
+    console.error("move-docs: then fix the cause and run the same move list again");
+    return 1;
+  }
+  console.log(summary);
+  if (priv) {
+    let real = PRIVATE;
+    try { real = fs.realpathSync(path.join(root, PRIVATE)); } catch (e) { /* named as linked */ }
+    console.log("the private repo changed too (" + PRIVATE + " -> " + real + "): commit it there, and push it right after public main");
+  }
   return 0;
 }
 
-module.exports = { SCAN, scanFiles, findRefs, rewriteText, checkMoves, planMoves, applyPlan };
+module.exports = { SCAN, PRIVATE, scanFiles, findRefs, rewriteText, checkMoves, planMoves, writeProblems, applyPlan, undoCommands, main };
 if (require.main === module) process.exit(main(process.argv));

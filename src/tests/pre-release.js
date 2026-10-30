@@ -207,6 +207,127 @@ const rd = (d, rel) => fs.readFileSync(path.join(d, rel), 'utf8');
      r.text === 'x src/docs/specs/1.9.0/example-a.md src/docs/specs/1.9.0/example-a.md\n\n```\n[a](../specs/1.9.0/example-a.md)\n```\nspecs/1.9.0/example-a.md\n', r);
   ck('#127 the files it searches include the ledger, skills, CLAUDE.md and src/js, and never dist/ or docs/',
      ['CLAUDE.md', '.claude/skills', 'src', 'scripts'].every(s => md.SCAN.includes(s)) && !md.SCAN.some(s => /^(dist|docs)(\/|$)/.test(s)), md.SCAN);
+  /* ruling 15's four roots; ruling 25's status log; ruling 24's private allowlist, and
+     nothing else of the private repo (its packs are not ours to rewrite) */
+  ck('#127 ...and README.md, build.sh, dev.sh, .githooks, the status log and the private leak allowlist, only that from the private repo',
+     ['README.md', 'build.sh', 'dev.sh', '.githooks', '.claude/status.md', '_private-data/tests/leak-allowlist.json'].every(s => md.SCAN.includes(s)) &&
+     md.SCAN.filter(s => s.startsWith('_private-data')).length === 1, md.SCAN);
+}
+
+{
+  // the private repo's leak allowlist (#127 ruling 24): rewritten through the
+  // _private-data symlink when it is linked; nothing else of the private repo is
+  // searched; the run says the private repo changed
+  const d = tree();
+  const priv = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-move-docs-private-'));
+  const allow = {_comment: ['hashes, never text'], allow: [
+    {file: 'src/docs/plans/example-alpha.md', hash: '0123456789abcdef', why: 'example'},
+    {file: 'scripts/example.py', hash: 'fedcba9876543210', why: 'example'}]};
+  const allowText = JSON.stringify(allow, null, 2) + '\n';
+  fs.mkdirSync(path.join(priv, 'tests'), {recursive: true});
+  fs.writeFileSync(path.join(priv, 'tests', 'leak-allowlist.json'), allowText);
+  const otherText = 'Not ours: src/docs/plans/example-alpha.md\n';
+  fs.writeFileSync(path.join(priv, 'tests', 'other.md'), otherText);
+  fs.symlinkSync(priv, path.join(d, '_private-data'));
+  const dry = runMove(d, MOVES, '--dry-run');
+  ck('#127 the dry run lists the private allowlist among its edits',
+     dry.status === 0 && /^edit  _private-data\/tests\/leak-allowlist\.json \(1\)$/m.test(dry.stdout), dry.stdout + dry.stderr);
+  const r = runMove(d, MOVES);
+  const got = fs.readFileSync(path.join(priv, 'tests', 'leak-allowlist.json'), 'utf8');
+  ck('#127 the private leak allowlist\'s repo path follows the move, and nothing else in it changes',
+     r.status === 0 && got === allowText.replace('src/docs/plans/example-alpha.md', 'src/docs/plans/1.9.0/example-alpha.md'), got + r.stderr);
+  ck('#127 ...written through the symlink, which stays a symlink', fs.lstatSync(path.join(d, '_private-data')).isSymbolicLink());
+  ck('#127 ...the rest of the private repo is not searched', fs.readFileSync(path.join(priv, 'tests', 'other.md'), 'utf8') === otherText);
+  ck('#127 ...and the run says the private repo changed, naming where it really is',
+     r.stdout.includes('the private repo changed too (_private-data -> ' + fs.realpathSync(priv) + '): commit it there, and push it right after public main'), r.stdout);
+  fs.rmSync(d, {recursive: true, force: true});
+  fs.rmSync(priv, {recursive: true, force: true});
+  // absent: skipped without a word
+  const d2 = tree();
+  const r2 = runMove(d2, MOVES);
+  ck('#127 with no _private-data linked, the run succeeds and says nothing about it',
+     r2.status === 0 && !/private/.test(r2.stdout + r2.stderr), r2.stdout + r2.stderr);
+  fs.rmSync(d2, {recursive: true, force: true});
+}
+
+/* a read-only folder is refused before anything is written (#127 final fix wave).
+   chmod means nothing to root, so these cases are skipped there. */
+const asRoot = typeof process.getuid === 'function' && process.getuid() === 0;
+if (!asRoot) {
+  for (const [what, ro, why] of [
+      ['a read-only destination folder', 'src/docs/specs/1.9.0', 'src/docs/specs/1.9.0 is not writable (src/docs/specs/1.9.0/example-alpha-design.md is written in it)'],
+      ['a read-only source folder', 'src/docs/plans', 'src/docs/plans is not writable (src/docs/plans/1.9.0/example-alpha.md is written in it)'],
+      ['a read-only file with a reference to rewrite', 'CLAUDE.md', 'CLAUDE.md is not writable (a reference in it is rewritten)']]) {
+    const d = tree();
+    fs.mkdirSync(path.join(d, 'src/docs/specs/1.9.0'), {recursive: true});
+    fs.chmodSync(path.join(d, ro), fs.statSync(path.join(d, ro)).isDirectory() ? 0o555 : 0o444);
+    const before = snapshot(d);
+    const r = runMove(d, MOVES);
+    ck('#127 move-docs refuses ' + what + ' before writing anything',
+       r.status === 1 && r.stderr.includes('move-docs: ' + why) && r.stderr.includes('nothing was written') &&
+       !r.stdout.includes('references rewritten') && same(snapshot(d), before), r.stdout + r.stderr);
+    ck('#127 ...without a stack trace', !/^\s+at /m.test(r.stderr), r.stderr);
+    const dry = runMove(d, MOVES, '--dry-run');
+    ck('#127 ...and the dry run refuses it too', dry.status === 1 && dry.stderr.includes(why), dry.stderr);
+    fs.chmodSync(path.join(d, ro), 0o755);
+    fs.rmSync(d, {recursive: true, force: true});
+  }
+}
+
+/* a write that fails part way (#127 final fix wave): main() is run in this process
+   with fs.writeFileSync (or fs.unlinkSync) failing at the nth call, on a tree under
+   git. It must print no success summary and no stack trace, say how far it got,
+   keep every source until the end, and print undo commands that, run as printed,
+   leave git status clean. */
+{
+  const gitIn = (d, ...a) => spawnSync('git', ['-C', d, '-c', 'user.name=t', '-c', 'user.email=t@example.com',
+    '-c', 'commit.gpgsign=false', ...a], {encoding: 'utf8'});
+  const failAt = (fn, n, truncate) => {
+    const d = tree();
+    gitIn(d, 'init', '-q'); gitIn(d, 'add', '-A'); gitIn(d, 'commit', '-qm', 'start');
+    const listDir = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-move-docs-list-'));
+    const list = path.join(listDir, 'moves.json');
+    fs.writeFileSync(list, JSON.stringify(MOVES));
+    const orig = fs[fn], log = console.log, err = console.error;
+    let calls = 0, out = '', errOut = '', rc;
+    fs[fn] = function () {
+      if (++calls === n) {
+        if (truncate) orig.call(fs, arguments[0], ''); // the write got as far as emptying its file
+        throw new Error('EIO: injected failure at ' + fn + ' #' + n);
+      }
+      return orig.apply(fs, arguments);
+    };
+    console.log = (...a) => { out += a.join(' ') + '\n'; };
+    console.error = (...a) => { errOut += a.join(' ') + '\n'; };
+    try { rc = md.main(['node', MOVE_DOCS, list, '--root', d]); }
+    catch (e) { rc = 'threw: ' + e.stack; }
+    finally { fs[fn] = orig; console.log = log; console.error = err; }
+    fs.rmSync(listDir, {recursive: true, force: true});
+    return {d, rc, out, err: errOut};
+  };
+  for (const [fn, n, label, truncate] of [['writeFileSync', 3, 'the third write'], ['unlinkSync', 2, 'removing the second source'],
+      ['writeFileSync', 1, 'the first write, after it emptied its file', true]]) {
+    const {d, rc, out, err} = failAt(fn, n, truncate);
+    ck('#127 a failure at ' + label + ': exit 1, no summary, no stack trace',
+       rc === 1 && !/references rewritten/.test(out) && !/^\s+at /m.test(err) && /move-docs: failed after \d+ of \d+ writes: EIO: injected/.test(err), {rc, out, err});
+    if (truncate) {
+      ck('#127 ...the file the failing write emptied is in the undo list', /^  git checkout -- .*\.claude\/skills\/example\/SKILL\.md/m.test(err), err);
+    }
+    if (fn === 'writeFileSync') {
+      ck('#127 ...every source is still in place (sources are removed last)',
+         MOVES.every(m => fs.existsSync(path.join(d, m.from))) && err.includes('every source is still where it was'), err);
+    } else {
+      ck('#127 ...the writes all landed and one source went before the failure',
+         MOVES.every(m => fs.existsSync(path.join(d, m.to))) && /removed 1 of 3 sources/.test(err), err);
+    }
+    const undo = err.split('\n').filter(l => /^  (git |rm )/.test(l)).map(l => l.trim());
+    ck('#127 ...prints undo commands naming each file, never the whole tree',
+       undo.length >= 1 && err.includes('it has run none of them') && !undo.some(c => / -- \.$| -- \. /.test(c) || /git clean/.test(c)), undo);
+    undo.forEach(c => spawnSync('sh', ['-c', c], {cwd: d}));
+    const st = gitIn(d, 'status', '--porcelain', '--untracked-files=all').stdout.trim();
+    ck('#127 ...and those commands, run as printed, put the tree back as it was', st === '', st);
+    fs.rmSync(d, {recursive: true, force: true});
+  }
 }
 
 /* ---------- scripts/pre-release-record.js (#127, spec §3, §5) */
@@ -281,6 +402,62 @@ const record = (ver, open = []) => [
      'git does not track it and there is no tag v1.9.0. Put the record back, then run again: ' +
      'mv src/docs/archive/1.9.0/PRE-RELEASE.md src/docs/PRE-RELEASE.md', rec.gateProblem(d, '1.9.0'));
   ck('#127 ...and moves nothing', fs.existsSync(path.join(d, rec.archivePath('1.9.0'))) && fs.existsSync(path.join(d, rec.RECORD)));
+  fs.rmSync(d, {recursive: true, force: true});
+}
+
+{
+  // the CLI's arguments and words (#127 final fix wave)
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-record-'));
+  const cli = (...a) => spawnSync('node', [RECORD_JS, ...a, '--root', d], {encoding: 'utf8'});
+  fs.mkdirSync(path.join(d, 'src/docs'), {recursive: true});
+  fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.0'));
+  for (const flag of ['--help', '-h']) {
+    const r = cli(flag);
+    ck('#127 the CLI\'s ' + flag + ' prints the usage and exits 0', r.status === 0 && r.stdout.startsWith('usage: node scripts/pre-release-record.js') && r.stderr === '', r);
+  }
+  let r = cli('--bogus');
+  ck('#127 an unknown flag exits 2 with the usage', r.status === 2 && r.stderr.includes('unknown option --bogus') && r.stderr.includes('usage:'), r.stderr);
+  r = cli('v1.9.0');
+  ck('#127 a version that is not X.Y.Z exits 2 with the usage', r.status === 2 && r.stderr.includes('v1.9.0 is not a version X.Y.Z') && r.stderr.includes('usage:'), r.stderr);
+  r = cli('1.9.0', '1.9.1');
+  ck('#127 two versions exit 2', r.status === 2 && r.stderr.includes('usage:'), r.stderr);
+  r = spawnSync('node', [RECORD_JS, '1.9.0', '--root'], {encoding: 'utf8'});
+  ck('#127 --root with no folder exits 2', r.status === 2 && r.stderr.includes('--root needs a folder'), r.stderr);
+  // with no version, the same exact-heading rule release.js applies
+  fs.writeFileSync(path.join(d, rec.RECORD), record('v1.9.0'));
+  r = cli();
+  ck('#127 the CLI with no version refuses a heading that is not X.Y.Z, as release.js does',
+     r.status === 1 && !r.stdout.includes('complete') &&
+     r.stderr.trim() === "pre-release: src/docs/PRE-RELEASE.md's heading names v1.9.0, which is not a version X.Y.Z: release.js refuses it. Run /pre-release X.Y.Z first.", r.stdout + r.stderr);
+  fs.writeFileSync(path.join(d, rec.RECORD), 'just text\n');
+  r = cli();
+  ck('#127 ...and a record with no heading', r.status === 1 && r.stderr.includes('has no "# Pre-release X.Y.Z" heading'), r.stderr);
+  // each refusal reads "pre-release" once
+  fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.0', [2]));
+  r = cli('1.9.0');
+  ck('#127 a refusal that names the step reads "pre-release" once',
+     r.status === 1 && r.stderr.trim() === 'pre-release 1.9.0 is not finished: step 2. Outstanding issues is open. Run /pre-release 1.9.0 to finish it.', r.stderr);
+  fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.1'));
+  r = cli('1.9.0');
+  ck('#127 ...and any other refusal is prefixed "pre-release: " once',
+     r.status === 1 && r.stderr.trim() === 'pre-release: src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /pre-release 1.9.0 first.', r.stderr);
+  fs.rmSync(d, {recursive: true, force: true});
+}
+
+if (!asRoot) {
+  // archiveRecord() failing (#127 final fix wave): it throws, the record stays where
+  // it was, and the folder it made is removed, so no later gate misreads the tree
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-record-'));
+  fs.mkdirSync(path.join(d, 'src/docs/archive'), {recursive: true});
+  fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.0'));
+  fs.chmodSync(path.join(d, 'src/docs'), 0o555); // the record cannot leave src/docs
+  let threw = null;
+  try { rec.archiveRecord(d, '1.9.0'); } catch (e) { threw = e; }
+  fs.chmodSync(path.join(d, 'src/docs'), 0o755);
+  ck('#127 a failed archiveRecord throws, leaves the record in place and no empty archive folder',
+     threw !== null && fs.existsSync(path.join(d, rec.RECORD)) && !fs.existsSync(path.join(d, 'src/docs/archive/1.9.0')), threw && threw.message);
+  ck('#127 ...and the command to file it by hand (no git here: plain mv)',
+     rec.archiveByHand(d, '1.9.0') === 'mkdir -p src/docs/archive/1.9.0 && mv src/docs/PRE-RELEASE.md src/docs/archive/1.9.0/PRE-RELEASE.md');
   fs.rmSync(d, {recursive: true, force: true});
 }
 
