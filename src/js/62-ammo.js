@@ -4,7 +4,7 @@
    any +N it adds (item.ammo). The weapon's attack row spends from the stack it
    is loaded with, and recovery gives half back. Bundles ("Arrows (20)") unpack
    into single pieces the moment they reach a sheet, so a stack's qty is its count.
-   Design: src/docs/specs/2026-10-02-ammo-design.md
+   Design: src/docs/specs/1.8.0/2026-10-02-ammo-design.md
 
    The pure half comes first — no DOM — so src/tests/sheet.js can assert it. */
 
@@ -100,7 +100,7 @@ function ammoOne(kind){const k=ammoKindOf(kind)||"piece";return (/^[aeiou]/.test
    The character's rule, an item's own override, the app's defaults, and how
    many of one entry's shots come back. Read at recovery, never at the shot,
    so changing the setting reaches shots already fired.
-   Design: src/docs/specs/2026-10-18-ammo-recovery-design.md §4 */
+   Design: src/docs/specs/1.9.0/2026-10-18-ammo-recovery-design.md §4 */
 const AMMO_RECOVERY=[["half","Half (rules as written)"],["all","All"],["hits","Hits only"],["none","None"]];
 function ammoRecoveryOf(c){const v=c&&c.ammoRecovery;return AMMO_RECOVERY.some(r=>r[0]===v)?v:"half";}
 /* An item's own override, kept OUTSIDE ammo and weapon (the rules-update tool

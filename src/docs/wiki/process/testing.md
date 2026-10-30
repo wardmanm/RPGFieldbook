@@ -124,7 +124,7 @@ its extractor.
 - for the wiki: every page is listed in `index.md`, every link resolves, there are no wikilinks,
   every cited function and fragment exists, and every JS fragment is cited by some page and named in
   the overview's code map. This is the lint from the
-  [wiki spec](../../specs/2026-09-28-living-wiki-design.md) §7, and it was being added while this page
+  [wiki spec](../../specs/1.7.2/2026-09-28-living-wiki-design.md) §7, and it was being added while this page
   was written;
 - that every path or link to a spec, plan or archived doc resolves (#127), in every file
   `move-docs.js` scans except `src/tests/` and `_private-data/` (one clone shared by every checkout,

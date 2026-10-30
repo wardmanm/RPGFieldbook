@@ -16,7 +16,7 @@ When a page gains a Decisions row, add its line here under that page.
 ### [Overview](overview.md)
 
 - **Where dev docs live** — Split by reader: `src/docs/` for Mike's, `src/docs/_claude/` for agent context; ADR-001 stays with the human docs
-- **How the reference is kept** — This wiki, compiled from the ledger and kept current by each change ([spec](../specs/2026-09-28-living-wiki-design.md))
+- **How the reference is kept** — This wiki, compiled from the ledger and kept current by each change ([spec](../specs/1.7.2/2026-09-28-living-wiki-design.md))
 
 ## Architecture
 
@@ -372,14 +372,14 @@ When a page gains a Decisions row, add its line here under that page.
 - **Spell-slot columns in class tables** — Skipped
 - **Where tables are browsed** — As one of the Rules browser's own categories, same as any other
 - **Where a table's footnotes render (#73)** — Under the table, outside its scroll box, escaped like a cell
-- **Which categories the Rules tab browses (#99)** — [Every loaded category, plus Glossary and Tables](../specs/2026-10-19-rules-browser-design.md), in a fixed order; an empty one is hidden
-- **What a row opens (#99)** — [The existing info windows, unified](../specs/2026-10-19-rules-browser-design.md); feats, traits and items get one in the same style
-- **Class, subclass and background windows from the Rules tab (#99)** — [Reference mode](../specs/2026-10-19-rules-browser-design.md) (`{ref:true}`): the same function, showing the rules only
-- **Narrow screens on the Rules tab (#99)** — [A list screen](../specs/2026-10-19-rules-browser-design.md): the categories are one screen, a table the next, with "← Categories" back
-- **Search on the Rules tab (#99)** — [One box above the sidebar searching every category](../specs/2026-10-19-rules-browser-design.md), as well as each table's own
-- **How the Rules tab is structured (#99)** — [A new fragment, one generic table driven by a config per category](../specs/2026-10-19-rules-browser-design.md); the pickers' filter definitions move into shared builders
-- **The pack, on the Rules tab (#99)** — [A Source column everywhere](../specs/2026-10-19-rules-browser-design.md), and a Pack filter only when more than one pack is loaded
-- **Conditions on the Rules tab (#99)** — [Their own category](../specs/2026-10-19-rules-browser-design.md): glossary terms marked `cond`
+- **Which categories the Rules tab browses (#99)** — [Every loaded category, plus Glossary and Tables](../specs/1.9.0/2026-10-19-rules-browser-design.md), in a fixed order; an empty one is hidden
+- **What a row opens (#99)** — [The existing info windows, unified](../specs/1.9.0/2026-10-19-rules-browser-design.md); feats, traits and items get one in the same style
+- **Class, subclass and background windows from the Rules tab (#99)** — [Reference mode](../specs/1.9.0/2026-10-19-rules-browser-design.md) (`{ref:true}`): the same function, showing the rules only
+- **Narrow screens on the Rules tab (#99)** — [A list screen](../specs/1.9.0/2026-10-19-rules-browser-design.md): the categories are one screen, a table the next, with "← Categories" back
+- **Search on the Rules tab (#99)** — [One box above the sidebar searching every category](../specs/1.9.0/2026-10-19-rules-browser-design.md), as well as each table's own
+- **How the Rules tab is structured (#99)** — [A new fragment, one generic table driven by a config per category](../specs/1.9.0/2026-10-19-rules-browser-design.md); the pickers' filter definitions move into shared builders
+- **The pack, on the Rules tab (#99)** — [A Source column everywhere](../specs/1.9.0/2026-10-19-rules-browser-design.md), and a Pack filter only when more than one pack is loaded
+- **Conditions on the Rules tab (#99)** — [Their own category](../specs/1.9.0/2026-10-19-rules-browser-design.md): glossary terms marked `cond`
 
 ### [Combat view](features/combat-view.md)
 

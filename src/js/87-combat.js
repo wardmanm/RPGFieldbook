@@ -6,7 +6,7 @@
    picked: copies would duplicate every id (the #17 bug, where
    the visible copy updates and the hidden one rots), and a purpose-built
    dashboard would re-implement every section's controls. Closing the view never
-   ends combat. Design: src/docs/specs/2026-09-24-combat-view-design.md
+   ends combat. Design: src/docs/specs/1.7.0/2026-09-24-combat-view-design.md
 
    The pure half comes first — no DOM — so src/tests/sheet.js can assert it. */
 

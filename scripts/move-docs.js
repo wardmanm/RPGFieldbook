@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /*
  * Move dev docs and rewrite every reference to them (#127, the pre-release
- * spec, src/docs/specs/2026-10-29-pre-release-design.md §4 step 1.3).
+ * spec, src/docs/specs/1.9.0/2026-10-29-pre-release-design.md §4 step 1.3).
  *
  *   node scripts/move-docs.js <moves.json> [--dry-run] [--root DIR]
  *

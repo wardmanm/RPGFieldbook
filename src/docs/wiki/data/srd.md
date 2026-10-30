@@ -18,7 +18,7 @@ this repo ships: the D&D content every player gets.
 `docs.js` (the README and README-converter credit, the zip's corrections file) · **See also:** [Converter](converter.md),
 [Rules packs](../architecture/rules-packs.md), [Data archive](../architecture/data-archive.md),
 [Homebrew](homebrew.md), Humblewood (the private repo's `docs/humblewood.md`, the other verbatim check), [Testing](../process/testing.md),
-[the spec](../../specs/2026-10-08-srd-pack-design.md)
+[the spec](../../specs/1.8.0/2026-10-08-srd-pack-design.md)
 
 ## How it works
 

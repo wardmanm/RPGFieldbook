@@ -219,7 +219,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | Where dev docs live | Split by reader: `src/docs/` for Mike's, `src/docs/_claude/` for agent context; ADR-001 stays with the human docs | — ; the zip guard's `^src\/` rule covers both, so there is no packaging risk either way |
-| How the reference is kept | This wiki, compiled from the ledger and kept current by each change ([spec](../specs/2026-09-28-living-wiki-design.md)) | The ledger alone: it is in date order, so learning the current state of spells meant replaying 11 entries to see which won |
+| How the reference is kept | This wiki, compiled from the ledger and kept current by each change ([spec](../specs/1.7.2/2026-09-28-living-wiki-design.md)) | The ledger alone: it is in date order, so learning the current state of spells meant replaying 11 entries to see which won |
 
 ## History
 

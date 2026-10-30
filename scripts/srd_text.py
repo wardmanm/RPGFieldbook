@@ -1,5 +1,5 @@
 """The SRD 5.2 pack's text against the SRD's own (#84, spec
-src/docs/specs/2026-10-08-srd-pack-design.md §5). Pure: the PDF's page texts in,
+src/docs/specs/1.8.0/2026-10-08-srd-pack-design.md §5). Pure: the PDF's page texts in,
 findings out. src/tests/srd-verbatim.py reads the PDF and reports.
 
 A finding is a span of pack text that appears NOWHERE in the SRD. Shipping text

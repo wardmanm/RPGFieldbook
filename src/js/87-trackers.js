@@ -2,7 +2,7 @@
    Counters the player makes up, grouped by a tag of their choosing — kills by
    creature type, pages of a book. (Checklists and tasks live in journal pages
    since #95.) One that can finish can close itself when it does, into a
-   Completed list, with an Undo. Design: src/docs/specs/2026-09-29-journal-design.md §6
+   Completed list, with an Undo. Design: src/docs/specs/1.8.0/2026-09-29-journal-design.md §6
 
    NOT the resource trackers on the Sheet (65-resources.js), nor the combat round
    tracker (87-combat.js). Tags are the journal's: tagLabel(), groupByTag() in

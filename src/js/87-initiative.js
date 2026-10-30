@@ -3,7 +3,7 @@
    (cleared by combatEnd()). The array order IS the turn order; initSort()
    re-sorts it, stable, when an initiative changes. Bands: 0 Healthy,
    1 Injured, 2 Bloodied, 3 Near death, 4 Dead, null not set. Spec:
-   src/docs/specs/2026-10-25-initiative-tracker-design.md. */
+   src/docs/specs/1.9.0/2026-10-25-initiative-tracker-design.md. */
 const HB_NAMES=["Healthy","Injured","Bloodied","Near death","Dead"];
 const HB_SAYS=['"untouched", "fresh"','"barely hurt", "a few scratches"','"badly hurt", half or less','"almost dead", "barely standing"',"struck out; Next skips it"];
 function initInt(v){const s=String(v==null?"":v).trim();return /^-?\d+$/.test(s)?parseInt(s,10):null;}

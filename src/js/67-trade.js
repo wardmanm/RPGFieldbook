@@ -2,7 +2,7 @@
    Every item and coin change writes ONE line through logInv() (grants through
    logGrant(), which batches a source's grants into one line). Each line keeps
    what reversing it needs, so any line that can still be reversed cleanly
-   can be undone. Spec: src/docs/specs/2026-10-25-trade-window-design.md. */
+   can be undone. Spec: src/docs/specs/1.9.0/2026-10-25-trade-window-design.md. */
 const INV_LOG_SIZES=[100,250,500,1000,2500];
 const INV_KINDS=["trade","add","edit","delete","use","coins","grant","ammo"];
 const COIN_CP={cp:1,sp:10,ep:50,gp:100,pp:1000};

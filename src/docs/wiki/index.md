@@ -9,7 +9,7 @@ one-line History entry citing that ledger heading. Adding a page means adding it
 (`.claude/skills/wiki/`) holds the procedure and the page template; `src/tests/docs.js` checks that
 every page is listed here, every link resolves, every function a page names exists, every JS
 fragment is covered by some page, and every ledger `L<n>` a page cites is still a ledger heading
-(so the ledger stays append-only). Design: [the wiki spec](../specs/2026-09-28-living-wiki-design.md).
+(so the ledger stays append-only). Design: [the wiki spec](../specs/1.7.2/2026-09-28-living-wiki-design.md).
 
 ## Start here
 
@@ -72,12 +72,12 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 ## Roadmap
 
 - [Known issues](roadmap/known-issues.md) — limitations, deferred work, and what is verified NOT a gap
-- [1.9.0](roadmap/1.9.0.md) — the last feature release before 2.0: the fifteen items, their dependencies, the five waves, how a wave runs
 - [2.0](roadmap/2.0.md) — the refactor: goals, what it must carry, open questions
 
 ## Elsewhere (indexed in place, not moved)
 
 - [RELEASING](../RELEASING.md) — `/pre-release` first, then cutting and publishing a release, what CI refuses, rollback
+- [1.9.0 roadmap (archived)](../archive/1.9.0/roadmap-1.9.0.md) — record of the last feature release before 2.0: the fifteen items, their dependencies, the five waves, how a wave runs
 - [WORKTREES](../WORKTREES.md) — several issues at once in parallel worktrees
 - [ADR-001](../ADR-001-source-split.md) — why the source is split and still ships as one file
 - [UNRELEASED](../UNRELEASED.md) — the changelog notebook for the next release

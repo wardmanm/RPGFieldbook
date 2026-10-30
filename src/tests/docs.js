@@ -310,7 +310,7 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   ck('the app says the icons were changed', /background square was removed/i.test(settings));
 }
 
-// ---------- the wiki (src/docs/wiki/) — see src/docs/specs/2026-09-28-living-wiki-design.md §7
+// ---------- the wiki (src/docs/wiki/) — see src/docs/specs/1.7.2/2026-09-28-living-wiki-design.md §7
 // Facts only, like everything above: a page is listed, its links resolve, the
 // code it names exists, and no JS fragment goes undocumented. Wrong PROSE is
 // the wiki skill's lint pass, not this.

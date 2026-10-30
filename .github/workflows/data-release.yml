@@ -15,7 +15,7 @@ name: Data release
 # A data release is NEVER GitHub's "latest". Every installed copy of Fieldbook
 # finds app updates through /releases/latest, so a data release there would
 # hide them — the last step checks, and repairs it if it ever happens.
-# Spec: src/docs/specs/2026-10-07-data-archive-design.md §8.2.
+# Spec: src/docs/specs/1.8.0/2026-10-07-data-archive-design.md §8.2.
 
 on:
   push:

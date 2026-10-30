@@ -21,8 +21,8 @@ versions, opening a zip, re-importing, pack credits, the notice, and both releas
 **Data:** `data/packs.json`, `releases/data/` · **Tests:** `data-archive.js`, `data-kit.py`,
 `rules-data.js`, `docs.js` · **See also:** [Rules packs](rules-packs.md),
 [Settings & updates](../features/settings-and-updates.md), [Building & CI](../process/building-and-ci.md),
-[RELEASING](../../RELEASING.md), [the spec](../../specs/2026-10-07-data-archive-design.md),
-[the extensions spec](../../specs/2026-10-26-extensions-manifest-design.md)
+[RELEASING](../../RELEASING.md), [the spec](../../specs/1.8.0/2026-10-07-data-archive-design.md),
+[the extensions spec](../../specs/1.9.0/2026-10-26-extensions-manifest-design.md)
 
 ## How it works
 

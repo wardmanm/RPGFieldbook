@@ -3,7 +3,7 @@
 archive — and the release scripts that drive it. Every case runs on a scratch
 copy under a temp dir, never on data/. Prints PASS/FAIL lines and ends with
 "ALL PASSED (n)" or "FAILURES: ...", which is what run.sh reads.
-Spec: src/docs/specs/2026-10-07-data-archive-design.md"""
+Spec: src/docs/specs/1.8.0/2026-10-07-data-archive-design.md"""
 import hashlib
 import json
 import os

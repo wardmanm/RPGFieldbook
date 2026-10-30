@@ -2,7 +2,7 @@
    The Journal tab's own pages: a running record of the campaign — sessions,
    the people met, quests — each with an optional tag that groups it, the dates
    it was written and edited, and the same markdown grammar as the section notes
-   (noteHTML()). Design: src/docs/specs/2026-09-29-journal-design.md
+   (noteHTML()). Design: src/docs/specs/1.8.0/2026-09-29-journal-design.md
 
    The pure half comes first — no DOM — so src/tests/sheet.js can assert it. */
 

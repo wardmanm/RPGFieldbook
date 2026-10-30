@@ -92,7 +92,7 @@ const NOTE_SENTINELS=new RegExp("["+String.fromCharCode(0xE000)+"-"+String.fromC
 /* ---- checklists (#95) ----
    A line that starts `[ ]`, `[]`, `[x]` or `[X]`, a bullet before it allowed,
    with words after it, is a checkbox. One regex serves the renderer and the
-   helpers, so they cannot disagree. Design: specs/2026-10-17-journal-checklists-design.md §4 */
+   helpers, so they cannot disagree. Design: specs/1.9.0/2026-10-17-journal-checklists-design.md §4 */
 const NOTE_CK=/^ {0,3}(?:[-*+] +)?\[( |x|X)?\] +(\S.*)$/;
 /* the checkbox lines of a text, in order: their line index, state and words.
    Each line is matched as noteHTML() reads it, its sentinel characters

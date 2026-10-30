@@ -310,7 +310,7 @@ function renderConcCard(){
    active timed condition with the active spells (advanceRound()); one that
    reaches its duration clears itself, with an Undo. The Concentrating condition
    is never timed: its spell owns the clock. These helpers are pure, no DOM.
-   Design: src/docs/specs/2026-10-06-timed-conditions-design.md */
+   Design: src/docs/specs/1.8.0/2026-10-06-timed-conditions-design.md */
 const STATUS_UNITS=[["rounds",6],["minutes",60],["hours",3600]];
 /* the duration in whole seconds; 0 = untimed (junk, 0 or less, or Concentrating) */
 function statusDuration(s){

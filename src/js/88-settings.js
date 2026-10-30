@@ -4,7 +4,7 @@
    The page last viewed is remembered in `settings.setPage`. */
 /* ---- the sidebar and its pages (#107) ----
    Six categories beside one page at a time, replacing the folding sections
-   (spec src/docs/specs/2026-10-16-settings-dialog-design.md). `scope:"char"`
+   (spec src/docs/specs/1.8.1/2026-10-16-settings-dialog-design.md). `scope:"char"`
    pages exist only while a character is open. Icons are line drawings in the
    tab bar's style (24px, stroked), written here, not game-icons artwork, so
    they need no attribution. */

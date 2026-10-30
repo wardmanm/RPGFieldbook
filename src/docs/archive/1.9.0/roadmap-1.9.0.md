@@ -1,0 +1,194 @@
+# 1.9.0
+
+The last feature release before the 2.0 rewrite ([2.0](../../wiki/roadmap/2.0.md), #100). This page is its
+integration plan: the fifteen open issues on the v1.9.0 milestone, what each touches, the order they
+are built in and why, and how each wave goes from issue to `main`. Agreed with Mike on 2026-10-16;
+no code is written yet. Each item still gets its own spec and plan when its wave starts (see
+"How a wave runs").
+
+**See also:** [Known issues](../../wiki/roadmap/known-issues.md), [2.0](../../wiki/roadmap/2.0.md), [WORKTREES](../../WORKTREES.md),
+[RELEASING](../../RELEASING.md), [Sections & layout](../../wiki/ui/sections-and-layout.md),
+[Combat view](../../wiki/features/combat-view.md), [Journal](../../wiki/features/journal.md),
+[Rules packs](../../wiki/architecture/rules-packs.md)
+
+## The rule that shapes the plan
+
+2.0 begins as a 1:1 React port of this app (#100). So **every character or settings field 1.9.0
+adds is a save format 2.0 must load**, and every spec written here is the spec 2.0 ports from. Each
+item's spec therefore states its data model first and keeps it minimal: a field is optional, has a
+`blankChar()` default, survives `migrate()` and a save→load round trip
+([Character model](../../wiki/architecture/character-model.md)). The code is disposable; the fields and the
+specs are not.
+
+## The items
+
+Sizes are a planning guess (S under a day, M a few days, L a week or more). "Touches" lists the
+fragments the item is expected to edit, which is what the waves are scheduled by
+(WORKTREES §3: schedule by files, not by count).
+
+| Issue | What | Size | Touches | New state (expected) | Needs first |
+|---|---|---|---|---|---|
+| #88 | Pack labels used as object keys (`__proto__`) | S | `89-rules-merge.js` | — | — |
+| #95 | Checklists and tasks leave trackers for journal pages (`[ ]` / `[x]` syntax) | M | `87-trackers.js`, `87-journal.js`, `87-notes.js` (page rendering), `47-journal.css`, `60-journal.html`, `71-char-io.js` (migrating existing checklist/task trackers) | journal text grammar; a migration of `trackers[].type` checklist/task | — |
+| #93 | A tag group of trackers shows an optional total | S | `87-trackers.js` | per-group total flag on the character | #95 |
+| #94 | Trackers lay out horizontally inside a group | S | `87-trackers.js`, `47-journal.css` | — | #93 |
+| #104 | Ammo recovery options: 50% (RAW), 100%, Hit/Miss, None, applied at End combat; per-item recoverability; thrown weapons fire themselves | L | `62-ammo.js`, `88-settings.js` (Sheet display row), `80-modal-forms.js` (item editor), `docs/rules-schema.md` (ships) | `character.ammoRecovery`; per-shot hit/miss in `ammoSpent`; `ammo.recover` on items | — |
+| #97 | Edit/delete buttons hidden behind a per-section header toggle | M | `87-notes.js` (`renderNoteIcons()` is the pattern), `20-lists.js`, `40-sheet.js`, `60-attacks.js`, `20-cards.css` | per-section flag on the character, keyed by `NOTE_SECTIONS` id | — |
+| #99 + #53 | Rules tab overhaul: a category sidebar over every loaded category, filterable tables, a modal per entry | L | `40-rules.html`, `86-tables.js`, `60-attacks.js` (the glossary list moves), `85-browse.js` (shared facets), new CSS; likely a new fragment in `manifest.json` | `settings.rulesCat` | — |
+| #103 | Sheet tab makeover: three columns, condensed vitals, Attacks to Inventory, bio fields to Story | L | `00-sheet.html`, `30-sheet.css`, `40-sheet.js`, `66-coins-hp.js`, `00-constants.js` (`buildStats()`, `buildBio()`), `10-inventory.html`, `30-story.html`, `87-notes.js` (the `attacks` registry entry's tab) | layout choices in `settings` or on the character, to be decided | #97 |
+| #101 | Level-up fanfare: an animation and a "what you gain" summary with the HP step | M | `56-class.js`, `58-choices.js`, CSS | — | — |
+| #91 | Initiative tracker on the Combat tab; party roster on Story | L | `87-combat.js`, `70-combat.html`, `45-combat.css`, `30-story.html`, `00-constants.js` (`buildBio()`) | `character.party`; combatants, saved with the fight | #103 (the bio stack) |
+| #47 | Trade window and an inventory log | L | a new `67-trade.js`; `80-modal-forms.js`, `85-browse.js`, `90-boot.js`, `66-coins-hp.js`, `50-classrace.js`, `62-ammo.js`, `87-combat.js`, `88-settings.js`, `10-inventory.html`, `50-modal.css` | `character.invLog` and `character.invLogSize`; every item and coin path (the finder, the item form, row delete, Use, Adjust, the coin boxes, Convert, grants, End combat) writes one line | #103 (the Inventory tab) |
+| #52 | Hide a tab per character | M | template (tab bar), `40-sheet.js` (`selectTab()`, `jumpToNote()`), `88-settings.js` (Sheet display row) | `character.hiddenTabs` | #104 merged (same Settings rows) |
+| #102 | Extensions and manifest installs, **built 2026-10-26**: Settings → Rules data becomes Extensions; packs install and update from the built-in source or any manifest URL, through one all-or-nothing plan; Manual install; the Extensions pill | L | a new `89-extensions.js`; `88-settings.js`, `89-rules-merge.js`, `89-zip.js`, `30-version.js`, `80-modal-forms.js`, `90-boot.js`, the template, `10-chrome.css`, `50-modal.css`; `tools/data-kit/fbdata.py` (format 2, `release-files`), `build.sh`, `release.js`/`data-release.js` and the workflows (`releases/data/`), `docs/rules-schema.md` (ships) | `settings.sources`, `settings.packOrigin`, `settings.dismissedUpdates` (replacing `rulesSources`) | #88; the CORS spike |
+| #105 | The End of combat window, **built 2026-10-29**: End combat asks in the app's warning window, then one window wraps the fight up — the time and the fallen, then folded rows for Ammunition (with Undo recovery), Experience (Split among N, Done into the level-up), Loot (a trade with the fallen) and After combat (flagged trackers and pages, live) | L | a new `87-combat-end.js`; `87-combat.js` (`endCombatAsk()`, `endCombatNow()`), `62-ammo.js` (`applyAmmoRecovery({quiet})`), `67-trade.js` (`openTrade({onClose})`, `tradeClosed()`), `87-trackers.js`, `87-journal.js` (`jnlTogglePage()`), `90-boot.js`, `00-constants.js`, `71-char-io.js`, `50-modal.css` | `xpSplit`, `endCombatOpen`, and `afterCombat` on trackers and pages; loot written through #47's log | #104, #91, #47, #95 |
+
+Scope calls already made (Mike, 2026-10-16):
+
+- **#53 is part of #99.** Spells, feats and items in the Rules tab are categories of the same
+  browser.
+- **#102 covers public packs only.** A manifest source installs the latest public data release in
+  one tap, closing "a data update is announced, never installed" in [Known issues](../../wiki/roadmap/known-issues.md).
+  Private packs stay file imports; a token in settings is not built. A spike runs first: whether
+  GitHub release assets answer a `file://` page with CORS headers (raw.githubusercontent.com does,
+  asset downloads redirect to objects.githubusercontent.com). If they don't, the feature falls back
+  to announce-and-link, which already exists.
+- **#104 includes thrown weapons** (Mike, 2026-10-17). A weapon with the Thrown property gets a
+  Throw on its attack row that spends one from its own stack and comes back under the recovery
+  rule. That closes the deferred "thrown weapons track no ammunition of their own" item in
+  [Known issues](../../wiki/roadmap/known-issues.md) and grows #104 from M to L.
+
+## Dependencies
+
+```
+#104 ammo options ─────┐
+#91  initiative ───────┼──▶ #105 combat-end dialog
+#47  trade and log ────┤      (recovery, loot through the log, XP, post-combat trackers and pages)
+#95  checklists→journal┘
+
+#95 ──▶ #93 ──▶ #94          one fragment (87-trackers.js): #95 removes two tracker types,
+                              then the others reshape what is left (counters)
+
+#97 ──▶ #103                 the header toggle exists before the headers are redesigned
+
+#88 ──▶ #102                 same code; the small fix lands before the feature
+
+#103 is the conflict hub: it rewrites the Sheet tab, moves Attacks into 10-inventory.html (which
+#47 edits) and moves alignment, languages, race and background into the bio stack in 30-story.html
+and buildBio() (which #91's party roster edits). Nothing else on those files runs beside it.
+```
+
+## The waves
+
+Each wave is a set of worktrees with disjoint files, run in parallel (`scripts/wt.sh add <n>`),
+merged one branch at a time, then one build and one QA pass on `main`. The order inside a wave is
+the merge order.
+
+| Wave | Worktrees | Why here |
+|---|---|---|
+| **0** | #88 | Half a day; clears the ground for #102 |
+| **1** | **A:** #95 → #93 → #94, serially in one worktree · **B:** #104 · **C:** #97 · **D:** #99 (with #53), built 2026-10-22 | Mechanics with small UI, nothing on the Sheet tab's layout. D is the long one and starts early; it will still be in flight when wave 2 begins, which is fine: it touches no wave-2 file |
+| **2** | #103 · #101 beside it · the #102 CORS spike (read-only) | The Sheet tab alone. #103 is design work with screenshot iteration, so it has the tab to itself; #101 lives in `56-class.js`, off the hub. Everything downstream shoots against the final layout |
+| **3** | #91, built 2026-10-25 · #47, built 2026-10-25 · #52, built 2026-10-25 · #102 | #91 and #47 wait on #103's moves. #52 and #102 are independent and each adds Settings rows; they come here because wave 1's #104 adds a Sheet display row too and `setPageHTML()` is one function |
+| **3b** | #118, built 2026-10-27 | Feat support (added 2026-10-25): at an Ability Score Improvement, an ability increase or a feat, with a per-character "feats allowed" setting. Grew on 2026-10-27 to species feats, Undo level-up and level down from a record. Off the hub (`56-class.js`, `57-levelup.js`, `58-choices.js`); after #102 |
+| **4** | #105, built 2026-10-29 | The capstone; needs all four inputs merged |
+
+Mike chose the middle for #103 over first (nothing else ready to run beside it) and last (#91 and
+#47 built against the old layout, then reworked; every tab re-shot at the end).
+
+## How a wave runs
+
+1. **Spec, just in time.** Before a wave starts, each of its items is brainstormed with Mike and
+   written to `src/docs/specs/YYYY-MM-DD-<topic>-design.md`: the data model first, then the UI,
+   then what is out of scope. Specs are written per wave, not all up front, so they describe the
+   code as merged (#103's layout, #95's journal shape), not a guess at it. Items marked S may take a
+   short in-chat design instead when the spec would restate the issue.
+2. **Plan**, to `src/docs/plans/`, then a worktree per item (WORKTREES §1). Branches carry `src/`
+   only; never the built file.
+3. **Build it** the usual way: tests first for the pure parts, `./src/tests/run.sh` green, build to
+   verify, screenshots of every affected tab (before and after, both skins where themed CSS moves),
+   interactive changes driven. The wiki page, the ledger entry and the `UNRELEASED.md` bullet are
+   part of the branch, not an afterthought.
+4. **Integrate** one branch per `git merge --no-ff`, in the wave's order; re-point the second
+   branch's ledger citations in the merge commit (WORKTREES §4); `./build.sh && ./src/tests/run.sh`;
+   Mike's browser QA; commit the artifact; push. Each issue closed with its own keyword.
+5. **Between waves**, bugs found in QA are fixed on `main` before the next wave's worktrees are
+   made, so they branch from the fix.
+
+The release is Mike's to cut, after wave 4, as [RELEASING](../../RELEASING.md) describes. Nothing
+here bumps `APP_VERSION`.
+
+## Decisions made before the specs
+
+Settled with Mike on 2026-10-17, so no wave starts without them. Each item's spec takes these as
+given and works out the rest (the exact markup, the phone layout, the tests). Where a spec finds
+one of these wrong, it says so and the decision is revisited there, not quietly changed.
+
+| Item | Question | Decision | Rejected, and why |
+|---|---|---|---|
+| #95 | Existing checklist and task trackers | **Migrated into journal pages** by `migrate()`: a checklist becomes a page titled with its name and tagged with its tag, items as `[ ]` / `[x]` lines; the tasks of one tag merge into one page. Trackers becomes counters only | Read-only in Completed: two homes for one idea until 2.0. Migrate and keep a copy: every list twice |
+| #95 | A checkbox in a rendered page | **Tickable in the read view**: `[ ]` renders as a real checkbox, a tap flips it and rewrites that line to `[x]`. A task is the same box; the line is the task. The notes grammar stays escape-first ([Rich text](../../wiki/architecture/rich-text.md)); this is its first interactive element | Read-only until Edit: three taps a tick. A second task syntax with a cross-page roll-up: a second grammar to learn |
+| #93 / #94 | Layout and totals | **Compact tiles in a wrapping row** per tag group (name, − count +, a bar with a goal); the group's total, when switched on, reads in the group header as "(total N)", and the switch is on the header | A total tile: looks tappable. A sideways scroller: hides tiles on a phone |
+| #93 | What the total counts, and its form | **Every counter with that tag, open or closed**, so completing one never drops the total; **the bare total** in the group header ("Kills (3) · 42"), switched by a Σ button on the header, stored in `trackerTotals[tagKey]` | Open only: closing a counter subtracts it. "42 of 60" when all have goals: the form changes as counters are added |
+| #94 | Completed | **Stays a list of rows**; only the open groups become tiles | Tiles too: it is a record, not a dashboard |
+| #104 | How Hit/Miss learns the result | **Fire asks Hit / Miss at once**, before the shot is counted; Undo reverses it. **Hits are the recoverable shots.** 50%, 100% and None never prompt | Tag after the fact: untagged shots need a default. Two Fire buttons: a wider row, easy to mis-tap |
+| #104 | Per-ammunition recoverability | **A top-level `recover` on the item** (`always` / `never`, absent for the character's rule), set in the item editor; it wins over the sheet's rule, None included. The defaults (firearm bullets never, Thrown weapons always) are the app's, by kind and property, so the packs do not change (revised 2026-10-18; see [the spec](../../specs/1.9.0/2026-10-18-ammo-recovery-design.md)) | The rule alone: a bullet and a javelin can't both be right under one rule. `ammo.recover` in pack data (the 2026-10-17 answer): every pack's digest moves and a data release is needed, for a default the app can know |
+| #104 | Thrown weapons | **A Thrown weapon fires itself**: a Throw on its attack row spends one from its own stack, counts in `ammoSpent`, and comes back under the rule, `always` by default | The field alone, thrown weapons later: "always" would have no user |
+| #104 | Where the rule lives, and End combat | **Per character, Settings → Sheet display**, "Ammo recovery": RAW 50% / 100% / Hit–Miss / None. **End combat applies it** when anything was fired since Start, with a toast and Undo in place of the Yes/No prompt; None skips it and hides Recover on the row | Still asking: one more tap every fight. App-wide: two tables on one device can't differ |
+| #97 | Scope of the toggle | **Per section, hides edit and delete only.** A pencil toggle in each list card's header (features, attacks, inventory, spells, statuses, journal pages, trackers), stored per character per `NOTE_SECTIONS` id; stars, folds, Use, Fire, equip and + Add stay. Default shown. `renderNoteIcons()` is the pattern and headings stay ToC-clean ([Shell](../../wiki/ui/shell.md)) | Hiding everything but play controls: adding mid-session means a flip first. One sheet-wide switch: can't lock Inventory and keep Features editable |
+| #99 | The sidebar's categories | **Every loaded category, plus Glossary and Tables**, in a fixed order; an empty category is hidden; the glossary's + Add and the player's own entries stay | Only what a character can add: leaves out subclasses, options and conditions. A pack chip row: wanted, not now |
+| #99 | What a row opens | **The existing info windows, unified**: a class its info window, a spell its preview, a table `openTableView()`, a term `openGlossView()`; feats, items and species get one in the same style. Fieldbook's design, not 5e-tools' | One new generic modal: a second rendering of classes and spells beside the sheet's, which drifts. Inline expansion: a class makes the table unwieldy |
+| #103 | What leaves the Sheet | **Attacks → Inventory**, and the `attacks` registry entry's tab with it; **alignment, languages and the race and background text → Story**, with race and background in brief beside name, class and level. The Sheet keeps portrait/name/class/level, abilities with saves, skills, vitals (AC, HP, initiative, proficiency, speed, death saves), hit dice (die and CON shown), rest and inspiration as icons, resistances and immunities, statuses, resources, features, familiars. Print and the combat view key on the registry and must survive the move ([Sections & layout](../../wiki/ui/sections-and-layout.md)) | Attacks only: the issue asked for the bio moves. Features too: the issue said to keep showing them |
+| #103 | A layout choice | **One new layout, no setting**: three columns condensing to two then one by width; the existing Sheet display settings apply inside it | A classic fallback: twice the CSS and screenshots until 2.0. A density switch: more to design |
+| #101 | What level-up shows | **An animation, then a card with everything the level grants (traits, choices to make, slots, resources) and the HP step on the card itself**; Done closes a level with nothing to choose, Continue opens the existing choice window only when there is one, now with no `hp` block of its own. The animation is off under `prefers-reduced-motion`. Settled in the spec, not as first scoped here — see [the spec](../../specs/1.9.0/2026-10-24-level-up-fanfare-design.md) §2 decision 4 | Inside the choice window: already the longest in the app. After the choices: the fun moment last. Unchanged choice window with HP still in it (the original answer here): two screens every quiet level for no reason |
+| #91 | Combatant state | **Saved with the character while a fight is active**, beside `combatActive` and `combatRound`; End combat clears it | Session-only: a phone reload mid-fight loses the order. Kept after End: a staleness question |
+| #91 | The combatant record | **Name, initiative, a health band (Healthy · Injured · Severely injured · Near death · Dead), an AC estimate, dead** — Dead rows are skipped by Next; an optional exact HP box for allies. The **party roster** on Story lists members (name, AC, max HP optional); Start combat adds them and this character; combatants can be added mid-fight | Name and initiative only: the issue listed the rest. Exact HP for everyone: enemy HP is a guess typed as a number |
+| #47 | What the log records; the currency check | **Every item and coin change** — trades, finder adds, form adds/edits/deletes, Use, grants (one line per source), coin edits, and one ammunition line per kind per fight — with the time, what moved and who; **a Log button on the Equipment card opens it as a dialog**, newest first, with Undo on any line still clean. **A trade that gives less than it gets shows red and Complete Trade asks to confirm; it still goes through** | Adds and removes only: an edited quantity leaves no trace. A collapsible section at the bottom of Inventory (the plan here until the brainstorm): the tab is already long. Blocking Complete: gifts and haggling can't be recorded |
+| #52 | Hiding tabs | **Settings → Sheet display lists the word tabs as switches**; Sheet can't be hidden, nor the combat swords. A hidden tab leaves the bar; if it was active the Sheet shows. A section-note jump or the rules-update tool targeting a hidden tab **unhides it with a toast** | Hide from the tab, long-press to unhide: invisible, and clashes with the phone's own. Hiding Combat and refusing jumps: hides the swords mid-fight |
+| #102 | What a manifest source is; what install does | **A URL to the archive's own `fieldbook-data.json`, extended (format 2)**, listing each pack with a version, sha256, `minApp`, category and descriptions at a path relative to it. The official one is `releases/data/` in the release commit, read from raw.githubusercontent.com at the tag. The app fetches **each pack file one by one**, checks its sha256, and installs through one plan, **replacing each pack by file name and system** as `importPack()` does. Settled in [the spec](../../specs/1.9.0/2026-10-26-extensions-manifest-design.md), not as first scoped here: the CORS spike showed a `file://` page can't download a release asset, so the archive is not fetched | The release zip, as first scoped: its asset redirects to storage with no CORS header. A repo URL: ties the format to GitHub and its rate limit |
+| #105 | Shape, and loot | **One window, opened after the fight has ended** (End combat asks first, in the app's warning window), **its sections folded** (the summary open, every other section a one-line row that opens on a tap and remembers being open, per character): the summary is what the app knows (rounds, time, the combatants with the fallen struck through), Ammunition (what the rule returned, with Undo), XP (a box with a "Split among N" switch; the level-up opens after Done when it reaches a level), **Loot (opens #47's trade window with the fallen foes as the other party**, so it lands in the log, and comes back after it), and the post-combat trackers and pages; Done closes it, any section may be skipped. Refined by [the spec](../../specs/1.9.0/2026-10-29-end-of-combat-design.md) §2 | A sequence of prompts: four windows after every fight. Loot as a plain add: a third item-adding UI. The window with the fight still running: the question and the wrap-up are different moments. Everything open in one scroll: long after every fight |
+| #105 | The post-combat flag | **A per-tracker and per-page switch, "Show after combat"**; flagged open counters appear in the window as their tiles, without the pen (tap + for the kill count there), flagged pages as their title and text with tickable checkboxes. Nothing changes automatically | Prompting a value per tracker: the tile's + already does it. Titles as links: closes the window to act |
+
+## Risks
+
+- **#103 slips.** It is design iteration, and wave 3's #91 and #47 wait on it. Mitigation: wave 1's
+  D (#99) and the #102 spike absorb the time; if #103 is still open when they finish, #52 and #102
+  can start early, since they touch none of its files.
+- **Trackers change shape three times** (#95, #93, #94). One worktree, three sequential specs, one
+  merge, so `migrate()` learns the final shape once.
+- **New fields multiply.** Nine items add character or settings state. The per-wave spec review is
+  where a field is refused or merged with an existing one, and every one gets a round-trip test.
+- **Settings rows collide.** `setPageHTML()` is one function; the waves keep items that add rows
+  apart (#104 in wave 1, #52 and #102 in wave 3).
+- **#105 inherits every upstream decision.** Its spec is written last, against merged code, and
+  it is the one item that may expose a wrong call in #104, #91 or #47; fixing that upstream is in
+  scope for wave 4.
+
+## Not in 1.9.0
+
+- **#110 (shapeshifting)**, held on the backlog with no milestone (Mike, 2026-10-25), and the thirteen `1.9.1`-labelled issues
+  filed the same day (#111–#117, #119–#124), which wait for 1.9.1. Remaining order: #47 → #102 → #118 → #105.
+- Anything in #100's list: the React port, hosted mode, multiplayer, custom rulesets, theming,
+  drag-and-drop sections, the rules generator. 1.9.0 builds nothing for them, but every spec is
+  written so the port can read it.
+- Private packs through a manifest (#102's token option). File import stays their path.
+- The known-issue bugs are not milestone items. One found in play is blocking and is fixed on
+  `main` between waves, as always; none is scheduled here.
+
+## History
+
+- 2026-10-16 — The plan: fifteen items mapped to fragments and state, five waves, how a wave runs, what each spec must settle. → ledger L6003, #100
+- 2026-10-17 — The open questions answered: twenty decisions recorded for the specs to take as given; #104 grows to thrown weapons and per-item recoverability. → ledger L6023, #100
+- 2026-10-17 — #95, #93 and #94 built (wave 1, worktree A). → ledger L6047, #95, #93, #94
+- 2026-10-18 — #104's spec: the recoverability override becomes a top-level item field with app-side defaults, not pack data. → ledger L6068, #104
+- 2026-10-19 — #104 built (wave 1): a per-character recovery rule, an item's own override and the app's defaults, Hit/Miss tallies, Thrown weapons, recovery's record and Undo, End combat recovering on its own, the Settings row and the item editor's select. → ledger L6081, #104
+- 2026-10-22 — The #99 row's state cell: "fold state in `settings`" becomes `settings.rulesCat`, now that the final-review pass has finished replacing the tab's old fold with the browser's stored category. → ledger L6455, #99
+- 2026-10-24 — #101 built (wave 2): the level-up scene and card, half-casters rounding up, and the
+  multiclass 13+ note; its decision row above is corrected to match what shipped. → ledger L6840, #101
+- 2026-10-25 — #52 built (wave 3): one Tabs group per character in Settings → Sheet display; the Sheet and the combat swords can never be hidden. → ledger L6989, #52
+- 2026-10-25 — #118 joins wave 3 (3b); #110 moves to 2.0; the 1.9.1-labelled issues wait. → ledger L7271
+- 2026-10-25 — #110 goes to the backlog with no milestone, not 2.0. → ledger L7284
+- 2026-10-25 — #47 built (wave 3): the trade window and the inventory log; its row and decision row are corrected to match what shipped (the log is a dialog, the field is `invLog`). → ledger L7291, #47
+- 2026-10-26 — #102 built (wave 3): Extensions and manifest installs; its row and decision row are corrected to match what shipped (pack files fetched one by one, not the archive; `settings.sources`). → ledger L7428, #102
+- 2026-10-27 — #118 built (wave 3b): the ASI or a feat in one list, Feats allowed, level 19's Epic Boon, species feats, Undo level-up and level down from a record; the four feat-carrying packs need a data release. → ledger L7569, #118
+- 2026-10-29 — #105 built (wave 4): End combat asks in the warning window and opens the End of combat window; its row and its two decision rows are updated to match the spec's §2 (opened after the fight has ended, the summary is what the app knows, XP has the split, the rows are folded, Loot names the fallen foes). → ledger L7921, #105

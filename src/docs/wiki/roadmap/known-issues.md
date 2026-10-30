@@ -1,7 +1,7 @@
 # Known issues
 
-Everything known to be imperfect, postponed, or blocked on a source we don't hold, checked against the
-code at `facbc78`. The last section lists things that look like gaps and are not: each was a
+Everything known to be imperfect, postponed, or blocked on a source we don't hold, re-checked against
+the code at `1614d43` for the 1.9.0 pre-release. The last section lists things that look like gaps and are not: each was a
 deliberate call, and "fixing" one would break something or contradict a rule. When an item here is
 fixed, delete it and add a History line. When a new one is accepted, add it here and link it from the
 page it concerns.
@@ -45,8 +45,9 @@ Known behaviour that is accepted for now.
   seed: a first class added at level 3 and then removed keeps its levels 2–3, and removing a
   multiclass class keeps the hit points its levels added — the same as a class levelled up in play.
   → ledger L3886, and [Vitals & rest](../features/vitals-and-rest.md)
-- **Multiclass ability prerequisites** (e.g. INT 13 for a Wizard) are neither carried by the pack nor
-  enforced. → ledger L3886
+- **Multiclass ability prerequisites** (e.g. INT 13 for a Wizard) are stated, not checked. The Add
+  class window's multiclass note says the rule (`MC_PREREQ`, #101), but the packs don't carry each
+  class's primary ability, so nothing enforces it. → ledger L3886
 - **A source's packs stay until removed by hand** once the source is taken out of the list (#102
   decision 13), and a pack fetched before `_url` stamping keeps any entry its plain source has since
   dropped (a re-fetch replaces the rest by name). Both follow from a fetch never discarding what it
@@ -82,9 +83,6 @@ Known behaviour that is accepted for now.
   save rows), and prints no item uses. → ledger L2345, L2818
 - **The item finder has no Escape key of its own.** `openBrowse()` closes from its Close button only;
   the global Escape handler dismisses the modal and nothing else. → ledger L3397
-- **At phone width** an attack row's name runs into its type label behind the to-hit pill, and a
-  feature row's name crowds its source tag **(unverified)**: not re-checked in a browser since it was
-  reported. → ledger L3525
 - **2014-named single ammunition pieces keep their name on a sheet migrated before ammunition
   shipped.** "Crossbow Bolt" and "Blowgun Needle" learn the 2024 kind and fire, but `migrateAmmo()`
   never renames them, so the rules-update tool lists them as not in any loaded pack. Existing
@@ -141,9 +139,11 @@ Known behaviour that is accepted for now.
 - **A public player's old Homebrew still names Xanathar's spells "from Xanathar's Guide to
   Everything"**, which no public file provides. The release notes say it moved; re-importing it
   from the private archive replaces it. → ledger L7858, and [Homebrew](../data/homebrew.md)
-- **The old releases' copyrighted data stays reachable until 2.0.** Deleting the v1.3.0–v1.7.2 pack
-  assets (at the #85 finish) leaves GitHub's Source code archives of each tag, and public history,
-  until the history purge. → ledger L5426, and [2.0](2.0.md)
+- **The old releases' copyrighted data stays reachable until 2.0.** The v1.3.0–v1.7.2 releases still
+  carry their pack assets (every `*_full.json`, every `fieldbook-v*.zip`, and v1.3.0's source zip):
+  deleting them is pending Mike's decision ([RELEASING §4a](../../RELEASING.md)). Even once they are
+  deleted, GitHub's Source code archives of each tag, and public history, keep the data until the
+  history purge. → ledger L5426, and [2.0](2.0.md)
 - **The trackers' Σ is a button nested in a `role="button"` group header,** so assistive tech may
   flatten the header and never reach the Σ. Restructuring the header pattern (the journal's and the
   section notes' group headers share it) is likely 2.0's. → ledger L6057, and [Journal](../features/journal.md)
@@ -166,8 +166,24 @@ Known behaviour that is accepted for now.
   for Mike in the `release` environment; GitHub refuses required reviewers on a private repo on the
   current plan (HTTP 422). Claude Code's ask rules and `/release`'s "publish" are its only gates.
   → ledger L6226, and [Private data](../data/private-data.md)
+- **A long inventory log of Use, give and delete lines takes real storage** (#47, accepted and
+  measured). Each keeps one whole copy of the item so Undo can bring it back, saved with the
+  character in localStorage, which the app shares across every character (browsers commonly allow
+  about 5 MB a site). Edit lines keep only the fields that changed (500 edits of a magic item,
+  117,000 characters). The log is capped per character (100 to 2,500 lines, default 500); the final
+  review's estimate for 2,500 one-copy lines was 1.8 to 2.6 million characters, and the default is a
+  fifth of that. A save that doesn't land says so. → [Inventory](../features/inventory.md)
+- **Existing Bards are not fixed automatically** (#67). The rules-update tool compares traits, not
+  choices, so a Bard made before #67 is not offered its missing first-class skills: tick them by
+  hand, or remove and re-add the class after re-importing the 2024 pack. → ledger L3985
+- **Multiclass characters saved before #66 keep a second class's saves, skills and gear.** Since #66 a
+  class added as an extra class no longer grants its first-class ones, but older sheets are not
+  changed; removing that class still
+  reverts them. → ledger L3886
 
 ## Deferred
+
+Wanted, not yet done. Each needs work, not a source.
 
 - **#102's deferred minors.** Three unauthenticated GitHub API calls per boot (the app check asks
   for the latest release; the data check and the official source each list the releases), against
@@ -180,8 +196,9 @@ Known behaviour that is accepted for now.
 - **#102's release-tooling minors**: `release-files` deletes before it writes;
   `./build.sh --release --no-zip` skips `releases/data/`; `data-kit.py`'s leak test reads the shared
   temp folder. → ledger L7428, and [Data kit](../data/data-kit.md)
-Wanted, not yet done. Each needs work, not a source.
-
+- **Private packs through a manifest (#102's token option): not built.** raw.githubusercontent.com
+  can't serve a private repo and no token is stored, so they stay a Manual install (file import).
+  → [Private data](../data/private-data.md)
 - **Humblewood species have no size.** They all resolve to Medium (`charSize()`), but Jerbeen, Luma
   and Hedge are Small in the book. The fix belongs in the private repo's Humblewood extractor, which
   has a verbatim suite, so the data must not be hand-edited. A player can set size from the rail
@@ -240,8 +257,9 @@ Blocked until someone has the book or PDF.
 ## Found while compiling the wiki — for Mike's triage
 
 Compiling the wiki meant checking every claim in the ledger against the code, and on 2026-09-28 that
-turned these up. None is fixed yet. They are here so none gets lost; each should be triaged into a
-fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this section.
+turned these up. Some have been fixed since and removed, the last at the 1.9.0 pre-release; the
+rest are not fixed yet. They are here so none gets lost; each should be triaged
+into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this section.
 
 ### Likely bugs a player can hit
 
@@ -293,19 +311,10 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   `racesForCharacter()` filters by system. → [Theming & icons](../ui/theming-and-icons.md)
 - **Print includes hidden attacks**: `printSheet()` prints the attacks of unequipped weapons.
   → [Attacks & damage](../features/attacks-and-damage.md)
-- **A long inventory log of Use, give and delete lines is still large** (#47). Each keeps one
-  whole copy of the item so Undo can bring it back, saved with the character in localStorage, which
-  the app shares across every character (browsers commonly allow about 5 MB a site). Edit lines no
-  longer count: they keep only the fields that changed (500 edits of a magic item, 117,000
-  characters). The final review's estimate for 2,500 one-copy lines was 1.8 to 2.6 million
-  characters; the default 500 is a fifth of that. A save that doesn't land says so.
-  → [Inventory](../features/inventory.md)
 
 ### Keyboard access
 
-- The Rules tab's two section headings are `role="button"` with `tabindex="0"`, but nothing in
-  `wire()` handles Enter or Space, so they take focus and do nothing. Features group heads and
-  inventory section heads can't be focused at all. The Attacks card's `data-atksec` headings look
+- Features group heads and inventory section heads fold on a click but can't be focused at all. The Attacks card's `data-atksec` headings look
   clickable but have no handler. → [Sections & layout](../ui/sections-and-layout.md)
 
 ### Breaks of a non-negotiable
@@ -369,10 +378,11 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 - **`docs.js` still tolerates `DATA_VERSIONS` naming XPHB, Humblewood, XGE, TCE and Homebrew**
   (`LEFT_FOR_PRIVATE`). The next release retakes `DATA_VERSIONS` from the pruned registry, after
   which the tolerance is inert: delete it then. → ledger L5426, and [Testing](../process/testing.md)
-- **Tests the ledger says exist but don't:** unit tests for `usesMax()` and for the casting engine
-  (`pickSlotLevel()`, `parseDurationSec()`, `autoSlots()`) (L16, L179); explicit assertions of the
-  Archery/Defense effects and the Rage/Focus/Sorcery trackers (L625); a plain-modal-after-emblem-modal
-  regression check (L3289). `attackNumbers()` and `pbValue()` are untested too.
+- **Tests the ledger says exist but don't:** unit tests for `usesMax()` and for the casting engine's
+  `pickSlotLevel()` and `parseDurationSec()` (L16, L179); an explicit assertion of the Defense effect
+  (L625); a plain-modal-after-emblem-modal regression check (L3289). `pbValue()` is untested too.
+  (`autoSlots()`, `attackNumbers()`, Archery's effect and the Rage/Focus/Sorcery trackers are tested
+  now.)
   → [Testing](../process/testing.md)
 - **Invisible bytes in tracked files:** `src/tests/tables.js` has four literal private-use
   characters. → [Building & CI](../process/building-and-ci.md)
@@ -388,16 +398,13 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
 - **Code comments that no longer match:**
   - The `30-version.js` header says to bump `APP_VERSION` on every change, and the `UPDATE_REPO`
     comment describes the old badge.
-  - The bold-only block above `descHTML()` is out of date.
   - `20-cards.css` says `.rt-view` is pre-wrap.
   - `build.sh` calls the concatenation "2,600-line".
   - `70-persistence.js` says LZW saves "roughly a third" (measured: 19%).
-  - `openModal()` says "~30 call sites"; there are about 50.
   - `modalTakeFocus()` and `toast()` still describe the combat view's removed `inert`.
   - `fetch-icons.js` points to a nonexistent `src/icons/README.md`.
   - The `convert.py` USAGE docstring is out of date.
   - `spellDamageFromText()` claims a pattern reads Delayed Blast Fireball.
-  - `release.yml`'s header still shows `git commit -am`.
   - `choiceFieldHTML()` calls its `option` checkbox branch dead code, but maneuvers, metamagic,
     invocations and infusions all use it.
   - `wire()` places `adjustHP()` in `65-resources.js`; it lives in `66-coins-hp.js`.
@@ -412,63 +419,13 @@ fix, a Limitation above, or a Verified-NOT-gap below, and then removed from this
   - L3676 says Hit Dice moving back to Rest "reverses 1.7.0", but the move under Hit Points shipped
     in v1.5.0.
 
-### Decisions made while fixing #63–#66 — for Mike to confirm
+### Decisions made while fixing #63–#66
 
-Each is recorded, with its reason, in the page's Decisions table; each is easy to reverse.
+Confirmed by Mike and archived: [known-issues-decisions-63-66](../../archive/1.9.0/known-issues-decisions-63-66.md).
 
-- **Dismissing a choice window still opens the windows queued behind it** — including the starting
-  equipment after dismissing the first Add-class window, which used to open nothing. Chosen because
-  the alternative loses things silently. → ledger L3847, [Character building](../features/character-building.md)
-- **Removing the first class while another remains hands saving throws to the new first class**
-  (tagged to it, with a toast); its starting skills and equipment are not re-offered. → ledger L3886,
-  [Grants & provenance](../architecture/grants-and-provenance.md)
-- **Multiclass characters saved before #66 are not changed** — they keep a second class's saves,
-  skills and gear; removing that class still reverts them. → ledger L3886
-- **A plain source's Fetch adds no confirmation dialog**, since nothing is lost unless a fresh copy replaces it; a
-  fetched pack with the same system and entry names as a file import replaces those entries, as
-  re-importing the file would. → ledger L3797, [Rules packs](../architecture/rules-packs.md)
+### Decisions made while fixing #67–#73
 
-### Decisions made while fixing #67–#73 — for Mike to confirm
-
-Each is recorded, with its reason, in the page's Decisions table; each is easy to reverse.
-
-- **Existing Bards are not fixed automatically.** The rules-update tool compares traits, not
-  choices, so a Bard made before #67 is not offered its missing skills: tick them by hand, or remove
-  and re-add the class after re-importing the 2024 pack. → ledger L3985
-- **Import settings asks in a window with three buttons** (Cancel · Keep my rules · Replace my rules,
-  Keep as the default), rather than the browser's OK/Cancel dialog, because there are three outcomes. There is no
-  "merge" option; a file with an empty pool counts as carrying no rules; the sources list is still
-  replaced wholesale; and a bare settings object with no known key is refused as "not a settings
-  file". → ledger L4134, [Settings & updates](../features/settings-and-updates.md)
-- **`migrate()` drops non-object values from a character's lists** (a `null`, a bare string or
-  number), silently, because they can't be shown and can crash a render; glossary objects are never
-  dropped. → ledger L4206, [Character model](../architecture/character-model.md)
-- **A keyword written `{name, description}` loads as its term and text** (`desc` is not an alias);
-  pack entries with no usable name are skipped and counted on the status line, not shown as a chip
-  on the pack's row, and a settings file's unusable entries are dropped without a message. → ledger
-  L4206, [Rules packs](../architecture/rules-packs.md)
-- **Magic weapons take their names from the base weapon data, not a copy of the base weapon's
-  fields** — the dump's magic weapons already carry every base field. → ledger L4327,
-  [Converter](../data/converter.md)
-- **A weapon bonus on a non-weapon item lives only in its description** (#74). Bracers of Archery,
-  Oil of Sharpness, the Rod of Lordly Might, the Eldritch Claw Tattoo and Baba Yaga's Mortar and
-  Pestle no longer add an automatic bonus: the old global effect reached every attack, and no effect
-  target can say "bows only". The player types it on the weapon's extra-damage box instead.
-  → ledger L4392, [Attacks & damage](../features/attacks-and-damage.md)
-- **Conditional AC and save bonuses stay in the description** (#76), decided by a text rule over the
-  sentence that states each bonus plus a reviewed list pinned in the tests. Bracers of Defense is one
-  of the five: its +2 needs no armor and no shield, so an unarmored monk loses the automatic +2 once
-  the update is applied. The Quarterstaff's once-per-rest Reaction is description, not a tracked use.
-  → ledger L4502, [Armor & AC](../features/armor-and-ac.md)
-- **A spell bonus limited to one class's spells applies to the character's single spellcasting**
-  (#77) — exact for a single-class caster; a multiclass caster's other class gets it too. → ledger
-  L4568, [Spells](../features/spells.md)
-- **"+1 to ability checks" is one `check` effect** (#79) that reaches every skill, initiative and
-  passive Perception — not 18 skill effects plus initiative. A plain ability check shows the bonus
-  only in that ability's breakdown; the modifier box stays the modifier. The Proficiency Bonus box is
-  now marked when an effect changes it, and tappable. Items that set or cap a score (Belts of Giant
-  Strength, the +2-to-a-maximum Ioun Stones) or change speed stay prose. → ledger L4689,
-  [Computed stats & effects](../architecture/computed-stats-and-effects.md)
+Confirmed by Mike and archived: [known-issues-decisions-67-73](../../archive/1.9.0/known-issues-decisions-67-73.md).
 
 ## Verified NOT gaps (do not fix)
 
@@ -553,3 +510,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-28 — Homebrew is private: its Xanathar's spells resolve in the private archive, and `LEFT_FOR_PRIVATE` names it too. → ledger L7858, #125
 - 2026-10-29 — Added: a reload loses the End of combat window's typed XP; a loot trade's With can exceed its typing limit; a shot's Undo refuses once End combat has settled it. Undo recovery's home-joined gap stays unreachable, now because the window keeps the sheet inert. → ledger L7921, #105
 - 2026-10-29 — Removed: a loot trade's With can no longer exceed its typing limit; the End of combat window caps it at 60 characters. → ledger L8025, #105
+- 2026-10-30 — Corrected: the intro's stamp and the triage intro; multiclass prerequisites are stated, not checked; the old releases' assets are still attached, their deletion pending; the Deferred intro back under its heading, and private packs through a manifest added; the inventory log's size, existing Bards and pre-#66 multiclass sheets moved to Limitations; the Rules-tab keyboard sentence, three fixed stale comments and the now-tested functions dropped. Removed: the phone-width crowding (fixed by #57). The two "for Mike to confirm" decision sections archived to `src/docs/archive/1.9.0/` (pre-release 1.9.0, step 1).

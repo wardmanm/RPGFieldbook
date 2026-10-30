@@ -7,7 +7,7 @@
  *
  * A pack changed in this release when its version IS this release's version:
  * release.js and data-release.js give exactly the changed packs that version.
- * Spec: src/docs/specs/2026-10-07-data-archive-design.md §5.5.
+ * Spec: src/docs/specs/1.8.0/2026-10-07-data-archive-design.md §5.5.
  */
 "use strict";
 const fs = require("fs");

@@ -1,7 +1,7 @@
 # Combat view
 
 A tab of just the sections a player needs mid-fight — any of the 17 noteable cards it may take
-(every section but the Sheet's header), the Journal
+(every section but the Sheet's header and the Bio tab's Party), the Journal
 tab's Trackers included, from any tab, in an order they choose — with a round tracker in its
 header. It is reached from the crossed swords in
 the tab bar and has no word tab of its own. The cards in it are the **real** cards, moved in while
@@ -46,9 +46,9 @@ its own tab. Leaving the tab never ends combat.
 `60-attacks.js` · `applyAmmoRecovery()`, `undoRecoveryTap()` in `62-ammo.js` · markup
 `src/html/70-combat.html`, styles `src/css/45-combat.css` · **Tests:**
 `sheet.js` (the pure half), `rules-data.js` (the tab wiring) · **See also:**
-[the spec](../../specs/2026-09-24-combat-view-design.md), [the plan](../../plans/2026-09-24-combat-view.md),
-[the initiative tracker spec](../../specs/2026-10-25-initiative-tracker-design.md),
-[the End of combat spec](../../specs/2026-10-29-end-of-combat-design.md),
+[the spec](../../specs/1.7.0/2026-09-24-combat-view-design.md), [the plan](../../plans/1.7.0/2026-09-24-combat-view.md),
+[the initiative tracker spec](../../specs/1.9.0/2026-10-25-initiative-tracker-design.md),
+[the End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-design.md),
 [Spells](spells.md), [Ammunition](ammunition.md), [Sections & layout](../ui/sections-and-layout.md),
 [Story & notes](story-and-notes.md), [Shell](../ui/shell.md)
 
@@ -146,7 +146,7 @@ A strip of chips under the combat header shows the fight's order, each with a he
 optionally, a "now acting" marker; a ▾ table below it is the read-only, one-row-per-combatant view.
 **Start combat** (`#cvStart`) opens `openInitRoll()` — **Roll initiative**; Cancel or × starts
 nothing. Full data model, decisions and code list
-are in [the spec](../../specs/2026-10-25-initiative-tracker-design.md); this section is the
+are in [the spec](../../specs/1.9.0/2026-10-25-initiative-tracker-design.md); this section is the
 as-built summary.
 
 **Data.** `character.party` ([{id,name,ac,maxHp}]`, the Bio-tab roster, see
@@ -225,7 +225,7 @@ actor doesn't change.
 
 ## End combat and the End of combat window (#105)
 
-Full decisions and wording are in [the spec](../../specs/2026-10-29-end-of-combat-design.md) and its
+Full decisions and wording are in [the spec](../../specs/1.9.0/2026-10-29-end-of-combat-design.md) and its
 As built; this section is the summary.
 
 **The warning.** End (`#cvEnd`) calls `endCombatAsk()`, which is async and asks in the app's own
@@ -407,7 +407,7 @@ XP; the fight itself had already ended and saved.
 
 ## Decisions
 
-Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with the as-built differences.
+Settled in the [spec](../../specs/1.7.0/2026-09-24-combat-view-design.md) §2, with the as-built differences.
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
@@ -415,7 +415,7 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 | Where the button lives | The sticky tab bar, alone in its pinned tool group | The title bar: it scrolls away, taking the "combat running" indicator with it |
 | What a round changes | Active spells and timed conditions, through `advanceRound()` | Active spells only — timed conditions came in #55 |
 | Start and End | Start sets round 1; End is its own button and asks; leaving never ends combat | Opening and closing as start and end: closing to look something up would end the fight |
-| Which sections | Any but the Sheet's header, six by default, drag to reorder, saved per character | Fixed sheet order; starting empty (no reason recorded). The header (#103): its rests are not a fight action, and the portrait comes with Vitals |
+| Which sections | Any but the Sheet's header and the Bio tab's Party, six by default, drag to reorder, saved per character | Fixed sheet order; starting empty (no reason recorded). The header (#103): its rests are not a fight action, and the portrait comes with Vitals. Party: the roster, not a fight's combatants, which live on the view's own tracker (#91) |
 | Inspiration in the view (#103) | Its own ✦ in the view's header, wired like `#starBtn` | Nothing: the star left Vitals for the Sheet header, which the view does not take |
 | Mechanism | Move the real cards | Copies: every id duplicated. A purpose-built dashboard: re-implements every section's controls |
 | "In combat" | `combatActive`, its own flag | `combatRound > 0`: old sheets would start in a fight |
@@ -424,7 +424,7 @@ Settled in the [spec](../../specs/2026-09-24-combat-view-design.md) §2, with th
 | A ✕ and a ☰ in the header | **Removed** (#80): the tab acts like every tab — another tab or the swords leave it; the tab bar's own ☰ was retired in #103 | Keeping them from the overlay: a close button no other tab has, and a second ☰ beside the tab bar's |
 | Cards from a hidden tab (#52) | They stay in the view; the player put them there, and hiding a tab is a tab-bar fact, not a combat-layout one | Dropping them while their tab is hidden: hiding Spells would quietly strip the slots from a fight already running (Mike chose to keep them) |
 
-Settled in the [initiative tracker spec](../../specs/2026-10-25-initiative-tracker-design.md) §2, with Mike, 2026-10-16/2026-10-24/25 (#91):
+Settled in the [initiative tracker spec](../../specs/1.9.0/2026-10-25-initiative-tracker-design.md) §2, with Mike, 2026-10-16/2026-10-24/25 (#91):
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
@@ -441,7 +441,7 @@ Settled in the [initiative tracker spec](../../specs/2026-10-25-initiative-track
 | Show rolls | A switch (`initShowRolls`, default on) hides initiative numbers from the strip | n/a |
 | Ties (plan-level, not in the spec table) | **Act earlier** / **Act later** buttons inside the combatant dialog | Dragging a table row: the table's targets are 44px inside a sideways-scrolling strip, where drag and scroll gestures collide |
 
-Settled in the [End of combat spec](../../specs/2026-10-29-end-of-combat-design.md) §2, with Mike,
+Settled in the [End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-design.md) §2, with Mike,
 2026-10-29 (#105):
 
 | Question | Decision | Rejected, and why |
@@ -492,3 +492,4 @@ Settled in the [End of combat spec](../../specs/2026-10-29-end-of-combat-design.
 - 2026-10-25 — The final review's fixes: your chip follows your HP, the actor stays in view, Start commits a typed roll, a wrap on Dead or Remove advances the round, the dialog keeps focus and shows the clamped HP, the round is said once, and `combatEnd()` hands back the fight. → ledger L7212, #91
 - 2026-10-29 — End combat asks in the app's warning window and opens the End of combat window: the time and the fallen, folded rows for Ammunition (Undo recovery), Experience (Split among N, Done into the level-up, "Add N XP?" on close), Loot (a trade with the fallen, and back) and After combat (flagged tiles and pages); `endCombatNow()`, `87-combat-end.js`. → ledger L7921, #105
 - 2026-10-29 — The final fix wave: XP the sheet can't read is never overwritten (Ruling 21); a strict text box with "Whole numbers only", Enter is Done; focus back on Open trade after a trade; tracker focus stays in the window; After combat reads "All done"; the window fits its content (Ruling 19); Loot's name capped at 60. → ledger L8025, #105
+- 2026-10-30 — Corrected: the Bio tab's Party is the second section left out of the view, beside the Sheet's header (pre-release 1.9.0, step 1).

@@ -3,7 +3,7 @@
    record release.js checks before it cuts an app release. Every case runs on a
    scratch tree under a temp dir, never on this repo's src/docs. The gate inside
    release.js is tested in data-kit.py, beside the other release.js cases, on a
-   scratch git checkout. Spec: src/docs/specs/2026-10-29-pre-release-design.md */
+   scratch git checkout. Spec: src/docs/specs/1.9.0/2026-10-29-pre-release-design.md */
 const fs = require('fs'), path = require('path'), os = require('os'), crypto = require('crypto');
 const {spawnSync} = require('child_process');
 const {makeCheck, ROOT} = require('./harness');

@@ -88,7 +88,7 @@ options, not this character's choices.
 
 **Class.** `openAddClass()` takes a pack class or a custom name and a starting level (1–20). With
 no class in the loaded rules it says so in the old Class card's words (`NO_RULES_HINT`): load a
-rules pack with races and classes from Settings → Rules, or use a custom name.
+rules pack with races and classes from Settings → Extensions, or use a custom name.
 `addClass()` sets the spellcasting ability if none is set and runs `applyClassLevel()` for every
 level up to the starting one — traits become features, `choices` and spell notes collect — then
 opens one choice modal for all of them. What else it grants depends on whether a class is already
@@ -600,3 +600,4 @@ they are built: [Converter](../data/converter.md).
   app's own warning window with named buttons; Done reads the picks after them and commits once.
   Epic Boon shows once on the level-19 card. → ledger L7710, #118
 - 2026-10-27 — Fix round 1: an "or" prerequisite is named whole ("Strength 13 or Dexterity 13"), not just its closest alternative. → ledger L7710, #118
+- 2026-10-30 — Corrected: `NO_RULES_HINT` points to Settings → Extensions, not Settings → Rules (pre-release 1.9.0, step 1).

@@ -34,7 +34,7 @@ sheet already drawn. `charNeedsUpdate()` says no for a backup (`isBackup`), when
 `skipUpdate === APP_VERSION`, when the stamp is not behind, and when no packs are loaded. If it is
 behind and the diff is empty, the sheet is quietly marked checked; otherwise a modal offers
 **Not now**, **Don't ask again for vX** (sets `skipUpdate`, leaves the stamp) and **Review
-updates**. Settings → Rules data → Check for rules updates is the manual way in, so dismissing is never a
+updates**. Settings → Extensions → This sheet → Check for rules updates is the manual way in, so dismissing is never a
 one-way door.
 
 **Stamping a copy.** Each copy site calls `stampSrc(copy, def, kind, cat, shape)`, which records
@@ -93,8 +93,8 @@ up and update N", or "Back up and mark checked" with nothing ticked. `commitUpda
 
 1. Names the backup `"<name> (backup v<appVersion>)"` **before** anything advances the stamp.
 2. `backupCharacter()`. On success → `finishUpdates()`.
-3. On failure, nothing has changed yet: a modal says why (`res.error`), names Settings → Rules data →
-   Clear all as the way to free space, and offers **Download backup and update** — it downloads
+3. On failure, nothing has changed yet: a modal says why (`res.error`), names Settings → Extensions →
+   Remove all as the way to free space, and offers **Download backup and update** — it downloads
    `res.copy` and carries on, or changes nothing if the download throws.
 
 `finishUpdates()` runs `applyUpdates()`, `markCharChecked()`, `renderAll()` and `renderHome()`, and
@@ -218,3 +218,4 @@ state survives. Attack mechanics: [Attacks & damage](attacks-and-damage.md).
 - 2026-09-29 — and the Stone of Good Luck's and Ioun Stone of Mastery's new effects. → ledger L4689, #79
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-16 — A pool entry from a pack older than ammunition is filled in at load, so repaired copies read as unchanged. → ledger L5780, #96
+- 2026-10-30 — Corrected: the manual check is Settings → Extensions → This sheet → Check for rules updates, and the backup failure names Settings → Extensions → Remove all (pre-release 1.9.0, step 1).

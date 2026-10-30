@@ -246,3 +246,32 @@ to commit or push (#90).
 - Don't merge several branches in one `git merge` command (section 4).
 - Don't create worktrees outside `.claude/worktrees/`; anywhere else in the repo is not gitignored and
   will show up in `git status` and in `git ls-files` sweeps.
+
+---
+
+## 9. How a wave runs
+
+A release with several features is built in waves (1.9.0 had five; its plan is the archived 1.9.0
+roadmap page). Section 3 decides which issues share a wave; this is how each wave goes from issue to
+`main`.
+
+1. **Spec, just in time.** Before a wave starts, each of its items is brainstormed with Mike and
+   written to `src/docs/specs/YYYY-MM-DD-<topic>-design.md`: the data model first, then the UI,
+   then what is out of scope. Specs are written per wave, not all up front, so they describe the
+   code as merged by the waves before, not a guess at it. A small item may take a short in-chat
+   design instead when the spec would restate the issue.
+2. **Plan**, to `src/docs/plans/`, then a worktree per item (section 1). Branches carry `src/` only;
+   never the built file (section 2).
+3. **Build it** the usual way: tests first for the pure parts, `./src/tests/run.sh` green, build to
+   verify, screenshots of every affected tab (before and after, both skins where themed CSS moves),
+   interactive changes driven. The wiki page, the ledger entry and the `UNRELEASED.md` bullet are
+   part of the branch, not an afterthought.
+4. **Integrate** one branch per `git merge --no-ff`, in the wave's order; re-point the second
+   branch's ledger citations in the merge commit (section 4); `./build.sh && ./src/tests/run.sh`;
+   Mike's browser QA; commit the artifact; push. Each issue is closed with its own keyword
+   (section 5).
+5. **Between waves**, bugs found in QA are fixed on `main` before the next wave's worktrees are
+   made, so they branch from the fix.
+
+The release is Mike's to cut, after the last wave, as `RELEASING.md` describes. Nothing here bumps
+`APP_VERSION`.

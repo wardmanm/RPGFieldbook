@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Arguments: `$ARGUMENTS` — the version being prepared, `X.Y.Z`. It is required: ask for it if missing.
 
-The design, which binds this procedure: `src/docs/specs/2026-10-29-pre-release-design.md`. The
+The design, which binds this procedure: `src/docs/specs/1.9.0/2026-10-29-pre-release-design.md`. The
 record this skill keeps is what `scripts/release.js` checks: `./build.sh --release X.Y.Z` refuses
 until `src/docs/PRE-RELEASE.md` names exactly `X.Y.Z` with all five steps `done`. Run
 `node scripts/pre-release-record.js X.Y.Z` to see what it would say: it prints

@@ -3,7 +3,7 @@
    and again after recompute(), and the card lists the difference. Comparing
    the sheet, not reading the class table, is what makes it right for any
    pack, homebrew included, and it can never claim something the sheet did
-   not get. Spec: src/docs/specs/2026-10-24-level-up-fanfare-design.md. */
+   not get. Spec: src/docs/specs/1.9.0/2026-10-24-level-up-fanfare-design.md. */
 function levelSnapshot(){
   const slots=[];
   for(let lv=1;lv<=9;lv++){const s=character.slots&&character.slots[lv];slots.push(s?num(s.total):0);}

@@ -5,7 +5,7 @@
    built-in official source (the release tag on raw.githubusercontent.com),
    manifest URLs, and old-style plain URLs (fetchAllRules()). Every way of
    installing builds candidates, then one plan, one confirm, one all-or-nothing
-   install. Spec: src/docs/specs/2026-10-26-extensions-manifest-design.md */
+   install. Spec: src/docs/specs/1.9.0/2026-10-26-extensions-manifest-design.md */
 const EXT_CATS=["rules"];
 const EXT_SUMMARY_MAX=140,EXT_DESC_MAX=4000,EXT_MAN_MAX=65536,EXT_PACKS_MAX=1000,EXT_FILE_MAX=33554432;
 const EXT_CHECK_MS=10000,EXT_FILE_MS=30000;

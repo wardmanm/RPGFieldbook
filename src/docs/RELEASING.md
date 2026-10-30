@@ -338,13 +338,9 @@ only there, as **data-only releases in the same scheme**: changed packs become `
 tag is `data-vX.Y.Z-N`, and the one asset is `fieldbook-data-private-X.Y.Z-N.zip`. No app release
 ever bumps a private pack. Like every release, it is Mike's to cut.
 
-**Before the first one:** the private repo must be pushed, and its CI green, which needs #85 on
-public `main` (the CI builds public `main` and bundles with its kit). So its first push comes
-before #85 merges and that push's CI run fails; after the merge, run its CI by hand
-(`gh workflow run ci.yml -R wardmanm/RPGFieldbookPrivate`) and confirm it green. A private release
-also needs a public app release to build against: `data-release.js` refuses an `APP_VERSION` before 1.8.0, and
-the private workflow checks out the public tag `vX.Y.Z`. The first private release was `1.8.1-1`
-(2026-10-16), after app 1.8.1; it bumped all four packs.
+**What it needs:** a public app release to build against:
+`data-release.js` refuses an `APP_VERSION` before 1.8.0, and the private workflow checks out the
+public tag `vX.Y.Z`. The first private release was `1.8.1-1` (2026-10-16), after app 1.8.1.
 
 **How.** From the public checkout, with the private data committed:
 
@@ -528,13 +524,7 @@ tag's release workflow afterwards, which would re-upload them.
 
 ## 5. Before the first automated release
 
-- **The first tag must be ≥ `v1.2.2`.** The in-app badge only appears when a release tag compares
-  *newer* than `APP_VERSION` (1.2.1 today), so re-tagging the current version shows players nothing.
-- **The repo must be public**, or the unauthenticated `api.github.com` call the badge makes returns
-  404 and it silently never appears. The check is deliberately silent on failure — it must never
-  break an offline player — so a private repo looks identical to "no update available".
-- CI will fail until `dist/fieldbook.html` is built and committed. That's the staleness gate doing
-  its job.
+Done, and archived: [RELEASING-before-first-automated-release](archive/1.9.0/RELEASING-before-first-automated-release.md).
 
 ---
 

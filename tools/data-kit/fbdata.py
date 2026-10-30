@@ -11,8 +11,8 @@
     fbdata.py build <src> [--srd | --full | --book CODE] -o OUT.zip [--version V]
 
 Python 3.8+, standard library only. Exit status: 0 ok, 1 a check failed,
-2 bad input. Spec: src/docs/specs/2026-10-07-data-archive-design.md §4–§6;
-the format-2 manifest and release-files: src/docs/specs/2026-10-26-extensions-manifest-design.md §3.
+2 bad input. Spec: src/docs/specs/1.8.0/2026-10-07-data-archive-design.md §4–§6;
+the format-2 manifest and release-files: src/docs/specs/1.9.0/2026-10-26-extensions-manifest-design.md §3.
 """
 import argparse
 import hashlib

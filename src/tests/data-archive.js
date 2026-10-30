@@ -2,7 +2,7 @@
    archive, pack credits, and the newer-data notice. Sections run in order (some
    are async), then ck.done(). Later tasks add sections above the marker line
    and names to the loadApp() list. Spec:
-   src/docs/specs/2026-10-07-data-archive-design.md */
+   src/docs/specs/1.8.0/2026-10-07-data-archive-design.md */
 const fs = require('fs'), path = require('path'), zlib = require('zlib'), os = require('os');
 const {spawnSync} = require('child_process');
 const {loadApp, makeCheck, ROOT} = require('./harness');

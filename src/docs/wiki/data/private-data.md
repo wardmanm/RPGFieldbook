@@ -21,7 +21,7 @@ the private repo's `data/packs.json` (XPHB, Humblewood, XGE, TCE, Homebrew) · *
 · **See also:** [Data kit](data-kit.md), [Data archive](../architecture/data-archive.md),
 [Testing](../process/testing.md), [Supplements](supplements.md), [Converter](converter.md),
 [RELEASING](../../RELEASING.md), [2.0](../roadmap/2.0.md) (the history purge),
-[the spec](../../specs/2026-10-09-private-split-design.md)
+[the spec](../../specs/1.8.0/2026-10-09-private-split-design.md)
 
 ## How it works
 

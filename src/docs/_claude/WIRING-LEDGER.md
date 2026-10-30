@@ -3400,7 +3400,7 @@ A full-screen view, opened from crossed swords in the tab bar, holding any of th
 REAL cards, moved into `#cvList` with a hidden `[data-cvhome]` marker left at home, and moved back on
 close. Copies would duplicate every id (the #17 `#skill-perception` bug). A tracker in its header
 (Start, ◀ ▶, End) drives the existing `advanceRound()`. Closing the view never ends combat.
-Spec: `src/docs/specs/2026-09-24-combat-view-design.md`; plan: `src/docs/plans/2026-09-24-combat-view.md`.
+Spec: `src/docs/specs/1.7.0/2026-09-24-combat-view-design.md`; plan: `src/docs/plans/1.7.0/2026-09-24-combat-view.md`.
 
 Things that are not obvious and would be easy to undo by accident:
 
@@ -3704,14 +3704,14 @@ the modal's re-inert hand-off, `aria-modal`, and the capture-phase Esc — Esc i
 a tab. The header is sticky at `--cv-top`, the tab bar's MEASURED height (cvStickyTop, on open and
 resize); a drag now scrolls the window near the header's bottom edge or the window's. The swords
 button takes `.active` (underline, or a ring when it is already the in-combat pill).
-The overlay's spec (src/docs/specs/2026-09-24-combat-view-design.md) is historical now.
+The overlay's spec (src/docs/specs/1.7.0/2026-09-24-combat-view-design.md) is historical now.
 
 ## The wiki: the reference compiled out of this ledger (2026-09-28)
 
 **This file is now the log; the reference is [src/docs/wiki/](../wiki/index.md).** 38 topic pages
 (architecture, features, ui, data, process, roadmap) say how Fieldbook works *now*, each with the
 invariants a refactor must keep, the traps that already bit, a Decisions table, and a History whose
-lines point back here by L-number. Spec: `src/docs/specs/2026-09-28-living-wiki-design.md`.
+lines point back here by L-number. Spec: `src/docs/specs/1.7.2/2026-09-28-living-wiki-design.md`.
 Every `##`/`###` section above is cited by at least one page. New entries here get shorter: what
 changed and why, and a link to the page that now describes it.
 
@@ -5150,7 +5150,7 @@ Pages: [data archive](../wiki/architecture/data-archive.md).
 Part 2 of #82. A new rules pack, **SRD 5.2**: only the D&D content Wizards of the Coast publishes
 under CC-BY-4.0 in the System Reference Document, converted from the same 5e-tools dump as the 2024
 pack, matched to the SRD 5.2.1 PDF, and credited as the licence asks. In #85 it becomes the D&D
-content every player gets. Spec: `src/docs/specs/2026-10-08-srd-pack-design.md`.
+content every player gets. Spec: `src/docs/specs/1.8.0/2026-10-08-srd-pack-design.md`.
 
 1. **The pack.** `data/srd52/`, eleven files, each `system: "SRD 5.2"` with
    `excludeSystems: ["humblewood"]`, no `_note` and no `requires`; the pack names are "SRD 5.2
@@ -5425,7 +5425,7 @@ Pages: [settings & updates](../wiki/features/settings-and-updates.md), [homebrew
 
 ## The private data split and the data kit (#85, 2026-10-09)
 
-Spec `src/docs/specs/2026-10-09-private-split-design.md`, plan `src/docs/plans/2026-10-09-private-split.md`,
+Spec `src/docs/specs/1.8.0/2026-10-09-private-split-design.md`, plan `src/docs/plans/1.8.0/2026-10-09-private-split.md`,
 commits `f5e491a..c043f2f` and this entry's. Part 3 of #82, which closes with it. The three #85
 entries above record steps of this one; this entry records the whole and every ruling made on the way.
 
@@ -5932,8 +5932,8 @@ Pages: [shell](../wiki/ui/shell.md), [settings & updates](../wiki/features/setti
 1. Mike: the Settings dialog is cluttered and its one long scroll of five folding sections is hard
    to parse. Wanted: sidebar categories, consistent control types lined up as in a reference
    Preferences dialog, and the sidebar condensed to icons when Icon tabs is on or the screen is
-   cramped. Designed with him first: spec `src/docs/specs/2026-10-16-settings-dialog-design.md`,
-   plan `src/docs/plans/2026-10-16-settings-dialog.md`.
+   cramped. Designed with him first: spec `src/docs/specs/1.8.1/2026-10-16-settings-dialog-design.md`,
+   plan `src/docs/plans/1.8.1/2026-10-16-settings-dialog.md`.
 2. Six pages: Appearance (Look; Interface), Sheet display and Carrying (only with a character open,
    under a "This character" caption, each "For *name*"), Rules data (Sources; Loaded data; This
    sheet — the rules-update check moved here from the old character section), Backup (Characters;
@@ -6017,9 +6017,9 @@ Pages: [private data](../wiki/data/private-data.md)
    code.
 3. The rule the page states: 2.0 begins as a 1:1 port, so every field 1.9.0 adds is a save format
    2.0 must load, and each spec puts its data model first.
-4. New page `wiki/roadmap/1.9.0.md`, indexed under Roadmap. Nothing in `src/` outside docs changed.
+4. New page `archive/1.9.0/roadmap-1.9.0.md`, indexed under Roadmap. Nothing in `src/` outside docs changed.
 
-Pages: [1.9.0](../wiki/roadmap/1.9.0.md), [2.0](../wiki/roadmap/2.0.md)
+Pages: [1.9.0](../archive/1.9.0/roadmap-1.9.0.md), [2.0](../wiki/roadmap/2.0.md)
 ## The 1.9.0 plan's open questions answered (#100, 2026-10-17)
 
 1. Mike went through the "what each spec has to settle" list on the 1.9.0 page, one item at a
@@ -6043,17 +6043,17 @@ Pages: [1.9.0](../wiki/roadmap/1.9.0.md), [2.0](../wiki/roadmap/2.0.md)
    source is a per-release manifest JSON and install goes through the zip importer; #105 is one
    screen whose loot opens the trade window, with flagged trackers and pages shown live.
 
-Pages: [1.9.0](../wiki/roadmap/1.9.0.md)
+Pages: [1.9.0](../archive/1.9.0/roadmap-1.9.0.md)
 ## Journal checklists; trackers as counters, tiles and totals (#95, #93, #94, 2026-10-17)
 
-1. Spec: `specs/2026-10-17-journal-checklists-design.md`; plan `plans/2026-10-17-journal-checklists.md`. One worktree, three issues, in that order.
+1. Spec: `specs/1.9.0/2026-10-17-journal-checklists-design.md`; plan `plans/1.9.0/2026-10-17-journal-checklists.md`. One worktree, three issues, in that order.
 2. The grammar (`87-notes.js`): `NOTE_CK`, a checkbox block in `noteHTML()` before bullets, one `noteInline()` per item; `noteCheckboxes()`, `toggleCheckbox()`, `noteProgress()`; ☐/☑ in the preview. CSS `.n-ck`/`.ck` in `20-cards.css`.
 3. Write-back: one `[data-ck]` click in `wire()` → `jnlToggleCheckbox()` (the open page) or `noteToggleCheckbox()` (a Section Notes entry). No keydown: a `<button>` clicks natively. Progress `done/total` on the list row and the page meta. Insert checkbox in both editors (`insertMarker()`, caret after the marker).
 4. Trackers keep counters only: types, items, the tick markup, the form's Type and Items, the two hooks, migrate()'s item repair, the tick CSS all gone. `migrateTrackerPages()` turns a file's checklists and tasks into pages (spec §5), dates as `toLocaleDateString()`, idempotent by construction.
 5. #93: `trackerTotals[tagKey]`, Σ on the header, `trkGroupTotal()` over every counter with the tag, open or closed; the fold handlers ignore the Σ by click and by key. #94: `.trk-group` a wrapping row of `.trk` tiles; Completed stays rows.
 6. Tests: `sheet.js` (grammar, toggle, progress, preview, page and note write-back, migration fixtures, counters-only form, totals), `rules-data.js` (the handlers, the editor buttons, the CSS). Driven in Playwright (Task 8, all of the brief's steps 1–9, plus the two #94 shots the #94 review couldn't verify): a three-box page ticked and un-ticked through the UI, confirming `character.journal[0].text`, the row's `1/3`→`2/3`, and the bold mid-item markup surviving (`<strong>Mire</strong>` beside the checked box); the Section Notes card's own checkbox ticked, `character.secNotes.vitals.text` confirmed, and its hover preview showing ☑/☐ glyphs with no buttons; Insert checkbox landing the caret after the marker in the journal editor (read `#jnlText`'s value and `selectionStart===value.length`), then typed into and Done, confirming a fourth box; a live `migrate()`/`finishImport()` of a checklist and two tasks (one tagged, one not) landing as three pages with the right progress (Quests: "The lost map" 1/2, "Tasks" 0/1; Untagged: "Tasks" 1/1) and an empty Trackers card; the tracker form showing Name/Tag/Goal with no Type; the same three-box page shot again on the Humblewood skin and in explicit light and dark theme. One correction made mid-run: the brief's dark-mode step reads `settings.mode="dark"`, but the field is `settings.theme` (`00-constants.js`, `applyTheme()` in `75-home-theme.js`) — `settings.mode` doesn't exist, so that line was a no-op, and since this browser profile's `localStorage` already carried `theme:"dark"` from an earlier session, both shots would have come out dark regardless of the bug. Re-shot with `settings.theme` instead, giving genuinely distinct light and dark captures. The #94 tile fixture (Goblins/Orcs goal 10/Wolves/Codex goal 300/a closed Old, `trackerTotals={kills:true}`) at 360×800: two tiles per row, nothing clipped, the Kills total reading 27 (every counter with the tag, open and the closed Old, 12+3+7+5); the same fixture with Trackers added to the Combat tab at 390px: the tiles sit inside the combat column, nothing clipped. Screenshots: `.claude/qa/95-list.png`, `95-page.png`, `95-page-ticked.png`, `95-secnote.png`, `95-preview.png`, `95-migrated.png`, `95-form.png`, `95-page-humblewood.png`, `95-page-dark.png`, `94-tiles-360.png`, `94-combat.png`.
 
-Pages: [journal](../wiki/features/journal.md), [rich text](../wiki/architecture/rich-text.md), [story & notes](../wiki/features/story-and-notes.md), [known issues](../wiki/roadmap/known-issues.md), [1.9.0](../wiki/roadmap/1.9.0.md)
+Pages: [journal](../wiki/features/journal.md), [rich text](../wiki/architecture/rich-text.md), [story & notes](../wiki/features/story-and-notes.md), [known issues](../wiki/roadmap/known-issues.md), [1.9.0](../archive/1.9.0/roadmap-1.9.0.md)
 ## Final review fixes: Story fields tick, totals follow a typed count, closed checklists keep their ticks (#95, #93, 2026-10-17)
 
 1. #93: a typed count (the count box's `change`, patched in place by `trkPatchRow()`) left the group header's `.trk-total` on the old sum until the next redraw. `trkPatchRow()` now updates it too, from `trkGroupTotal()`, when the row's `.fgroup` shows one. The Σ's name is constant, "Total for <tag>"; `aria-pressed` alone carries whether the total shows.
@@ -6067,7 +6067,7 @@ Pages: [journal](../wiki/features/journal.md), [rich text](../wiki/architecture/
 Pages: [journal](../wiki/features/journal.md), [rich text](../wiki/architecture/rich-text.md), [story & notes](../wiki/features/story-and-notes.md), [known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md)
 ## The #104 spec: ammunition recovery options and thrown weapons (#104, 2026-10-18)
 
-1. Brainstormed with Mike: spec `specs/2026-10-18-ammo-recovery-design.md`. A per-character rule
+1. Brainstormed with Mike: spec `specs/1.9.0/2026-10-18-ammo-recovery-design.md`. A per-character rule
    (`character.ammoRecovery`: half, all, hits, none; default half, so every sheet keeps today's
    behaviour), an item's own `recover` (always, never) that wins over it, None included; app-side
    defaults (firearm bullets never, Thrown weapons always); every hit comes back in Hits-only;
@@ -6077,11 +6077,11 @@ Pages: [journal](../wiki/features/journal.md), [rich text](../wiki/architecture/
    the item editor, not `ammo.recover` in pack data, so no pack digest moves and no data release is
    needed.
 
-Pages: [1.9.0](../wiki/roadmap/1.9.0.md)
+Pages: [1.9.0](../archive/1.9.0/roadmap-1.9.0.md)
 ## Ammunition recovery options and thrown weapons (#104, 2026-10-19)
 
-1. Built on `issue/104-ammo-recovery`: spec `specs/2026-10-18-ammo-recovery-design.md`, plan
-   `plans/2026-10-19-ammo-recovery.md`. Seven feat/fix commits plus this docs task.
+1. Built on `issue/104-ammo-recovery`: spec `specs/1.9.0/2026-10-18-ammo-recovery-design.md`, plan
+   `plans/1.9.0/2026-10-19-ammo-recovery.md`. Seven feat/fix commits plus this docs task.
 2. The rule: `character.ammoRecovery` (`AMMO_RECOVERY`: half/all/hits/none), default `"half"`, read
    through `ammoRecoveryOf()`. The override: a top-level `item.recover` (`"always"`/`"never"`),
    outside `ammo` and `weapon`, read through `itemRecover()`; the app's own defaults
@@ -6142,7 +6142,7 @@ Pages: [1.9.0](../wiki/roadmap/1.9.0.md)
 Pages: [ammunition](../wiki/features/ammunition.md), [combat view](../wiki/features/combat-view.md),
 [inventory](../wiki/features/inventory.md), [settings & updates](../wiki/features/settings-and-updates.md),
 [character model](../wiki/architecture/character-model.md), [known issues](../wiki/roadmap/known-issues.md),
-[1.9.0](../wiki/roadmap/1.9.0.md)
+[1.9.0](../archive/1.9.0/roadmap-1.9.0.md)
 
 ## Final review fixes (#104, 2026-10-19)
 
@@ -6252,7 +6252,7 @@ Pages: [building & CI](../wiki/process/building-and-ci.md), [private data](../wi
    a feature, an item or a class — and keeps every play control (stars, folds, Use, Fire, Throw,
    Cast, equip, On/Off, prepared pins, resource −/+/reset, the familiar's Summoned switch, + Add).
    One switch per card, per character, default shown, so no existing sheet changes. Design:
-   [the spec](../specs/2026-10-19-edit-toggle-design.md).
+   [the spec](../specs/1.9.0/2026-10-19-edit-toggle-design.md).
 2. Decisions (settled with Mike, recorded in the spec): edit/delete/remove only, never a play
    control; one switch per card, not one sheet-wide switch; every card with such a button, including
    the class and ancestry/background chips' Remove and Section Notes, not just the plan's original
@@ -6333,8 +6333,8 @@ Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
    filters; a row opens the window the sheet already uses for that entry. It is read-only — nothing
    here adds to the character (#53's scope). Why: a rules question mid-session meant leaving the
    sheet or guessing which Add picker held the answer; the tab held only the glossary and reference
-   tables. Design: [the spec](../specs/2026-10-19-rules-browser-design.md),
-   [the plan](../plans/2026-10-21-rules-browser.md).
+   tables. Design: [the spec](../specs/1.9.0/2026-10-19-rules-browser-design.md),
+   [the plan](../plans/1.9.0/2026-10-21-rules-browser.md).
 2. Decisions (spec §2, settled with Mike 2026-10-16/19): every loaded category plus Glossary and
    Tables, fixed order, an empty one hidden; a row opens the existing info windows, unified, rather
    than a second rendering; the class, subclass, species and background windows gain a reference
@@ -6344,7 +6344,7 @@ Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
    config per category, in a new fragment; a Source column everywhere, and a Pack filter only when
    more than one pack is loaded; Conditions is its own category, over the glossary terms marked
    `cond`, not left inside the Glossary.
-3. Rulings the plan added beyond the spec's literal wording (`src/docs/plans/2026-10-21-rules-browser.md`,
+3. Rulings the plan added beyond the spec's literal wording (`src/docs/plans/1.9.0/2026-10-21-rules-browser.md`,
    Global Constraints): the **Glossary is always listed, even empty**, so its + Add stays reachable;
    **Subclasses lists `subclassesFor()` of every loaded class** (its own inline subclasses plus any
    loose `rules.subclasses` entry), not `rules.subclasses` alone, because the SRD pack carries
@@ -6450,7 +6450,7 @@ Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
 Pages: [rules & tables](../wiki/features/rules-and-tables.md), [shell](../wiki/ui/shell.md),
 [sections & layout](../wiki/ui/sections-and-layout.md), [decisions](../wiki/decisions.md),
 [character building](../wiki/features/character-building.md), [inventory](../wiki/features/inventory.md),
-[features & traits](../wiki/features/features-and-traits.md), [1.9.0](../wiki/roadmap/1.9.0.md)
+[features & traits](../wiki/features/features-and-traits.md), [1.9.0](../archive/1.9.0/roadmap-1.9.0.md)
 
 ## The Rules browser: final-review fixes (#99, 2026-10-22)
 
@@ -6514,7 +6514,7 @@ pass over `src/js/86-rules-browser.js`. This entry supersedes L6327 §10's (a) a
 
 Pages: [rules & tables](../wiki/features/rules-and-tables.md), [shell](../wiki/ui/shell.md),
 [sections & layout](../wiki/ui/sections-and-layout.md), [decisions](../wiki/decisions.md),
-[roadmap/1.9.0](../wiki/roadmap/1.9.0.md)
+[roadmap/1.9.0](../archive/1.9.0/roadmap-1.9.0.md)
 
 ## Pack-label maps without a prototype (#88, 2026-10-23)
 
@@ -6633,7 +6633,7 @@ Pages: [vitals & rest](../wiki/features/vitals-and-rest.md)
 ## The Sheet makeover (#103, 2026-10-23)
 
 **What.** The Sheet tab becomes one condensed page after Foundry VTT's sheet (spec
-`src/docs/specs/2026-10-23-sheet-makeover-design.md`, wave 2 of 1.9.0). Eight tasks on
+`src/docs/specs/1.9.0/2026-10-23-sheet-makeover-design.md`, wave 2 of 1.9.0). Eight tasks on
 `issue/103-sheet-makeover`; the hit-dice bar and spend box (Task 5) have their own entry above.
 
 - **The header** (`<header class="card sheet-head" data-note="portrait">`, `00-sheet.html`): the
@@ -6923,7 +6923,7 @@ Pages: [character building](../wiki/features/character-building.md),
 [spells](../wiki/features/spells.md), [vitals & rest](../wiki/features/vitals-and-rest.md),
 [theming & icons](../wiki/ui/theming-and-icons.md),
 [build & source split](../wiki/architecture/build-and-source-split.md),
-[1.9.0](../wiki/roadmap/1.9.0.md).
+[1.9.0](../archive/1.9.0/roadmap-1.9.0.md).
 
 ## Level-up fanfare: final review fixes (#101, 2026-10-24)
 
@@ -7058,8 +7058,8 @@ landed on the Sheet; both skins at 1280 showed the same gapless bar; the console
 Pages: [Shell](../wiki/ui/shell.md), [Settings & updates](../wiki/features/settings-and-updates.md),
 [Character model](../wiki/architecture/character-model.md), [Combat view](../wiki/features/combat-view.md),
 [Story & notes](../wiki/features/story-and-notes.md), [decisions](../wiki/decisions.md),
-[1.9.0](../wiki/roadmap/1.9.0.md), the spec's As built
-(`src/docs/specs/2026-10-24-hide-tabs-design.md`).
+[1.9.0](../archive/1.9.0/roadmap-1.9.0.md), the spec's As built
+(`src/docs/specs/1.9.0/2026-10-24-hide-tabs-design.md`).
 
 ## Hide tabs: final review fixes (#52, 2026-10-25)
 
@@ -7084,7 +7084,7 @@ player lands at the top of the Sheet rather than at the hidden tab's old scroll 
 `setTabHidden()` → `applyHiddenTabs()` directly, not through `renderAll()`; the `[data-tabsw]`
 click handler is a per-button listener (`88-settings.js:228-232`), not delegated; the shell's guard
 rationale names "a leftover `cvPrevTab`, or a future caller", not a deep link Fieldbook doesn't
-have. The spec's As built (`src/docs/specs/2026-10-24-hide-tabs-design.md`) now cites
+have. The spec's As built (`src/docs/specs/1.9.0/2026-10-24-hide-tabs-design.md`) now cites
 `rules-data.js:2398` and `88-settings.js:228-232` in place of the stale `rules-data.js:182` and
 `88-settings.js:140-144`, and its I1 bullet records the fix made instead of the deferral reason.
 
@@ -7099,7 +7099,7 @@ Pages: [Shell](../wiki/ui/shell.md), [Settings & updates](../wiki/features/setti
 An initiative tracker on the combat view: roll initiative when combat starts, a strip of chips
 under the combat header, a ▾ table, a dialog per combatant, and a Party card on Bio so companions
 join every fight automatically. Built in six tasks against
-`src/docs/specs/2026-10-25-initiative-tracker-design.md`; the full task-by-task account, every
+`src/docs/specs/1.9.0/2026-10-25-initiative-tracker-design.md`; the full task-by-task account, every
 `Ruling:`/`minor (deferred)` line and the reviews are in
 `.superpowers/sdd/2026-10-25-initiative-tracker/progress.md` and the task reports beside it.
 
@@ -7206,8 +7206,8 @@ stayed empty (`browser_console_messages`, `all:true`) across the whole session. 
 Pages: [Combat view](../wiki/features/combat-view.md), [Story & notes](../wiki/features/story-and-notes.md),
 [Character model](../wiki/architecture/character-model.md), [Sections & layout](../wiki/ui/sections-and-layout.md),
 [Theming & icons](../wiki/ui/theming-and-icons.md), [Overview](../wiki/overview.md),
-[decisions](../wiki/decisions.md), [1.9.0](../wiki/roadmap/1.9.0.md), the spec's As built
-(`src/docs/specs/2026-10-25-initiative-tracker-design.md`).
+[decisions](../wiki/decisions.md), [1.9.0](../archive/1.9.0/roadmap-1.9.0.md), the spec's As built
+(`src/docs/specs/1.9.0/2026-10-25-initiative-tracker-design.md`).
 
 ## Initiative tracker: final review fixes (#91, 2026-10-25)
 
@@ -7256,7 +7256,7 @@ found three Important gaps and nine minors; the rulings at the end of `progress.
   T2: the stale sheet.js test name is corrected.
 
 Pages: [Combat view](../wiki/features/combat-view.md), [Character model](../wiki/architecture/character-model.md),
-the spec's As built (`src/docs/specs/2026-10-25-initiative-tracker-design.md`).
+the spec's As built (`src/docs/specs/1.9.0/2026-10-25-initiative-tracker-design.md`).
 
 ## QA screenshots filed by issue (2026-10-25)
 
@@ -7279,19 +7279,19 @@ Mike, on the fifteen issues filed 2026-10-25 (#110–#124):
 
 Remaining 1.9.0 order (Mike, 2026-10-25): #47 → #102 → #118 → #105.
 
-Pages: [1.9.0](../wiki/roadmap/1.9.0.md), [2.0](../wiki/roadmap/2.0.md).
+Pages: [1.9.0](../archive/1.9.0/roadmap-1.9.0.md), [2.0](../wiki/roadmap/2.0.md).
 
 ## #110 to the backlog, not 2.0 (2026-10-25)
 
 Mike, correcting the entry above: #110 (shapeshifting) has **no milestone**; it is held on the
 backlog. 2.0 is already large. Its milestone is cleared on GitHub; the 2.0 page no longer plans it.
 
-Pages: [1.9.0](../wiki/roadmap/1.9.0.md), [2.0](../wiki/roadmap/2.0.md).
+Pages: [1.9.0](../archive/1.9.0/roadmap-1.9.0.md), [2.0](../wiki/roadmap/2.0.md).
 
 ## Trade window and inventory log (#47, 2026-10-25)
 
-Built on `issue/47-trade-window` in five tasks (spec `src/docs/specs/2026-10-25-trade-window-design.md`,
-plan `src/docs/plans/2026-10-25-trade-window.md`; the implementer and reviewer reports and every
+Built on `issue/47-trade-window` in five tasks (spec `src/docs/specs/1.9.0/2026-10-25-trade-window-design.md`,
+plan `src/docs/plans/1.9.0/2026-10-25-trade-window.md`; the implementer and reviewer reports and every
 Ruling are in `.superpowers/sdd/2026-10-25-trade-window/`).
 
 - **A new fragment, `67-trade.js`,** after `66-coins-hp.js` (37 JS fragments). It holds the coin
@@ -7334,7 +7334,7 @@ Pages: [Inventory](../wiki/features/inventory.md), [Ammunition](../wiki/features
 [Character model](../wiki/architecture/character-model.md),
 [Settings & updates](../wiki/features/settings-and-updates.md), [Shell](../wiki/ui/shell.md),
 [Overview](../wiki/overview.md), [Known issues](../wiki/roadmap/known-issues.md),
-[1.9.0](../wiki/roadmap/1.9.0.md), the spec's As built.
+[1.9.0](../archive/1.9.0/roadmap-1.9.0.md), the spec's As built.
 
 ## #47 final review fixes (2026-10-25)
 
@@ -7429,7 +7429,7 @@ Pages: [inventory](../wiki/features/inventory.md), [theming & icons](../wiki/ui/
 
 Fieldbook installs and updates packs from a **manifest**, and Settings → Rules data became
 **Extensions**. Built on `issue/102-extensions` in seven tasks. Spec
-`src/docs/specs/2026-10-26-extensions-manifest-design.md`, whose As built section lists every ruling
+`src/docs/specs/1.9.0/2026-10-26-extensions-manifest-design.md`, whose As built section lists every ruling
 and deferred minor.
 
 - **The manifest is format 2** of the data zip's `fieldbook-data.json`: per pack a `category`,
@@ -7470,7 +7470,7 @@ Pages: [data archive](../wiki/architecture/data-archive.md),
 [settings & updates](../wiki/features/settings-and-updates.md),
 [storage](../wiki/architecture/storage.md), [shell](../wiki/ui/shell.md),
 [data kit](../wiki/data/data-kit.md), [known issues](../wiki/roadmap/known-issues.md),
-[overview](../wiki/overview.md), [1.9.0](../wiki/roadmap/1.9.0.md),
+[overview](../wiki/overview.md), [1.9.0](../archive/1.9.0/roadmap-1.9.0.md),
 [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md); and
 [RELEASING](../RELEASING.md).
 
@@ -7569,8 +7569,8 @@ Pages: [settings & updates](../wiki/features/settings-and-updates.md),
 ## Feat support (#118, 2026-10-27)
 
 Branch `issue/118-feats`, commits `2bf87c3..be89263`, then this docs commit. Spec:
-`src/docs/specs/2026-10-26-feat-support-design.md`. Its As built section lists every ruling and
-every deferred minor. Plan: `src/docs/plans/2026-10-27-feat-support.md`. Mike decided the nine
+`src/docs/specs/1.9.0/2026-10-26-feat-support-design.md`. Its As built section lists every ruling and
+every deferred minor. Plan: `src/docs/plans/1.9.0/2026-10-27-feat-support.md`. Mike decided the nine
 §2 decisions on 2026-10-26 and 2026-10-27.
 
 **What changed:**
@@ -7652,7 +7652,7 @@ Pages: [character building](../wiki/features/character-building.md),
 [character model](../wiki/architecture/character-model.md),
 [converter](../wiki/data/converter.md), [settings & updates](../wiki/features/settings-and-updates.md),
 [known issues](../wiki/roadmap/known-issues.md), [2.0](../wiki/roadmap/2.0.md),
-[1.9.0](../wiki/roadmap/1.9.0.md), [decisions](../wiki/decisions.md).
+[1.9.0](../archive/1.9.0/roadmap-1.9.0.md), [decisions](../wiki/decisions.md).
 
 ## #118 final fix wave (2026-10-27)
 
@@ -7920,9 +7920,9 @@ Pages: [homebrew](../wiki/data/homebrew.md), [private data](../wiki/data/private
 
 ## End of combat (#105, 2026-10-29)
 
-Wave 4 of [1.9.0](../wiki/roadmap/1.9.0.md), the capstone. Spec
-`src/docs/specs/2026-10-29-end-of-combat-design.md` (its §2 decisions are Mike's, 2026-10-29), plan
-`src/docs/plans/2026-10-29-end-of-combat.md`, built in seven tasks on `issue/105-end-of-combat`.
+Wave 4 of [1.9.0](../archive/1.9.0/roadmap-1.9.0.md), the capstone. Spec
+`src/docs/specs/1.9.0/2026-10-29-end-of-combat-design.md` (its §2 decisions are Mike's, 2026-10-29), plan
+`src/docs/plans/1.9.0/2026-10-29-end-of-combat.md`, built in seven tasks on `issue/105-end-of-combat`.
 End combat now asks in the app's own warning window; confirming ends the fight and opens one
 **End of combat** window: the time, a chip per combatant with the fallen struck through, then folded
 rows for Ammunition (with Undo recovery), Experience (a box, Split among N, Done into the level-up),
@@ -8020,7 +8020,7 @@ Pages: [combat view](../wiki/features/combat-view.md), [ammunition](../wiki/feat
 [journal](../wiki/features/journal.md), [inventory](../wiki/features/inventory.md),
 [shell](../wiki/ui/shell.md), [character model](../wiki/architecture/character-model.md),
 [decisions](../wiki/decisions.md), [known issues](../wiki/roadmap/known-issues.md),
-[1.9.0](../wiki/roadmap/1.9.0.md), [overview](../wiki/overview.md).
+[1.9.0](../archive/1.9.0/roadmap-1.9.0.md), [overview](../wiki/overview.md).
 
 ## End of combat: the final fix wave (#105, 2026-10-29)
 
@@ -8069,8 +8069,8 @@ Pages: [combat view](../wiki/features/combat-view.md), [journal](../wiki/feature
 
 ## Pre-release (#127, 2026-10-29)
 
-Release Process Updates. Spec `src/docs/specs/2026-10-29-pre-release-design.md` (its §2 decisions
-are Mike's, 2026-10-29), plan `src/docs/plans/2026-10-29-pre-release.md`, built in six tasks on
+Release Process Updates. Spec `src/docs/specs/1.9.0/2026-10-29-pre-release-design.md` (its §2 decisions
+are Mike's, 2026-10-29), plan `src/docs/plans/1.9.0/2026-10-29-pre-release.md`, built in six tasks on
 `issue/127-pre-release`. An app release now starts with **`/pre-release X.Y.Z`**: five steps, each
 confirmed by Mike, committed on main and recorded in `src/docs/PRE-RELEASE.md`; `release.js` refuses
 to cut until that record is complete for exactly that version. Nothing changes for players.
@@ -8172,7 +8172,7 @@ players.
 
 1. **The backfill broke the private leak scan (Ruling 24).** `_private-data/tests/leak-allowlist.json`
    names allowed passages by public repo path, and the backfill moves one of them
-   (`src/docs/plans/2026-10-09-private-split.md`), so the scan failed with five stale entries.
+   (`src/docs/plans/1.8.0/2026-10-09-private-split.md`), so the scan failed with five stale entries.
    `move-docs.js`'s `SCAN` now holds that one file, read and written through the symlink, and
    skipped without a word when `_private-data` is absent; a run that changes it ends "the private
    repo changed too (… -> <real path>)". `/pre-release` step 1.5 commits it in the private repo

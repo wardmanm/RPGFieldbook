@@ -19,7 +19,7 @@ format-2 manifest fields, `validate`'s length, `minApp`, `size` and path checks,
 the example pack, the kit zip unzipped with no repo around it, the release scripts in a scratch repo),
 `converter.py` (`build` on a mini dump) · **See also:** [Data archive](../architecture/data-archive.md),
 [Rules packs](../architecture/rules-packs.md), [Converter](converter.md), [Private data](private-data.md),
-[Building & CI](../process/building-and-ci.md), [the spec](../../specs/2026-10-09-private-split-design.md)
+[Building & CI](../process/building-and-ci.md), [the spec](../../specs/1.8.0/2026-10-09-private-split-design.md)
 
 ## How it works
 

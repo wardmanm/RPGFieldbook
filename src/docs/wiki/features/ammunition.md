@@ -302,7 +302,7 @@ to the inserted entry's own default, keeping an explicit Always or Never.
 ## Decisions
 
 Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
-[the spec](../../specs/2026-10-02-ammo-design.md) §2.
+[the spec](../../specs/1.8.0/2026-10-02-ammo-design.md) §2.
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
@@ -319,7 +319,7 @@ Settled with Mike on 2026-10-01 and 2026-10-02; the full discussion is in
 | Merging an unpacked bundle | **Only into a stack of the same name, bonus and grant** | Merging any stack of the kind: would pull from a stack the player kept apart on purpose, and take back more than a removed class actually granted |
 
 Settled with Mike on 2026-10-17 and 2026-10-18 (#104); the full discussion is in
-[the 2026-10-18 spec](../../specs/2026-10-18-ammo-recovery-design.md) §2.
+[the 2026-10-18 spec](../../specs/1.9.0/2026-10-18-ammo-recovery-design.md) §2.
 
 | Question | Decision | Rejected, and why |
 |---|---|---|

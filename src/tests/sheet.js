@@ -2105,7 +2105,7 @@ function charWith(inv, hp) {
 }
 
 /* ---- combat view: which sections, in what order, and combat state ----
-   Design: src/docs/specs/2026-09-24-combat-view-design.md §3. */
+   Design: src/docs/specs/1.7.0/2026-09-24-combat-view-design.md §3. */
 {
   const D = ['vitals', 'statuses', 'attacks', 'resources', 'slots', 'activespells'];
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -2196,7 +2196,7 @@ function charWith(inv, hp) {
 }
 
 /* ---- timed conditions: reading, wording, the clock (#55) ----
-   Design: src/docs/specs/2026-10-06-timed-conditions-design.md §3, §4. */
+   Design: src/docs/specs/1.8.0/2026-10-06-timed-conditions-design.md §3, §4. */
 {
   ck('a duration is whole seconds above 0, else untimed',
      X.statusDuration({durationSec: 18}) === 18 && X.statusDuration({durationSec: '60'}) === 60 &&
@@ -2551,7 +2551,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
 }
 
 /* ---- checklists in a note: the grammar, the toggle, the count (#95)
-   Design: src/docs/specs/2026-10-17-journal-checklists-design.md §4. */
+   Design: src/docs/specs/1.9.0/2026-10-17-journal-checklists-design.md §4. */
 {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const h = X.noteHTML('[ ] find the map\n[x] cross the Mire\n- [] meet Brindle\n   * [X] pay him');
@@ -2603,7 +2603,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
 }
 
 /* ---- the journal: its fields, and what migrate() does to them ----
-   Design: src/docs/specs/2026-09-29-journal-design.md §3. */
+   Design: src/docs/specs/1.8.0/2026-09-29-journal-design.md §3. */
 {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const b = X.blankChar();
@@ -2631,7 +2631,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
 }
 
 /* ---- the journal: tags, order, search, the page rule, the stamp ----
-   Design: src/docs/specs/2026-09-29-journal-design.md §3, §5. */
+   Design: src/docs/specs/1.8.0/2026-09-29-journal-design.md §3, §5. */
 {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   // tags
@@ -2797,7 +2797,7 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
 }
 
 /* ---- trackers: the model, progress, and the close rule ----
-   Design: src/docs/specs/2026-09-29-journal-design.md §3, §6. */
+   Design: src/docs/specs/1.8.0/2026-09-29-journal-design.md §3, §6. */
 {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const b = X.blankChar();
@@ -3567,7 +3567,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
 }
 
 /* ---- ammunition: kinds, stacks, unpacking (#6) ----
-   Design: src/docs/specs/2026-10-02-ammo-design.md §3, §5. */
+   Design: src/docs/specs/1.8.0/2026-10-02-ammo-design.md §3, §5. */
 {
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   ck('a kind is trimmed, its spaces collapsed, lower-cased', X.ammoKindOf('  Sling   Bullet ') === 'sling bullet' && X.ammoKindOf(7) === '');

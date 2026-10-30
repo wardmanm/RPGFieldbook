@@ -8,7 +8,7 @@
    it was opened for (`who`), like every toast Undo here, and is dropped on
    Done, on ×/Escape and when the character changes (endFightLive()).
    After 87-journal.js and 87-trackers.js in the manifest: it draws their tiles
-   and pages. Design: src/docs/specs/2026-10-29-end-of-combat-design.md */
+   and pages. Design: src/docs/specs/1.9.0/2026-10-29-end-of-combat-design.md */
 const EC_ROWS=["ammo","xp","loot","after"];
 const EC_LABEL={ammo:"Ammunition",xp:"Experience",loot:"Loot",after:"After combat"};
 /* A rules term or table link inside a page shown here (After combat): inert,
