@@ -324,11 +324,11 @@ What differs from the sections above, and why:
 
 **Deviations**
 
-- **§4, a system change replacing `system` chips: not needed** — a character's system never changes
+- **§4, a system change replacing `system` chips: not needed** (#133) — a character's system never changes
   (ruled at plan time). Settings → Skin does still rewrite the open character's `system`, which
   leaves its `system` chips; inert today, because every ruleset falls back to Common, and recorded in
   [Known issues](../../wiki/roadmap/known-issues.md).
-- **§4, a new character before a cold rules cache** gets the fallback Common even where a pack would
+- **§4, a new character before a cold rules cache** (#146) gets the fallback Common even where a pack would
   declare other defaults (parked in Task 2; inert, no pack declares `defaultLanguages`; known issues).
 - **§5, the Languages lift runs once**, flagged by `langLifted` (set by `newCharacter()`, never in
   `blankChar()`), so a "Languages:" line the player types later stays text. "Once" in §5 read as
@@ -394,7 +394,8 @@ What differs from the sections above, and why:
 fits its boxes (28px of text in a 35px box in Classic's Cinzel) at 390 and 1280; the sense chip
 reads "TREMORSENSE · 60 FT" (the chip is uppercase) as §8 asks.
 
-**What Mike still has to check on his devices**
+**What Mike still has to check on his devices** (Decided (Mike, 2026-10-30): covered by the QA checklist's device
+pass)
 
 - Touch: the header's class line, the paw and its menu, the hit-dice bar and the spend box, the HP
   bar's boxes (tap to type) and ± buttons, the death-save circles, the chip × and + Add.

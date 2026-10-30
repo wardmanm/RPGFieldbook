@@ -250,7 +250,8 @@ is recorded in the ledger entries for each.
   own `n` first), and an entry whose stack was already gone at recovery is **not** restored if the
   grant that made it has since been revoked (`grantSidLive()`). §8 governs; §6 is the simplified
   summary. Three findings on this exact path were caught and folded in before the feature shipped
-  (commit `3cbc6a5`).
+  (commit `3cbc6a5`). Decided (Mike, 2026-10-30): a stack deleted while its Undo was showing is not
+  restored; closed, as it is unreachable since #105.
 - **A recovered stack Undo leaves at ×0 is removed (§6 said "never below 0").** §6 describes Undo
   clamping a quantity at 0; the actual rule is the one that already governs every ammunition stack
   on the sheet — a stack at ×0 does not exist, it is removed (see [Ammunition](../../wiki/features/ammunition.md),
@@ -266,7 +267,8 @@ is recorded in the ledger entries for each.
   the sheet, so a pre-#104 sheet's firearm bullets — which used to recover at half like every other
   stack — now recover nothing unless the player sets that item's own Recovery to Always. This is the
   intended fix (decision 5's whole point), recorded here because it is the one place "a sheet from
-  before #104 behaves exactly as today" does not hold.
+  before #104 behaves exactly as today" does not hold. Decided (Mike, 2026-10-30): keep; old sheets do not keep
+  half.
 - **`recoverShows()`** (`80-modal-forms.js`) is the one rule, not in the original spec, for whether
   the item editor's "After a fight" field shows at all: ammunition, or a Thrown weapon. Task 6 fix
   round 1 (`554f6e3`) found Insert from pack left the field exactly as the blank new-item form had
@@ -280,12 +282,12 @@ is recorded in the ledger entries for each.
   are "Default (never comes back)", "Default (always comes back)" or "Sheet's rule" (the first
   names the app's default when there is one), then "Always comes back" and "Never comes back".
   Settings' choices read "Half (rules as written)", All, Hits only, None.
-- **A weapon made in the item editor cannot be Thrown (§5.1).** §5.1 said "a homebrew weapon gets
+- **A weapon made in the item editor cannot be Thrown (§5.1).** (#145) §5.1 said "a homebrew weapon gets
   it by typing the property into its notes", but the item editor has no weapon-notes field: Save
   carries `weapon.notes` from the pack entry last inserted (or the item being edited). Only pack
   data — a rules pack's own entry, inserted or found — marks a weapon Thrown. Recorded as Open on
   the [Ammunition](../../wiki/features/ammunition.md) page.
-- **Old sheets: counts declined under the old question come back.** Before #104, End combat asked
+- **Old sheets: counts declined under the old question come back.** (#152) Before #104, End combat asked
   Yes/No about new shots, and a "No" left those counts on record. The first End combat after
   upgrading recovers them under the sheet's rule, with a toast and Undo recovery — a departure from
   §8's "exactly as today", recorded here; Undo recovery puts them back if the player didn't want
@@ -299,7 +301,7 @@ is recorded in the ledger entries for each.
   every outstanding entry — each gives back what its rule allows and is cleared, the rest spent
   (§4.3). When something came back, the toast carries Undo recovery, which restores every entry it
   cleared, zero-back ones included; when nothing came back, the counts are cleared quietly — no
-  toast words, no Undo. The row's Recover still names its own kind only.
+  toast words, no Undo. The row's Recover still names its own kind only. Decided (Mike, 2026-10-30): keep.
 
 ## 12. Release note
 

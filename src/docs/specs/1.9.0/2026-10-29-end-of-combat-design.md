@@ -271,7 +271,7 @@ How it works now: [Combat view](../../wiki/features/combat-view.md), with
 - **`applyAmmoRecovery()` takes `opts.logged` as well as `opts.quiet`, and `undoRecoveryTap()` takes
   `opts.quiet`** (§5). The window's Undo must still correct End combat's log lines, which are written
   before recovery; and its "Recovery undone" toast would sit over a window that says it itself.
-- **The window's tiles have no edit pen, and the rules chips in its pages are inert** (§4.5). The modal
+- **The window's tiles have no edit pen, and the rules chips in its pages are inert** (§4.5, #145). The modal
   has one layer: the tracker form, a glossary entry or a table would replace the window and lose the
   typed XP and the Undo. Inert chips keep `role="button"` and a tab stop from `highlight()`, so a
   screen reader announces a button that does nothing there (accepted).
@@ -295,7 +295,7 @@ How it works now: [Combat view](../../wiki/features/combat-view.md), with
   its Undo re-spent shots in an ended fight. An error toast is left up. Ruling 18: a shot fired outside
   a fight also stops undoing once a later End combat sweeps it up, since undoing it then would recover
   it twice.
-- **End combat's screen-reader announcement** (`#cvLive`) says only "Combat ended after 5 rounds
+- **End combat's screen-reader announcement** (`#cvLive`, #145) says only "Combat ended after 5 rounds
   (30 sec)", no longer what was recovered, and it lands in a region the window makes inert the same
   moment, so a screen reader may not speak it (Task 3 minor, accepted; the window's Ammunition row
   shows what came back).
@@ -331,7 +331,8 @@ How it works now: [Combat view](../../wiki/features/combat-view.md), with
   seeded value gets past: cut at a name with the rest counted ("Goblin 1, Goblin 2, … and 3 more"); a
   first name too long alone is cut inside it, by characters, never mid-surrogate ("Name… and 2
   more"). The review's second half — marking loot trades so they stay out of the With suggestions —
-  was not in the fix brief and is not done.
+  was not in the fix brief and is not done. Decided (Mike, 2026-10-30): loot trades stay in the With
+  suggestions.
 
 ### Tests
 
@@ -366,7 +367,8 @@ milestone character (no Experience row), a hidden Journal tab (no After combat r
 (no chips, no Ammunition row, the warning's second sentence left out); both "Show after combat"
 switches, driven and saved. The console held only the two boot-time network errors both builds show.
 Not driven: touch, real devices, print, a backdrop tap, the finder's round trip from a loot trade, a
-character switch with the window open, a reload with it open.
+character switch with the window open, a reload with it open. Decided (Mike, 2026-10-30): the device items are
+covered by the QA checklist's device pass.
 
 **Final fix wave**, shots `105-fix-*.png`: a quiet fight at 1280 (the box fits its two rows, 260 px
 tall); "4S0" typed for real and Done clicked (the window stays, focus in the box, "Whole numbers
@@ -380,7 +382,7 @@ Tab from the Undo (focus on the next tile in the window), and Enter on Undo (foc
 a tick on a page open in the Journal editor ("Finish editing “Loot list <i>” first.", nothing
 ticked); everything open at 1280 and 390 (capped at 680 px, the rows scrolling, Done in view, nothing
 scrolling sideways) and folded at 390. Not driven: Safari itself (the box's type is what changed),
-touch, real devices.
+touch, real devices. Decided (Mike, 2026-10-30): covered by the QA checklist's device pass.
 
 ### Deferred
 
@@ -391,10 +393,10 @@ tab's inert copy; the After combat row went blank when its last tracker closed; 
 in the editor was refused silently; the window kept the wide modal's fixed height (Ruling 19); Loot's
 seeded name could exceed 60 characters; Enter in the XP box did nothing.
 
-**Not done, for Mike:** loot trades still feed the trade window's With suggestions (the review's M7
-second half: mark them `meta.loot` and skip them there).
+**Decided (Mike, 2026-10-30):** loot trades stay in the trade window's With suggestions (the review's M7
+second half, to mark them `meta.loot` and skip them there, is not done).
 
-**Accepted minors:**
+**Accepted minors** (#145):
 - `t105End()` has no check for a character switch while the warning is open (the code handles it).
 - `hideToast()` runs after `applyAmmoRecovery()`; `undoFireTap()` folds two guards into one boolean.
 - A classless character is told "Level 2 ready", then Done's "Add a class first".

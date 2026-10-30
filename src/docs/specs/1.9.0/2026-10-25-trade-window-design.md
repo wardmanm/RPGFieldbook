@@ -356,7 +356,7 @@ wrote "Edited … Details changed" — and so did Chain Mail, a wand with no `us
 `qty` and a trade's custom item (I1).
 
 **Deferred minors, from code review across Tasks 1–4 (all recorded in progress.md; those marked ✔
-were fixed in Task 4's fix round, the rest left by ruling):**
+were fixed in Task 4's fix round, the rest left by ruling and filed in #147):**
 - The coins-undo reason's fallback to `k.toUpperCase()` is dead code: every key comes from a real
   denomination (Task 1).
 - `invUndo()` re-renders the inventory, attacks and coins and recomputes for every kind, even one

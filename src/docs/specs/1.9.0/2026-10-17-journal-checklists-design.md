@@ -294,7 +294,7 @@ Departures from this spec, found while implementing and verified against the shi
   `.trk-of` is `flex-basis:100%` unconditionally, so it never counts toward the −/count/+ row's
   min-content on a phone-width tile. The tile is `flex:1 1 140px` (max `280px`), the count box
   `54px`, and the tile's −/+ buttons `30px` square.
-- **The Σ is a real `<button>` inside the `role="button"` group header**, not a `<span>`: both the
+- **The Σ is a real `<button>` inside the `role="button"` group header** (#100), not a `<span>`: both the
   header's click and keydown fold handlers check for it explicitly and return before toggling the
   group, rather than relying on event bubbling alone to miss it. A button nested in a
   `role="button"` is a known accessibility compromise: assistive tech may flatten the header and

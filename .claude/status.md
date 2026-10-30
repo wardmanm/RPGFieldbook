@@ -7,6 +7,14 @@ Updated: 2026-10-30 · Branch: main
 The thirteen `1.9.1`-labelled issues wait for 1.9.1; #110 and #126 have no milestone. No branch open.
 
 ## Recent changes
+- 2026-10-30: `/pre-release 1.9.0` step 2: 25 issues filed to the milestone (#128–#152: 17 P1 and 8
+  grouped P2), the old releases' copyrighted-asset cleanse among them as #140, and two items noted on
+  #100. Mike's decisions: End combat keeps clearing every ammunition count; pre-#104 firearm bullets
+  stay at never (old sheets don't keep half); Undo recovery and a deleted stack closed (unreachable
+  since #105); loot trades stay in the With suggestions; the Warlock's Pact Magic columns stay; a
+  permission ask rule for `/pre-release`'s GitHub writes is wanted (being added); the device pass is
+  the QA checklist's; the End of combat window pins to the top (#145); a fixed feat's +1 goes through
+  the +1 step (#146).
 - 2026-10-30: Merged #127, the pre-release process: `/pre-release <ver>` (docs filed by version with every
   link rewritten, outstanding issues filed to the milestone with a fix label and project Priority, a QA
   checklist Claude pre-drives, QA bugs where only a P0 blocks, release notes checked), recorded in
@@ -30,48 +38,33 @@ The thirteen `1.9.1`-labelled issues wait for 1.9.1; #110 and #126 have no miles
   Level-down dialog, and the app's own warning window (`askConfirm()`; the other confirm() boxes are #126).
 
 ## Pending decisions
-- **A permission rule for `/pre-release`'s GitHub writes** (raised 2026-10-29): no `permissions.ask` rule makes
-  Claude Code ask before `gh issue create`, `gh label create` or `gh project item-edit`; the skill's text
-  is the only guard. Options: add an ask rule / leave it. Blocks: nothing.
-- **#105's window shifts as a section opens** (raised 2026-10-29): sized to its content and centred, it
-  grows from the middle, so the tapped row moves. Options: pin it to the top / back to the fixed height
-  (empty space after a quiet fight) / keep. Claude's suggestion: pin to the top. Blocks: nothing.
-- **Loot trades in the trade window's With suggestions** (raised 2026-10-29): keep them out? Options: yes / no.
-- **End combat clears every outstanding ammunition count** (raised 2026-10-19, at #104's final
-  review). Shots that give nothing back are spent at End combat, though Mike was earlier told they
-  would stay on record. Options: keep / revert. Blocks: nothing; it is on main.
-- **Firearm bullets on sheets saved before #104 now recover nothing**; they used to recover half
-  (raised 2026-10-19). Options: keep / let old sheets keep half.
-- **Undo recovery does not restore a stack deleted while its Undo was showing** (raised
-  2026-10-19). Options: keep / restore it.
+- None.
 
 ## Loose ends
-- #127's leftovers (release-undo and `releases/data/`, the private push check, push order, bash 3.2, and
-  the deferred minors) are in its spec's As built; `/pre-release 1.9.0` step 2 brings them to Mike to file.
 - 34 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
 - Data releases needed (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs
-  (#118 feat ability increases and species feats), and Homebrew in the private repo (#125).
+  (#118 feat ability increases and species feats), and Homebrew in the private repo (#125); filed as #138.
 - #118 deferred minors, in the spec's As built: a feat's fixed skills aren't granted; a fixed species or
-  background feat's +1 isn't applied (dormant in shipped data); "+1 to two" accepts one score twice.
+  background feat's +1 isn't applied (dormant in shipped data); "+1 to two" accepts one score twice (#146).
 - Mike's device pass for #105, #118, #102, #47, #91, #52, #101, #103, #97 and #99: touch, print, Safari and Firefox, and his own
   characters. Claude drove each at desktop and phone widths (`.claude/qa/`). Specific things to check:
-  - #101: a long level card at phone width puts the HP step and Done below the fold;
+  - #101: a long level card at phone width puts the HP step and Done below the fold (#146);
   - #101: the card's class line and banner now use the body font;
   - #103: the phone AC shield overlaps the portrait;
-  - #103: the ↑ button can sit over a row's delete button mid-scroll.
+  - #103: the ↑ button can sit over a row's delete button mid-scroll (#151).
   - #91: the strip's sideways scroll on a real phone; a fight with Mike's own characters.
   - #47: a trade on a real phone; the Log dialog's scroll on Safari; Mike's own inventory's log.
   - #102: drag and drop from the desktop, a zip through Manual install, the phone notice row.
 - #102: the official source is untested against a real release — no published release carries
-  `releases/data/` yet; the first release cut after this merge is its first real run.
+  `releases/data/` yet; the first release cut after this merge is its first real run (#139).
 - #102: 13 deferred minors, listed in the spec's As built (e.g. three GitHub API calls per boot;
-  manifests stored inside the settings key; the home screen doesn't point at Extensions).
+  manifests stored inside the settings key; the home screen doesn't point at Extensions) (#149, #150, #100).
 - #52 leftover: hiding a tab while the combat view is open, then pressing the swords, lands on the
-  Sheet at that tab's scroll position.
+  Sheet at that tab's scroll position (#151).
 - #99 follow-ups:
-  - focus drops to the page after a sort, filter or Show more in the Rules tables;
-  - a rules fetch that lands while typing in a search box takes focus.
+  - focus drops to the page after a sort, filter or Show more in the Rules tables (#151);
+  - a rules fetch that lands while typing in a search box takes focus (#151).
 - #104 follow-ups:
-  - `src/tests/sheet.js`'s #8 item-editor block no longer ends with `X.resetRules()`;
+  - `src/tests/sheet.js`'s #8 item-editor block no longer ends with `X.resetRules()` (#150);
   - two doc sentences to tighten: the spec's As built "Old sheets" bullet, and `ammunition.md`'s End
-    combat row.
+    combat row (#152).

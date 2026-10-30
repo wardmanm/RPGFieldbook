@@ -136,7 +136,7 @@ As specified, §1–§9, with these notes:
   for: the round trip, the markup scan (every edit/delete/remove button carries `ed`, every play
   control doesn't), the toggle's both states, and every `EDIT_CARDS` key reaching a real card.
 - **§7's "every card key reaches a card" and "the markup carries `ed`" are two separate scans,
-  not one.** `rules-data.js` checks the twelve `HIDDEN` button hooks all carry `ed` and the
+  not one.** (#150) `rules-data.js` checks the twelve `HIDDEN` button hooks all carry `ed` and the
   `KEPT` play-control hooks never do (source-scanned, since most rows are built as template
   literals rather than real DOM), and separately that every `EDIT_CARDS` key reaches a card in the
   built template. Together they cover §7's "the registry is exactly the cards whose markup has an

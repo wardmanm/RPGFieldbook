@@ -319,7 +319,7 @@ Built as designed, §1–§11, with these notes:
    by monkey-patching `window.matchMedia` in the live page and re-running `doLevelUp()`, exercising
    the real `luReducedMotion()` code path rather than the unit harness's own mock. This is not the
    same as a real OS or browser reduced-motion setting; see "What Mike checks," below.
-6. **Known minor items, left for the controller, not fixed in this branch:**
+6. **Known minor items, left for the controller, not fixed in this branch** (the open ones are #146):
    - a resource whose max and die both change in the same level emits two rows, "uses" then "die",
      as spec §4 intends (separate lines) — this case has no test (`levelGains()`);
    - a bad "I rolled" + Apply after a good one shows the error line but Done/Continue still commits
@@ -370,7 +370,7 @@ Built as designed, §1–§11, with these notes:
    - **One spell note per class.** A second class added above level 1 lists only the highest
      level's spell note (`luLatestNotes()`), not every level's.
    - **The two stale comments** above now describe creation.
-   - **Left, and in the wiki's known issues:**
+   - **Left, and in the wiki's known issues (#146):**
      - a long card at 390 puts the HP step and Done below the fold, for Mike's phone pass;
      - the page behind the scene isn't inert for its 2.4s;
      - `luSummary()` cuts at abbreviations;
@@ -387,7 +387,8 @@ for `.lu-fx`); real characters (every level-up driven in QA started from a fresh
 sheet; nothing here reads or writes a field a saved character wouldn't already have, but a levelled,
 multiclassed character of Mike's own is the real stress case for `levelGains()`'s diffing); and real
 reduced motion, set in the OS or the browser rather than monkey-patched, which is the one branch
-this task could not drive end to end (note 5, above).
+this task could not drive end to end (note 5, above). Decided (Mike, 2026-10-30): covered by the QA checklist's
+device pass.
 
 Everything else — the scene's markup, timing and tokens, the card's rows and ordering, the HP
 step's controls and wording, Done/Continue/closing-early, the multiclass fixes, and the QA pass

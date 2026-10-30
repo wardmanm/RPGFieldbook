@@ -390,43 +390,44 @@ The final fix wave's own (implementer's), each with its cost if wrong:
 
 ### Deferred minors
 
-- `move-docs.js`: the test tree has no file under `src/docs/archive/` (the `SCAN` test covers
+- `move-docs.js` (#150): the test tree has no file under `src/docs/archive/` (the `SCAN` test covers
   Ruling 15's four roots since the final fix wave); a backup like `foo.md.orig` is rewritten as `foo.md`; `LINK_TARGET`
   stops at a space or `(` even inside `<…>`. (The unused `RECORD_JS` constant is used since Task 3.)
-- The link check: its archive branch is only self-tested until `src/docs/archive/` exists.
-- The gate: no test for `--release patch` or `minor` succeeding, or for a CRLF record;
+- The link check (#150): its archive branch is only self-tested until `src/docs/archive/` exists.
+- The gate (#150): no test for `--release patch` or `minor` succeeding, or for a CRLF record;
   `data-kit.py`'s undone-cut case extracts the `mv` command by splitting the refusal's wording.
-- `smoke.md`: the ancestry/background/class line and the trade window line each bundle several
+- `smoke.md` (#150): the ancestry/background/class line and the trade window line each bundle several
   checks.
-- The skill (final review): step 1's "first `#<n>`" fallback picked the wrong issue for 4 of 43
+- The skill (final review, #150): step 1's "first `#<n>`" fallback picked the wrong issue for 4 of 43
   docs (each still landed in the right version, and Mike confirms the list); the merge grep also
   matches merges *into* an issue branch. Fix later: take a plan's issue from its `**Spec:**`, and
   anchor the grep to `^[0-9a-f]+ Merge (branch ')?issue/<n>-`.
-- The link check (final review): it does not verify a moved doc's outgoing links (`../../wiki/…`),
+- The link check (final review, #150): it does not verify a moved doc's outgoing links (`../../wiki/…`),
   which only `move-docs.js`'s recompute protects; the backfill broke none.
-- For Mike (final review): no `permissions.ask` rule guards the skill's `gh issue create|comment`,
-  `gh label create` or `gh project item-add|item-edit`; the skill's text is the only guard.
+- The permission rule (final review): no `permissions.ask` rule guards the skill's `gh issue
+  create|comment`, `gh label create` or `gh project item-add|item-edit`; the skill's text is the only
+  guard. Decided (Mike, 2026-10-30): the rule is wanted; it is being added in its own commit.
 - After the backfill, a worktree branched before it reports stale allowlist entries in its
   `private-data` suite until it merges main (the one private clone serves every checkout).
-- The skill: the P0 check leaves comparing two lists to the reader; a resume with a missing or
+- The skill (#150): the P0 check leaves comparing two lists to the reader; a resume with a missing or
   doubled record row is undefined (the gate refuses such a record anyway); step 1's rebuild trigger
   is narrower than the build's inputs; `--grep` also matches body lines; a second "Kept at" line
   picks the older sha; a stale dirty `QA-CHECKLIST.md` can enter step 1's commit; all steps done
   plus a declined rebuild is not spelled out.
-- RELEASING's undo (final re-review): a full `./build.sh --release` (not `--no-zip`) also writes new
+- RELEASING's undo (final re-review, #150): a full `./build.sh --release` (not `--no-zip`) also writes new
   files under `releases/data/` (`build.sh:127-130`), which `git restore --staged . && git checkout -- .`
   leaves untracked; RELEASING (around :66-69) says only the record's copy is left behind. Fix: name
   `releases/data/`'s new files in the undo, or remove them by path.
-- `/release`'s private check (final re-review): "exactly one unpushed private `paths moved` commit" is
+- `/release`'s private check (final re-review, #150): "exactly one unpushed private `paths moved` commit" is
   prose; the preflight only runs `git -C _private-data status -sb`, and its comment still reads
   "pushed unless releasing it". Fix: `git -C _private-data log --format='%h %s' @{u}..` must print one
   `paths moved` line and `git -C _private-data diff --name-only @{u}..` only
   `tests/leak-allowlist.json`; the private commit names that file as its pathspec.
-- Push order (final review and re-review): between step 1 and the release, public main and the private
+- Push order (final review and re-review, #150): between step 1 and the release, public main and the private
   repo each hold an unpushed commit; a push of public main for any other reason (or a private data
   release) first turns the private CI's leak scan red until the private commit is pushed. Nothing
   enforces the order.
-- The filing block under macOS `/bin/bash` 3.2: a body with an unmatched `(` fails to parse (here-doc
+- The filing block under macOS `/bin/bash` 3.2 (#150): a body with an unmatched `(` fails to parse (here-doc
   inside `$(…)`), so nothing is filed — it fails safe; zsh, which Claude Code uses, is unaffected.
 
 ### Decided after the build

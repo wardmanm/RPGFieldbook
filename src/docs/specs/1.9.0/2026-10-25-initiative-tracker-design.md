@@ -314,10 +314,10 @@ final review fixes (#91, 2026-10-25)"):
   `combatEnd()` returns `{rounds, sec, combatants}`, the fight it cleared, for #105; **m6**
   `startCombatNow()` stays as the no-roll start the tests call, now commented; **m7** this As built
   corrected; **m9** Add combatant keeps a 60-character name. **m8** (the double render per tracker
-  action) was left by ruling.
+  action) was left by ruling (#145).
 
 **Deferred minors, from code review across Tasks 1–5 (all recorded in progress.md; those marked
-✔ were fixed in the final fix wave, the rest left by ruling):**
+✔ were fixed in the final fix wave, the rest left by ruling and filed in #145):**
 - `initRollCheck` reports the generic "Type the number you rolled." for a negative input like
   `-3`, rather than the d20-range message — the plan's own code (Task 1).
 - ✔ A `sheet.js` test name read "every other section is combat-addable", now stale since `party` is

@@ -131,7 +131,7 @@ for the full QA account and screenshot paths):
 - **A redirect to the Sheet scrolls to the top.** `applyHiddenTabs()` (`40-sheet.js`) follows its
   own `selectTab("sheet")` with `window.scrollTo({top:0})`, so a player moved off a hidden active
   tab no longer lands mid-Sheet at the old tab's scroll position.
-- **Three deferred minors from code review, none of them behavioural:**
+- **Three deferred minors from code review, none of them behavioural** (#151):
   - `rules-data.js:2398`'s `#99` regex window moved `{0,500}`→`{0,700}` with no comment saying why —
     the new `selectTab()` guard line (§4) pushed an existing, unrelated check past its old budget.
   - `HIDEABLE_TABS.indexOf(name)>=0` is written out three times in `40-sheet.js` rather than

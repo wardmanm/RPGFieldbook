@@ -23,20 +23,20 @@ Known behaviour that is accepted for now.
   skill pick, the subclass and spells to adjust by hand. Removing the class reverts all of it, and
   race and background choices revert fully. → ledger L2571, L7569, and
   [Character building](../features/character-building.md)
-- **A feat's fixed `skills` are not granted.** `grantFeatDef()` forwards a feat's effects, uses,
+- **A feat's fixed `skills` are not granted.** (#146) `grantFeatDef()` forwards a feat's effects, uses,
   cost and skill *choices*, but not a fixed `skills` list, so such a skill is added by hand. It
   predates #118, and level down deliberately never matches a feat by its rules `skills`. → ledger
   L7569, and [Grants & provenance](../architecture/grants-and-provenance.md)
-- **A fixed species or background feat's `ability` increase is not applied.** `grantFeatDef()`
+- **A fixed species or background feat's `ability` increase is not applied.** (#146) `grantFeatDef()`
   applies a feat's `effects` only. The +1 is asked only when the feat is picked from a list
   (`commitAsiPick()`), so for a fixed `feat` the player raises the score by hand. It is dormant for
   shipped data: no shipped species uses a fixed `feat`, and Origin feats carry no `ability`.
   `docs/rules-schema.md` says so. → ledger L7657, and
   [Character building](../features/character-building.md)
-- **The ASI's "+1 to two" accepts the same ability twice,** for +2 to one score. The 2024 rule
+- **The ASI's "+1 to two" accepts the same ability twice,** (#146) for +2 to one score. The 2024 rule
   says two different scores. It predates #118. → ledger L7569, and
   [Abilities & skills](../features/abilities-and-skills.md)
-- **The choices inside a feat stay by hand.** The ASI step asks only for a feat's +1. Its spells
+- **The choices inside a feat stay by hand.** (#146) The ASI step asks only for a feat's +1. Its spells
   (Magic Initiate, Fey-Touched, Ritual Caster…), tools and instruments (Crafter, Musician), damage
   types (Elemental Adept), Resilient's saving throw and Weapon Master's mastery are the player's to
   add. No shipped pack carries them in structured form. → ledger L7569, and
@@ -45,7 +45,7 @@ Known behaviour that is accepted for now.
   seed: a first class added at level 3 and then removed keeps its levels 2–3, and removing a
   multiclass class keeps the hit points its levels added — the same as a class levelled up in play.
   → ledger L3886, and [Vitals & rest](../features/vitals-and-rest.md)
-- **Multiclass ability prerequisites** (e.g. INT 13 for a Wizard) are stated, not checked. The Add
+- **Multiclass ability prerequisites** (e.g. INT 13 for a Wizard) are stated, not checked (#146). The Add
   class window's multiclass note says the rule (`MC_PREREQ`, #101), but the packs don't carry each
   class's primary ability, so nothing enforces it. → ledger L3886
 - **A source's packs stay until removed by hand** once the source is taken out of the list (#102
@@ -55,11 +55,11 @@ Known behaviour that is accepted for now.
   → ledger L3797, and [Rules packs](../architecture/rules-packs.md)
 - **A class's gold alternative is the average of its dice**, not a roll (`_dice_avg_gold()` in
   `convert.py`). → ledger L42
-- **Granted items match the item list by exact name only** (`grantItemByName()`). Anything else is added
+- **Granted items match the item list by exact name only** (`grantItemByName()`, #149). Anything else is added
   as a plain named item with no description, cost or weapon data. The 2024 and Humblewood classes and
   backgrounds carry 18 such names, for example "Holy Symbol", "Druidic Focus", "a Gaming Set (your
   choice)" and "Traveling Clothes". → ledger L42
-- **Missing references degrade quietly.** A feat that isn't loaded becomes an empty feature named
+- **Missing references degrade quietly.** (#149) A feat that isn't loaded becomes an empty feature named
   `Feat: X`, and a missing granted item becomes a bare name. Only subclasses and declared `requires`
   are reported. → ledger L1883
 - **Artificer and Mystic are 2014/UA content labelled XPHB** in the 2024 pack's `classes.json`
@@ -69,36 +69,36 @@ Known behaviour that is accepted for now.
   Tasha's skips the Artificer and its subclasses instead of shipping duplicates. → ledger L1816
 - **`**Hit** Points` loses its glossary chip.** The asterisks break the `\b(term)\b` match. This is
   inherent to escaping first and matching second. → ledger L1504
-- **A favourited granted feature loses its star when the grant is rebuilt.** Changing subclass,
+- **A favourited granted feature loses its star when the grant is rebuilt.** (#146) Changing subclass,
   removing a class or swapping ancestry runs `removeFeaturesWhere()` and re-adds through
   `addFeatureFromDef()`, which makes a new object. Inventory doesn't have this problem, because
   `grantItemByName()` reuses the item. Levelling up is safe: it only adds. → ledger L2381
-- **Multiclass pact slots share one pool.** `autoSlots()` adds the Pact Magic slots onto the
+- **Multiclass pact slots share one pool.** (#146) `autoSlots()` adds the Pact Magic slots onto the
   full-caster table, so a Wizard 3 / Warlock 3 reads L1:4 L2:4. A short rest restores the pact count
   from that shared pool. Real 5e tracks them separately. → ledger L3169
-- **Feats picked from the feature finder get no skill-choice prompt.** `addPickedFeature()` adds with
+- **Feats picked from the feature finder get no skill-choice prompt.** (#146) `addPickedFeature()` adds with
   no origin, and `grantFeatDef()` only queues a feat's skill choices when a source id exists.
   → ledger L2776
 - **The printed sheet** shows prepared spells as `◆`/`○` with no key (the same gap as the skill and
-  save rows), and prints no item uses. → ledger L2345, L2818
-- **The item finder has no Escape key of its own.** `openBrowse()` closes from its Close button only;
+  save rows), and prints no item uses (#151). → ledger L2345, L2818
+- **The item finder has no Escape key of its own.** (#151) `openBrowse()` closes from its Close button only;
   the global Escape handler dismisses the modal and nothing else. → ledger L3397
 - **2014-named single ammunition pieces keep their name on a sheet migrated before ammunition
-  shipped.** "Crossbow Bolt" and "Blowgun Needle" learn the 2024 kind and fire, but `migrateAmmo()`
+  shipped.** (#145) "Crossbow Bolt" and "Blowgun Needle" learn the 2024 kind and fire, but `migrateAmmo()`
   never renames them, so the rules-update tool lists them as not in any loaded pack. Existing
   copies of the 35 dropped 2014 gear items ("Spell Scroll (1st Level)", "Rations (1 day)"…) show
   the same way. → ledger L4989, and [Ammunition](../features/ammunition.md)
 - **Ammunition picker rows can look identical** when two grants each give "Arrow ×20": stacks of
-  different grants stay apart by design, and nothing on the row tells them apart. An origin hint
+  different grants stay apart by design, and nothing on the row tells them apart (#145). An origin hint
   would. → ledger L4989, and [Ammunition](../features/ammunition.md)
 - **Undo recovery drops a home-joined entry's unrecovered remainder once the home stack is fired
-  out.** When recovery tops up an equivalent stack already on the sheet (the old one being gone)
+  out.** (#145) When recovery tops up an equivalent stack already on the sheet (the old one being gone)
   and that stack is then fired down to nothing, `undoRecovery()` finds the stack it depended on gone
   and does not restore the cleared entry, so the shots recovery did not give back are not put back
   on record. Unreachable from the UI today: Undo recovery lives in the End of combat window (#105),
   which keeps the sheet inert, so nothing can be fired while it is offered. → ledger L6147, L7921,
   and [Ammunition](../features/ammunition.md)
-- **Undo recovery asks whether a grant is live now, not whether it was revoked since.**
+- **Undo recovery asks whether a grant is live now, not whether it was revoked since.** (#145)
   `grantSidLive()` checks the character's race, background and classes at Undo time, so a class
   removed and re-added inside the Undo window reads as never revoked, and a cleared entry from its
   old grant comes back. → ledger L6147, and [Ammunition](../features/ammunition.md)
@@ -109,11 +109,11 @@ Known behaviour that is accepted for now.
   End combat, and a shot fired outside a fight stops undoing once a later End combat sweeps it up.
   The window's Undo recovery is the way back. → ledger L7921, and
   [Ammunition](../features/ammunition.md)
-- **A weapon made in the item editor cannot be Thrown.** The editor has no weapon-notes field; Save
+- **A weapon made in the item editor cannot be Thrown.** (#145) The editor has no weapon-notes field; Save
   carries `weapon.notes` from the pack entry last inserted, so only pack data marks a weapon Thrown.
   → ledger L6147, and [Ammunition](../features/ammunition.md)
 - **Xanathar's five Adamantine Ammunition pieces carry rarity "Unknown"** (5e-tools writes
-  "unknown"), which sorts first in the item finder's Rarity filter. → ledger L4989, and
+  "unknown"), which sorts first in the item finder's Rarity filter (#149). → ledger L4989, and
   [Ammunition](../features/ammunition.md)
 - **Fieldbook before 1.8.0 can't open the rules-data zip.** A player on an older copy unzips it and
   imports the `.json` files inside; the release notes, `NOTICE.md` and README §3a say so. The
@@ -139,20 +139,20 @@ Known behaviour that is accepted for now.
 - **A public player's old Homebrew still names Xanathar's spells "from Xanathar's Guide to
   Everything"**, which no public file provides. The release notes say it moved; re-importing it
   from the private archive replaces it. → ledger L7858, and [Homebrew](../data/homebrew.md)
-- **The old releases' copyrighted data stays reachable until 2.0.** The v1.3.0–v1.7.2 releases still
+- **The old releases' copyrighted data stays reachable until 2.0.** (#140) The v1.3.0–v1.7.2 releases still
   carry their pack assets (every `*_full.json`, every `fieldbook-v*.zip`, and v1.3.0's source zip):
   deleting them is pending Mike's decision ([RELEASING §4a](../../RELEASING.md)). Even once they are
   deleted, GitHub's Source code archives of each tag, and public history, keep the data until the
   history purge. → ledger L5426, and [2.0](2.0.md)
-- **The trackers' Σ is a button nested in a `role="button"` group header,** so assistive tech may
+- **The trackers' Σ is a button nested in a `role="button"` group header,** (#100) so assistive tech may
   flatten the header and never reach the Σ. Restructuring the header pattern (the journal's and the
   section notes' group headers share it) is likely 2.0's. → ledger L6057, and [Journal](../features/journal.md)
 - **A new character made before a cold rules cache has loaded gets Common as its default
-  language**, even where a loaded pack would declare other `defaultLanguages`: `newCharacter()`
+  language** (#146), even where a loaded pack would declare other `defaultLanguages`: `newCharacter()`
   reads the packs as they are at that moment, and `migrate()` only adds missing defaults later, so
   the fallback Common stays beside them. Inert today: no pack declares `defaultLanguages`.
   → ledger L6633, and [Character model](../architecture/character-model.md)
-- **Changing a sheet's system does not swap its `system` language chips** for the new ruleset's
+- **Changing a sheet's system does not swap its `system` language chips** (#133) for the new ruleset's
   defaults (the #103 spec §4 asked for it; ruled not needed at plan time, as a character's system
   is not meant to change, though Settings → Skin does rewrite the open character's). Inert today:
   every ruleset falls back to Common. → ledger L6633, and [Character model](../architecture/character-model.md)
@@ -187,59 +187,60 @@ Wanted, not yet done. Each needs work, not a source.
 
 - **#102's deferred minors.** Three unauthenticated GitHub API calls per boot (the app check asks
   for the latest release; the data check and the official source each list the releases), against
-  GitHub's 60 an hour; memoising the list is deferred (M10). A plain source's URL is only checked to be non-empty (old relative
+  GitHub's 60 an hour; memoising the list is deferred (M10, #149). A plain source's URL is only checked to be non-empty (old relative
   sources are allowed by design; it reaches only `fetch`). `extVerify()` doesn't compare the bytes'
   length with the manifest's declared `size` (the sha256 covers it when present), and a page with
   no `fetch` at all throws synchronously. Small simplifications (one shared newest-by-key helper, a
-  size message keyed on the cap constant) wait for 2.0. → ledger L7428, and
+  size message keyed on the cap constant) wait for 2.0. The URL, size, `fetch` and simplification
+  minors are noted on #100. → ledger L7428, and
   [Rules packs](../architecture/rules-packs.md)
-- **#102's release-tooling minors**: `release-files` deletes before it writes;
+- **#102's release-tooling minors** (#150): `release-files` deletes before it writes;
   `./build.sh --release --no-zip` skips `releases/data/`; `data-kit.py`'s leak test reads the shared
   temp folder. → ledger L7428, and [Data kit](../data/data-kit.md)
-- **Private packs through a manifest (#102's token option): not built.** raw.githubusercontent.com
+- **Private packs through a manifest (#102's token option): not built.** (#149) raw.githubusercontent.com
   can't serve a private repo and no token is stored, so they stay a Manual install (file import).
   → [Private data](../data/private-data.md)
-- **Humblewood species have no size.** They all resolve to Medium (`charSize()`), but Jerbeen, Luma
+- **Humblewood species have no size.** (#149) They all resolve to Medium (`charSize()`), but Jerbeen, Luma
   and Hedge are Small in the book. The fix belongs in the private repo's Humblewood extractor, which
   has a verbatim suite, so the data must not be hand-edited. A player can set size from the rail
   meanwhile. → ledger L1426
-- **Small tables inside features read as flat text.** Magic Item Hacking's rarity costs and the
+- **Small tables inside features read as flat text.** (#149) Magic Item Hacking's rarity costs and the
   Spell Emulator component's tiers are examples. → ledger L3596
-- **Rune Knight runes have no tracker.** They are per-rune uses, not a pool, so
+- **Rune Knight runes have no tracker.** (#146) They are per-rune uses, not a pool, so
   `class-resources.json` can't express them. → ledger L3649
 - **Two spells' damage isn't read**: Delayed Blast Fireball ("base damage is 12d6") and Glyph of
   Warding ("5d8 Acid, Cold, Fire, Lightning, or Thunder damage"). Each needs its own pattern, and
   neither is worth one that risks false positives. → ledger L2989
-- **Using an item can't remove a status** (Elixir of Health). That wants a list and a different UI.
+- **Using an item can't remove a status** (Elixir of Health, #147). That wants a list and a different UI.
   → ledger L2818
-- **Twelve Sep 2024 characteristic tables** (Stonesinger, Warrenborn, Wonderstruck) are not extracted.
+- **Twelve Sep 2024 characteristic tables** (Stonesinger, Warrenborn, Wonderstruck) are not extracted (#149).
   Their pages stack tables both vertically and side by side, which the table reader doesn't handle. Six
   of the twelve came back malformed, so all twelve are dropped: a background gets its four tables or
   none. → ledger L1045, and the private repo's `docs/HUMBLEWOOD-PLAYTESTS.md` §7
-- **Lower-value playtest tables not extracted:** the Gadgeteer progression table, Lunin Pedigree, the
+- **Lower-value playtest tables not extracted** (#149): the Gadgeteer progression table, Lunin Pedigree, the
   Whispering Wind expanded spells and Deep Roots' two tables. The features that cite them carry their
   full text. → the private repo's `docs/HUMBLEWOOD-PLAYTESTS.md` §7
-- **Cervan "Surge of Vigor" has no uses tracker.** The ledger deferred it for want of the source, but
+- **Cervan "Surge of Vigor" has no uses tracker.** (#149) The ledger deferred it for want of the source, but
   the verbatim text now states the limit ([book text: the long-rest reset clause]), so it needs
   `uses {1/long}`, not a book. → ledger L1808, and
   the private repo's `docs/humblewood.md`
-- Journal pages and trackers don't print; trackers have no rest reset
+- Journal pages and trackers don't print; trackers have no rest reset (#148)
   ([Journal](../features/journal.md)).
-- **Firearm reloading and energy cells (XDMG) are not modelled.** → [Ammunition](../features/ammunition.md)
-- **Magic ammunition outside the selection rule is not converted**: BMT, AU and the 2014 DMG
+- **Firearm reloading and energy cells (XDMG) are not modelled.** (#145) → [Ammunition](../features/ammunition.md)
+- **Magic ammunition outside the selection rule is not converted** (#149): BMT, AU and the 2014 DMG
   variants, and generic +N weapons. → [Ammunition](../features/ammunition.md)
-- **Quivers and other ammunition containers have no capacity.** → [Ammunition](../features/ammunition.md)
-- **Rests do not move condition or spell clocks.** → [Conditions & concentration](../features/conditions-and-concentration.md)
-- **An item's Use cannot apply a timed condition.** → [Conditions & concentration](../features/conditions-and-concentration.md)
+- **Quivers and other ammunition containers have no capacity.** (#145) → [Ammunition](../features/ammunition.md)
+- **Rests do not move condition or spell clocks.** (#145) → [Conditions & concentration](../features/conditions-and-concentration.md)
+- **An item's Use cannot apply a timed condition.** (#147) → [Conditions & concentration](../features/conditions-and-concentration.md)
 - **What the level-up fanfare's final review left (#101).** None blocks a level-up:
   - A long level card at phone width (a multiclass add with a long note) puts the HP step and Done
-    below the fold, so the player scrolls. Pinning them to the card's foot is Mike's call, after his
+    below the fold, so the player scrolls (#146). Pinning them to the card's foot is Mike's call, after his
     phone pass.
-  - The page behind the 2.4s scene isn't inert. Tab can move focus behind the layer, and arrow keys
+  - The page behind the 2.4s scene isn't inert (#146). Tab can move focus behind the layer, and arrow keys
     still reach a focused combat grip. Enter, Space and Esc are swallowed, so nothing activates.
-  - `luSummary()` cuts a feature's first sentence at an abbreviation ("e.g.", "p. 3"). It also strips
+  - `luSummary()` cuts a feature's first sentence at an abbreviation ("e.g.", "p. 3") (#146). It also strips
     every `_`, `*`, `#`, `>` and backtick, so "snake_case" loses its underscore.
-  - After a skip, focus lands on the HP step's "I rolled" box (`#luTyped`), not Roll for me. This is
+  - After a skip, focus lands on the HP step's "I rolled" box (`#luTyped`), not Roll for me (#146). This is
     `openModal()`'s app-wide first-field rule.
 
   → ledger L6928, and [Character building](../features/character-building.md)
@@ -263,75 +264,75 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 
 ### Likely bugs a player can hit
 
-- **No class carries its first-class armor, weapon or tool training** in any pack:
+- **No class carries its first-class armor, weapon or tool training** in any pack (#137):
   `convert_classes()` reads only `skills` from `startingProficiencies`, so a Bard's three Musical
   Instruments or a Fighter's armor training never reach the sheet. → ledger L3985, and
   [Converter](../data/converter.md)
-- **A subclass's own window shares the title of the window before it**, so "Fighter — Level 3" can
+- **A subclass's own window shares the title of the window before it** (#146), so "Fighter — Level 3" can
   appear twice in a row (class choices, then Battle Master's). → ledger L4086, and
   [Character building](../features/character-building.md)
-- **The glossary editor's Save replaces the whole entry**, so fields it doesn't show are dropped when
+- **The glossary editor's Save replaces the whole entry** (#136), so fields it doesn't show are dropped when
   a player edits an entry that has them. → ledger L4206
-- **The Gadgeteer's level-1 "Proficiencies" trait** still arrives on a multiclass add and lists saving
+- **The Gadgeteer's level-1 "Proficiencies" trait** (#149) still arrives on a multiclass add and lists saving
   throws as text, so it can read as if it grants them (Humblewood publishes no multiclass rules).
   → ledger L3886
-- **Glossary pop-ups show raw table anchors.** `openGlossView()` renders the entry with `esc()` only, so
+- **Glossary pop-ups show raw table anchors.** (#151) `openGlossView()` renders the entry with `esc()` only, so
   the `[Table: Carrying Capacity]`-style anchors in the 2024, Xanathar's and Tasha's glossaries appear
   as literal text. → [Rich text](../architecture/rich-text.md)
-- **Removing a source does not revert everything it seeded**: text appended to `proficiencies`, the
+- **Removing a source does not revert everything it seeded** (#131): text appended to `proficiencies`, the
   seeded `speed` and `size`, `spellAbility`, and the legacy `ancestry`/`background` strings. Because
   `applyRace()` fills speed and size only when they are empty, *swapping* ancestry keeps the old ones.
   This goes against the provenance invariant. → [Grants & provenance](../architecture/grants-and-provenance.md)
-- **No rules-update prompt for a character that autoloads at boot.** Since the IndexedDB move,
+- **No rules-update prompt for a character that autoloads at boot.** (#135) Since the IndexedDB move,
   `boot()` autoloads the character before `loadRulesCacheAsync()` has restored the packs, so
   `charNeedsUpdate()` sees none, and nothing asks again when they arrive. Ledger L702 describes the old
   order. → [Rules-update tool](../features/rules-update-tool.md)
-- **Editing a feature freezes a scaling use count.** `openFeatureForm()` saves `usesMax()` as a plain
+- **Editing a feature freezes a scaling use count.** (#132) `openFeatureForm()` saves `usesMax()` as a plain
   number, replacing a by-level or formula maximum. → [Features & traits](../features/features-and-traits.md)
-- **The Size box shows as "set by hand" whenever the ancestry has a size**, because `recompute()`
+- **The Size box shows as "set by hand" whenever the ancestry has a size** (#146), because `recompute()`
   highlights it whenever `character.size` is set and `applyRace()` fills that field. This
   contradicts L1711. → [Vitals & rest](../features/vitals-and-rest.md)
-- **Weapons granted outside the item finder arrive unequipped**, so their attack row is hidden.
+- **Weapons granted outside the item finder arrive unequipped** (#128), so their attack row is hidden.
   `grantItemByName()` and a new item from `openItemForm()` start with `equipped:false`. A brand-new
   character's starting weapons get equipped only on its first reload, by `migrateWeaponEquip()`,
   because `newCharacter()` skips `migrate()`. → [Attacks & damage](../features/attacks-and-damage.md)
-- **A spell attack row can disagree with the cast dialog.** `attackNumbers()` adds `attack`/`damage`
+- **A spell attack row can disagree with the cast dialog.** (#129) `attackNumbers()` adds `attack`/`damage`
   effects to spell rows, but the Spellcasting card and `promptSpellAttack()` don't. → [Attacks & damage](../features/attacks-and-damage.md)
-- **Deleting a weapon's attack row by hand doesn't stick.** The next item save (`syncItemAttack()`) or
+- **Deleting a weapon's attack row by hand doesn't stick.** (#145) The next item save (`syncItemAttack()`) or
   rules update (`updResyncAttack()`) recreates it. → [Attacks & damage](../features/attacks-and-damage.md)
-- **Manual AC has no control.** Nothing sets `character.ac`, although ledger L239 describes a manual
+- **Manual AC has no control.** (#130) Nothing sets `character.ac`, although ledger L239 describes a manual
   fallback. `armorAC()` adds shields on top of a manual AC and lets several shields stack, and the
   breakdown shows "Base AC 0" when the value is `null`. → [Armor & AC](../features/armor-and-ac.md)
-- **"Insert from rules pack" in the item form** copies no `category`, `type` or `src` stamp, so the item
+- **"Insert from rules pack" in the item form** (#147) copies no `category`, `type` or `src` stamp, so the item
   is filed by guesswork and the rules-update tool can match it only by name. → [Inventory](../features/inventory.md)
-- **Homebrew loaded alone reports "15 missing" for 14 entries**: Warlock is counted by both the
+- **Homebrew loaded alone reports "15 missing" for 14 entries** (#149): Warlock is counted by both the
   structural and the declared check. → [Homebrew](../data/homebrew.md)
-- **Changing the skin rewrites `character.system`** (coins, the ancestry list) with no warning, and the
+- **Changing the skin rewrites `character.system`** (#133) (coins, the ancestry list) with no warning, and the
   New-character hint "All loaded rules stay available either way" is false for ancestries, which
   `racesForCharacter()` filters by system. → [Theming & icons](../ui/theming-and-icons.md)
-- **Print includes hidden attacks**: `printSheet()` prints the attacks of unequipped weapons.
+- **Print includes hidden attacks** (#151): `printSheet()` prints the attacks of unequipped weapons.
   → [Attacks & damage](../features/attacks-and-damage.md)
 
 ### Keyboard access
 
-- Features group heads and inventory section heads fold on a click but can't be focused at all. The Attacks card's `data-atksec` headings look
+- Features group heads and inventory section heads fold on a click but can't be focused at all (#151). The Attacks card's `data-atksec` headings look
   clickable but have no handler. → [Sections & layout](../ui/sections-and-layout.md)
 
 ### Breaks of a non-negotiable
 
-- **Silent storage writes (constraint 2), narrowed.** Every character and library write now reports
+- **Silent storage writes (constraint 2), narrowed.** (#141) Every character and library write now reports
   a refused write (#81): autosave (`saveNow()`), `newCharacter()`, `finishImport()`,
   `migrateOldChar()`, `deleteCharacter()` and `setAutoload()`. `saveSettings()` still returns why it
   was refused, but most of its callers ignore that. → [Storage](../architecture/storage.md)
-- **A stale rules cache can win.** If a save falls back to localStorage after IndexedDB once held the
+- **A stale rules cache can win.** (#134) If a save falls back to localStorage after IndexedDB once held the
   pool, the old IndexedDB copy is never cleared, and `loadRulesCacheAsync()` lays it over the newer
   copy on the next boot. → [Storage](../architecture/storage.md)
-- **Google Fonts in the template (constraint 1).** `src/fieldbook.template.html` links
+- **Google Fonts in the template (constraint 1).** (#144) `src/fieldbook.template.html` links
   `fonts.googleapis.com`. It has been there since the first commit, with no recorded decision. Offline,
   the font stacks fall back to local serifs. → [Theming & icons](../ui/theming-and-icons.md)
 - `boot()` and `renderHome()` call `localStorage.getItem` outside a `try`, so a browser that throws on
-  storage access would stop boot **(unverified)**. → [Storage](../architecture/storage.md)
-- **Remove and Remove all still write a green status line synchronously.** When the rules cache
+  storage access would stop boot **(unverified)** (#142). → [Storage](../architecture/storage.md)
+- **Remove and Remove all still write a green status line synchronously.** (#143) When the rules cache
   can't be saved (no IndexedDB, quota), the refusal shows only in the red line above the pack list,
   not on the status line — a plain source's Fetch reports it in both, and an install in its toast. → ledger L3797, and
   [Storage](../architecture/storage.md)
@@ -339,63 +340,60 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 ### Latent: no shipped data triggers these yet
 
 - `openClassInfo()` assumes a pack class's `spellcasting` is a string and `savingThrows` a list;
-  a hand-written pack with other shapes would break the class info window. → ledger L4206
-- `requires` cannot name a subclass: `missingRequirements()` looks it up through `ruleById()`, whose
+  a hand-written pack with other shapes would break the class info window (#146). → ledger L4206
+- `requires` cannot name a subclass (#149): `missingRequirements()` looks it up through `ruleById()`, whose
   subclass key is `class|name`. → [Rules packs](../architecture/rules-packs.md)
-- `usesMax()` reads `byLevel` by total character level; `resolveResMax()` uses the class's own level.
+- `usesMax()` reads `byLevel` by total character level; `resolveResMax()` uses the class's own level (#146).
   → [Computed stats & effects](../architecture/computed-stats-and-effects.md)
-- `settings.autoload` is seeded and never read. `portraitImg` has no default in `blankChar()`.
+- `settings.autoload` is seeded and never read (#151). `portraitImg` has no default in `blankChar()`.
   `choicesSettled()` is defined and never called. Nothing binds `character.speed`, so base speed only
   ever comes from the ancestry. → [Character model](../architecture/character-model.md)
 
 
 ### Tooling
 
-- **Subclass tables are never read.** Subclasses carry `subclassTableGroups`, but `_class_tables()`
+- **Subclass tables are never read.** (#149) Subclasses carry `subclassTableGroups`, but `_class_tables()`
   reads `classTableGroups`. Nothing is lost today (the shipped subclass tables are spell columns it
   would skip, or already in prose), but a new one would be missed. → ledger L3761
-- **A table cell with both `roll` and `entry` prints only the roll** (the DMG, BMT and LLK deck
+- **A table cell with both `roll` and `entry` prints only the roll** (#149) (the DMG, BMT and LLK deck
   printings — no shipped pack). → ledger L3761
-- **Warlock Features keeps its "Spell Slots" and "Slot Level" columns**, although the converter's
-  decision is to skip spell-slot columns. Needs a call: Pact Magic is not the slot table the decision
-  was about. → ledger L3761, and [Converter](../data/converter.md)
-- **`convert.py --resources` doesn't work as documented.** The `classes` subcommand accepts it and
+- **`convert.py --resources` doesn't work as documented.** (#149) The `classes` subcommand accepts it and
   ignores it. `supplement` always reads `data/class-resources.json`, and silently gets nothing if the
   file is missing. → [Converter](../data/converter.md)
-- **`convert.py` never looks for its helper files beside itself**, although the data kit zip ships
+- **`convert.py` never looks for its helper files beside itself** (#149), although the data kit zip ships
   `overlay.json` and `class-resources.json` next to it. A player running the kit's `convert.py all`
   directly gets a warning and must pass both flags; `fbdata.py convert` and `build` pass them.
   → [Converter](../data/converter.md), [Data kit](../data/data-kit.md)
-- **The `SUPPLEMENTS` profiles don't carry `--avoid-table-names`**, so a bare `--book` re-run does not
+- **The `SUPPLEMENTS` profiles don't carry `--avoid-table-names`** (#149), so a bare `--book` re-run does not
   reproduce the table names (`dev.sh` passes the flag). → [Supplements](../data/supplements.md)
-- **The Humblewood extractor** (in the private repo): `--write-prose` drops a repeated heading missing
+- **The Humblewood extractor** (in the private repo, #149): `--write-prose` drops a repeated heading missing
   from `HEAD_ERRATA` silently, although ledger L904 calls that a hard error. Its "Th" ligature audit
   checks only core table cells. → the private repo's `docs/humblewood.md`
-- **The PDF suites skip locally even with `.venv` and the PDFs present**: `srd-verbatim`, and the
+- **The PDF suites skip locally even with `.venv` and the PDFs present** (#150): `srd-verbatim`, and the
   private repo's Humblewood suite inside `private-data`, use the `python3` on `PATH`, which lacks
   PyMuPDF. With `.venv/bin` on `PATH` they run (the Humblewood one reports 165 passed). `run.sh`'s
   closing "All N suites passed" also counts a skipped suite. → [Testing](../process/testing.md)
-- **`docs.js` still tolerates `DATA_VERSIONS` naming XPHB, Humblewood, XGE, TCE and Homebrew**
+- **`docs.js` still tolerates `DATA_VERSIONS` naming XPHB, Humblewood, XGE, TCE and Homebrew** (#150)
   (`LEFT_FOR_PRIVATE`). The next release retakes `DATA_VERSIONS` from the pruned registry, after
   which the tolerance is inert: delete it then. → ledger L5426, and [Testing](../process/testing.md)
-- **Tests the ledger says exist but don't:** unit tests for `usesMax()` and for the casting engine's
+- **Tests the ledger says exist but don't** (#150): unit tests for `usesMax()` and for the casting engine's
   `pickSlotLevel()` and `parseDurationSec()` (L16, L179); an explicit assertion of the Defense effect
   (L625); a plain-modal-after-emblem-modal regression check (L3289). `pbValue()` is untested too.
   (`autoSlots()`, `attackNumbers()`, Archery's effect and the Rage/Focus/Sorcery trackers are tested
   now.)
   → [Testing](../process/testing.md)
-- **Invisible bytes in tracked files:** `src/tests/tables.js` has four literal private-use
+- **Invisible bytes in tracked files** (#150): `src/tests/tables.js` has four literal private-use
   characters. → [Building & CI](../process/building-and-ci.md)
 
 ### Stale docs, comments and data notes
 
-- **ADR-001 "As built, part 2"** says JS fragments are joined with a newline. `build-html.js` uses no
+- **ADR-001 "As built, part 2"** (#152) says JS fragments are joined with a newline. `build-html.js` uses no
   separator; only the test harness joins with one. It also still describes the Tables-tab fragment,
   which was removed in #32.
-- **`docs/rules-schema.md`** (it ships):
+- **`docs/rules-schema.md`** (it ships, #152):
   - §6.11 still names a Tables tab, says ragged rows are padded (only the converter pads), and leaves
     `race` out of `ownerKind`.
-- **Code comments that no longer match:**
+- **Code comments that no longer match** (#152):
   - The `30-version.js` header says to bump `APP_VERSION` on every change, and the `UPDATE_REPO`
     comment describes the old badge.
   - `20-cards.css` says `.rt-view` is pre-wrap.
@@ -408,10 +406,10 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
   - `choiceFieldHTML()` calls its `option` checkbox branch dead code, but maneuvers, metamagic,
     invocations and infusions all use it.
   - `wire()` places `adjustHP()` in `65-resources.js`; it lives in `66-coins-hp.js`.
-- **Data `_note`s** in the private repo's Humblewood pack: its `races.json` says skill choices are
+- **Data `_note`s** in the private repo's Humblewood pack (#152): its `races.json` says skill choices are
   text-only, but five traits have real choosers, and its `subclasses.json` names the old
   `humblewood-spells.json`.
-- **Ledger claims now wrong:**
+- **Ledger claims now wrong** (#152):
   - L1426 says Humblewood data must not be hand-edited for sizes, but a hand-added `size` or `uses`
     survives re-extraction.
   - L2538's mid-sentence scan skips `spells.json`.
@@ -443,6 +441,9 @@ These look like missing features. Each was checked and is right as it stands.
   skill-choice path if it is ever wanted. → ledger L2581
 - **A Warlock losing its lower-level slots on level-up is the rule.** Pact Magic slots are all of the
   highest unlocked level. Every row matches the PHB table. → ledger L3169
+- **Warlock Features keeps its "Spell Slots" and "Slot Level" columns**, although the converter's
+  decision is to skip spell-slot columns: Pact Magic is not the slot table that decision was about.
+  Decided (Mike, 2026-10-30): the columns stay. → ledger L3761, and [Converter](../data/converter.md)
 - **The March 2024 Fizzar packet is excluded on purpose.** Nov 2024 supersedes it in full, and taking
   it would add a dead class. Do not add it. → ledger L1045
 - **A pack with no `dataVersion` gets no badge,** and neither does one newer than the app expects.
@@ -511,3 +512,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-29 — Added: a reload loses the End of combat window's typed XP; a loot trade's With can exceed its typing limit; a shot's Undo refuses once End combat has settled it. Undo recovery's home-joined gap stays unreachable, now because the window keeps the sheet inert. → ledger L7921, #105
 - 2026-10-29 — Removed: a loot trade's With can no longer exceed its typing limit; the End of combat window caps it at 60 characters. → ledger L8025, #105
 - 2026-10-30 — Corrected: the intro's stamp and the triage intro; multiclass prerequisites are stated, not checked; the old releases' assets are still attached, their deletion pending; the Deferred intro back under its heading, and private packs through a manifest added; the inventory log's size, existing Bards and pre-#66 multiclass sheets moved to Limitations; the Rules-tab keyboard sentence, three fixed stale comments and the now-tested functions dropped. Removed: the phone-width crowding (fixed by #57). The two "for Mike to confirm" decision sections archived to `src/docs/archive/1.9.0/` (pre-release 1.9.0, step 1).
+- 2026-10-30 — Issue numbers and Mike's decisions written back (pre-release 1.9.0, step 2).

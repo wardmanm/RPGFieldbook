@@ -435,30 +435,30 @@ The rules packs changed:
 - Tasha's: feats (10 of 15) and races.
 
 The three private packs are committed in the private repo as `999bf63`, which is **not pushed**. Push it
-right after public `main`. Each of the four packs needs a data release, which Mike cuts. Until then, a
+right after public `main`. Each of the four packs needs a data release, which Mike cuts (#138). Until then, a
 player's installed SRD pack has no `ability` fields and no Human feat choice. The step still lists the
 feats, but asks no +1 for them, because the SRD text doesn't carry the sentence the fallback reads. Human's
 Origin feat stays prose.
 
 ### Deferred minors
 
-- **Task 1:** `_title_feat_name()` doesn't capitalise after a hyphen ("Fey-touched"). It is dormant: no
+- **Task 1 (#149):** `_title_feat_name()` doesn't capitalise after a hyphen ("Fey-touched"). It is dormant: no
   species uses the named-feat branch.
-- **Task 3:** the dismiss guard doesn't count a feat pick. This predates #118, since the ASI selects
+- **Task 3 (#146):** the dismiss guard doesn't count a feat pick. This predates #118, since the ASI selects
   worked the same way.
-- **Task 3 → known issue:** `grantFeatDef()` doesn't grant a feat's fixed `skills`.
-- **Task 3 → known issue:** the ASI's "+1 to two" accepts the same ability twice.
-- **Task 4:** `sidLabel()` cuts a colon-named species in its "from …" label. This predates #118.
+- **Task 3 → known issue (#146):** `grantFeatDef()` doesn't grant a feat's fixed `skills`.
+- **Task 3 → known issue (#146):** the ASI's "+1 to two" accepts the same ability twice.
+- **Task 4 (#146):** `sidLabel()` cuts a colon-named species in its "from …" label. This predates #118.
 - **Task 5, for the final fix wave:** both fixed there (below).
   - Undo from the toast while a Level down dialog is open let `applyLevelDown()` apply an older record.
   - A malformed imported record (a feature's `grants` not an array) made level down throw.
-- **Task 5, deferred:**
+- **Task 5, deferred (#146):**
   - an error part-way through `doLevelUp()` can leave settle armed for the next unrelated edit;
   - the toast's Undo stays clickable after a change and answers "no longer available" (§5a says the
     action is gone);
   - subclass traits below the reached level, picked late, aren't in the record;
   - the dialog reads "max HP 0 → 1" when max HP is blank.
-- **Known issue, by §12:** the choices inside a feat (spells, tools, damage types, Resilient's saving
+- **Known issue, by §12 (#146):** the choices inside a feat (spells, tools, damage types, Resilient's saving
   throw, Weapon Master's mastery) stay by hand.
 
 ### The final fix wave
@@ -473,11 +473,11 @@ The final whole-branch review found five minors, all fixed (ledger "#118 final f
 - **M3.** A row's short line skips `Repeatable:` and `Prerequisite:` lines. Skilled now has none.
 - **M5.** A +1 that allows all six abilities reads "+1 any".
 - **M4.** A doc fix in `docs/rules-schema.md`. A species' fixed `feat` gets its `effects` but not its
-  `ability` increase, which is asked only when the feat is picked from a list.
+  `ability` increase, which is asked only when the feat is picked from a list (#146).
 
 ### Open for Mike
 
-- **The data releases** above, and pushing the private repo's `999bf63` after public `main`.
-- **A fixed species or background feat's `ability` increase** (M4) is not applied or asked. The
-  alternative is to route a fixed grant that has `ability` through the +1 step. It is dormant for
+- **The data releases** (#138) above, and pushing the private repo's `999bf63` after public `main`.
+- **A fixed species or background feat's `ability` increase** (M4, #146) is not applied or asked.
+  Decided (Mike, 2026-10-30): route a fixed grant that has `ability` through the +1 step. It is dormant for
   shipped data: no shipped species uses a fixed `feat`, and Origin feats carry no `ability`.

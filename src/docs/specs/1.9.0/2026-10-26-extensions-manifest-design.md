@@ -501,7 +501,7 @@ above, the rulings made while building, what was deferred, and what is still ope
 - **The plan has a `replace` outcome** (§5): a loaded pack with no readable version is replaced,
   ticked; a candidate with no readable version is "Replace anyway", unticked.
 - **The plan's rows name their source** ("from QA Workshop (qa.example)", "from a file"), as §5 step 3 asks.
-- **`checkForDataUpdate()` does not hand its pick to the official source** (§7). The official source
+- **`checkForDataUpdate()` does not hand its pick to the official source** (§7, #149). The official source
   lists the releases itself (`extOfficialUrl()`), so a boot makes three GitHub API calls (M10).
 - **`dataUpdateHint()` stays** (§7), on the home screen's loaded-data list. On the Extensions page
   the "v*A* · v*B* out" chip shows only where no source offers the pack.
@@ -525,20 +525,20 @@ above, the rulings made while building, what was deferred, and what is still ope
 
 ### Deferred minors
 
-- **M10:** three unauthenticated GitHub API calls per boot, against a limit of 60 an hour; memoise
+- **M10 (#149):** three unauthenticated GitHub API calls per boot, against a limit of 60 an hour; memoise
   the release list.
-- **N5:** simplifications (a shared newest-by-key helper; a size message keyed on the cap constant; a
+- **N5 (#100):** simplifications (a shared newest-by-key helper; a size message keyed on the cap constant; a
   redundant `p&&`; an unneeded `_dups` copy); `extVerify()` doesn't compare the byte length with the
   declared `size`; a page with no `fetch` throws synchronously.
-- **Task 3:** a plain source's URL is only checked to be non-empty (old relative sources by design;
+- **Task 3 (#100):** a plain source's URL is only checked to be non-empty (old relative sources by design;
   it reaches only `fetch()`).
-- **Task 1:** `release-files` deletes then writes, not atomically as `pack` does. (Its stale loop's
+- **Task 1 (#150):** `release-files` deletes then writes, not atomically as `pack` does. (Its stale loop's
   missing `isfile` guard was fixed with M9.)
-- **Task 2:** `./build.sh --release --no-zip` skips `releases/data/` (the release skill always builds
+- **Task 2 (#150):** `./build.sh --release --no-zip` skips `releases/data/` (the release skill always builds
   the zips, and CI catches a missing folder); `data-kit.py`'s leak test snapshots the shared temp
   folder, a narrow flake when two worktrees run the suite at once. (The exit handler's unguarded
   `fs.rmSync` was fixed under Ruling 18.)
-- **Final review M2–M7:** stored manifests aren't re-read through `extEntry()` on load (M2); every
+- **Final review M2–M7 (#149):** stored manifests aren't re-read through `extEntry()` on load (M2); every
   source's manifest lives in the settings key (M3); render cost grows with a manifest's size (M4);
   Manual install reads a chosen file whole before its size check (M5); the home screen doesn't point
   at Extensions (M6); switching the official source on checks every source (M7).
