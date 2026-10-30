@@ -8163,3 +8163,66 @@ on main, after the merge.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
 [overview](../wiki/overview.md), [decisions](../wiki/decisions.md), [index](../wiki/index.md).
+
+## Pre-release: the final fix wave (#127, 2026-10-29)
+
+The final review of `issue/127-pre-release` (`2d97fab..ed47481`) found one Important issue and
+confirmed the seven items held for this wave. All are fixed here, with tests. Nothing changes for
+players.
+
+1. **The backfill broke the private leak scan (Ruling 24).** `_private-data/tests/leak-allowlist.json`
+   names allowed passages by public repo path, and the backfill moves one of them
+   (`src/docs/plans/2026-10-09-private-split.md`), so the scan failed with five stale entries.
+   `move-docs.js`'s `SCAN` now holds that one file, read and written through the symlink, and
+   skipped without a word when `_private-data` is absent; a run that changes it ends "the private
+   repo changed too (… -> <real path>)". `/pre-release` step 1.5 commits it in the private repo
+   (`docs: pre-release X.Y.Z — paths moved`), never pushes it; `/release` pushes it right after
+   public main, and its preflight expects that one unpushed commit. Checked on scratch copies of
+   both repos: the move rewrites the allowlist and the private leak scan stays green. The docs
+   suite's link check leaves `_private-data/` out, since the one clone serves every checkout.
+2. **`move-docs.js` failing part way.** `planMoves()` now also checks, through `writeProblems()`,
+   that every file it rewrites and every folder it writes into or removes from is writable, so a
+   read-only folder refuses with nothing written, in the dry run too. `applyPlan()` writes every
+   new and rewritten file first and removes the moved sources last, and on a failure throws with
+   its progress; `main()` then prints how far it got, no stack trace and no summary, and the exact
+   commands that undo what it wrote (`undoCommands()`: `git checkout --` and `rm -f` naming each
+   file, the one whose write threw among them, the private repo through `git -C`), and runs none. Named files, never `.`: a
+   tree-wide checkout would also discard step 1's corrections, and `git clean` would delete the
+   untracked first-run record. The summary line prints only once every write has landed.
+3. **`release.js`'s record move.** `archiveRecord()` now removes the archive folder it made when the
+   rename fails, and `release.js` catches the failure: the cut stands (exit 0, the build carries
+   on), and it prints "the cut is written, but the pre-release record could not be filed" with the
+   exact `mkdir -p … && git mv …` (`archiveByHand()`; plain `mv` when git does not track the record).
+   The record stays at its old path, so a later gate reads the tree as it is.
+4. **The record CLI.** With no version it applies `release.js`'s rule: a heading that is not
+   `X.Y.Z` (`# Pre-release v1.9.0`) is refused. `--help`/`-h` print the usage and exit 0; an unknown
+   flag, a second argument, `--root` with no folder, or a version that is not `X.Y.Z` print it and
+   exit 2. A refusal reads "pre-release" once: the gate's words that already start so are printed
+   as they are, the rest get "pre-release: ".
+5. **The skill's filing block** is one block, to run as one Bash call (Claude Code keeps no shell
+   variables between calls): it checks `PRIORITY` is exactly `P0`, `P1` or `P2` and exits
+   otherwise; looks up the project's ids, the Priority option among them, before `gh issue create`,
+   and exits with nothing filed when one is missing; passes the body on stdin
+   (`--body-file - <<'BODY'`), so no body file exists; and says when an issue was filed but its
+   project fields were not. Run against a fake `gh` under bash and zsh: a lowercase `p0` and a
+   missing option file nothing, a P0 gets no fix-version label.
+6. **The archived roadmap page** is always `src/docs/archive/X.Y.Z/roadmap-X.Y.Z.md`, the name
+   `/release` reads.
+7. **"Main moved" ignores the status log (Ruling 25).** The moved-main pathspec gains
+   `':!.claude/status.md'`, and `move-docs.js` searches `.claude/status.md`.
+8. **RELEASING's undo (Ruling 25).** `/release` stages with `git add -A`, and `git checkout -- .`
+   restores from the index, so the undo is `git restore --staged . && git checkout -- .`, then the
+   `mv` the gate prints. Checked on a scratch copy against a real `./build.sh --release`, and in
+   `data-kit.py` against `release.js`.
+
+**Tests.** `pre-release.js` (102): the private allowlist rewritten through a symlink to a fake
+private repo, nothing else there touched, the message, and its absence; three read-only cases
+refused before writing; a write, an unlink, and a write that emptied its file failing part way
+(fault-injected into `main()`), whose printed undo commands, run as printed, leave `git status` clean; the CLI's arguments and words; a
+failed `archiveRecord()`. `data-kit.py`: the staged undo, and a record `release.js` cannot file.
+`docs.js`: the filing block is one block with its guards and stdin body, the roadmap name, the
+moved-main pathspec, and the private commit and push.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
+[decisions](../wiki/decisions.md), [private data](../wiki/data/private-data.md); [RELEASING](../RELEASING.md)
+§0 and §4; the spec's As built (Rulings 24, 25 and the wave's own, a–g).

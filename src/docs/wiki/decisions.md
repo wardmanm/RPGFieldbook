@@ -687,6 +687,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Out-of-date docs (#127)** — Candidates found, Mike confirms each; finished docs move to `src/docs/archive/<ver>/`, wrong ones are corrected in place. Nothing is deleted
 - **Filing issues (#127)** — Milestone = the release's (v1.9.0), label = the next fix version (`1.9.1`), added to project #3 (RPGFieldbook) with Status Backlog and a Priority Mike confirms: P2 minor bug / visual / tweak; P1 medium bug, functionality affected, workaround exists, no data at risk; P0 blocker
 - **What blocks a release (#127)** — Only an open P0 in the release's milestone. A P0 gets no next-version label; it stays in the milestone and holds step 4 open until it is closed
+- **Moved docs and the private repo (#127, Ruling 24)** — `move-docs.js` rewrites the private leak scan's allowlist too, when `_private-data` is linked; `/pre-release` commits it in the private repo, and `/release` pushes it right after public main, never before
 - **The QA checklist (#127)** — One file, rebuilt every run, by app area, "New in this release" plus a standing "Still works" list, then a device pass; Claude pre-drives what it can in the project Playwright browser before Mike tests
 
 ### [Testing](process/testing.md)

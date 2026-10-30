@@ -242,20 +242,23 @@ CLAUDE.md. No UNRELEASED bullet: nothing a player sees.
 
 ## As built
 
-Built 2026-10-29 in six tasks on `issue/127-pre-release` (`2d97fab..`), each reviewed. The code is the
-truth, and the wiki pages in §11 describe it (ledger "Pre-release (#127, 2026-10-29)"). This section
+Built 2026-10-29 in six tasks on `issue/127-pre-release` (`2d97fab..`), each reviewed, then a final
+fix wave after the final review. The code is the truth, and the wiki pages in §11 describe it (ledger
+"Pre-release (#127, 2026-10-29)" and "Pre-release: the final fix wave (#127, 2026-10-29)"). This section
 records where the code lives, every deviation and ruling with what it costs if it is wrong, and what
 was deferred.
 
 ### Where it lives
 
 - `scripts/move-docs.js`: step 1.3's script (`findRefs()`, `rewriteText()`, `checkMoves()`,
-  `planMoves()`, `applyPlan()`, `scanFiles()`, `SCAN`), with `--dry-run` and `--root`.
+  `planMoves()`, `writeProblems()`, `applyPlan()`, `undoCommands()`, `scanFiles()`, `SCAN`), with
+  `--dry-run` and `--root`.
 - `scripts/pre-release-record.js`: the record's parser and the gate's words (`parseRecord()`,
-  `recordProblem()`, `gateProblem()`, `archiveRecord()`, `STEPS`), and the CLI
-  `node scripts/pre-release-record.js [X.Y.Z]` that `/release`'s preflight runs.
+  `recordProblem()`, `gateProblem()`, `archiveRecord()`, `archiveByHand()`, `STEPS`), and the CLI
+  `node scripts/pre-release-record.js [X.Y.Z]` (and `--help`) that `/release`'s preflight runs.
 - The gate in `scripts/release.js`: after the version resolves and the "must be higher" check,
-  before anything is written; the record is filed last, after the notebook is emptied.
+  before anything is written; the record is filed last, after the notebook is emptied, and a failed
+  filing leaves the cut standing with the command that files it by hand.
 - The skill, `.claude/skills/pre-release/SKILL.md`; `/release`'s preflight in
   `.claude/skills/release/SKILL.md`.
 - The standing list, `src/docs/qa/smoke.md`.
@@ -272,7 +275,8 @@ was deferred.
   `data-kit.py`, beside the other `release.js` cases, on a scratch git checkout.
 - **`move-docs.js` searches more than §4.3 lists**: also `.github/workflows/`, `data/packs.json`,
   `scripts/`, `tools/data-kit/`, the suites, README.md, `build.sh`, `dev.sh` and `.githooks/`, since
-  paths to specs already sit there and decision 2 says "everywhere".
+  paths to specs already sit there and decision 2 says "everywhere"; and `.claude/status.md` and,
+  when linked, the private repo's `tests/leak-allowlist.json` (Rulings 24, 25).
 - **§6's check is scoped** to real claims: it skips `src/tests/` (invented fixtures); a relative link
   counts only outside fenced blocks, and only when it names `specs/`, `plans/` or `archive/` or a
   dated doc; an `X.Y.Z`, `YYYY` or `example-` path is an illustration. Without this, 23 false alarms.
@@ -339,6 +343,13 @@ Each with what it costs if it is wrong.
 23. Step 2's write-backs (issue numbers into `known-issues.md`, an As built, `.claude/status.md`) go
     into step 2's own commit straight after filing, so none is left uncommitted between sessions.
     Cost: none.
+24. `move-docs.js` also rewrites `_private-data/tests/leak-allowlist.json`, whose entries name public
+    files by repo path, when the private repo is linked (skipped without a word when it is not);
+    step 1 commits the private repo too, and it is pushed right after public main, never before.
+    Cost: none.
+25. `.claude/status.md` joins `move-docs.js`'s `SCAN`, and the moved-main check ignores commits that
+    touch only it; RELEASING's undo of a cut first unstages (`git restore --staged .`), since
+    `/release` stages with `git add -A`. Cost: none.
 
 The implementers' own, upheld: `pre-release-record.js` is mode 644 like every other script, run as
 `node scripts/…`; step 3 restores the build files before its commit; archiving never cuts a section
@@ -346,35 +357,54 @@ from the ledger; `/release` looks for the roadmap page under `archive/` too; a d
 records "Kept at `<sha>`" under the checklist's header as the next moved-main baseline (cost if
 wrong: one header line).
 
-### Pending: the final fix wave
+The final fix wave's own (implementer's), each with its cost if wrong:
 
-Not known issues: these are to be fixed before the branch merges.
-
-- `move-docs.js`: a write failing midway leaves a half-moved tree, a raw stack trace, and a success
-  summary already printed. Validate everything, then write, and report a failure honestly.
-- `release.js`: a failed record move after the cut leaves a half-cut tree and a raw stack trace.
-- The record CLI: with no version it reports complete for a heading like `# Pre-release vX.Y.Z`,
-  which `release.js` refuses; it takes `--help` as a version; its refusal reads
-  "pre-release: pre-release …".
-- The skill: the issue body file has no stated location (put it in a `mktemp` file outside the repo,
-  so `git add -A` cannot take it).
-- `/release` looks for one fixed archived roadmap name, while step 1's archive name is conditional.
-- The skill's `PICK` guard prints "stop" but does not stop, and `PRIORITY` is not checked before
-  `gh issue create`.
-- Routine `docs(repo): status` commits count as "main moved", so every resume across sessions asks
-  the rebuild question; the moved-main check should also ignore commits touching only
-  `.claude/status.md`.
+- a. `move-docs.js` checks, before writing, that every file it rewrites and every folder it writes
+  into or removes from is writable, so a read-only folder refuses with nothing written (the dry run
+  too); the part-way failure path is tested by fault injection into `main()`. Cost: none.
+- b. Its undo commands name each file (`git checkout -- <files>`, `rm -f <files>`, the private repo
+  through `git -C`), never `git checkout -- .` or `git clean`: a tree-wide checkout would also throw
+  away step 1's corrections, and a clean would delete the untracked first-run record. It prints
+  them and runs none. Cost if wrong: a long command line after a rare failure.
+- c. A record `release.js` cannot file leaves the cut standing (exit 0, so `build.sh` finishes the
+  build) and prints `mkdir -p … && git mv …` (plain `mv` when git does not track the record);
+  `archiveRecord()` removes the folder it made. `/release` runs that command before its commit.
+  Cost if wrong: one command by hand.
+- d. The CLI: `--help`/`-h` print the usage to stdout and exit 0; usage errors exit 2; a refusal
+  exits 1, printed as it is when it already starts "pre-release", else prefixed "pre-release: ".
+  Cost: none.
+- e. The filing block looks up every project id, the Priority option included, before
+  `gh issue create`, so a missing `project` scope now stops with nothing filed rather than filing
+  an issue with no priority; a project write failing after filing still reads "(priority not
+  set)". Cost if wrong: a scope refresh before the first filing.
+- f. The private commit is `docs: pre-release X.Y.Z — paths moved`, with no issue number (every
+  later pre-release makes it too), made with the step-1 commit after the suite; `/release`'s
+  preflight expects exactly that unpushed commit and Gate 2 pushes it after public main. Cost: none.
+- g. Only the allowlist is scanned in the private repo, never its packs; and the docs suite's link
+  check leaves `_private-data/` out, since the one clone serves every checkout and its own leak scan
+  catches a stale path. Cost if wrong: a stale allowlist path is caught by the private suite, not
+  the docs suite.
 
 ### Deferred minors
 
-- `move-docs.js`: the `SCAN` test does not cover Ruling 15's four roots; the test tree has no file
-  under `src/docs/archive/`; a backup like `foo.md.orig` is rewritten as `foo.md`; `LINK_TARGET`
+- `move-docs.js`: the test tree has no file under `src/docs/archive/` (the `SCAN` test covers
+  Ruling 15's four roots since the final fix wave); a backup like `foo.md.orig` is rewritten as `foo.md`; `LINK_TARGET`
   stops at a space or `(` even inside `<…>`. (The unused `RECORD_JS` constant is used since Task 3.)
 - The link check: its archive branch is only self-tested until `src/docs/archive/` exists.
 - The gate: no test for `--release patch` or `minor` succeeding, or for a CRLF record;
   `data-kit.py`'s undone-cut case extracts the `mv` command by splitting the refusal's wording.
 - `smoke.md`: the ancestry/background/class line and the trade window line each bundle several
   checks.
+- The skill (final review): step 1's "first `#<n>`" fallback picked the wrong issue for 4 of 43
+  docs (each still landed in the right version, and Mike confirms the list); the merge grep also
+  matches merges *into* an issue branch. Fix later: take a plan's issue from its `**Spec:**`, and
+  anchor the grep to `^[0-9a-f]+ Merge (branch ')?issue/<n>-`.
+- The link check (final review): it does not verify a moved doc's outgoing links (`../../wiki/…`),
+  which only `move-docs.js`'s recompute protects; the backfill broke none.
+- For Mike (final review): no `permissions.ask` rule guards the skill's `gh issue create|comment`,
+  `gh label create` or `gh project item-add|item-edit`; the skill's text is the only guard.
+- After the backfill, a worktree branched before it reports stale allowlist entries in its
+  `private-data` suite until it merges main (the one private clone serves every checkout).
 - The skill: the P0 check leaves comparing two lists to the reader; a resume with a missing or
   doubled record row is undefined (the gate refuses such a record anyway); step 1's rebuild trigger
   is narrower than the build's inputs; `--grep` also matches body lines; a second "Kept at" line

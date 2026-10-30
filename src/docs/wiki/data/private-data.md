@@ -281,6 +281,11 @@ imports the public archive and then the private one resolves a shared table name
 - **A stale allowlist entry fails the scan.** Rewording or deleting an allowlisted run (a
   `CLASS_BLURB` line, a correction's `find`) leaves its entry matching nothing, and the private
   suite goes red in the public run. Remove the entry in the private repo in the same change.
+  Moving an allowlisted file does the same, since an entry names its file by repo path: when
+  `/pre-release` files docs by version, `scripts/move-docs.js` rewrites the allowlist's paths
+  through `_private-data`, the skill commits that in the private repo, and `/release` pushes it
+  right after public main (#127, Ruling 24). A checkout branched before such a move reports stale
+  entries until it merges main, since every checkout shares the one private clone.
 - **A symlink is a file to git.** `.gitignore` names `_private-data` (and `.venv`) with no trailing
   slash: `_private-data/` matches only a directory, so the link would show as untracked and
   `git add -A` would commit it as a path that dangles in every other clone.
@@ -359,3 +364,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-16 — The first private release went out as `1.8.1-1`, after app 1.8.1, not `1.8.0-1`. → ledger L5990
 - 2026-10-19 — The private release has no approval gate (plan limit); the public ones do. → ledger L6226, #109
 - 2026-10-28 — Homebrew moves here with its licence and credit; the leak scan keeps reading the public `data/homebrew/` as free text where an older ref has it; the push order when both repos change. → ledger L7858, #125
+- 2026-10-29 — `move-docs.js` rewrites the leak allowlist's paths when `/pre-release` moves an allowlisted doc; committed here, pushed after public main. → ledger L8167, #127

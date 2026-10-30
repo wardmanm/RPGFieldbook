@@ -13,8 +13,9 @@ several branches at once is [WORKTREES](../../WORKTREES.md).
 `scripts/build-html.js`; `bundle()`, `cmd_bundle()`, `load_registry()`, `cmd_pack()`, `cmd_build()`,
 `validate_archive()`, `kit_file()` in `tools/data-kit/fbdata.py`; `scripts/gen-changelog.js`,
 `scripts/data-release.js`, `scripts/data-release-notes.js`; `scripts/move-docs.js` (`findRefs()`,
-`rewriteText()`, `planMoves()`, `scanFiles()`); `scripts/pre-release-record.js` (`recordProblem()`,
-`gateProblem()`, `archiveRecord()`); `.claude/skills/pre-release/`, `.claude/skills/release/`;
+`rewriteText()`, `planMoves()`, `writeProblems()`, `applyPlan()`, `undoCommands()`, `scanFiles()`);
+`scripts/pre-release-record.js` (`recordProblem()`, `gateProblem()`, `archiveRecord()`,
+`archiveByHand()`); `.claude/skills/pre-release/`, `.claude/skills/release/`;
 `APP_VERSION` and `DATA_VERSIONS` in `30-version.js` · **Data:** `data/packs.json`, `tools/data-kit/example-pack/example-pack.json` ·
 **Tests:** `docs.js` (zip allowlist vs README §9, README names the archive and the kit,
 `data/packs.json` against `DATA_VERSIONS`; every link to a spec, plan or archived doc resolves; the
@@ -257,17 +258,22 @@ record`). It works through five steps in strict order, and reopening one reopens
 **1. Docs** (shipped specs and plans filed into `specs/<ver>/` and `plans/<ver>/` by the first tag
 after their merge; only an open issue keeps a doc at the top level, and a closed one with no merge is
 dated by the commit that added it, for Mike to confirm; out-of-date docs archived to `archive/<ver>/`
-or corrected; every reference rewritten by `move-docs.js`, the artifact rebuilt and committed if a
-`src/js/` comment changed); **2. Outstanding issues** (loose ends from specs' As built, known issues
+or corrected; every reference rewritten by `move-docs.js`, which checks it can write everything
+first, removes moved sources last, and on a failure part way prints the commands that undo exactly
+what it wrote; when `_private-data` is linked it rewrites the private leak scan's allowlist too,
+committed in the private repo and pushed by `/release` right after public main, never before; the
+artifact rebuilt and committed if a `src/js/` comment changed); **2. Outstanding issues** (loose ends from specs' As built, known issues
 and the status log, filed in the `vX.Y.Z` milestone with the next fix version's label, Status
 Backlog and the Priority Mike confirms, and the numbers written back and committed straight after
-filing); **3. QA checklist** (`QA-CHECKLIST.md`, rebuilt from the release's notes, closed issues and
+filing, each issue by one block run as one Bash call, which checks the priority and looks up the
+project's ids before it files, and passes the body on stdin); **3. QA checklist** (`QA-CHECKLIST.md`, rebuilt from the release's notes, closed issues and
 specs plus `src/docs/qa/smoke.md`, pre-driven in the project Playwright browser); **4. QA bugs**
 (each failure filed; a P0 gets no fix-version label, and an open P0 in the milestone holds the
 step open); **5. Release notes** (the pending bullets read as a player would). Each step is
 recorded in the record and committed on main as `docs: pre-release X.Y.Z — step N`; it never
 pushes, and writes to GitHub (issues, labels, project fields, comments) only after Mike confirms.
-If main moves after step 3, a rerun asks whether to rebuild the checklist, carrying Mike's marks
+If main moves after step 3 (its own commits and `docs(repo): status` commits don't count), a rerun
+asks whether to rebuild the checklist, carrying Mike's marks
 forward on every unchanged line; declined, it records "Kept at `<sha>`" and counts from there.
 `/release`'s preflight then runs `node scripts/pre-release-record.js` and the open-P0 query (the
 same query `/pre-release` uses, which `docs.js` keeps identical) before proposing a version.
@@ -295,7 +301,8 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 - **No app release without a complete pre-release record.** `release.js` checks it offline: the
   record names exactly the resolved version, has one row per step, and every step is `done`; a
   version whose tag exists or whose archived record git tracks was cut before. `/release`'s preflight
-  adds the open-P0 check. Data releases are not gated.
+  adds the open-P0 check. Data releases are not gated. A record that cannot be filed after the cut
+  does not stop it: `release.js` says so and prints the `git mv` that files it by hand.
 - **The zip is an allowlist, and a zip that fails the guard is deleted.** Dev material goes under
   `src/` (banned wholesale by `^src/`) or at the repo root, never in `docs/`. A new player-facing doc
   means editing the `docs/` regex in `build.sh` **and** README §9. `docs.js` fails if any `docs/*.md`
@@ -419,3 +426,4 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 - 2026-10-19 — Releases wait for Mike: `verify` → `publish` jobs, `publish` in the `release` environment; Claude Code ask rules on the release commands. → ledger L6226, #109
 - 2026-10-26 — Both release workflows check `releases/data/` against the build; `./build.sh --release` writes it. → ledger L7428, #102
 - 2026-10-29 — `/pre-release`: `release.js` refuses an app release without a complete pre-release record and files it under `src/docs/archive/<version>/`; `move-docs.js`; `dev.sh`'s checklist and `build.sh`'s closing line name it. → ledger L8070, #127
+- 2026-10-29 — The final fix wave: `move-docs.js` rewrites the private leak allowlist and the status log, checks every write first and prints exact undo commands on a failure; a record `release.js` cannot file leaves the cut standing; the record CLI's arguments; one filing block; the status log no longer counts as "main moved". → ledger L8167, #127
