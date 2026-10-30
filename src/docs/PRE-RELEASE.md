@@ -5,7 +5,7 @@ Started: 2026-10-30 · App was 1.8.1
 |---|---|---|---|
 | 1. Docs | done | 2026-10-30 | 22 specs and 21 plans filed by version, roadmap 1.9.0 archived; 3 sections archived, 16 corrections; 426 references rewritten in 75 files |
 | 2. Outstanding issues | done | 2026-10-30 | 121 rows: 25 filed (#128 to #152; 17 P1, 8 grouped P2), 2 noted on #100, 7 decided by Mike and skipped; numbers written back |
-| 3. QA checklist | open | | |
+| 3. QA checklist | done | 2026-10-30 | 217 lines plus an 18-line device pass; Claude drove 192 (188 passed, 2 failed, 2 lines possibly wrong), 25 not driven; 8 more probable bugs found off the list |
 | 4. QA bugs | open | | |
 | 5. Release notes | open | | |
 
