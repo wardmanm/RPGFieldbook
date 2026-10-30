@@ -6,11 +6,74 @@ How a version gets from your working copy to a player's download. Dev-only — t
 Publishing is automated. **You never upload assets by hand.** Pushing a tag is the whole trigger,
 and nothing goes public until Mike approves the run's `publish` job in GitHub (§2, the approval gate).
 
-**For Claude: Mike starts a release by typing `/release`** — the `release` skill (`.claude/skills/release/`) runs the steps below with his two confirmations, the exact version and "publish" (#109).
+**For Claude: Mike starts a release by typing `/release`** — the `release` skill (`.claude/skills/release/`) runs the steps below with his two confirmations, the exact version and "publish" (#109). An app release needs **`/pre-release X.Y.Z`** finished first (§0, #127).
 
 **`./dev.sh` drives all of this from a menu** — build, tests, cut a release, cut a data release, and a
 condensed copy of the checklist — so you shouldn't need this file for the routine path. It's here for the detail:
 what each guard refuses and why, and how to recover.
+
+---
+
+## 0. Before you cut: `/pre-release`
+
+An app release starts with **`/pre-release X.Y.Z`** in Claude Code (#127; the `pre-release` skill,
+`.claude/skills/pre-release/`). It runs on **main** and refuses on any other branch: it names the
+branch and stops, and never switches (`/release`, by contrast, switches to main itself). It also
+refuses a dirty tree, except for its own two files, `src/docs/PRE-RELEASE.md` and
+`src/docs/QA-CHECKLIST.md`, which it commits first on a resume (`docs: pre-release X.Y.Z — record`).
+It works through five steps, in strict order, each confirmed by Mike and committed on main as
+`docs: pre-release X.Y.Z — step N`, never pushed (the commits go up with the release), and records
+them in `src/docs/PRE-RELEASE.md`:
+
+1. **Docs.** Shipped specs and plans move into `specs/<ver>/` and `plans/<ver>/`, by the first
+   release tag after the merge that shipped them (a doc whose issue is still open stays at the top
+   level; one with no merge found is dated by the commit that added it, for Mike to confirm);
+   out-of-date docs are archived to `archive/<ver>/` or corrected in place; `scripts/move-docs.js`
+   rewrites every link, the ledger line for line. When `_private-data` is linked it also rewrites
+   the private leak scan's allowlist, which names public files by path; that change is committed in
+   the private repo (`docs: pre-release X.Y.Z — paths moved`) and pushed right after public main,
+   never before. `move-docs.js` checks it can write every file first, removes moved sources last,
+   and if a write still fails part way, prints the exact commands that undo what it wrote.
+2. **Outstanding issues.** Loose ends from the release's specs, known issues and the status log are
+   filed (milestone `vX.Y.Z`, the next fix version's label, project #3 with Status Backlog and a
+   Priority), merged into an existing issue, or skipped. Nothing reaches GitHub before Mike marks
+   every row, and the issue numbers written back into their sources are committed straight away.
+3. **QA checklist.** `src/docs/QA-CHECKLIST.md`, rebuilt from this release's notes, issues and
+   specs plus the standing list `src/docs/qa/smoke.md`, and pre-driven by Claude in the browser.
+4. **QA bugs.** Mike's pass; every failure filed. A P0 is filed in the milestone with no fix-version
+   label, and an open P0 holds this step open.
+5. **Release notes.** The pending bullets, read as a player would, rewritten where Mike agrees.
+
+Reopening a step reopens every later step. If main moves after step 3 (a merged P0 fix, say; the
+pre-release's own commits and a `docs(repo): status` commit don't count), a rerun lists what arrived and asks whether to rebuild the checklist, which keeps Mike's marks on
+every unchanged line and reopens steps 3 to 5; declined, the checklist records "Kept at `<sha>`"
+and the next rerun counts from there. With every step done, a rerun changes nothing and says to
+run `/release X.Y.Z`.
+
+**The gate.** `./build.sh --release` (in `scripts/release.js`) refuses, before it writes anything,
+unless the record names exactly the version being cut (the resolved one: `patch` becomes a number
+first), has exactly one row per step, and all five are `done`; the message names the first open
+step. It also refuses a version cut before: its tag `vX.Y.Z` exists, or git tracks
+`src/docs/archive/X.Y.Z/PRE-RELEASE.md`. It works offline, so it does not ask GitHub about P0s:
+`/release`'s preflight does. `node scripts/pre-release-record.js X.Y.Z` prints what the gate would
+say. After the cut, `release.js` moves the record to `src/docs/archive/X.Y.Z/PRE-RELEASE.md`, and
+the release commit's `git add -A` takes the move. If that move fails, the cut stands: `release.js`
+says so and prints the `mkdir -p … && git mv …` that files the record by hand, to run before the
+release commit. Data and private data releases are not gated.
+
+**Undoing a cut you haven't committed.** `/release` stages the cut with `git add -A`, and
+`git checkout -- .` restores from what is staged, so unstage first. Together they put back every
+tracked file the cut changed (the committed record at its old path among them), but leave the
+record's new copy, `src/docs/archive/X.Y.Z/PRE-RELEASE.md`, which git no longer tracks. Move it back
+before cutting again:
+
+```bash
+git restore --staged . && git checkout -- .
+mv src/docs/archive/X.Y.Z/PRE-RELEASE.md src/docs/PRE-RELEASE.md
+```
+
+Forget the `mv` and the next `--release X.Y.Z` refuses, says the cut was undone, and prints that
+command. It never moves the record itself.
 
 ---
 
@@ -28,6 +91,8 @@ Every field is a release precondition: the version, the branch, how many bullets
 because that state publishes nothing and produces no error anywhere.
 
 ### The steps
+
+**0. `/pre-release X.Y.Z`** (§0). `--release` refuses until it is complete.
 
 **1. Write the notes as you work.** One `- ` bullet per player-visible change in
 `src/docs/UNRELEASED.md`. The header counts them; `--release` refuses if there are none.
@@ -81,6 +146,7 @@ badge starts pointing at it.
 `dev.sh` only shells out to `build.sh` and `scripts/*`, so the manual path is the same thing:
 
 ```bash
+node scripts/pre-release-record.js 1.3.1   # §0: the record is complete
 ./src/tests/run.sh
 git status --porcelain
 ./build.sh --release patch          # or: minor | major | 2.0.0
@@ -96,6 +162,8 @@ git push --follow-tags
 versions, digests and `release` in `data/packs.json` with `data-release.js` — **never hand-edit any
 of them.** It:
 
+- refuses unless the pre-release record is complete for exactly the new version (§0), before it
+  writes anything,
 - bumps `APP_VERSION` in `src/js/30-version.js`,
 - runs `tools/data-kit/fbdata.py versions --bump <new version>`, which gives the new version **only
   to the packs whose content changed since their last release** (by content digest, so
@@ -104,6 +172,7 @@ of them.** It:
 - snapshots `DATA_VERSIONS` from `data/packs.json`: the versions this build ships with,
 - folds every pending bullet from `src/docs/UNRELEASED.md` into a new `CHANGELOG` entry,
 - empties the notebook,
+- moves the record to `src/docs/archive/<version>/PRE-RELEASE.md`,
 - and then `build.sh` rebuilds, revalidates and re-zips, the rules-data archive included,
 - and writes **`releases/data/`** (#102): `fbdata.py release-files` puts the format-2 manifest
   `fieldbook-data.json` and every public pack there, flat, and validates them `--public`.
@@ -115,8 +184,9 @@ Extensions). `git add -A` takes it. Only a real release writes it: a `+dev` buil
 neither does `./build.sh --release --no-zip`, because it runs in the zip step (CI refuses a tag
 without it).
 
-It refuses to release with an empty notebook, and refuses a version that isn't higher than the
-current one (that would break the in-app update check). **A release needs `python3`** (`python`
+It refuses to release with an empty notebook, without a complete pre-release record for that
+version, or for a version cut before (§0), and refuses a version that isn't higher than the current
+one (that would break the in-app update check). **A release needs `python3`** (`python`
 will do): without it, `release.js` refuses before writing anything. `src/js/30-version.js` is
 checked for a `DATA_VERSIONS` line *before* the registry bump runs, so a failure there — or the
 registry bump itself failing — leaves `data/packs.json` and `30-version.js` both untouched.
@@ -408,6 +478,9 @@ git switch -c release/1.2.x v1.2.1
 ---
 
 ## 4. Fixing a release
+
+**A cut not yet committed.** Undo it with `git restore --staged . && git checkout -- .` and put the
+pre-release record back with the `mv` in §0; `release.js` names that command if you forget.
 
 **An upload failed but the tag is fine.** Re-run without cutting a new version:
 Actions → Release → *Run workflow* → enter the tag. It rebuilds and, once approved, re-uploads with

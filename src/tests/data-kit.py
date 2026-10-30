@@ -322,7 +322,8 @@ def checkout(app="1.8.0", release="1.8.0"):
     """a scratch repo laid out like this one: the scripts, the kit, 30-version.js,
     the notebook and data/, digests seeded, everything committed"""
     d = scratch()
-    for rel in ("scripts/data-release.js", "scripts/data-release-notes.js", "scripts/release.js", "tools/data-kit/fbdata.py"):
+    for rel in ("scripts/data-release.js", "scripts/data-release-notes.js", "scripts/release.js",
+                "scripts/pre-release-record.js", "tools/data-kit/fbdata.py"):
         os.makedirs(os.path.dirname(os.path.join(d, rel)), exist_ok=True)
         shutil.copy(os.path.join(ROOT, rel), os.path.join(d, rel))
     write(d, "src/js/30-version.js", raw='const APP_VERSION="%s";\nconst DATA_VERSIONS={"Alpha":"1.8.0","Beta":"1.7.0"};\n'
@@ -340,6 +341,23 @@ def checkout(app="1.8.0", release="1.8.0"):
     git(d, "add", "-A")
     git(d, "commit", "-qm", "start")
     return d
+
+
+PRE_RELEASE_STEPS = ["Docs", "Outstanding issues", "QA checklist", "QA bugs", "Release notes"]
+
+
+def prerelease(d, ver, open_steps=()):
+    """a pre-release record in the spec's format (#127, spec §3): every step done but open_steps"""
+    rows = ["| %d. %s | %s |" % (i + 1, s, "open | |" if i + 1 in open_steps else "done | 2026-10-30 | ok")
+            for i, s in enumerate(PRE_RELEASE_STEPS)]
+    write(d, "src/docs/PRE-RELEASE.md", raw="# Pre-release %s\nStarted: 2026-10-30 · App was 1.8.0\n\n"
+          "| Step | State | Done | Summary |\n|---|---|---|---|\n%s\n" % (ver, "\n".join(rows)))
+
+
+def untracked_all(d):
+    """git status --porcelain, every untracked file listed (#127 ruling 12: a refusal
+    must leave no new file either, which git diff --stat cannot see)"""
+    return git(d, "status", "--porcelain", "--untracked-files=all").stdout.strip()
 
 
 d = checkout()
@@ -388,8 +406,130 @@ r = node(d, "scripts/data-release.js")
 ck("data-release refuses an app older than 1.8.0", r.returncode == 1 and "1.8.0 or later" in r.stderr, r.stderr)
 shutil.rmtree(d)
 
+# ---------- #127: release.js refuses without a complete pre-release record (spec §5)
+d = checkout()
+rec_path = os.path.join(d, "src/docs/PRE-RELEASE.md")
+for name, rec, level, msg in [
+        ("no record", None, "1.9.0",
+         "no pre-release record for 1.9.0 (src/docs/PRE-RELEASE.md does not exist). Run /pre-release 1.9.0 first."),
+        ("a record for another version", ("1.9.1", ()), "1.9.0",
+         "src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /pre-release 1.9.0 first."),
+        ("an open step, naming the first", ("1.9.0", (3, 5)), "1.9.0",
+         "pre-release 1.9.0 is not finished: step 3. QA checklist is open. Run /pre-release 1.9.0 to finish it."),
+        ("a level that resolves to another version", ("1.9.0", ()), "patch",
+         "src/docs/PRE-RELEASE.md is for 1.9.0, not 1.8.1. Run /pre-release 1.8.1 first.")]:
+    if os.path.exists(rec_path):
+        os.remove(rec_path)
+    if rec:
+        prerelease(d, *rec)
+    r = node(d, "scripts/release.js", level)
+    ck("#127 release.js refuses %s" % name, r.returncode == 1 and ("release: " + msg) in r.stderr, r.stderr)
+    status = untracked_all(d)
+    ck("#127 ...and writes nothing (%s)" % name,
+       git(d, "diff", "--stat").stdout.strip() == "" and os.path.exists(rec_path) == bool(rec)
+       and status == ("?? src/docs/PRE-RELEASE.md" if rec else ""), (git(d, "diff", "--stat").stdout, status))
+prerelease(d, "1.9.0")
+# #127 ruling 17: "cut before" is an archived record git tracks, or the tag v<version>
+write(d, os.path.join("src/docs/archive", "1.9.0", "PRE-RELEASE.md"), raw="# Pre-release 1.9.0\n")
+git(d, "add", "src/docs/archive")
+git(d, "commit", "-qm", "an earlier cut of 1.9.0")
+before = untracked_all(d)
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 release.js refuses a version whose archived record is tracked: cut before",
+   r.returncode == 1 and "release: src/docs/archive/1.9.0/PRE-RELEASE.md already exists: 1.9.0 has been cut before." in r.stderr
+   and git(d, "diff", "--stat").stdout.strip() == "" and untracked_all(d) == before, (r.stderr, before, untracked_all(d)))
+shutil.rmtree(d)
+d = checkout()
+prerelease(d, "1.9.0")
+git(d, "tag", "v1.9.0")
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 release.js refuses a version whose tag exists: cut before",
+   r.returncode == 1 and "release: the tag v1.9.0 already exists: 1.9.0 has been cut before." in r.stderr
+   and git(d, "diff", "--stat").stdout.strip() == "" and untracked_all(d) == "?? src/docs/PRE-RELEASE.md", (r.stderr, untracked_all(d)))
+shutil.rmtree(d)
+
+# ---------- #127 ruling 17: a cut undone with `git checkout -- .` (the record committed, as /pre-release does)
+d = checkout()
+prerelease(d, "1.9.0")
+git(d, "add", "-A")
+git(d, "commit", "-qm", "pre-release 1.9.0")
+r = node(d, "scripts/release.js", "1.9.0")
+first = r.returncode
+git(d, "checkout", "--", ".")
+before = untracked_all(d)
+r = node(d, "scripts/release.js", "1.9.0")
+mv = "mv src/docs/archive/1.9.0/PRE-RELEASE.md src/docs/PRE-RELEASE.md"
+ck("#127 an undone cut is refused as undone, not 'cut before', naming the command that puts the record back",
+   first == 0 and before == "?? src/docs/archive/1.9.0/PRE-RELEASE.md" and r.returncode == 1
+   and "release: src/docs/archive/1.9.0/PRE-RELEASE.md is left from a cut of 1.9.0 that was undone" in r.stderr
+   and r.stderr.rstrip().endswith(mv) and "cut before" not in r.stderr, (first, before, r.stderr))
+ck("#127 ...writes nothing, and moves nothing itself",
+   git(d, "diff", "--stat").stdout.strip() == "" and untracked_all(d) == before, (git(d, "diff", "--stat").stdout, untracked_all(d)))
+if r.stderr.rstrip().endswith(mv):  # run the command exactly as the refusal gave it
+    subprocess.run(r.stderr.rstrip().rsplit(": ", 1)[1], shell=True, cwd=d)
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 ...and after that command, the cut succeeds and files the record again",
+   r.returncode == 0 and not os.path.exists(os.path.join(d, "src/docs/PRE-RELEASE.md"))
+   and os.path.exists(os.path.join(d, "src/docs/archive/1.9.0/PRE-RELEASE.md"))
+   and 'APP_VERSION="1.9.0"' in open(os.path.join(d, "src/js/30-version.js"), encoding="utf-8").read(), r.stderr)
+shutil.rmtree(d)
+
+# ---------- #127 ruling 25: RELEASING's undo once the cut is staged. /release stages
+# with `git add -A`, and `git checkout -- .` restores from the index, so the undo
+# unstages first: `git restore --staged . && git checkout -- .`, then the mv the gate prints
+d = checkout()
+prerelease(d, "1.9.0")
+git(d, "add", "-A")
+git(d, "commit", "-qm", "pre-release 1.9.0")
+r = node(d, "scripts/release.js", "1.9.0")
+first = r.returncode
+git(d, "add", "-A")
+staged = git(d, "diff", "--cached", "--name-status").stdout
+git(d, "restore", "--staged", ".")
+git(d, "checkout", "--", ".")
+undone = untracked_all(d)
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 RELEASING's undo of a staged cut puts every tracked file back and leaves only the archived copy",
+   first == 0 and "src/docs/archive/1.9.0/PRE-RELEASE.md" in staged and undone == "?? src/docs/archive/1.9.0/PRE-RELEASE.md"
+   and git(d, "diff", "--stat").stdout.strip() == "" and r.returncode == 1 and r.stderr.rstrip().endswith(mv), (first, staged, undone, r.stderr))
+subprocess.run(mv, shell=True, cwd=d)
+r = node(d, "scripts/release.js", "1.9.0")
+ck("#127 ...and after the mv the gate prints, the cut goes through again", r.returncode == 0, r.stderr)
+shutil.rmtree(d)
+
+# ---------- #127 final fix wave: the record cannot be filed after the cut. The cut is
+# written, so release.js carries on (exit 0) with no stack trace, names the exact
+# command that files the record by hand, and leaves no empty archive folder
+if not (hasattr(os, "geteuid") and os.geteuid() == 0):  # chmod means nothing to root
+    d = checkout()
+    prerelease(d, "1.9.0")
+    git(d, "add", "-A")
+    git(d, "commit", "-qm", "pre-release 1.9.0")
+    os.makedirs(os.path.join(d, "src/docs/archive"))
+    os.chmod(os.path.join(d, "src/docs"), 0o555)  # the record cannot leave src/docs
+    r = node(d, "scripts/release.js", "1.9.0")
+    os.chmod(os.path.join(d, "src/docs"), 0o755)
+    by_hand = "mkdir -p src/docs/archive/1.9.0 && git mv src/docs/PRE-RELEASE.md src/docs/archive/1.9.0/PRE-RELEASE.md"
+    ck("#127 release.js: a record it cannot file leaves the cut done, says so, and names the git mv, with no stack trace",
+       r.returncode == 0 and "release: the cut is written, but the pre-release record could not be filed" in r.stderr
+       and ("release: file it by hand before the release commit: " + by_hand + "\n") in r.stderr and "    at " not in r.stderr
+       and 'APP_VERSION="1.9.0"' in open(os.path.join(d, "src/js/30-version.js"), encoding="utf-8").read(), r.stderr)
+    ck("#127 ...the record stays where it was, and no empty archive folder is left",
+       os.path.exists(os.path.join(d, "src/docs/PRE-RELEASE.md")) and not os.path.exists(os.path.join(d, "src/docs/archive/1.9.0")),
+       untracked_all(d))
+    printed = [l.split("release commit: ", 1)[1] for l in r.stderr.splitlines() if l.startswith("release: file it by hand")]
+    if printed:  # run the command exactly as release.js printed it
+        subprocess.run(printed[0], shell=True, cwd=d)
+    ck("#127 ...and that command, run as printed, files it as a cut would",
+       not os.path.exists(os.path.join(d, "src/docs/PRE-RELEASE.md"))
+       and "R  src/docs/PRE-RELEASE.md -> src/docs/archive/1.9.0/PRE-RELEASE.md" in git(d, "status", "--porcelain").stdout,
+       git(d, "status", "--porcelain").stdout)
+    shutil.rmtree(d)
 d = checkout()
 write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 6}]})
+prerelease(d, "1.9.0")
+with open(os.path.join(d, "src/docs/PRE-RELEASE.md"), encoding="utf-8") as f:
+    record_text = f.read()
 r = node(d, "scripts/release.js", "1.9.0")
 reg = read_json(d, "data/packs.json")
 with open(os.path.join(d, "src/js/30-version.js"), encoding="utf-8") as f:
@@ -399,6 +539,12 @@ ck("release.js bumps the changed pack to the new app version",
    (r.stderr, reg))
 ck("...snapshots DATA_VERSIONS from the registry", 'const DATA_VERSIONS={"Alpha":"1.9.0","Beta":"1.7.0"}' in v, v[:200])
 ck("...and still bumps APP_VERSION", 'APP_VERSION="1.9.0"' in v)
+archived = os.path.join(d, "src/docs/archive", "1.9.0", "PRE-RELEASE.md")
+ck("#127 ...files the pre-release record under src/docs/archive/<version>/, bytes intact",
+   not os.path.exists(os.path.join(d, "src/docs/PRE-RELEASE.md")) and os.path.exists(archived)
+   and open(archived, encoding="utf-8").read() == record_text, r.stderr)
+ck("#127 ...and commits and tags nothing",
+   git(d, "rev-list", "--count", "HEAD").stdout.strip() == "1" and git(d, "tag", "-l").stdout.strip() == "")
 shutil.rmtree(d)
 
 d = checkout()

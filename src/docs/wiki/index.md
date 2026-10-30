@@ -65,7 +65,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 
 ## Process
 
-- [Building & CI](process/building-and-ci.md) — `build.sh`, the zip allowlist, CI, the git hooks
+- [Building & CI](process/building-and-ci.md) — `build.sh`, the zip allowlist, CI, the git hooks, `/pre-release` and the release gate
 - [Testing](process/testing.md) — the suites, the harness, and why a green check is not proof
 - [Screenshot QA](process/screenshot-qa.md) — the Playwright MCP launcher, its flags, and the traps
 
@@ -77,9 +77,10 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 
 ## Elsewhere (indexed in place, not moved)
 
-- [RELEASING](../RELEASING.md) — cutting and publishing a release, what CI refuses, rollback
+- [RELEASING](../RELEASING.md) — `/pre-release` first, then cutting and publishing a release, what CI refuses, rollback
 - [WORKTREES](../WORKTREES.md) — several issues at once in parallel worktrees
 - [ADR-001](../ADR-001-source-split.md) — why the source is split and still ships as one file
 - [UNRELEASED](../UNRELEASED.md) — the changelog notebook for the next release
-- [Specs](../specs/) and [plans](../plans/) — one design spec per feature, and the plans that execute them
+- [Specs](../specs/) and [plans](../plans/) — one design spec per feature, and the plans that execute them, filed by version once shipped
+- [Smoke list](../qa/smoke.md) — the standing "Still works" lines each release's QA checklist copies
 - [rules-schema](../../../docs/rules-schema.md) and [README-converter](../../../docs/README-converter.md) — player-facing, ship in the zip

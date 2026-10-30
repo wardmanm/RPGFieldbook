@@ -9,6 +9,11 @@
  *
  *   node scripts/release.js patch|minor|major|X.Y.Z
  *
+ * An app release needs `/pre-release <version>` finished first (#127): it
+ * refuses unless src/docs/PRE-RELEASE.md names exactly the new version with
+ * every step done, and after the cut it files that record under
+ * src/docs/archive/<version>/ (scripts/pre-release-record.js).
+ *
  * Deliberately does nothing else — no git commit, no tag, no push. Cutting the
  * GitHub Release stays a human step (see CLAUDE.md "Publishing / updates").
  */
@@ -85,6 +90,16 @@ const cmp = (a, b) => {
 };
 if (cmp(next, cur) <= 0) die(`refusing to go from ${cur} to ${next} — the new version must be higher`);
 
+/* ---------------- the pre-release record (#127) ----------------
+   An app release needs `/pre-release <next>` finished first: the record
+   src/docs/PRE-RELEASE.md naming exactly `next`, every step done (spec
+   2026-10-29-pre-release-design.md §5). Checked here, after `next` is known and
+   before anything is written. Offline on purpose: the open-P0 check against
+   GitHub is the release skill's, not this script's. */
+const preRelease = require("./pre-release-record.js");
+const gate = preRelease.gateProblem(ROOT, next);
+if (gate) die(gate);
+
 /* ---------------- write the CHANGELOG entry ---------------- */
 
 // Local date, not UTC: the entry should read as the day the owner cut it.
@@ -145,6 +160,21 @@ console.error(bumped.length
 
 const keep = raw.slice(0, raw.indexOf("\n## Pending"));
 fs.writeFileSync(NOTEBOOK, keep + "\n## Pending\n\n_Nothing yet._\n");
+
+/* ---------------- file the pre-release record (#127, spec §3) ----------------
+   Last, so a refusal above leaves it where /pre-release can resume it. The cut is
+   written by now, so a failed move does not undo or stop it (build.sh runs under
+   `set -e`, and stopping here would leave a half-built release): it says so, with
+   the exact command that files the record by hand, and the cut carries on.
+   archiveRecord() leaves no empty archive folder behind, and the record stays at
+   its old path, so a later gate reads the tree as it is: the tag decides "cut
+   before" once the release is tagged (#127 final fix wave). */
+try {
+  console.error(`    pre-release record filed as ${preRelease.archiveRecord(ROOT, next)}`);
+} catch (e) {
+  console.error(`release: the cut is written, but the pre-release record could not be filed (${e.message}).\n` +
+    `release: file it by hand before the release commit: ${preRelease.archiveByHand(ROOT, next)}`);
+}
 
 console.error(`    v${cur} -> v${next} (${date}), ${notes.length} note${notes.length === 1 ? "" : "s"}`);
 process.stdout.write(next);

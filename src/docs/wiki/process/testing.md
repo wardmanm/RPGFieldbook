@@ -1,6 +1,6 @@
 # Testing
 
-`./src/tests/run.sh` runs ten suites: plain Node and Python asserting against the real source, with
+`./src/tests/run.sh` runs eleven suites: plain Node and Python asserting against the real source, with
 no framework, no dependencies and no browser. The JS suites load the app exactly as the build
 concatenates it, which is itself the guard against a top-level ordering bug. One suite turns claims in
 the docs into assertions, and one runs the private repo's suites against this checkout when it is
@@ -11,7 +11,7 @@ lesson.
 **Code:** `src/tests/run.sh`, `src/tests/harness.js`; the app's `blankChar()` in `00-constants.js`
 and `APP_VERSION` in `30-version.js` (the TDZ pair); `90-boot.js` (left out of the harness) ·
 **Tests:** `converter.py`, `tables.js`, `rules-data.js`, `sheet.js`, `char-update.js`, `docs.js`,
-`data-kit.py`, `data-archive.js`, `srd-verbatim.py`, `private-data.js`; the fixture
+`data-kit.py`, `data-archive.js`, `pre-release.js`, `srd-verbatim.py`, `private-data.js`; the fixture
 `fixtures/srd-excluded-names.json` · **See also:** [Building & CI](building-and-ci.md),
 [Private data](../data/private-data.md),
 [Data archive](../architecture/data-archive.md), [SRD 5.2](../data/srd.md),
@@ -51,9 +51,10 @@ it after a build.
 | `sheet.js` | The pure functions the sheet leans on: signed coin/HP entry, temp HP, weight and encumbrance, size, origins, "choose N" budgets, stat layouts, feature grouping and the feat picker, dice expressions, item uses, spell allotments, rich text, emblems, attack damage strings, armor and AC, concentration, the combat view's pure helpers, modal focus; and **a hostile character, pack and keyword id through 40 renderers**, none of which may emit the payload raw |
 | `char-update.js` | The version stamp and the rules-update tool: fingerprints, diff classification, apply keeping character-local state, backups, gating, the R1–R5 regressions, the item regressions read from SRD 5.2 entries; plus level-1 HP seeding, the level-up HP step, option pickers, resource dice, starting-equipment grants, and the order the choice windows open in, driven through the real flow with invented classes and the SRD 5.2 classes |
 | `docs.js` | Doc claims as assertions (below) |
-| `data-kit.py` | `tools/data-kit/fbdata.py` and the scripts that drive it, every case on a scratch copy under a temp dir: data versions sort the data way; a digest ignores key order and whitespace but not a changed value, title, licence or credit; `versions --changed`, `--check` and `--bump`; every bad registry refused before anything happens; every released pack in the real registry has a digest (an unreleased one, `version: null`, has none until its first release); `pack` writing the same bytes twice, with the right manifest and `NOTICE.md`; `validate` catching a missing file, a SHA mismatch, an extra file, a system mismatch and a path escape; and, in a scratch git repo, `data-release.js` (`--dry-run` writes nothing; it refuses dirty `data/`, no changes, an existing tag and another app's release; the next N), `release.js` (bumps only changed packs, snapshots `DATA_VERSIONS`) and `data-release-notes.js`; since #85, golden checks pinning `bundle`, `validate --public` refusing a missing or unlisted licence, `build` from a folder of packs, a registry and one pack file, `kit_file()`'s lookup, `convert` filling in only the inputs the caller didn't name (`--overlay=PATH` included), `build` at a 5e-tools checkout's root pointing at its `data/`, `data-release.js --registry` against another checkout, the example pack and (once built) the kit zip working unzipped with no repo around it (CI re-runs the suite after its full build for these), and the `private-data` suite's three outcomes on a fake runner; since #90, `scripts/sync-private.py` on a fake converter (its commands pinned, check and write, a moved pack, a removed file, a failing converter, no dump, no private repo, `--status` against a scratch git repo with a bare remote) and the relaying of its NOTE and FAIL lines by the suite and `run.sh` |
+| `data-kit.py` | `tools/data-kit/fbdata.py` and the scripts that drive it, every case on a scratch copy under a temp dir: data versions sort the data way; a digest ignores key order and whitespace but not a changed value, title, licence or credit; `versions --changed`, `--check` and `--bump`; every bad registry refused before anything happens; every released pack in the real registry has a digest (an unreleased one, `version: null`, has none until its first release); `pack` writing the same bytes twice, with the right manifest and `NOTICE.md`; `validate` catching a missing file, a SHA mismatch, an extra file, a system mismatch and a path escape; and, in a scratch git repo, `data-release.js` (`--dry-run` writes nothing; it refuses dirty `data/`, no changes, an existing tag and another app's release; the next N), `release.js` (bumps only changed packs, snapshots `DATA_VERSIONS`; since #127 it also refuses without a complete pre-release record, a record for another version (the resolved one, so `patch` too), an open step, or a version cut before (its tag, or a tracked archived record), writing nothing when it does, refuses an undone cut with the `mv` that restores the record and succeeds once that is run, also after RELEASING's undo of a staged cut, files the record under `src/docs/archive/<version>/` after the cut, and, when it cannot, finishes the cut and prints the `git mv` that files it) and `data-release-notes.js`; since #85, golden checks pinning `bundle`, `validate --public` refusing a missing or unlisted licence, `build` from a folder of packs, a registry and one pack file, `kit_file()`'s lookup, `convert` filling in only the inputs the caller didn't name (`--overlay=PATH` included), `build` at a 5e-tools checkout's root pointing at its `data/`, `data-release.js --registry` against another checkout, the example pack and (once built) the kit zip working unzipped with no repo around it (CI re-runs the suite after its full build for these), and the `private-data` suite's three outcomes on a fake runner; since #90, `scripts/sync-private.py` on a fake converter (its commands pinned, check and write, a moved pack, a removed file, a failing converter, no dump, no private repo, `--status` against a scratch git repo with a bare remote) and the relaying of its NOTE and FAIL lines by the suite and `run.sh` |
 | `srd-verbatim.py` | The SRD 5.2 pack's text against the SRD 5.2.1 PDF: every span of pack text the SRD lacks must be corrected or accepted in `scripts/srd-corrections.json`, and every acceptance and alias there must still be used (see [SRD 5.2](../data/srd.md)). Needs `.venv` (pymupdf) and `_conversion-data/srd52/SRD_CC_v5.2.1.pdf`; **prints `SKIP` and exits 0 without them** |
 | `data-archive.js` | The app's half: `parseDataVer()`, `cmpDataVer()` and the tag helpers as tables of cases; `crc32()` against known vectors and `inflateRaw()` against Node's own deflate at every level; every refusal code and the ignored entries; `readDataArchive()` on an archive, a manifest one folder down, an app zip, a kit zip, a loose zip and an empty one; the one read budget across nested archives; `importRulesPayloads()` and `importPack()` replacing; both status lines, the four pickers' `accept`; pack credits through merge, export, removal and clear, escaped; **the round trip** (`fbdata.py pack` the real bundles, import the zip, and the pool equals importing the bundles); zips from Python's `zipfile` and `zip -9`; and the newer-data notice, `checkForDataUpdate()` included, against a stubbed network |
+| `pre-release.js` | The release tooling (#127), every case on a scratch tree under a temp dir: `scripts/move-docs.js` (each reference kind, repo-rooted, docs-rooted and relative, folder and image links, the angle-bracket form and a repo path beside a link on one line; fenced blocks; a moved file's own links recomputed; a link that resolves nowhere and a quoted link from outside `src/docs` left as written; a doc whose name only starts the same untouched; the ledger's line count; a binary moved byte for byte; `--dry-run` writing nothing; the refusals, the same move list run twice included, each writing nothing; the private leak allowlist rewritten through a symlink to a fake private repo, and skipped when there is none; a read-only folder or file refused before anything is written; a write, an unlink, or a write that emptied its file failing part way, fault-injected into `main()`, with no summary and no stack trace, and its printed undo commands leaving `git status` clean) and `scripts/pre-release-record.js` (parsing from the top table only, each refusal, a missing or doubled step row, a state not exactly `done`, the CLI, its `--help`, its usage errors, a heading that is not `X.Y.Z` with no version given, "pre-release" said once, the archive move and a failed one, and `gateProblem()` reading an untracked archived record with no tag as an undone cut) |
 | `private-data.js` | The private repo's suites, run against this checkout (#85). With `_private-data` (or `$FIELDBOOK_PRIVATE`) present it runs `tests/run.sh` there with `FIELDBOOK` set to this checkout, relays its output, and passes only when it exits 0 with `ALL PASSED (n)` as its last line; without it, **prints `SKIP - no _private-data`**. The private runner holds five suites: the leak scan and its self-test, the four packs' content checks, the converter gate over the 2024, Xanathar's and Tasha's packs and `humblewood-verbatim` (see [Private data](../data/private-data.md)). After the runner it relays `sync-private.py --status`: a `NOTE` while the private repo has work to commit or push, never a failure |
 
 `srd-verbatim`, and the private repo's `humblewood-verbatim` inside `private-data`, run under
@@ -124,7 +125,23 @@ its extractor.
   every cited function and fragment exists, and every JS fragment is cited by some page and named in
   the overview's code map. This is the lint from the
   [wiki spec](../../specs/2026-09-28-living-wiki-design.md) §7, and it was being added while this page
-  was written.
+  was written;
+- that every path or link to a spec, plan or archived doc resolves (#127), in every file
+  `move-docs.js` scans except `src/tests/` and `_private-data/` (one clone shared by every checkout,
+  whose own leak scan fails on a stale allowlist path): repo-rooted and docs-rooted paths everywhere, fenced
+  blocks included; a relative link only outside fenced blocks, and only when it names `specs/`,
+  `plans/` or `archive/` or a dated doc, since plans quote other pages' links; a link to a folder
+  counts when the folder exists; and an `X.Y.Z`, `YYYY` or `example-` path is an illustration;
+- that `qa/smoke.md` has one section per app area, in tab order, each with a line (#127);
+- that the `pre-release` and `release` skills agree with the gate (#127): the record template's
+  five step rows are the ones `release.js` reads, the checklist names the smoke list's areas, both
+  skills hold the same open-P0 query, `/release` runs the record check, `/pre-release` refuses off
+  main and never switches, its clean-tree check allows exactly the record and the checklist, its
+  filing commands hard-code no priority and give a P0 no fix-version label, filing and the project
+  fields are one block that checks the priority and looks up the Priority option before it files
+  and passes the body on stdin, the archived roadmap page has the one name `/release` reads, the
+  moved-main check ignores the status log, a moved private allowlist is committed by `/pre-release`
+  and pushed by `/release` after public main, and reopening a step reopens every later step.
 
 ### Throwaway checks
 
@@ -230,7 +247,7 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - **`LEFT_FOR_PRIVATE` in `docs.js` goes inert at the next release**, when `release.js` retakes
   `DATA_VERSIONS` from the pruned registry; delete it then. A tripwire that failed once it was inert
   was rejected, since it would fail CI at the release itself.
-- `run.sh`'s closing line counts a skipped suite as run, so CI's "All 10 suites passed" includes the
+- `run.sh`'s closing line counts a skipped suite as run, so CI's "All 11 suites passed" includes the
   skipped `private-data`.
 
 ## History
@@ -259,3 +276,5 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-10-13 — `run.sh` shows a passing suite's `NOTE` lines and a failing one's indented `FAIL` lines; `private-data` relays the private repo's status; `data-kit.py` tests `sync-private.py`. → ledger L5724, #90
 - 2026-10-27 — The harness `document` gains a no-op `removeEventListener`; `sheet.js` drives the warning window in a fake tree. → ledger L7710, #118
 - 2026-10-28 — Homebrew's checks move to the private suite with the pack; the public suites test SRD 5.2 and invented packs only, `requires`' two tooltip forms on an invented pack; the staleness test lends itself a second baseline, so a one-pack `DATA_VERSIONS` passes; the private-pack scan covers the homebrew folder. → ledger L7858, #125
+- 2026-10-29 — Eleven suites: `pre-release.js` (`move-docs.js` and the record); `data-kit.py` tests `release.js`'s pre-release gate and the record's filing; `docs.js` checks every link to a spec, plan or archived doc, the smoke list's areas, and the two release skills against the gate. → ledger L8070, #127
+- 2026-10-29 — The final fix wave's cases: the private allowlist, read-only refusals and part-way failures in `move-docs.js`; the record CLI's arguments; a failed record move; RELEASING's staged undo; the filing block, roadmap name, moved-main pathspec and private push in the skills. → ledger L8167, #127

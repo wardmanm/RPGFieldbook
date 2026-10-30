@@ -19,6 +19,8 @@
 # Releasing is a separate, deliberate act: it folds the pending notes from
 # src/docs/UNRELEASED.md into a new CHANGELOG entry and bumps APP_VERSION.
 # A bare build has to be safe to run constantly, so it must not touch either.
+# An app release needs /pre-release <version> finished first (#127):
+# scripts/release.js refuses otherwise (src/docs/RELEASING.md §0).
 #
 # Build with unreleased notes pending and the app zip is marked "+dev"; build
 # with rules data changed since data/packs.json's release and the archive is.
@@ -56,7 +58,8 @@ finish(){
   echo "==> Done (v$VER). Remember: browser smoke-test any UI changes before publishing."
   if [ -z "$RELEASE" ] && [ "$PENDING" -gt 0 ]; then
     echo "    $PENDING unreleased note(s) in src/docs/UNRELEASED.md — still on v$VER."
-    echo "    Cut a release with: ./build.sh --release patch|minor|major"
+    echo "    To release: /pre-release X.Y.Z in Claude Code, then ./build.sh --release X.Y.Z"
+    echo "    (--release refuses until that pre-release record is complete)."
   fi
 }
 

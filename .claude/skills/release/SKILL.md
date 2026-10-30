@@ -25,7 +25,7 @@ release. "Skip the checks" never skips preflight or a gate: say so in one line a
 
 | What's waiting | Release |
 |---|---|
-| bullets under `## Pending` in `src/docs/UNRELEASED.md` | **app** (`./build.sh --release`), which carries changed public data too |
+| bullets under `## Pending` in `src/docs/UNRELEASED.md` | **app** (`./build.sh --release`), which carries changed public data too; it needs `/pre-release X.Y.Z` complete first |
 | no bullets; `node scripts/data-release.js --dry-run` lists changed packs | **data** |
 | `_private-data` has changed packs (`node scripts/data-release.js --registry _private-data/data/packs.json --data-root _private-data/data --dry-run`) | **private**, after any public release above |
 
@@ -39,25 +39,51 @@ git status --porcelain                                        # every line
 PATH="$PWD/.venv/bin:$PATH" ./src/tests/run.sh                # all suites; PDF suites run
 git worktree list; git branch --no-merged main                # nothing half-merged
 git -C _private-data status -sb                               # committed; pushed unless releasing it
+node scripts/pre-release-record.js                            # app only: the /pre-release record is complete
 ```
 
+- **The pre-release record (app releases only, #127).** `node scripts/pre-release-record.js`
+  checks `src/docs/PRE-RELEASE.md`, the record `/pre-release` keeps; the version it names is the
+  one you propose at Gate 1. Then check that no issue in that milestone with Priority P0 is open:
+  a number printed by both of these is an open P0.
+
+  ```bash
+  gh issue list --milestone "vX.Y.Z" --state open -L 500 --json number --jq '.[].number'
+  gh project item-list 3 --owner wardmanm --format json -L 2000 \
+    --jq '.items[]|select(.content.type=="Issue" and .milestone.title=="vX.Y.Z" and .priority=="P0")|.content.number'
+  ```
+
+  An incomplete record, a missing one, or an open P0: stop, say which, and send Mike to
+  `/pre-release X.Y.Z`. Do not propose a version. Data and private releases skip both checks.
+
+- **The private repo ahead of its remote** by exactly a `docs: pre-release X.Y.Z — paths moved`
+  commit (app releases): expected. `/pre-release` step 1 made it when `move-docs.js` rewrote the
+  private leak allowlist, and it is pushed right after public main (Gate 2), never before. Anything
+  else unpushed there: say so and ask.
 - **`??` lines:** an untracked file is missing from the tagged build. Ask whether each should be
   committed first or removed, and do not propose a version until none are left.
 - **` M` lines:** list each and ask whether it belongs in this release; `git add -A` will include it.
   Do not propose a version until Mike has answered.
-- **The milestone:** read the open roadmap page (`src/docs/wiki/roadmap/<version>.md`). If this release
-  ships part of a milestone, say which items are in and which are not.
+- **The milestone:** read the open roadmap page (`src/docs/wiki/roadmap/<version>.md`, or
+  `src/docs/archive/<version>/roadmap-<version>.md` once `/pre-release` has archived it). If this
+  release ships part of a milestone, say which items are in and which are not.
 - Check memory for a release freeze. Read the pending bullets back to Mike.
 
 ## 3. Gate 1 — the exact number
 
-Propose it: patch / minor / major from `APP_VERSION` in `src/js/30-version.js`, or the data script's
-`X.Y.Z-N`. A typed version is checked (higher than current; `X.Y.Z` for app, `X.Y.Z-N` for data).
-"Minor" once meant 1.7.1, so always ask: "Cut **vX.Y.Z**?" — then wait.
+Propose it: for an app release, the version the pre-release record names; for data, the data
+script's `X.Y.Z-N`. A typed version is checked (higher than current; `X.Y.Z` for app, `X.Y.Z-N` for data).
+"Minor" once meant 1.7.1, so always ask: "Cut **vX.Y.Z**?" — then wait. If Mike answers with an
+app version the record doesn't name, stop: that number needs its own `/pre-release` (`release.js`
+would refuse it anyway).
 
 ## 4. Cut
 
 - **app:** `./build.sh --release X.Y.Z`, then show the new `CHANGELOG` entry and `git diff --stat`.
+  `release.js` refuses without a complete record for exactly `X.Y.Z`, and after the cut files it
+  under `src/docs/archive/X.Y.Z/`; `git add -A` takes that move. If it says instead "the cut is
+  written, but the pre-release record could not be filed", the cut stands: show Mike the line, and
+  run the `mkdir -p … && git mv …` it prints before Gate 2's commit.
 - **data / private:** run `data-release.js` (with `--registry … --data-root …` for private) without
   `--dry-run`; show which packs moved.
 
@@ -67,7 +93,7 @@ Ask: "Publish **vX.Y.Z**? Reply **publish**." Then run, per `src/docs/RELEASING.
 
 | Kind | Commands |
 |---|---|
-| app | `git add -A && git commit -m "Release vX.Y.Z" && git tag -a vX.Y.Z -m "vX.Y.Z" && git push --follow-tags` |
+| app | `git add -A && git commit -m "Release vX.Y.Z" && git tag -a vX.Y.Z -m "vX.Y.Z" && git push --follow-tags`; then, if the preflight found the private repo's `paths moved` commit, `git -C _private-data push`, right after |
 | data | the four lines `data-release.js` printed (`data-vX.Y.Z-N`) |
 | private | its printed `git -C _private-data …` lines, only after public main is pushed |
 
@@ -102,3 +128,5 @@ On a failure: `RELEASING.md` §2 and §4. Then run `/status`, and report the rel
 | "He's in a hurry, skip tests" | Preflight is the release; one line to say so, then run it |
 | "Those `M` files are probably part of it" | Ask; `git add -A` takes them all |
 | "Pushed, done" | Not until CI is green and the assets are checked |
+| "The pre-release is nearly done, cut anyway" | `release.js` refuses; send Mike to `/pre-release` |
+| "A P1 is open in the milestone, stop" | Only an open P0 blocks; P1s carry the next fix version's label |

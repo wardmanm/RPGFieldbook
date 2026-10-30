@@ -57,7 +57,7 @@ suites.forEach(s => {
   ck('suite "' + s + '" exists', js || py);
 });
 const claudeSuites = /across (\w+) suites/.exec(claude);
-const WORDS = {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10};
+const WORDS = {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12};
 ck('CLAUDE.md states a suite count', !!claudeSuites);
 ck('CLAUDE.md suite count is right',
    claudeSuites && (WORDS[claudeSuites[1]] || +claudeSuites[1]) === suites.length,
@@ -395,6 +395,142 @@ if (packsReg && Array.isArray(packsReg.packs)) {
     const unmapped = [...fragNames].filter(f => !text[OVERVIEW].includes(f));
     ck("overview.md's code map names every fragment in manifest.json", unmapped.length === 0, unmapped);
   }
+}
+
+// ---------- links to specs, plans and the archive resolve (#127, pre-release spec §6)
+// /pre-release files specs and plans by version and archives finished docs, and
+// scripts/move-docs.js rewrites every reference. This is the net under it: every
+// path or link that names src/docs/specs/, plans/ or archive/ must exist. The
+// files are move-docs.js's own list (scanFiles()) minus src/tests/, whose
+// fixtures name invented docs. A relative link counts when it names one of the
+// three folders or a dated doc, and not inside a fenced block: plans quote other
+// pages' links there, which are relative to those pages. X.Y.Z, YYYY and an
+// example- file name mark an illustration, not a claim.
+{
+  const {scanFiles, findRefs} = require('../../scripts/move-docs.js');
+  const DOC_TARGET = /^src\/docs\/(specs|plans|archive)\//;
+  const ILLUSTRATION = /X\.Y\.Z|YYYY|(^|\/)example-[^/]*$/;
+  const counts = r => r.kind !== 'rel' || (!r.fenced &&
+    (/(^|\/)(specs|plans|archive)\//.test(r.token) || /^\d{4}-\d{2}-\d{2}-/.test(path.posix.basename(r.token))));
+  const deadDocLinks = (file, text, exists) => findRefs(text, file)
+    .filter(r => DOC_TARGET.test(r.target) && !ILLUSTRATION.test(r.token) && counts(r) && !exists(r.target));
+  // A folder link (../specs/, trailing slash, no file) is a kind move-docs.js
+  // itself recognises (its "a folder" case, line 14/139) — it names the
+  // category, not a doc, and never goes stale by itself. isFile() alone flagged
+  // src/docs/wiki/index.md's own "[Specs](../specs/) and [plans](../plans/)"
+  // links dead; existsSync() accepts the directory too (#127 ruling).
+  const onDisk = p => { try { return fs.existsSync(path.join(ROOT, p)); } catch (e) { return false; } };
+
+  // seen to fail first, on invented paths against a stand-in disk that holds one
+  // doc: a dead reference of each kind, and one that resolves
+  const kept = 'src/docs/specs/' + '2026-01-01-kept-design.md', gone = '2026-01-01-gone-design.md';
+  const only = p => p === kept;
+  ck('#127 the doc-link check catches a dead repo path',
+     deadDocLinks('CLAUDE.md', 'See src/docs/specs/' + gone + '.', only).length === 1);
+  ck('#127 ...a dead relative link from the wiki',
+     deadDocLinks('src/docs/wiki/process/x.md', '[spec](../../specs/' + gone + ')', only).length === 1);
+  ck('#127 ...and a dead docs-rooted path in a code comment',
+     deadDocLinks('src/js/x.js', '/* Design: specs/' + gone + ' */', only).length === 1);
+  ck('#127 ...but passes a link that resolves, and an illustration',
+     deadDocLinks('src/docs/wiki/x.md', '[spec](../specs/' + '2026-01-01-kept-design.md) and src/docs/archive/X.Y.Z/PRE-RELEASE.md', only).length === 0);
+
+  // _private-data/ is left out: it is one clone shared by every checkout, so a path
+  // its allowlist names can be ahead of (or behind) this checkout's tree, and its own
+  // leak scan already fails on a stale entry (#127 ruling 24)
+  const dead = scanFiles(ROOT).filter(f => !f.startsWith('src/tests/') && !f.startsWith('_private-data/'))
+    .flatMap(f => deadDocLinks(f, read(f), onDisk).map(r => f + ':' + r.line + ' ' + r.token));
+  ck('every link to a spec, plan or archived doc resolves (a move missed one: scripts/move-docs.js rewrites them)',
+     dead.length === 0, dead.slice(0, 10));
+}
+
+// ---------- the standing QA list (#127, pre-release spec §4 step 3)
+// /pre-release copies each area's lines from it into the release's checklist,
+// area by area, so its headings are the app's areas in tab order.
+{
+  const AREAS = ['Home', 'Sheet', 'Combat', 'Spells', 'Inventory', 'Bio', 'Journal', 'Rules', 'Settings', 'Extensions and updates'];
+  const smoke = read('src/docs/qa/smoke.md');
+  const heads = [...smoke.matchAll(/^## (.+)$/gm)].map(m => m[1].trim());
+  ck('#127 qa/smoke.md has one section per app area, in tab order', JSON.stringify(heads) === JSON.stringify(AREAS), heads);
+  const empty = smoke.split(/^## /m).slice(1).filter(s => !/^- \S/m.test(s)).map(s => s.split('\n')[0]);
+  ck('#127 ...and every section has at least one line', empty.length === 0, empty);
+}
+
+// ---------- the pre-release and release skills agree with the gate (#127, spec §5)
+// release.js reads the record's step rows; the skill writes them. And /release's
+// preflight must run the same check before Mike is asked for a number.
+{
+  const pre = read('.claude/skills/pre-release/SKILL.md');
+  const rel = read('.claude/skills/release/SKILL.md');
+  const {STEPS} = require('../../scripts/pre-release-record.js');
+  ck('#127 /pre-release is Mike\'s to start', /^---\nname: pre-release\n/.test(pre) &&
+     /^disable-model-invocation: true$/m.test(pre) && /^argument-hint: /m.test(pre));
+  const rows = STEPS.map((s, i) => '| ' + (i + 1) + '. ' + s + ' | open | | |');
+  ck('#127 its record template has the five step rows release.js reads', rows.every(r => pre.includes(r)), rows.filter(r => !pre.includes(r)));
+  const areas = [...read('src/docs/qa/smoke.md').matchAll(/^## (.+)$/gm)].map(m => m[1].trim());
+  ck('#127 its checklist names the smoke list\'s areas, in order', pre.includes(areas.join(', ')), areas.join(', '));
+  ck('#127 /release\'s preflight runs the record check and the open-P0 check',
+     rel.includes('node scripts/pre-release-record.js') && rel.includes('.priority=="P0"'));
+  // Each skill keeps its own open-P0 query, since each must run on its own; the
+  // two copies must stay one query (#127 ruling 5). A fenced block is compared
+  // with its fence's indent removed, as a list item indents it.
+  const fenced = text => {
+    const out = []; let cur = null, ind = '';
+    for (const line of text.split('\n')) {
+      const f = /^([ \t]*)```/.exec(line);
+      if (f && !cur) { cur = []; ind = f[1]; continue; }
+      if (f && cur) { out.push(cur.join('\n')); cur = null; continue; }
+      if (cur) cur.push(line.startsWith(ind) ? line.slice(ind.length) : line);
+    }
+    return out;
+  };
+  const p0 = text => fenced(text).filter(b => b.includes('.priority=="P0"'));
+  const [a, b] = [p0(pre), p0(rel)];
+  ck('#127 both skills hold one open-P0 query, and it is the same query',
+     a.length === 1 && b.length === 1 && a[0] === b[0], {pre: a, release: b});
+  // spec §7: it runs on main and refuses elsewhere; it never switches branch (#127 ruling 8)
+  ck('#127 /pre-release refuses off main and never switches branch',
+     pre.includes('git branch --show-current') && !pre.includes('git switch'));
+  // #127 ruling 19: the clean-tree check lets through exactly the two files a
+  // pre-release keeps between sessions, the record and Mike's marked checklist
+  const preflight = fenced(pre.split(/^## 0\. Preflight/m)[1] || '')[0] || '';
+  const porcelain = preflight.split('\n').filter(l => l.includes('git status --porcelain'));
+  const allowed = porcelain.flatMap(l => [...l.matchAll(/':!([^']+)'/g)].map(m => m[1])).sort();
+  ck('#127 /pre-release\'s clean-tree check allows exactly the record and the checklist',
+     porcelain.length === 1 && JSON.stringify(allowed) === JSON.stringify(['src/docs/PRE-RELEASE.md', 'src/docs/QA-CHECKLIST.md']), allowed);
+  // #127 ruling 22: filing uses the priority Mike confirmed, and a P0 never gets
+  // the fix-version label (spec decision 6), in the commands, not just the prose
+  const filing = fenced(pre).filter(b => b.includes('gh issue create') || b.includes('single-select-option-id')).join('\n');
+  const p0Branch = (/if \[ "\$PRIORITY" = P0 \]; then([\s\S]*?)\nelse\n/.exec(filing) || [])[1];
+  ck('#127 the filing commands hard-code no priority, and the P0 path has no fix-version label',
+     filing.includes('gh issue create') && !/"P[012]"/.test(filing) && filing.includes('select(.name==\\"$PRIORITY\\")') &&
+     p0Branch !== undefined && !p0Branch.includes('$NEXT'));
+  // #127 final fix wave: Claude Code keeps no shell variables between Bash calls, so
+  // filing and the project fields are ONE block; it checks PRIORITY and looks the
+  // project ids up before it creates anything, and its guards really stop
+  const fileBlocks = fenced(pre).filter(b => b.includes('gh issue create'));
+  const fb = fileBlocks[0] || '';
+  ck('#127 filing an issue and setting its project fields is one block',
+     fileBlocks.length === 1 && fb.includes('single-select-option-id') && fenced(pre).filter(b => b.includes('single-select-option-id')).length === 1,
+     fileBlocks.length);
+  ck('#127 ...it checks PRIORITY is exactly P0, P1 or P2 and exits otherwise, before any gh call',
+     /case "\$PRIORITY" in P0\|P1\|P2\) ;; \*\)[^\n]*exit 1;; esac/.test(fb) && fb.indexOf('case "$PRIORITY"') < fb.indexOf('gh '), fb);
+  ck('#127 ...looks up the Priority option before creating the issue, and stops when it is missing',
+     fb.indexOf('PICK=') >= 0 && fb.indexOf('PICK=') < fb.indexOf('gh issue create') && /\[ -n "\$PICK" \][\s\S]{0,200}?exit 1/.test(fb), fb);
+  ck('#127 ...and passes the body on stdin, so no body file exists in the repo',
+     (fb.match(/URL=\$\(gh issue create/g) || []).length === 2 && (fb.match(/URL=\$\(gh issue create/g) || []).length === (fb.match(/--body-file - <<'BODY'/g) || []).length && !/--body-file (?!-[ `])/.test(pre), fb);
+  // the archived roadmap page has one name, the one /release reads
+  ck('#127 /pre-release archives the roadmap page under the one name /release reads',
+     pre.includes('always becomes `src/docs/archive/X.Y.Z/roadmap-X.Y.Z.md`') && rel.includes('`src/docs/archive/<version>/roadmap-<version>.md`'));
+  // #127 ruling 25: a routine status commit is not "main moved"
+  const moved = fenced(pre).filter(b => b.includes('--invert-grep'));
+  ck('#127 the moved-main check ignores the record, the checklist and the status log',
+     moved.length === 1 && [':!src/docs/PRE-RELEASE.md', ':!src/docs/QA-CHECKLIST.md', ':!.claude/status.md'].every(x => moved[0].includes("'" + x + "'")), moved);
+  // #127 ruling 24: the private allowlist is committed in step 1, and pushed by /release right after public main
+  ck('#127 a moved private allowlist is committed by /pre-release and pushed by /release after public main',
+     pre.includes('git -C _private-data commit -m "docs: pre-release X.Y.Z — paths moved"') &&
+     /git push --follow-tags`; then[^\n]*`git -C _private-data push`, right after/.test(rel));
+  // #127 ruling 20: steps are strictly ordered
+  ck('#127 reopening a step reopens every later step', pre.includes('reopens every later step'));
 }
 
 ck.done();

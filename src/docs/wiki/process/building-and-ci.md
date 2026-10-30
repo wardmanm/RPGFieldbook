@@ -12,13 +12,18 @@ several branches at once is [WORKTREES](../../WORKTREES.md).
 `.github/workflows/ci.yml`, `release.yml`, `data-release.yml`; `validateOrder()`, `mayOverwrite()` in
 `scripts/build-html.js`; `bundle()`, `cmd_bundle()`, `load_registry()`, `cmd_pack()`, `cmd_build()`,
 `validate_archive()`, `kit_file()` in `tools/data-kit/fbdata.py`; `scripts/gen-changelog.js`,
-`scripts/data-release.js`, `scripts/data-release-notes.js`; `APP_VERSION` and `DATA_VERSIONS` in
-`30-version.js` · **Data:** `data/packs.json`, `tools/data-kit/example-pack/example-pack.json` ·
+`scripts/data-release.js`, `scripts/data-release-notes.js`; `scripts/move-docs.js` (`findRefs()`,
+`rewriteText()`, `planMoves()`, `writeProblems()`, `applyPlan()`, `undoCommands()`, `scanFiles()`);
+`scripts/pre-release-record.js` (`recordProblem()`, `gateProblem()`, `archiveRecord()`,
+`archiveByHand()`); `.claude/skills/pre-release/`, `.claude/skills/release/`;
+`APP_VERSION` and `DATA_VERSIONS` in `30-version.js` · **Data:** `data/packs.json`, `tools/data-kit/example-pack/example-pack.json` ·
 **Tests:** `docs.js` (zip allowlist vs README §9, README names the archive and the kit,
-`data/packs.json` against `DATA_VERSIONS`), `data-kit.py` (the archive is reproducible and
-validates; the example pack builds and passes `validate --public`; the kit zip, once built, works
-unzipped with no repo around it, re-run after the full build in `ci.yml` and `release.yml`; the
-release scripts in a scratch repo) · **See also:**
+`data/packs.json` against `DATA_VERSIONS`; every link to a spec, plan or archived doc resolves; the
+smoke list's areas; the two release skills against the gate), `data-kit.py` (the archive is
+reproducible and validates; the example pack builds and passes `validate --public`; the kit zip, once
+built, works unzipped with no repo around it, re-run after the full build in `ci.yml` and
+`release.yml`; the release scripts in a scratch repo, the pre-release gate's refusals and the record's
+filing included), `pre-release.js` (`move-docs.js` on a scratch tree, the record) · **See also:**
 [Build & source split](../architecture/build-and-source-split.md), [Data archive](../architecture/data-archive.md),
 [Testing](testing.md),
 [RELEASING](../../RELEASING.md), [WORKTREES](../../WORKTREES.md), [README](../../../../README.md)
@@ -28,7 +33,10 @@ release scripts in a scratch repo) · **See also:**
 ### `./build.sh`, in order
 
 1. **`--release <level>` only:** `node scripts/release.js` runs first, so the build carries the new
-   version. The rest of that path is [RELEASING](../../RELEASING.md).
+   version. It resolves the level to a version, then refuses an app release without a complete
+   pre-release record for exactly that version (`gateProblem()`), before writing anything, and files
+   the record with `archiveRecord()` after the cut. The rest of that path is
+   [RELEASING](../../RELEASING.md).
 2. **`node scripts/build-html.js`** concatenates `src/` into `dist/fieldbook.html`. It runs first
    because every check below reads the built file. Its own guards (manifest drift, CR/BOM, `boot();`
    last, the clobber guard) are on [Build & source split](../architecture/build-and-source-split.md).
@@ -52,7 +60,8 @@ release scripts in a scratch repo) · **See also:**
     (tools/data-kit/fbdata.py)" — `--no-zip` is no help by this point, since it needs Python too
     (step 6 already ran).
 11. **The player zip**, then its allowlist guard (below); then **the data kit zip** (below).
-12. The closing line. With notes pending it says how many, and how to cut a release.
+12. The closing line. With notes pending it says how many, and how to release: `/pre-release X.Y.Z`
+    first, then `--release`, which refuses until that record is complete.
 
 A bare `./build.sh` never changes `APP_VERSION`, `CHANGELOG`, the notebook or `data/packs.json`, so
 it is safe to run constantly. It does **not** run the test suites; `./src/tests/run.sh` is separate,
@@ -232,19 +241,49 @@ all three) to `_private-data/data/…` through `scripts/sync-private.py --write`
 commands (#90); it refuses those three, saying to link the private repo first, when
 `_private-data` is not linked (#85). Then
 there is commit (`c`), which builds a `type [26/30]: message, closes #26, closes #30` subject, stages
-with `git add -A` and pushes without `--follow-tags`. Release (`7`) confirms, runs `--release`, then
-prints the commit, tag and push commands and runs none of them. Data release (`d`) runs
-`data-release.js --dry-run`, asks, then bumps `data/packs.json` and prints its commands, also running
-none. The last are the release checklist
-(`8`), open the app (`9`) and where things live (`s`). It is Bash 3.2 compatible, and with no TTY it
-prints the menu and exits 0.
+with `git add -A` and pushes without `--follow-tags`. Release (`7`) confirms (saying `--release`
+refuses without a complete `/pre-release` record), runs `--release`, then prints the commit, tag and
+push commands and runs none of them. Data release (`d`) runs `data-release.js --dry-run`, asks, then
+bumps `data/packs.json` and prints its commands, also running none. The last are the release
+checklist (`8`, which starts at step 0, `/pre-release X.Y.Z`), open the app (`9`) and where things
+live (`s`). It is Bash 3.2 compatible, and with no TTY it prints the menu and exits 0.
 
-### `/release` and `/status`
+### `/pre-release`, `/release` and `/status`
 
-Two project skills, typed as slash commands (#108, #109). `/release [app|data|private] [version]`
+`/pre-release X.Y.Z` (`.claude/skills/pre-release/`, #127) gets an app release ready before it is
+cut. It runs on main and refuses anywhere else, naming the branch: it never switches. Its
+clean-tree check lets through exactly two files, the record `src/docs/PRE-RELEASE.md` and the
+checklist `src/docs/QA-CHECKLIST.md`, which a resume commits first (`docs: pre-release X.Y.Z —
+record`). It works through five steps in strict order, and reopening one reopens every later one:
+**1. Docs** (shipped specs and plans filed into `specs/<ver>/` and `plans/<ver>/` by the first tag
+after their merge; only an open issue keeps a doc at the top level, and a closed one with no merge is
+dated by the commit that added it, for Mike to confirm; out-of-date docs archived to `archive/<ver>/`
+or corrected; every reference rewritten by `move-docs.js`, which checks it can write everything
+first, removes moved sources last, and on a failure part way prints the commands that undo exactly
+what it wrote; when `_private-data` is linked it rewrites the private leak scan's allowlist too,
+committed in the private repo and pushed by `/release` right after public main, never before; the
+artifact rebuilt and committed if a `src/js/` comment changed); **2. Outstanding issues** (loose ends from specs' As built, known issues
+and the status log, filed in the `vX.Y.Z` milestone with the next fix version's label, Status
+Backlog and the Priority Mike confirms, and the numbers written back and committed straight after
+filing, each issue by one block run as one Bash call, which checks the priority and looks up the
+project's ids before it files, and passes the body on stdin); **3. QA checklist** (`QA-CHECKLIST.md`, rebuilt from the release's notes, closed issues and
+specs plus `src/docs/qa/smoke.md`, pre-driven in the project Playwright browser); **4. QA bugs**
+(each failure filed; a P0 gets no fix-version label, and an open P0 in the milestone holds the
+step open); **5. Release notes** (the pending bullets read as a player would). Each step is
+recorded in the record and committed on main as `docs: pre-release X.Y.Z — step N`; it never
+pushes, and writes to GitHub (issues, labels, project fields, comments) only after Mike confirms.
+If main moves after step 3 (its own commits and `docs(repo): status` commits don't count), a rerun
+asks whether to rebuild the checklist, carrying Mike's marks
+forward on every unchanged line; declined, it records "Kept at `<sha>`" and counts from there.
+`/release`'s preflight then runs `node scripts/pre-release-record.js` and the open-P0 query (the
+same query `/pre-release` uses, which `docs.js` keeps identical) before proposing a version.
+
+Two more project skills, typed as slash commands (#108, #109). `/release [app|data|private] [version]`
 (`.claude/skills/release/`) runs a release for Mike: it works out which kind is due, runs the
 preflight (on main and not behind, no untracked or unexplained modified files, every suite with
-`.venv/bin` on `PATH`, nothing half-merged, the private repo's state, where the milestone stands),
+`.venv/bin` on `PATH`, nothing half-merged, the private repo's state, where the milestone stands,
+and for an app release the pre-release record and no open P0; unlike `/pre-release`, it switches to
+main itself),
 asks Mike to confirm the exact version, cuts it, shows the changelog, and only after he says
 "publish" commits, tags and pushes; then it watches the workflow and checks the release's assets and
 "latest". `disable-model-invocation: true` means Claude never starts one on its own; CLAUDE.md's
@@ -259,6 +298,11 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 - **A plain build is idempotent on versioning.** Only `--release` touches `APP_VERSION`, `CHANGELOG`
   or the notebook. `build.sh` is run constantly; it must not be the thing that bumps.
 - **Build first.** Every later check reads `dist/fieldbook.html`.
+- **No app release without a complete pre-release record.** `release.js` checks it offline: the
+  record names exactly the resolved version, has one row per step, and every step is `done`; a
+  version whose tag exists or whose archived record git tracks was cut before. `/release`'s preflight
+  adds the open-P0 check. Data releases are not gated. A record that cannot be filed after the cut
+  does not stop it: `release.js` says so and prints the `git mv` that files it by hand.
 - **The zip is an allowlist, and a zip that fails the guard is deleted.** Dev material goes under
   `src/` (banned wholesale by `^src/`) or at the repo root, never in `docs/`. A new player-facing doc
   means editing the `docs/` regex in `build.sh` **and** README §9. `docs.js` fails if any `docs/*.md`
@@ -313,6 +357,10 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
   locally and build instead, as in [WORKTREES](../../WORKTREES.md) §5.
 - **A PR's CI runs the workflow from its merge commit.** An open PR picks up a `ci.yml` change only on
   a new run (a push, or close and reopen), not from "Re-run jobs".
+- **An undone cut leaves the record behind.** `git checkout -- .` restores every tracked file
+  `release.js` changed, but the record's new home, `src/docs/archive/X.Y.Z/PRE-RELEASE.md`, is
+  untracked and stays. `gateProblem()` tells that apart from a real earlier cut (a tag, or a tracked
+  archived record) and refuses with the `mv` that puts it back; it never moves it itself.
 - **The hooks read the working tree, not the staged blobs.** `git add -p` can therefore validate bytes
   you are not committing. This is accepted: the repo commits whole files.
 
@@ -336,6 +384,13 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 | Python for the archive | Required by every build since #85 (`fbdata.py` bundles too); for the zips only before | A Node port of the digest and the packer: two implementations that must agree byte for byte (L5082, L5342) |
 | Where `convert.py` ships | A separate, flat data kit zip (L5352) | Inside the app zip's `scripts/`: every player downloaded it, even those who never touch the converter |
 | Where the public/private licence gate lives | `release.yml` and `data-release.yml`, after the build (L5352) | In `build.sh`: a local build has no notion of "about to publish", and the same script also builds a private pack's data |
+| How hard the pre-release block is (#127) | A committed record, `src/docs/PRE-RELEASE.md`, checked by `/release` and by `./build.sh --release`: both refuse unless it is complete for exactly that version (L8070) | A CI check as well: it refuses after the tag is pushed, the worst place to learn. Convention only: not rigid |
+| Links when docs move (#127) | Rewritten by script in the same step, everywhere: wiki, specs, plans, code comments, CLAUDE.md, skills, and the ledger (a same-line substitution, so every `L<n>` citation stays valid). The docs suite gains a check that every link to a spec, plan or archived doc resolves (L8070) | Leaving the ledger's old paths: dead links in the log |
+| Existing specs and plans (#127) | Backfilled once, each into the version it shipped in, worked out from git (L8070) | From 1.9.0 onward only: folders consistent only from now |
+| Out-of-date docs (#127) | Candidates found, Mike confirms each; finished docs move to `src/docs/archive/<ver>/`, wrong ones are corrected in place. Nothing is deleted (L8070) | Deleting: breaks old links, buries old decisions |
+| Filing issues (#127) | Milestone = the release's (v1.9.0), label = the next fix version (`1.9.1`), added to project #3 (RPGFieldbook) with Status Backlog and a Priority Mike confirms: P2 minor bug / visual / tweak; P1 medium bug, functionality affected, workaround exists, no data at risk; P0 blocker (L8070) | A `blocker` label: the project already has Priority |
+| What blocks a release (#127) | Only an open P0 in the release's milestone. A P0 gets no next-version label; it stays in the milestone and holds step 4 open until it is closed (L8070) | P1 also blocking: it has a workaround and risks no data |
+| The QA checklist (#127) | One file, rebuilt every run, by app area, "New in this release" plus a standing "Still works" list, then a device pass; Claude pre-drives what it can in the project Playwright browser before Mike tests (L8070) | A blank checklist: Mike tests everything Claude could have |
 
 ## Open
 
@@ -370,3 +425,5 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 - 2026-10-19 — `/release` and `/status`: a release skill with two gates (the exact version, then "publish"), and the session status log written on main. → ledger L6203, #108, #109
 - 2026-10-19 — Releases wait for Mike: `verify` → `publish` jobs, `publish` in the `release` environment; Claude Code ask rules on the release commands. → ledger L6226, #109
 - 2026-10-26 — Both release workflows check `releases/data/` against the build; `./build.sh --release` writes it. → ledger L7428, #102
+- 2026-10-29 — `/pre-release`: `release.js` refuses an app release without a complete pre-release record and files it under `src/docs/archive/<version>/`; `move-docs.js`; `dev.sh`'s checklist and `build.sh`'s closing line name it. → ledger L8070, #127
+- 2026-10-29 — The final fix wave: `move-docs.js` rewrites the private leak allowlist and the status log, checks every write first and prints exact undo commands on a failure; a record `release.js` cannot file leaves the cut standing; the record CLI's arguments; one filing block; the status log no longer counts as "main moved". → ledger L8167, #127
