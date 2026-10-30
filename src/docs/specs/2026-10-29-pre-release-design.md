@@ -410,6 +410,28 @@ The final fix wave's own (implementer's), each with its cost if wrong:
   is narrower than the build's inputs; `--grep` also matches body lines; a second "Kept at" line
   picks the older sha; a stale dirty `QA-CHECKLIST.md` can enter step 1's commit; all steps done
   plus a declined rebuild is not spelled out.
+- RELEASING's undo (final re-review): a full `./build.sh --release` (not `--no-zip`) also writes new
+  files under `releases/data/` (`build.sh:127-130`), which `git restore --staged . && git checkout -- .`
+  leaves untracked; RELEASING (around :66-69) says only the record's copy is left behind. Fix: name
+  `releases/data/`'s new files in the undo, or remove them by path.
+- `/release`'s private check (final re-review): "exactly one unpushed private `paths moved` commit" is
+  prose; the preflight only runs `git -C _private-data status -sb`, and its comment still reads
+  "pushed unless releasing it". Fix: `git -C _private-data log --format='%h %s' @{u}..` must print one
+  `paths moved` line and `git -C _private-data diff --name-only @{u}..` only
+  `tests/leak-allowlist.json`; the private commit names that file as its pathspec.
+- Push order (final review and re-review): between step 1 and the release, public main and the private
+  repo each hold an unpushed commit; a push of public main for any other reason (or a private data
+  release) first turns the private CI's leak scan red until the private commit is pushed. Nothing
+  enforces the order.
+- The filing block under macOS `/bin/bash` 3.2: a body with an unmatched `(` fails to parse (here-doc
+  inside `$(…)`), so nothing is filed — it fails safe; zsh, which Claude Code uses, is unaffected.
+
+### Open for Mike
+
+- **A missing `project` scope at filing.** Ruling e (final fix wave) looks up the project fields before
+  `gh issue create`, so a missing scope stops with nothing filed. §9 says the issue is still filed and
+  recorded as "priority not set". Options: keep the code and amend §9 (Claude's recommendation: a P0
+  filed without its Priority is invisible to the open-P0 gate) / restore §9's behaviour.
 
 ### Not yet run
 
