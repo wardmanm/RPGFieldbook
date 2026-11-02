@@ -383,11 +383,13 @@ What differs from the sections above, and why:
   full width at desktop**: the middle and right columns are independent stacks (`.col-m`: Skills,
   Features; `.col-r`: Defences, Statuses, Resources), so Features follows Skills; two columns keep
   Features full width under the rail, one column keeps the phone order.
-- **#155 (2026-11-02, L8262): Features is a full-width row again, and the columns end level.** At
-  three columns Features left the middle stack for its own row under the rail and both stacks
-  (closer to §6.5/§6.7 than the L6776 change above), with its cards two across inside each group;
-  the rail, Skills and the right stack end on one line, each stack's last card growing to the
-  tallest column's height. Two columns and one are unchanged.
+- **#155 (2026-11-02, L8262, L8301): Features is a full-width row again, and the columns end level
+  when close.** At three columns Features left the middle stack for its own row under the rail and
+  both stacks (closer to §6.5/§6.7 than the L6776 change above), one card per row at every width
+  (Mike, 2026-11-02; the first build's two-across groups went). The rail, Skills and the right stack
+  end on one line, each stack's last card growing to the tallest column, only while the tallest is
+  at most 240px (`SHEET_STRETCH_MAX`) taller than the shortest (Mike, 2026-11-02); further apart,
+  each ends at its content. `sheetLevel()` measures. Two columns and one are unchanged.
 - **The ☰ section flyout is retired; a back-to-top button** (L6804, Mike 2026-10-24): the tabs are
   organised well enough to need no index, so `#btnToc`, `#tocFly` and `buildToc()` go (the rail's
   and strip's `.label`s above stay, for the note button, the combat toggle and the registry), and a

@@ -13,7 +13,8 @@ strip, and familiars, which open from the header.
 `renderCombatToggles()`, `combatCard()`, `combatAddable()` in `87-combat.js` ·
 `featGroups()`, `renderFeatures()`, `featCol()`, `invCol()`, `atkCol()`, `FEAT_FAV`, `ATK_FAV` in
 `20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()`, `renderSheetHead()`,
-`famFlyHTML()`, `openShFly()`, `openFamiliar()` in `40-sheet.js` ·
+`famFlyHTML()`, `openShFly()`, `openFamiliar()`, `SHEET_STRETCH_MAX`, `sheetShouldStretch()`, `sheetLevel()`,
+`scheduleSheetLevel()`, `wireSheetLevel()` in `40-sheet.js` ·
 `groupFieldHTML()`, `groupChoices()`, `groupNameProblem()`, `syncGroupFieldMsg()`, `groupFieldBlocked()` in
 `80-modal-forms.js` · `GROUP_RESERVED` in `00-constants.js` · `tagLabel()`, `tagTidy()` in `87-journal.js` · `renderAttacks()` in
 `60-attacks.js` · `rulesCatOf()` in `86-rules-browser.js` · `setPageOf()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
@@ -21,7 +22,7 @@ strip, and familiars, which open from the header.
 `20-spells.html`, `30-story.html`, `40-rules.html`, `60-journal.html`, `70-combat.html` · `10-chrome.css`,
 `20-cards.css`, `30-sheet.css` ·
 **Tests:** `rules-data.js` (registry against template, the Sheet grid and its queries, section heads, search boxes,
-Settings and Rules sections, the Features row and two-across groups), `sheet.js` (`featGroups()`, the shared favourites label, the parsed Sheet's places and section order, the combat view's round trip) ·
+Settings and Rules sections, the Features row, the levelling's CSS and wiring), `sheet.js` (`featGroups()`, the shared favourites label, the parsed Sheet's places and section order, the combat view's round trip, `sheetShouldStretch()`) ·
 **See also:** [Shell](shell.md), [Story & notes](../features/story-and-notes.md),
 [Combat view](../features/combat-view.md), [Inventory](../features/inventory.md),
 [Features & traits](../features/features-and-traits.md)
@@ -68,20 +69,31 @@ The Sheet is one condensed page after Foundry VTT's sheet (spec
   columns; under it two **independent stacks** sit side by side (Mike's ruling): **`.col-m`**
   (Skills) and **`.col-r`** (Defences, Statuses, Resources), so no card waits on its neighbour's
   row. **Features & Traits** is the third row, full width under all three (#155), a direct child of
-  the grid; at this width each feature group lays its cards two across (`30-sheet.css`: the
-  group's `.fgroup` is a two-column grid, its `.fghead` spans both, and each card keeps its own
-  height, so a folded card beside an open one stays one line).
-- **The three columns end on one line (#155).** The grid stretches its items, and each stack is a
-  flex column whose **last** card grows (`div.card:last-of-type{flex-grow:1}`). Whichever column
-  is tallest sets the row: usually Skills, or `.col-r` with many statuses or resources. The rail,
-  Skills and Resources then draw down to it with their content at the top; only the last card
-  grows, so every other card and every heading stays where it was. `:last-of-type`, not
-  `:last-child`: the combat view leaves a hidden `<span>` marker where a card was, and the last
-  card still at home grows instead.
+  the grid, one feature card per row at every width (Mike, 2026-11-02).
+- **The three columns end on one line while they are close (#155, Mike 2026-11-02).** By default
+  nothing stretches (`align-items:start`) and each column ends where its content ends. When the
+  tallest column is at most `SHEET_STRETCH_MAX` (240px) taller than the shortest, `sheetLevel()`
+  sets `.cols-even` on the grid: the grid then stretches the rail and both stacks to the row, and
+  each stack — a flex column — lets its **last** card grow (`div.card:last-of-type{flex-grow:1}`),
+  content at the top, so no other card or heading moves. `:last-of-type`, not `:last-child`: the
+  combat view leaves a hidden `<span>` marker where a card was, and the last card still at home
+  grows instead. Further apart (many statuses or resources), a stretched rail and Skills would be
+  long empty frames, so they are left ragged.
+- **How it decides.** `sheetLevel()` takes `.cols-even` off, measures where the rail, `.col-m` and
+  `.col-r` end from the grid's top (their own heights; the toggle and the measure happen in one task,
+  so nothing paints between), and asks the pure `sheetShouldStretch(heights)`. A column that is
+  hidden or holds no card on the Sheet (all of it in the combat view) is left out, and fewer than two
+  columns level nothing. It returns at once for print and while the Sheet is hidden, and clears the
+  class at ≤1000px. `wireSheetLevel()` (once, from `wire()`) re-runs it, debounced 60ms through
+  `scheduleSheetLevel()`, on the window's resize and on a ResizeObserver over the grid, the four column
+  boxes and **every child of every card in them** — a stretched card's own box does not shrink when
+  its content does, but `#statusList`, `#resList`, `#skills` and the rail's rows always measure their
+  content. Setting the class resizes the columns, which calls it once more; it measures the same
+  heights and stops.
 - **Two columns at ≤1000px:** the rail beside one column of the strip (3 × 2), `.col-m` (Skills) and
-  `.col-r`; Features full width under both, one card across, as widths.html. Nothing stretches
-  here (`align-items:start`, which leaves the last card's grow inert), so this layout is as it was
-  before #155.
+  `.col-r`; Features full width under both, as widths.html. Nothing stretches here: `sheetLevel()`
+  never sets `.cols-even` at this width, and the query undoes it for the moment a resize takes to
+  arrive, so this layout is as it was before #155.
 - **One column at ≤700px**, in the spec's order: rail, abilities, Defences, Statuses, Skills,
   Resources, Features. Both stacks become `display:contents` inside that query, so their cards are
   grid items and `order` can interleave them.
@@ -322,17 +334,20 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
   `#familiarCard`, `#familiarList` and `#addFamiliarLink` up without a guard. A missing id throws,
   and in `wire()` that leaves every later listener unbound.
 - **A media query comes after the rule it overrides.** `rules-data.js` pins the grid's ≤1000px and
-  ≤700px queries after `.sheet-grid`, 30-sheet.css's strip (≤1000px) and rail (≤700px) queries
-  after `.strip .abilities` and `.rail`, and the Features groups' ≤1000px query after their
-  two-across rule. `display:contents` on both stacks lives only inside the ≤700px query, scoped to
+  ≤700px queries after `.sheet-grid`, and 30-sheet.css's strip (≤1000px) and rail (≤700px) queries
+  after `.strip .abilities` and `.rail`. `display:contents` on both stacks lives only inside the ≤700px query, scoped to
   `.sheet-grid`; an unscoped `.stack` rule once broke every one-stack tab.
 - **A card goes home to its own place.** The combat view leaves a marker where each card was —
   inside `.col-m` or `.col-r`, or on the grid itself for the rail, the strip and Features — and puts
   the card back in its place; `sheet.js` checks this against the real markup.
-- **Only a stack's last card grows, and only at three columns (#155).** A second `flex-grow` would
-  move a heading in the stretched case; two columns and one keep `align-items:start`. The
-  two-across feature groups are scoped to `.sheet-grid>[data-note="features"]`, so the combat
-  view's Features stays one across.
+- **Only a stack's last card grows, only at three columns, and only under `.cols-even` (#155).** A
+  second `flex-grow` would move a heading in the stretched case; two columns and one keep
+  `align-items:start`. `sheetShouldStretch()` is the one place the 240px rule lives.
+- **The levelling observes card contents, not just the columns.** Watching only the column boxes
+  misses a stretched column's content shrinking (its box keeps the row's height), which is exactly
+  when the spread can pass 240px.
+- **Features is one card per row (Mike, 2026-11-02).** No `.fgroup` grid, scoped or not;
+  `rules-data.js` checks.
 - **The header is not combat-addable** (`nocv`). Its rests are not a fight action, and the portrait
   rides in with Vitals; a saved `portrait` in the view becomes `vitals` in `migrate()`.
 - **One group field.** A free-text label that files a record into a group is typed in
@@ -380,9 +395,10 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | How is a section identified? | A stable `k` in `NOTE_SECTIONS` | A heading-derived id: headings get reworded, and notes keyed to one would be orphaned |
-| The Sheet's layout (#103, #155) | One layout, no setting: header, rail, strip, then two independent stacks (Skills · Defences, Statuses, Resources) ending on one line with the rail, and Features full width under all three, two across; three columns, two, one by width | A classic fallback: twice the CSS and screenshots until 2.0. Features following Skills in the middle stack (the 2026-10-23 answer): the rail and the right column ended early beside it, leaving long empty gutters (Mike, #155) |
-| How the columns end level (#155) | The grid stretches; each stack's last card grows, content at the top | Stretching every card: moves every heading below the first. Leaving them ragged: the gutters #155 was filed for |
-| Feature cards two across (#155) | Each card at its own height (`align-items:start`) | Equal-height rows: a folded card beside an open one becomes a tall empty frame |
+| The Sheet's layout (#103, #155) | One layout, no setting: header, rail, strip, then two independent stacks (Skills · Defences, Statuses, Resources) ending on one line with the rail while within 240px, and Features full width under all three, one card per row; three columns, two, one by width | A classic fallback: twice the CSS and screenshots until 2.0. Features following Skills in the middle stack (the 2026-10-23 answer): the rail and the right column ended early beside it, leaving long empty gutters (Mike, #155) |
+| When the columns end level (#155, Mike 2026-11-02) | Only while the tallest is at most 240px (`SHEET_STRETCH_MAX`) taller than the shortest; then each stack's last card grows, content at the top. Further apart, each column ends at its content | Always stretching (the first build, L8262): with many statuses or resources the rail and Skills became 1,200px empty frames. Stretching every card: moves every heading below the first. Never stretching: the gutters #155 was filed for |
+| How the 240px rule is measured (#155) | `sheetLevel()`: class off, measure, decide, in one task; a ResizeObserver on the columns and their cards' contents, debounced, plus the window's resize | CSS alone: it cannot compare column heights. Observing only the column boxes: a stretched column's content shrinking never resizes its box |
+| Features at three columns (#155, Mike 2026-11-02) | One card per row at full width, as at every width | Two across inside each group (the first build, L8262) |
 | Familiars on the Sheet (#103) | A paw in the header, shown by a per-character switch, opening a popover and a modal; the card stays in the DOM, hidden, for the combat view | A chip with the name: long names and several familiars don't fit. A side drawer: heavier than needed. Flattening `.stack` to sink the card on a phone (the 2026-08-15 answer): the stacks are gone |
 | The familiars' #97 pencil (#103) | None: `familiars` leaves `EDIT_CARDS` | The familiar's window honouring `editHide`: its only toggle would be on the card, reachable just in the combat view |
 | May the header go in the combat view? (#103) | No (`nocv`); a saved one becomes Vitals | Keeping it addable: the name, rests and level would ride into a fight view |
@@ -442,3 +458,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-24 — The ☰ section flyout is retired: the header's `.label` caption is read by nothing now, and the note button, pencil and combat toggle are what a section card's `.label` is for. → ledger L6804, #103
 - 2026-10-25 — The Party card joins the registry as `party` (Bio, `nocv:true`) and `EDIT_CARDS` (twelve); the registry grows to 19 sections. → ledger L7097, #91
 - 2026-11-02 — Features & Traits becomes a full-width row under the three columns, its cards two across; the rail, Skills and the right stack end on one line (each stack's last card grows); two columns and one are unchanged. → ledger L8262, #155
+- 2026-11-02 — Mike's decisions: the columns level only while within 240px (`SHEET_STRETCH_MAX`, measured by `sheetLevel()`), and Features is one card per row at every width. → ledger L8301, #155

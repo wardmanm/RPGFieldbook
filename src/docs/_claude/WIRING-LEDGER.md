@@ -8297,3 +8297,41 @@ child of the grid, and the combat view's markers (Features' on the grid).
 Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
 [features & traits](../wiki/features/features-and-traits.md), [decisions](../wiki/decisions.md);
 the #103 spec's As built.
+
+## #155 round 2: the columns level only when close; Features one card per row (Mike, 2026-11-02)
+
+Mike's two decisions on the first build (L8262):
+
+1. **Level only when close (option A).** The three columns end on one line only while the tallest is
+   at most `SHEET_STRETCH_MAX` (240px) taller than the shortest. Further apart, nothing stretches
+   and each column ends where its content ends: the busy case (9 statuses, 8 resources) had drawn a
+   1,200px empty frame down the rail and Skills. The stretch rules now need `.sheet-grid.cols-even`
+   (base `align-items:start`); `sheetLevel()` in `40-sheet.js` sets it. It takes `.cols-even` off,
+   measures where the rail, `.col-m` and `.col-r` end from the grid's top (their own heights, in one
+   task, so nothing paints between), and decides by the pure `sheetShouldStretch(heights)`. A
+   column that is hidden or holds no card on the Sheet is left out; fewer than two left, nothing
+   levels. It returns at once for print and while the Sheet is hidden, and clears the class at
+   ≤1000px (the CSS also undoes it there, for the moment a resize takes to arrive).
+   `wireSheetLevel()`, called once from `wire()`, watches the window's resize and, with one
+   ResizeObserver debounced 60ms (`scheduleSheetLevel()`), the grid, the four column boxes and every
+   child of every card in them. The children matter: a stretched card's own box does not shrink when
+   its content does, but `#statusList`, `#resList`, `#skills` and the rail's rows always measure
+   their content. Toggling the class resizes the columns and calls it once more, which measures the
+   same natural heights and stops.
+2. **Features is one card per row at every width.** The two-across grid, its ≤1000px query, and their
+   tests are gone; group headers are unchanged. The card is still the grid's full-width third row.
+
+Driven at 1280: the SRD Paladin (natural 572 / 538 / 746, a 208px spread) levels; one status of 231px
+spread levels and one of 252px does not; the busy case does not; a status added by re-render and a live
+resize to 900 and back flip the class as they should. The first tuning ran before the web fonts had
+loaded and measured 19px differently; the observer catches that change too.
+
+**Tests.** `sheet.js`: `SHEET_STRETCH_MAX` is 240; `sheetShouldStretch()` for equal columns, 240,
+241, a hidden or empty column (null, 0, undefined), one column or none, and junk. `rules-data.js`:
+base `align-items:start`, the stretch only under `.cols-even`, ≤1000px undoing it, no `.fgroup` grid
+anywhere, and the wiring (boot call, ResizeObserver, debounce, resize, card children observed,
+print / ≤1000px / hidden guards, measure with the class off).
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
+[features & traits](../wiki/features/features-and-traits.md), [decisions](../wiki/decisions.md);
+the #103 spec's As built.
