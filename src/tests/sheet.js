@@ -17,7 +17,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'itemOrigin', 'originOptionsHTML', 'grantedFromOrigin', 'originFromGranted',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
   'ABIL',
-  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV', 'SHEET_STRETCH_MAX', 'sheetShouldStretch',
+  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
   'featOriginLabel', 'invSectionName', 'invGroups', 'INV_FAV', 'INV_ORDER', 'groupChoices', 'groupFieldHTML',
   'tagLabel', 'tagKey', 'journalEditorHTML', 'trackerFormHTML',
   'GROUP_RESERVED', 'tagTidy', 'groupNameProblem', 'syncGroupFieldMsg', 'groupFieldBlocked', 'groupByTag', 'invSection',
@@ -4915,18 +4915,6 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     ck('#155 the feature list renders into the Features card, a direct child of the grid (no stack)',
        !!fl && fl.parent.attr('data-note') === 'features' && fl.parent.parent === grid && !fl.closest('.col-m') && !fl.closest('.col-r'));
   }
-  // #155 (Mike, 2026-11-02): the three columns end level only while the
-  // tallest is at most SHEET_STRETCH_MAX px taller than the shortest
-  {
-    const S = X.sheetShouldStretch;
-    ck('#155 SHEET_STRETCH_MAX is 240', X.SHEET_STRETCH_MAX === 240);
-    ck('#155 equal columns stretch', S([600, 600, 600]) === true);
-    ck('#155 a 240px difference still stretches', S([600, 840, 700]) === true && S([840, 600]) === true);
-    ck('#155 a 241px difference does not', S([600, 841, 700]) === false && S([841, 600, 600]) === false);
-    ck('#155 a hidden or empty column is left out of the comparison', S([600, null, 820]) === true && S([600, 0, 900]) === false && S([600, undefined, 600]) === true);
-    ck('#155 one column left, or none, has nothing to level', S([600, null, null]) === false && S([]) === false && S(null) === false);
-    ck('#155 junk is not a height', S([600, NaN, 600]) === true && S([600, '900', 600]) === true && S([600, -50, 600]) === true);
-  }
   const doc = ctx.document, keep = {g: doc.getElementById, q: doc.querySelector, qa: doc.querySelectorAll, c: doc.createElement,
     ag: ctx.addGrip, rg: ctx.removeGrip, sl: ctx.syncStatLock, re: ctx.renderCombatEmpty, ch: X.character};
   doc.getElementById = id => root.querySelector('#' + id);
@@ -4952,52 +4940,39 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     doc.getElementById = keep.g; doc.querySelector = keep.q; doc.querySelectorAll = keep.qa; doc.createElement = keep.c;
     ctx.addGrip = keep.ag; ctx.removeGrip = keep.rg; ctx.syncStatLock = keep.sl; ctx.renderCombatEmpty = keep.re; X.character = keep.ch;
   }
-  // #155 (Mike, 2026-11-02, "option 2"): sheetLevel() measures the rail and the
-  // two stacks as the markup holds them — Statuses now under Skills in .col-m.
-  // Mike's sheet in round numbers (one condition, two resources): with
-  // Statuses in the right stack that ran 242px past Skills and nothing
-  // levelled; under Skills the three land within 142px and level.
+  // #155 (Mike, 2026-11-02, replacing the 240px rule): at three columns every
+  // stack's LAST card grows to the tallest column, always —
+  // `div.card:last-of-type{flex-grow:1}` (rules-data.js pins the CSS). Which
+  // card that is, read off the real markup: Statuses and Resources at home;
+  // with them in the combat view, the hidden <span> marker left in their place
+  // is not a div, so Skills and Defences grow instead; back home, as before.
   {
-    const grid = root.querySelector('.sheet-grid'), GAP = 16, TOP = 216;   // the stacks start under the strip
-    const H = {vitals: 560, skills: 340, statuses: 130, defences: 150, resources: 270};
     const cls = n => (n.attr('class') || '').split(/\s+/);
-    const dress = n => {
-      n.classList = {contains: c => cls(n).includes(c)};
-      Object.defineProperty(n, 'offsetHeight', {configurable: true, get: () => H[n.attr('data-note')] || 0});
-      n.getBoundingClientRect = () => {
-        if (cls(n).includes('rail')) return {top: 0, bottom: H.vitals};
-        const kids = n.children.filter(c => cls(c).includes('card') && c.offsetHeight > 0);
-        return {top: TOP, bottom: TOP + kids.reduce((a, c) => a + c.offsetHeight, 0) + GAP * Math.max(0, kids.length - 1)};
-      };
-      n.children.forEach(dress);
-    };
-    grid.children.forEach(dress);
-    const on = new Set();
-    grid.classList = {remove: c => on.delete(c), toggle: (c, v) => (v ? on.add(c) : on.delete(c)), contains: c => on.has(c)};
-    grid.offsetParent = {};
-    grid.getBoundingClientRect = () => ({top: 0});
-    grid.querySelector = sel => { const m = /^:scope>\.([\w-]+)$/.exec(sel); return m ? grid.children.find(c => cls(c).includes(m[1])) || null : null; };
-    const colM = grid.querySelector(':scope>.col-m'), colR = grid.querySelector(':scope>.col-r'), st = colM.querySelector('[data-note="statuses"]');
-    const keepQ = doc.querySelector, keepMM = ctx.window.matchMedia;
-    doc.querySelector = sel => (sel === '#tab-sheet .sheet-grid' ? grid : null);
+    const grid = root.querySelector('.sheet-grid');
+    const stack = c => grid.children.find(n => cls(n).includes(c));
+    const grows = c => { const divs = stack(c).children.filter(n => n.tag === 'div'), l = divs[divs.length - 1]; return l && cls(l).includes('card') ? l.attr('data-note') : null; };
+    ck('#155 the card that grows: Statuses under Skills, Resources under Defences', grows('col-m') === 'statuses' && grows('col-r') === 'resources', [grows('col-m'), grows('col-r')]);
+    const doc = ctx.document, keep = {g: doc.getElementById, q: doc.querySelector, qa: doc.querySelectorAll, c: doc.createElement,
+      ag: ctx.addGrip, rg: ctx.removeGrip, sl: ctx.syncStatLock, re: ctx.renderCombatEmpty, ch: X.character};
+    doc.getElementById = id => root.querySelector('#' + id);
+    doc.querySelector = sel => root.querySelector(sel);
+    doc.querySelectorAll = sel => root.querySelectorAll(sel);
+    doc.createElement = tag => mk(tag);
+    ctx.addGrip = () => {}; ctx.removeGrip = () => {}; ctx.syncStatLock = () => {}; ctx.renderCombatEmpty = () => {};
     try {
-      ctx.sheetLevel();
-      ck('#155 sheetLevel() levels Mike\'s sheet with Statuses under Skills (560 / 702 / 652)',
-         on.has('cols-even') && colM.getBoundingClientRect().bottom === 702 && colR.getBoundingClientRect().bottom === 652);
-      colR.appendChild(st);
-      ctx.sheetLevel();
-      ck('#155 ...and measures the stacks as they stand: the same cards with Statuses in the right stack (556 / 798) do not level',
-         !on.has('cols-even') && colM.getBoundingClientRect().bottom === 556 && colR.getBoundingClientRect().bottom === 798);
-      colM.appendChild(st);
-      ctx.sheetLevel();
-      const was = on.has('cols-even');
-      ctx.window.matchMedia = q => ({matches: q === '(max-width:1000px)'});
-      ctx.sheetLevel();
-      ck('#155 ...and clears the class at two columns', was && !on.has('cols-even'));
+      X.character = X.blankChar(); X.character.combatSections = ['statuses', 'resources'];
+      ctx.fillCombatView();
+      ck('#155 ...with Statuses and Resources in the combat view, their markers are spans and Skills and Defences grow',
+         stack('col-m').children.some(n => n.tag === 'span' && n.attr('data-cvhome') === 'statuses') &&
+         stack('col-r').children.some(n => n.tag === 'span' && n.attr('data-cvhome') === 'resources') &&
+         grows('col-m') === 'skills' && grows('col-r') === 'defences', [grows('col-m'), grows('col-r')]);
+      ctx.emptyCombatView();
+      ck('#155 ...and home again, Statuses and Resources grow', grows('col-m') === 'statuses' && grows('col-r') === 'resources' &&
+         root.querySelectorAll('[data-cvhome]').length === 0, [grows('col-m'), grows('col-r')]);
     } finally {
-      doc.querySelector = keepQ; ctx.window.matchMedia = keepMM;
+      doc.getElementById = keep.g; doc.querySelector = keep.q; doc.querySelectorAll = keep.qa; doc.createElement = keep.c;
+      ctx.addGrip = keep.ag; ctx.removeGrip = keep.rg; ctx.syncStatLock = keep.sl; ctx.renderCombatEmpty = keep.re; X.character = keep.ch;
     }
-    ck('#155 ...Statuses back under Skills', st.parent === colM && colM.children.indexOf(st) === 1);
   }
 }
 

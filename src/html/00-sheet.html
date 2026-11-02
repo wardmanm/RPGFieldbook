@@ -34,10 +34,10 @@
          and under it two independent stacks (Mike's ruling): .col-m (Skills,
          Statuses) and .col-r (Defences, Resources), so no card waits on its
          neighbour's row. #155: Features is a full-width row under all three,
-         and the rail and the two stacks end on one line (each column's last
-         card stretches) while they are within 240px of each other —
-         sheetLevel() in 40-sheet.js decides. Statuses sits under Skills
-         (Mike, 2026-11-02) so the two stacks come out close in height.
+         and the rail and the two stacks always end on one line at three
+         columns (Mike, 2026-11-02): the grid stretches each to the tallest
+         and each stack's last card grows, in CSS alone. Statuses sits under
+         Skills (Mike, 2026-11-02) so the two stacks come out close in height.
          It re-lays at ≤1000px (two columns: the stacks whole, one above the
          other, so the cards read and tab Skills, Statuses, Defences,
          Resources; Features full width under the rail) and ≤700px (one: both
