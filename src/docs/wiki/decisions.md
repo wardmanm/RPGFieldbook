@@ -496,7 +496,9 @@ When a page gains a Decisions row, add its line here under that page.
 ### [Sections & layout](ui/sections-and-layout.md)
 
 - **How is a section identified?** — A stable `k` in `NOTE_SECTIONS`
-- **The Sheet's layout (#103)** — One layout, no setting: header, rail, strip, then two independent stacks (Skills, Features · Defences, Statuses, Resources); three columns, two, one by width
+- **The Sheet's layout (#103, #155)** — One layout, no setting: header, rail, strip, then two independent stacks (Skills · Defences, Statuses, Resources) ending on one line with the rail, and Features full width under all three, two across; three columns, two, one by width
+- **How the columns end level (#155)** — The grid stretches; each stack's last card grows, content at the top
+- **Feature cards two across (#155)** — Each card at its own height (`align-items:start`)
 - **Familiars on the Sheet (#103)** — A paw in the header opening a popover and a modal; the card stays in the DOM, hidden, for the combat view
 - **The familiars' #97 pencil (#103)** — None: `familiars` leaves `EDIT_CARDS`
 - **May the header go in the combat view? (#103)** — No (`nocv`); a saved one becomes Vitals

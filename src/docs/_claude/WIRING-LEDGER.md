@@ -8258,3 +8258,42 @@ in step 4, which he can dismiss. Decision 7 of the spec is amended (its As built
 build"). The 1.9.0 run's first checklist became its pre-drive report.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md).
+
+## The Sheet: Features & Traits as a full-width row, the three columns end on one line (#155, 2026-11-02)
+
+Mike, in the 1.9.0 test pass: at three columns Features & Traits ran down the middle column while the
+rail and the right column ended early, leaving long empty gutters. Now:
+
+1. **Features is its own row.** The card leaves `.col-m` and becomes a direct child of
+   `.sheet-grid`, after `.col-r` (`00-sheet.html`); the base grid is `grid-template-rows:auto 1fr
+   auto` with Features at `grid-column:1/-1;grid-row:3`. `.col-m` holds Skills alone.
+2. **The three columns end on one line.** The grid stretches its items (`align-items:stretch`), the
+   rail spans rows 1–2 as before, and the stacks become flex columns whose **last** card grows
+   (`div.card:last-of-type{flex-grow:1}`). The tallest column sets the height; the rail, Skills and
+   Resources draw down to it with their content at the top, and no other card or heading moves.
+   `:last-of-type` rather than `:last-child` because the combat view leaves a hidden `<span>` marker
+   where a card was; the last card still at home grows instead.
+3. **Two across at three columns.** `.sheet-grid>[data-note="features"] .fgroup` is a two-column
+   grid with the `.fghead` spanning both, `align-items:start` (a folded card beside an open one
+   stays one line, rather than a tall empty frame); `display:block` again at ≤1000px. Scoped to the
+   Sheet, so the combat view's Features stays one across. The Features card joins the size
+   containers, so "Collapse all" still folds to its icon on a phone.
+4. **Two columns and one keep today's stacking.** ≤1000px resets `align-items:start` (the last
+   card's grow is inert there), places `.col-m` whole at column 2 row 2 instead of opening it
+   (`display:contents` is now only at ≤700px), and keeps Features at row 5, full width. ≤700px is
+   unchanged: both stacks open and the phone order runs to Features at 7. 900 and 390 shots are
+   unchanged from main.
+
+Print builds `#printArea` from the character, not from these cards, so it is untouched. The combat
+view takes Features from the grid and puts it back there (its marker's parent is `.sheet-grid`).
+
+**Tests.** `rules-data.js`: the card order with Features after the right stack, `.col-m` holding
+Skills alone, Features a child of the grid in no stack, the third row, stretch and the one
+`flex-grow`, two columns' `align-items:start` and placements, the two-across rule, its heading
+span, its ≤1000px query after it, and no unscoped `.fgroup` grid; the container rule now names
+Features. `sheet.js`: the parsed Sheet's places, its section order, `#featureList` inside a direct
+child of the grid, and the combat view's markers (Features' on the grid).
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
+[features & traits](../wiki/features/features-and-traits.md), [decisions](../wiki/decisions.md);
+the #103 spec's As built.
