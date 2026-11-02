@@ -275,11 +275,11 @@ PRIORITY=<P0, P1 or P2: the priority Mike confirmed>
 NEXT=<the next fix version>
 case "$PRIORITY" in P0|P1|P2) ;; *) echo "PRIORITY must be P0, P1 or P2, not '$PRIORITY': nothing filed"; exit 1;; esac
 PROJ=$(gh project view 3 --owner wardmanm --format json --jq .id)
-F() { gh project field-list 3 --owner wardmanm --format json --jq "$1"; }
-STATUS=$(F '.fields[]|select(.name=="Status")|.id')
-BACKLOG=$(F '.fields[]|select(.name=="Status")|.options[]|select(.name=="Backlog")|.id')
-PRIO=$(F '.fields[]|select(.name=="Priority")|.id')
-PICK=$(F ".fields[]|select(.name==\"Priority\")|.options[]|select(.name==\"$PRIORITY\")|.id")
+F() { gh project field-list 3 --owner wardmanm --format json --jq "$(cat)"; }   # the jq filter comes on stdin: never a positional
+STATUS=$(F <<<'.fields[]|select(.name=="Status")|.id')
+BACKLOG=$(F <<<'.fields[]|select(.name=="Status")|.options[]|select(.name=="Backlog")|.id')
+PRIO=$(F <<<'.fields[]|select(.name=="Priority")|.id')
+PICK=$(F <<<".fields[]|select(.name==\"Priority\")|.options[]|select(.name==\"$PRIORITY\")|.id")
 [ -n "$PROJ" ] && [ -n "$STATUS" ] && [ -n "$BACKLOG" ] && [ -n "$PRIO" ] && [ -n "$PICK" ] \
   || { echo "project #3 lookup failed (scope, network, or no Priority option $PRIORITY): nothing filed"; exit 1; }
 if [ "$PRIORITY" = P0 ]; then

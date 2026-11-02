@@ -91,13 +91,13 @@ case "$KIND" in bug|feature|task) ;; *) echo "KIND must be bug, feature or task:
 case "$PRIORITY" in ''|P0|P1|P2) ;; *) echo "PRIORITY must be P0, P1 or P2: nothing filed"; exit 1;; esac
 [ "$PRIORITY" = P0 ] && NEXT=
 PROJ=$(gh project view 3 --owner wardmanm --format json --jq .id)
-F() { gh project field-list 3 --owner wardmanm --format json --jq "$1"; }
-STATUS=$(F '.fields[]|select(.name=="Status")|.id')
-BACKLOG=$(F '.fields[]|select(.name=="Status")|.options[]|select(.name=="Backlog")|.id')
-PRIO=$(F '.fields[]|select(.name=="Priority")|.id')
-SIZEF=$(F '.fields[]|select(.name=="Size")|.id')
-PICK=; [ -n "$PRIORITY" ] && PICK=$(F ".fields[]|select(.name==\"Priority\")|.options[]|select(.name==\"$PRIORITY\")|.id")
-SPICK=; [ -n "$SIZE" ] && SPICK=$(F ".fields[]|select(.name==\"Size\")|.options[]|select(.name==\"$SIZE\")|.id")
+F() { gh project field-list 3 --owner wardmanm --format json --jq "$(cat)"; }   # the jq filter comes on stdin: never a positional
+STATUS=$(F <<<'.fields[]|select(.name=="Status")|.id')
+BACKLOG=$(F <<<'.fields[]|select(.name=="Status")|.options[]|select(.name=="Backlog")|.id')
+PRIO=$(F <<<'.fields[]|select(.name=="Priority")|.id')
+SIZEF=$(F <<<'.fields[]|select(.name=="Size")|.id')
+PICK=; [ -n "$PRIORITY" ] && PICK=$(F <<<".fields[]|select(.name==\"Priority\")|.options[]|select(.name==\"$PRIORITY\")|.id")
+SPICK=; [ -n "$SIZE" ] && SPICK=$(F <<<".fields[]|select(.name==\"Size\")|.options[]|select(.name==\"$SIZE\")|.id")
 [ -n "$PROJ" ] && [ -n "$STATUS" ] && [ -n "$BACKLOG" ] && { [ -z "$PRIORITY" ] || [ -n "$PICK" ]; } && { [ -z "$SIZE" ] || [ -n "$SPICK" ]; } \
   || { echo "project #3 lookup failed (scope, network, or an unknown option): nothing filed"; exit 1; }
 if [ -n "$NEXT" ]; then
