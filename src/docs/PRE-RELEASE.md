@@ -140,3 +140,4 @@ Started: 2026-10-30 · App was 1.8.1
 |---|---|---|---|---|
 | reported by Mike | Gold granted by an ancestry, class or background doesn't show in the coin boxes until a reload | P1 | #153 | open |
 | reported by Mike | A language granted by an ancestry or background doesn't appear as a pill until a reload | P2 | #154 | open |
+| The Sheet makeover (#103), Mike | Sheet: Features & Traits as a full-width row, and the three columns ending on one line | P0 | #155 | open |
