@@ -390,6 +390,12 @@ What differs from the sections above, and why:
   end on one line, each stack's last card growing to the tallest column, only while the tallest is
   at most 240px (`SHEET_STRETCH_MAX`) taller than the shortest (Mike, 2026-11-02); further apart,
   each ends at its content. `sheetLevel()` measures. Two columns and one are unchanged.
+- **#155, Statuses under Skills (2026-11-02, L8339; Mike's decision, "option 2").** At three
+  columns the middle stack is Skills, Statuses and the right stack Defences, Resources (§6.5 had
+  Statuses with Defences and Resources). On an everyday sheet the old right stack ran about 250px
+  past Skills, just over the 240px limit; with Statuses moved the columns land within about 130px
+  and level. §6.7's two-column order (Skills, Defences, Statuses, Resources) and one-column order
+  are kept: at ≤1000px both stacks open and each card takes its own grid row.
 - **The ☰ section flyout is retired; a back-to-top button** (L6804, Mike 2026-10-24): the tabs are
   organised well enough to need no index, so `#btnToc`, `#tocFly` and `buildToc()` go (the rail's
   and strip's `.label`s above stay, for the note button, the combat toggle and the registry), and a

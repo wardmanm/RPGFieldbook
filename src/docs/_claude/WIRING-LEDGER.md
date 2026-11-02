@@ -8335,3 +8335,74 @@ print / ≤1000px / hidden guards, measure with the class off).
 Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
 [features & traits](../wiki/features/features-and-traits.md), [decisions](../wiki/decisions.md);
 the #103 spec's As built.
+
+## #155 round 3: Statuses under Skills at three columns (Mike, 2026-11-02)
+
+Mike's decision on round 2 (L8301), "option 2" of the four drawn to scale on his own sheet. With one
+condition and two resources the right stack (Defences, Statuses, Resources) ran about 250px past
+Skills, just over the 240px limit, so nothing levelled and a rough gap opened under Vitals and
+Skills. Raising the limit, balancing the cards automatically and letting Features fill the gap were
+the other three options. Now:
+
+1. **At three columns Statuses sits under Skills.** The card moves into `.col-m` after Skills
+   (`00-sheet.html`): the middle column is Abilities (the strip), Skills, Statuses; the right is
+   Defences, Resources. The 240px rule is unchanged (`SHEET_STRETCH_MAX`, `sheetShouldStretch()`).
+   `sheetLevel()` already measured `:scope>.col-m` and `:scope>.col-r` whatever they hold, and
+   `wireSheetLevel()` already observed every child of every card in both stacks, so only their
+   comments changed. Under `.cols-even` the middle stack's growing last card is now Statuses (Skills
+   while Statuses is in the combat view, by the same `:last-of-type`).
+2. **Two columns keep their order: Skills, Defences, Statuses, Resources.** At ≤1000px both stacks
+   are now `display:contents` and each card takes its own row of column 2
+   (`grid-template-rows:auto auto auto auto 1fr auto`): the strip 1, Skills 2, Defences 3, Statuses
+   4, Resources 5, Features 6 at full width; the rail spans 1–5. Resources' row is the 1fr one the
+   rail also spans, so a rail taller than column 2 grows that row below Resources and opens no gap
+   above Features (what `.col-r` spanning rows 3/5 did before). Left as stacks, the move would have
+   read Skills, Statuses, Defences, Resources here.
+3. **One column is unchanged.** The phone `order`s already matched the cards by descendant
+   selectors. The ≤700px query now also puts back the four cards the ≤1000px query placed
+   (`grid-column:1;grid-row:auto`), and its own `display:contents` went: the ≤1000px query's
+   already applies.
+4. **Not changed:** `NOTE_SECTIONS` keeps skills, defences, statuses, resources (the order print
+   lists section notes in, and the Section Notes card's); print builds `#printArea` from the
+   character; the combat view leaves Statuses' marker in `.col-m` and sends the card back there;
+   hidden tabs, Features' collapse and favourites, the #97 pencils and section notes key on
+   `data-note`, not on the stack.
+
+**Focus order.** At three columns the document order is the reading order (down the middle stack,
+then the right). At two columns the keyboard now goes Skills, Statuses, Defences, Resources while
+the eye reads Skills, Defences, Statuses, Resources; one column already differed (Defences and
+Statuses come before Skills there).
+
+**Measured** (natural heights of the rail, `.col-m`, `.col-r` from the grid's top, at 1280):
+
+| Sheet | Before | After |
+|---|---|---|
+| Humblewood Gadgeteer 3 with a portrait, one condition, two resources, one resistance, one immunity (Mike's shape) | 572 / 538 / 785: 247px, ragged | 572 / 708 / 616: 136px, levels |
+| The SRD Paladin (no condition, two resources) | 572 / 538 / 746: 208px, levels | 572 / 668 / 616: 96px, levels |
+| Busy (9 conditions, 8 resources) | 572 / 538 / 1786, ragged | 572 / 1164 / 1161, ragged; Features starts about 600px higher |
+
+At 900 and 390 every card is where it was (390 pixel-identical; 900 differs only in anti-aliasing).
+
+**Driven** on the built file at 1280: Add on Statuses opened the form and saved a second condition
+(572 / 767 / 616, still levels); a third, added by `addStatusByName()` and drawn, took the middle
+column 254px past the rail and the class came off on its own, and Remove (with its confirm) on
+each brought it back to one condition, levelled; the combat view took Statuses
+and Resources, left their markers in `.col-m` and `.col-r`, and the Sheet tab sent them home, still
+level; the Statuses pencil hid both its edit buttons and showed them again; its note button opened
+"Note — Statuses & Conditions"; Features' Collapse all and a favourite star worked both ways; a live
+resize 1280 → 900 → 390 → 1280 cleared and restored the class; hiding Spells and Journal left the
+Sheet as it was; print media showed `#printArea` with the condition and the resistance, and the grid
+hidden. The combat round trip at 900 and 390 left every card in place.
+
+**Tests.** `sheet.js`: the parsed Sheet's places (Statuses `col-m#1`, Resources `col-r#1`), the
+section order (vitals, abilities, skills, statuses, defences, resources, features), the combat
+markers (Statuses in `.col-m`, Defences and Resources in `.col-r`), and `sheetLevel()` run against
+the parsed markup with stubbed heights: Mike's shape levels with Statuses under Skills, the same cards
+with Statuses moved back to the right stack do not, and two columns clear the class.
+`rules-data.js`: the markup order, `.col-m` exactly Skills then Statuses, `.col-r` exactly Defences
+then Resources, the two-column rows (each card's column and row, the 1fr row, both stacks open), the
+phone query putting every placed card back, and `sheetLevel()` measuring the rail and both stacks
+without naming a card.
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md), [overview](../wiki/overview.md),
+[decisions](../wiki/decisions.md); the #103 spec's As built.
