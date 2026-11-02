@@ -145,9 +145,10 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
    controls on a second line under the name: the − count + group starts at
    the left edge, as on a wide row, and restore/edit/delete sit at the
    right. Only inside .sheet-grid's
-   stacks: no container is declared anywhere else, so no other card is
-   touched. */
-.sheet-grid>.col-m>.card,.sheet-grid>.col-r>.card{container-type:inline-size}
+   stacks and its Features row (#155: Features left .col-m and keeps its
+   container, so "Collapse all" still folds to its icon on a phone): no
+   container is declared anywhere else, so no other card is touched. */
+.sheet-grid>.col-m>.card,.sheet-grid>.col-r>.card,.sheet-grid>[data-note="features"]{container-type:inline-size}
 .sheet-grid .card>.label{white-space:nowrap}
 @container (max-width:460px){#featCollapseLbl{display:none}}
 @container (max-width:420px){.res{flex-wrap:wrap;justify-content:flex-start;row-gap:6px}.res-main{flex:1 0 100%}.res [data-res-reset]{margin-left:auto}}

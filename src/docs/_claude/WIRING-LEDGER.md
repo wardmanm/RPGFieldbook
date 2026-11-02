@@ -8258,3 +8258,80 @@ in step 4, which he can dismiss. Decision 7 of the spec is amended (its As built
 build"). The 1.9.0 run's first checklist became its pre-drive report.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md).
+
+## The Sheet: Features & Traits as a full-width row, the three columns end on one line (#155, 2026-11-02)
+
+Mike, in the 1.9.0 test pass: at three columns Features & Traits ran down the middle column while the
+rail and the right column ended early, leaving long empty gutters. Now:
+
+1. **Features is its own row.** The card leaves `.col-m` and becomes a direct child of
+   `.sheet-grid`, after `.col-r` (`00-sheet.html`); the base grid is `grid-template-rows:auto 1fr
+   auto` with Features at `grid-column:1/-1;grid-row:3`. `.col-m` holds Skills alone.
+2. **The three columns end on one line.** The grid stretches its items (`align-items:stretch`), the
+   rail spans rows 1–2 as before, and the stacks become flex columns whose **last** card grows
+   (`div.card:last-of-type{flex-grow:1}`). The tallest column sets the height; the rail, Skills and
+   Resources draw down to it with their content at the top, and no other card or heading moves.
+   `:last-of-type` rather than `:last-child` because the combat view leaves a hidden `<span>` marker
+   where a card was; the last card still at home grows instead.
+3. **Two across at three columns.** `.sheet-grid>[data-note="features"] .fgroup` is a two-column
+   grid with the `.fghead` spanning both, `align-items:start` (a folded card beside an open one
+   stays one line, rather than a tall empty frame); `display:block` again at ≤1000px. Scoped to the
+   Sheet, so the combat view's Features stays one across. The Features card joins the size
+   containers, so "Collapse all" still folds to its icon on a phone.
+4. **Two columns and one keep today's stacking.** ≤1000px resets `align-items:start` (the last
+   card's grow is inert there), places `.col-m` whole at column 2 row 2 instead of opening it
+   (`display:contents` is now only at ≤700px), and keeps Features at row 5, full width. ≤700px is
+   unchanged: both stacks open and the phone order runs to Features at 7. 900 and 390 shots are
+   unchanged from main.
+
+Print builds `#printArea` from the character, not from these cards, so it is untouched. The combat
+view takes Features from the grid and puts it back there (its marker's parent is `.sheet-grid`).
+
+**Tests.** `rules-data.js`: the card order with Features after the right stack, `.col-m` holding
+Skills alone, Features a child of the grid in no stack, the third row, stretch and the one
+`flex-grow`, two columns' `align-items:start` and placements, the two-across rule, its heading
+span, its ≤1000px query after it, and no unscoped `.fgroup` grid; the container rule now names
+Features. `sheet.js`: the parsed Sheet's places, its section order, `#featureList` inside a direct
+child of the grid, and the combat view's markers (Features' on the grid).
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
+[features & traits](../wiki/features/features-and-traits.md), [decisions](../wiki/decisions.md);
+the #103 spec's As built.
+
+## #155 round 2: the columns level only when close; Features one card per row (Mike, 2026-11-02)
+
+Mike's two decisions on the first build (L8262):
+
+1. **Level only when close (option A).** The three columns end on one line only while the tallest is
+   at most `SHEET_STRETCH_MAX` (240px) taller than the shortest. Further apart, nothing stretches
+   and each column ends where its content ends: the busy case (9 statuses, 8 resources) had drawn a
+   1,200px empty frame down the rail and Skills. The stretch rules now need `.sheet-grid.cols-even`
+   (base `align-items:start`); `sheetLevel()` in `40-sheet.js` sets it. It takes `.cols-even` off,
+   measures where the rail, `.col-m` and `.col-r` end from the grid's top (their own heights, in one
+   task, so nothing paints between), and decides by the pure `sheetShouldStretch(heights)`. A
+   column that is hidden or holds no card on the Sheet is left out; fewer than two left, nothing
+   levels. It returns at once for print and while the Sheet is hidden, and clears the class at
+   ≤1000px (the CSS also undoes it there, for the moment a resize takes to arrive).
+   `wireSheetLevel()`, called once from `wire()`, watches the window's resize and, with one
+   ResizeObserver debounced 60ms (`scheduleSheetLevel()`), the grid, the four column boxes and every
+   child of every card in them. The children matter: a stretched card's own box does not shrink when
+   its content does, but `#statusList`, `#resList`, `#skills` and the rail's rows always measure
+   their content. Toggling the class resizes the columns and calls it once more, which measures the
+   same natural heights and stops.
+2. **Features is one card per row at every width.** The two-across grid, its ≤1000px query, and their
+   tests are gone; group headers are unchanged. The card is still the grid's full-width third row.
+
+Driven at 1280: the SRD Paladin (natural 572 / 538 / 746, a 208px spread) levels; one status of 231px
+spread levels and one of 252px does not; the busy case does not; a status added by re-render and a live
+resize to 900 and back flip the class as they should. The first tuning ran before the web fonts had
+loaded and measured 19px differently; the observer catches that change too.
+
+**Tests.** `sheet.js`: `SHEET_STRETCH_MAX` is 240; `sheetShouldStretch()` for equal columns, 240,
+241, a hidden or empty column (null, 0, undefined), one column or none, and junk. `rules-data.js`:
+base `align-items:start`, the stretch only under `.cols-even`, ≤1000px undoing it, no `.fgroup` grid
+anywhere, and the wiring (boot call, ResizeObserver, debounce, resize, card children observed,
+print / ≤1000px / hidden guards, measure with the class off).
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md),
+[features & traits](../wiki/features/features-and-traits.md), [decisions](../wiki/decisions.md);
+the #103 spec's As built.

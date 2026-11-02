@@ -52,6 +52,12 @@ description through `descHTML()`, a "Costs N X per use" line, the use pips and t
 **Off** stops the feature's effects (`contributions()` skips it) and greys the chips. The star
 re-renders without `recompute()`, since nothing derived changes; On/Off recomputes.
 
+**Where the card sits (#155).** On the Sheet's three-column layout the card is a full-width row
+under the rail and the two stacks; at two columns and one it is full width at the bottom. At every
+width it is one feature per row, at the card's full width, under group headings that fold as
+before (Mike, 2026-11-02). The placement is CSS only (`10-chrome.css`); `renderFeatures()` draws the
+same markup everywhere. See [Sections & layout](../ui/sections-and-layout.md).
+
 **Limited uses.** `usesMax(f)` resolves `uses.max` as a number, `{byLevel:[…]}` indexed by *total*
 level, `{formula:"level"}`, or `{formula:"<abbr>[±N]"}` (or that string bare) — an ability modifier
 from `abilFinal()`, minimum 1. It is resolved at every render, so the pips track levels and ability
@@ -166,3 +172,5 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 - 2026-10-16 — A feature files under its source, falling back to where it came from; the Source box offers the groups in use. → ledger L5823, #98
 - 2026-10-22 — The feat/trait picker's filters and preview become `featFacets()` and `openFeatInfo()`, shared with the Rules tab's Feats and Traits categories. → ledger L6327, #99
 - 2026-10-24 — The ☰ section flyout is retired, so the Favourites-in-the-menu decision is moot. → ledger L6804, #103
+- 2026-11-02 — The card is a full-width row under the Sheet's three columns, its rows two across within each group. → ledger L8262, #155
+- 2026-11-02 — One feature per row at every width (Mike); the two-across groups are gone. → ledger L8301, #155

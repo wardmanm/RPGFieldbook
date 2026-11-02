@@ -17,7 +17,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'itemOrigin', 'originOptionsHTML', 'grantedFromOrigin', 'originFromGranted',
   'effectiveChoose', 'choiceShortfall', 'choiceFieldHTML', 'grantProf', 'effSkill', 'SKILLS',
   'ABIL',
-  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV',
+  'featGroups', 'featItemHTML', 'featGroupLabel', 'FEAT_FAV', 'SHEET_STRETCH_MAX', 'sheetShouldStretch',
   'featOriginLabel', 'invSectionName', 'invGroups', 'INV_FAV', 'INV_ORDER', 'groupChoices', 'groupFieldHTML',
   'tagLabel', 'tagKey', 'journalEditorHTML', 'trackerFormHTML',
   'GROUP_RESERVED', 'tagTidy', 'groupNameProblem', 'syncGroupFieldMsg', 'groupFieldBlocked', 'groupByTag', 'invSection',
@@ -4890,8 +4890,30 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const where = k => { const c = root.querySelector('.card[data-note="' + k + '"]'); const p = c.parent; return (p.attr('class') || p.attr('id') || p.tag) + '#' + p.children.indexOf(c); };
   const KEYS = ['vitals', 'abilities', 'skills', 'features', 'defences', 'statuses', 'resources'];
   const before = KEYS.map(where);
-  ck('#103 the parsed Sheet has the two stacks, in their places',
-     before.join() === 'sheet-grid#0,sheet-grid#1,col-m#0,col-m#1,col-r#0,col-r#1,col-r#2', before);
+  // #155: Features is the grid's own child, after the two stacks (rail #0,
+  // strip #1, .col-m #2, .col-r #3, Features #4)
+  ck('#155 the parsed Sheet has the two stacks and the Features row, in their places',
+     before.join() === 'sheet-grid#0,sheet-grid#1,col-m#0,sheet-grid#4,col-r#0,col-r#1,col-r#2', before);
+  {
+    const grid = root.querySelector('.sheet-grid'), fl = root.querySelector('#featureList');
+    const order = grid.querySelectorAll('.card').map(c => c.attr('data-note'));
+    ck('#155 the Sheet\'s section order: vitals, abilities, skills, defences, statuses, resources, features (familiars hidden last)',
+       order.join() === 'vitals,abilities,skills,defences,statuses,resources,features,familiars', order);
+    ck('#155 the feature list renders into the Features card, a direct child of the grid (no stack)',
+       !!fl && fl.parent.attr('data-note') === 'features' && fl.parent.parent === grid && !fl.closest('.col-m') && !fl.closest('.col-r'));
+  }
+  // #155 (Mike, 2026-11-02): the three columns end level only while the
+  // tallest is at most SHEET_STRETCH_MAX px taller than the shortest
+  {
+    const S = X.sheetShouldStretch;
+    ck('#155 SHEET_STRETCH_MAX is 240', X.SHEET_STRETCH_MAX === 240);
+    ck('#155 equal columns stretch', S([600, 600, 600]) === true);
+    ck('#155 a 240px difference still stretches', S([600, 840, 700]) === true && S([840, 600]) === true);
+    ck('#155 a 241px difference does not', S([600, 841, 700]) === false && S([841, 600, 600]) === false);
+    ck('#155 a hidden or empty column is left out of the comparison', S([600, null, 820]) === true && S([600, 0, 900]) === false && S([600, undefined, 600]) === true);
+    ck('#155 one column left, or none, has nothing to level', S([600, null, null]) === false && S([]) === false && S(null) === false);
+    ck('#155 junk is not a height', S([600, NaN, 600]) === true && S([600, '900', 600]) === true && S([600, -50, 600]) === true);
+  }
   const doc = ctx.document, keep = {g: doc.getElementById, q: doc.querySelector, qa: doc.querySelectorAll, c: doc.createElement,
     ag: ctx.addGrip, rg: ctx.removeGrip, sl: ctx.syncStatLock, re: ctx.renderCombatEmpty, ch: X.character};
   doc.getElementById = id => root.querySelector('#' + id);
@@ -4905,8 +4927,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     ck('#103 every card goes into the view, a marker left in its place',
        KEYS.every(k => root.querySelector('.card[data-note="' + k + '"]').parent === list) &&
        KEYS.every(k => root.querySelector('[data-cvhome="' + k + '"]')), KEYS.map(where));
-    ck('#103 ...the markers sit in the stacks the cards came from',
-       root.querySelector('[data-cvhome="features"]').parent.attr('class') === 'col-m' && root.querySelector('[data-cvhome="statuses"]').parent.attr('class') === 'col-r');
+    ck('#155 ...the markers sit where the cards came from: Features on the grid, Skills and Statuses in their stacks',
+       root.querySelector('[data-cvhome="features"]').parent.attr('class') === 'sheet-grid' && root.querySelector('[data-cvhome="skills"]').parent.attr('class') === 'col-m' &&
+       root.querySelector('[data-cvhome="statuses"]').parent.attr('class') === 'col-r');
     ctx.emptyCombatView();
     const after = KEYS.map(where);
     ck('#103 after End, every card is back in its own stack, in its own place', JSON.stringify(after) === JSON.stringify(before), after);

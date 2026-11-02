@@ -1310,30 +1310,46 @@ function block(html, needle, tag) {
   ck('#103 the Skills display setting is retired', !/segStatStyle|data-statstyle/.test(fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8')));
   // beyond the brief's block: what the grid is and where the cards sit in it
   ck('#103 the grid is rail · middle · right', /\.sheet-grid\{[^}]*grid-template-columns:minmax\(220px,260px\) minmax\(0,1\.3fr\) minmax\(0,1fr\)/.test(css));
-  // Mike's layout ruling: the middle and right columns are independent stacks,
-  // so Features follows Skills instead of waiting under the taller right column
-  ck('#103 the Sheet\'s cards run rail, strip, the middle stack (Skills, Features), the right stack (Defences, Statuses, Resources)',
-     /data-note="vitals"[\s\S]*data-note="abilities"[\s\S]*<div class="col-m">\s*(?:<!--[\s\S]*?-->\s*)*<div class="card" data-note="skills"[\s\S]*data-note="features"[\s\S]*<div class="col-r">\s*<div class="card" data-note="defences"[\s\S]*data-note="statuses"[\s\S]*data-note="resources"/.test(sheet));
+  // Mike's layout ruling: the middle and right columns are independent stacks;
+  // #155: Features left the middle stack for a full-width row under all three
+  ck('#155 the Sheet\'s cards run rail, strip, the middle stack (Skills), the right stack (Defences, Statuses, Resources), then Features',
+     /data-note="vitals"[\s\S]*data-note="abilities"[\s\S]*<div class="col-m">\s*(?:<!--[\s\S]*?-->\s*)*<div class="card" data-note="skills"[\s\S]*<div class="col-r">\s*<div class="card" data-note="defences"[\s\S]*data-note="statuses"[\s\S]*data-note="resources"[\s\S]*data-note="features"/.test(sheet));
   {
-    const colM = block(sheet, '<div class="col-m">'), colR = block(sheet, '<div class="col-r">');
-    ck('#103 the middle stack holds exactly Skills, then Features',
-       JSON.stringify(colM.match(/data-note="[a-z]+"/g)) === JSON.stringify(['data-note="skills"', 'data-note="features"']), colM.match(/data-note="[a-z]+"/g));
+    // comments out first: one inside the grid quotes `<div class="card" data-note="`, which block() would count
+    const bare = sheet.replace(/<!--[\s\S]*?-->/g, '');
+    const colM = block(bare, '<div class="col-m">'), colR = block(bare, '<div class="col-r">'), grid = block(bare, '<div class="sheet-grid">');
+    ck('#155 the middle stack holds exactly Skills',
+       JSON.stringify(colM.match(/data-note="[a-z]+"/g)) === JSON.stringify(['data-note="skills"']), colM.match(/data-note="[a-z]+"/g));
     ck('#103 the right stack holds exactly Defences, Statuses, Resources',
        JSON.stringify(colR.match(/data-note="[a-z]+"/g)) === JSON.stringify(['data-note="defences"', 'data-note="statuses"', 'data-note="resources"']), colR.match(/data-note="[a-z]+"/g));
-    ck('#103 Features is no longer full width', !/class="card wide" data-note="features"/.test(t) && !/\.sheet-grid>\.wide/.test(css));
+    // a direct child of the grid: what the grid holds once both stacks are cut out of it
+    const direct = grid.replace(colM, '').replace(colR, '');
+    ck('#155 Features is a card of the grid itself, after both stacks, in no stack',
+       /<div class="card" data-note="features">/.test(direct) && grid.indexOf('data-note="features"') > grid.indexOf(colR) && !colM.includes('data-note="features"'));
+    ck('#103 Features carries no old layout class', !/class="card wide" data-note="features"/.test(t) && !/\.sheet-grid>\.wide/.test(css));
   }
   {
     const g = css.replace(/\/\*[\s\S]*?\*\//g, '');
     const q1 = g.indexOf('@media(max-width:1000px){\n  .sheet-grid{'), q2 = g.indexOf('@media(max-width:700px){\n  .sheet-grid{');
     const in1 = q1 < 0 ? '' : g.slice(q1, g.indexOf('\n}', q1)), in2 = q2 < 0 ? '' : g.slice(q2, g.indexOf('\n}', q2));
     const base = g.slice(g.indexOf('.sheet-grid{'), q1);
-    ck('#103 desktop: the strip over both stacks, the stacks side by side, each its own grid',
+    ck('#103 desktop: the strip over both stacks, the stacks side by side, each its own column',
        /\.sheet-grid>\.strip\{grid-column:2\/4;grid-row:1\}/.test(base) && /\.sheet-grid>\.col-m\{grid-column:2;grid-row:2\}/.test(base) &&
-       /\.sheet-grid>\.col-r\{grid-column:3;grid-row:2\}/.test(base) && /\.sheet-grid>\.col-m,\.sheet-grid>\.col-r\{display:grid;[^}]*align-content:start/.test(base), base);
+       /\.sheet-grid>\.col-r\{grid-column:3;grid-row:2\}/.test(base) && /\.sheet-grid>\.col-m,\.sheet-grid>\.col-r\{display:flex;flex-direction:column;/.test(base), base);
+    ck('#155 desktop: Features is a full-width third row, under the rail and both stacks',
+       /\.sheet-grid\{[^}]*grid-template-rows:auto 1fr auto/.test(base) && /\.sheet-grid>\.rail\{grid-column:1;grid-row:1\/3\}/.test(base) &&
+       /\.sheet-grid>\[data-note="features"\]\{grid-column:1\/-1;grid-row:3\}/.test(base), base);
+    ck('#155 desktop: nothing stretches by default — each column ends where its content ends',
+       /\.sheet-grid\{[^}]*align-items:start/.test(base) && !/align-content:start/.test(base), base);
+    ck('#155 desktop: with .cols-even the columns stretch to the row and each stack\'s last card grows',
+       /\.sheet-grid\.cols-even\{align-items:stretch\}/.test(base) &&
+       /\.sheet-grid\.cols-even>\.col-m>div\.card:last-of-type,\.sheet-grid\.cols-even>\.col-r>div\.card:last-of-type\{flex-grow:1\}/.test(base), base);
+    ck('#155 ...only the LAST card grows, so no other heading moves', (base.match(/flex-grow/g) || []).length === 1);
     ck('#103 no stack is flattened on the desktop grid', !/display:contents/.test(base));
-    ck('#103 two columns: the middle stack opens so Features goes full width under the rail, the right stack stays whole',
-       /\.sheet-grid>\.col-m\{display:contents\}/.test(in1) && !/\.col-r\{display:contents\}/.test(in1) &&
-       /\.sheet-grid \[data-note="features"\]\{grid-column:1\/-1;grid-row:5\}/.test(in1), in1);
+    ck('#155 two columns keep today\'s stacking: nothing stretches even with .cols-even, Skills\' stack under the strip, Features full width at the bottom',
+       /\.sheet-grid\.cols-even\{align-items:start\}/.test(in1) && !/display:contents/.test(in1) &&
+       /\.sheet-grid>\.col-m\{grid-column:2;grid-row:2\}/.test(in1) && /\.sheet-grid>\.col-r\{grid-column:2;grid-row:3\/5\}/.test(in1) &&
+       /\.sheet-grid>\[data-note="features"\]\{grid-column:1\/-1;grid-row:5\}/.test(in1), in1);
     ck('#103 one column: both stacks open, in the phone order',
        /\.sheet-grid>\.col-m,\.sheet-grid>\.col-r\{display:contents\}/.test(in2) &&
        ['defences"\]\{order:3', 'statuses"\]\{order:4', 'skillsCard\{order:5', 'resources"\]\{order:6', 'features"\]\{order:7'].every(x => new RegExp(x).test(in2)), in2);
@@ -1345,8 +1361,22 @@ function block(html, needle, tag) {
     const sc = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     const cards = fs.readFileSync(path.join(ROOT, 'src/css/20-cards.css'), 'utf8');
     const all = ['00-tokens', '10-chrome', '20-cards', '30-sheet', '45-combat', '47-journal', '50-modal'].map(f => { try { return fs.readFileSync(path.join(ROOT, 'src/css/' + f + '.css'), 'utf8'); } catch (e) { return ''; } }).join('\n');
-    ck('#103 the stacks\' cards are the only size containers', /\.sheet-grid>\.col-m>\.card,\.sheet-grid>\.col-r>\.card\{container-type:inline-size\}/.test(sc) &&
+    ck('#103 the stacks\' cards and the Features row (#155) are the only size containers', /\.sheet-grid>\.col-m>\.card,\.sheet-grid>\.col-r>\.card,\.sheet-grid>\[data-note="features"\]\{container-type:inline-size\}/.test(sc) &&
        (all.match(/container-type:/g) || []).length === 1);
+    {
+      const js = fs.readFileSync(path.join(ROOT, 'src/js/40-sheet.js'), 'utf8'), boot = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+      const fn = js.slice(js.indexOf('function sheetLevel()'), js.indexOf('let sheetLevelTimer'));
+      ck('#155 the levelling is wired once at boot', /\n  wireSheetLevel\(\);/.test(boot));
+      ck('#155 ...watches the columns and their cards\' contents with a ResizeObserver, debounced, and the window\'s resize',
+         /new ResizeObserver\(scheduleSheetLevel\)/.test(js) && /setTimeout\(sheetLevel,\d+\)/.test(js) && /addEventListener\("resize",scheduleSheetLevel\)/.test(js) &&
+         /:scope>\.col-r>\.card>\*/.test(js));
+      ck('#155 ...does nothing for print, clears the class at two columns and one, and skips a hidden Sheet',
+         /mm\("print"\)\)return;/.test(fn) && /mm\("\(max-width:1000px\)"\)\)\{grid\.classList\.remove\("cols-even"\);return;\}/.test(fn) && /offsetParent\)return;/.test(fn));
+      ck('#155 ...measures with the class off, then decides by sheetShouldStretch()',
+         fn.indexOf('classList.remove("cols-even")', fn.indexOf('offsetParent')) > 0 && /classList\.toggle\("cols-even",on\)/.test(fn) && /sheetShouldStretch\(/.test(fn));
+    }
+    ck('#155 Features is one card per row at every width (Mike, 2026-11-02): no .fgroup grid anywhere, scoped or not',
+       !/\.fgroup\{[^}]*display:grid/.test(all.replace(/\/\*[\s\S]*?\*\//g, '')));
     ck('#103 a narrow resource row puts its controls under the name', /@container \(max-width:420px\)\{\.res\{flex-wrap:wrap;[^}]*\}\.res-main\{flex:1 0 100%\}/.test(sc));
     ck('#103 a wrapped resource row keeps − count + at the left, restore/edit/delete at the right', /@container \(max-width:420px\)\{\.res\{[^}]*justify-content:flex-start[^}]*\}[^@]*\.res \[data-res-reset\]\{margin-left:auto\}/.test(sc));
     ck('#103 a resource name never breaks mid-word', /\.res-name\{[^}]*overflow-wrap:break-word/.test(cards) && !/\.res-name\{[^}]*overflow-wrap:anywhere/.test(cards));

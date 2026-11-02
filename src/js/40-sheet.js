@@ -461,6 +461,69 @@ function renderFamiliars(){
   el.innerHTML=character.familiars.map(f=>familiarCardHTML(f)).join("");
 }
 
+/* ================= the Sheet's columns end level, when they are close (#155) =================
+   At three columns the rail, the middle stack (Skills) and the right stack
+   (Defences, Statuses, Resources) end on one line by stretching each column's
+   last card — but only while they are close. Mike's rule (2026-11-02): the
+   tallest column may be at most SHEET_STRETCH_MAX px taller than the shortest.
+   Further apart (many statuses or resources), stretching would draw a long
+   empty frame down the rail and Skills, so nothing stretches and each column
+   ends where its content ends. The CSS (`.sheet-grid.cols-even`, 10-chrome.css)
+   does the stretching; this only decides. */
+const SHEET_STRETCH_MAX=240;
+/* Pure, so the suite can pin the rule. `heights` is each column's own height
+   (px); a column that is hidden or holds no card on the Sheet (every card of
+   it in the combat view) comes in as null or 0 and is left out — it has no
+   card to stretch. Fewer than two columns left: nothing to level. */
+function sheetShouldStretch(heights){
+  const h=(Array.isArray(heights)?heights:[]).filter(x=>typeof x==="number"&&isFinite(x)&&x>0);
+  if(h.length<2)return false;
+  return Math.max(...h)-Math.min(...h)<=SHEET_STRETCH_MAX;
+}
+/* Measures with .cols-even off, so it reads each column's own height, not the
+   stretched one, then sets it or leaves it off; both happen in one task, so
+   nothing paints in between. Heights are taken from the grid's top: the rail
+   starts there, and the two stacks start under the strip, so the three are
+   compared by where they end. Does nothing while the Sheet is hidden (another
+   tab, the combat view) or printing; at two columns and one it clears the
+   class, since only the three-column layout levels. */
+function sheetLevel(){
+  const grid=document.querySelector("#tab-sheet .sheet-grid");if(!grid||!grid.classList)return;
+  const mm=q=>!!(window.matchMedia&&window.matchMedia(q).matches);
+  if(mm("print"))return;
+  if(mm("(max-width:1000px)")){grid.classList.remove("cols-even");return;}
+  if(!grid.offsetParent)return;
+  grid.classList.remove("cols-even");
+  const top=grid.getBoundingClientRect().top;
+  const colH=el=>{
+    if(!el)return null;
+    const has=el.classList.contains("card")?el.offsetHeight>0:[...el.children].some(c=>c.classList.contains("card")&&c.offsetHeight>0);
+    return has?el.getBoundingClientRect().bottom-top:null;
+  };
+  const on=sheetShouldStretch([colH(grid.querySelector(":scope>.rail")),colH(grid.querySelector(":scope>.col-m")),colH(grid.querySelector(":scope>.col-r"))]);
+  grid.classList.toggle("cols-even",on);
+}
+let sheetLevelTimer=0;
+function scheduleSheetLevel(){clearTimeout(sheetLevelTimer);sheetLevelTimer=setTimeout(sheetLevel,60);}
+/* Wired once at boot. What moves a column's height: the window's width, a
+   status or resource added or removed, a card folded, the hit-dice box
+   opening, a card going to or from the combat view, the Sheet tab showing
+   again. A stretched card's own box does not move when its content shrinks,
+   so besides the grid and the three columns this watches every child of every
+   card in them — the static containers (#statusList, #resList, #skills, the
+   rail's rows…) whose height is always their content's. Toggling .cols-even
+   resizes the columns and so calls this once more; it measures the same
+   natural heights, decides the same, and stops. */
+function wireSheetLevel(){
+  const grid=document.querySelector("#tab-sheet .sheet-grid");if(!grid)return;
+  window.addEventListener("resize",scheduleSheetLevel);
+  if(typeof ResizeObserver!=="function"){scheduleSheetLevel();return;}
+  const ro=new ResizeObserver(scheduleSheetLevel);
+  const cols=[grid,...grid.querySelectorAll(":scope>.rail,:scope>.strip,:scope>.col-m,:scope>.col-r")];
+  cols.forEach(el=>ro.observe(el));
+  grid.querySelectorAll(":scope>.rail>*,:scope>.col-m>.card>*,:scope>.col-r>.card>*").forEach(el=>ro.observe(el));
+}
+
 /* ================= the sheet header (#103, spec §6.1, §6.6) =================
    The name, both rests and the star are static markup in 00-sheet.html (their
    ids are wired once at boot); these draw the parts that follow the character:

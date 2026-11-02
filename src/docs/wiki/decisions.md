@@ -496,7 +496,10 @@ When a page gains a Decisions row, add its line here under that page.
 ### [Sections & layout](ui/sections-and-layout.md)
 
 - **How is a section identified?** — A stable `k` in `NOTE_SECTIONS`
-- **The Sheet's layout (#103)** — One layout, no setting: header, rail, strip, then two independent stacks (Skills, Features · Defences, Statuses, Resources); three columns, two, one by width
+- **The Sheet's layout (#103, #155)** — One layout, no setting: header, rail, strip, then two independent stacks (Skills · Defences, Statuses, Resources) ending on one line with the rail while within 240px, and Features full width under all three, one card per row; three columns, two, one by width
+- **When the columns end level (#155, Mike 2026-11-02)** — Only while the tallest is at most 240px (`SHEET_STRETCH_MAX`) taller than the shortest; then each stack's last card grows, content at the top; further apart, each column ends at its content
+- **How the 240px rule is measured (#155)** — `sheetLevel()`: class off, measure, decide; a debounced ResizeObserver on the columns and their cards' contents, plus resize
+- **Features at three columns (#155, Mike 2026-11-02)** — One card per row at full width, as at every width
 - **Familiars on the Sheet (#103)** — A paw in the header opening a popover and a modal; the card stays in the DOM, hidden, for the combat view
 - **The familiars' #97 pencil (#103)** — None: `familiars` leaves `EDIT_CARDS`
 - **May the header go in the combat view? (#103)** — No (`nocv`); a saved one becomes Vitals
