@@ -73,8 +73,9 @@ The Sheet is one condensed page after Foundry VTT's sheet (spec
 - **Statuses sits under Skills (#155, Mike 2026-11-02).** On an everyday sheet (one condition, two
   resources) the old right stack of Defences, Statuses and Resources ran about 250px past Skills,
   just over the 240px limit below, so nothing levelled and a gap opened under the rail and Skills.
-  With Statuses in the middle stack the three columns land within about 130px and level. This is
-  the three-column layout only: two columns and one keep their own order (below).
+  With Statuses in the middle stack the three columns land within about 130px and level. It sits
+  under Skills at two columns too (Mike, the same day), so the markup's order is the order on
+  screen and the order Tab walks; only the phone reorders (below).
 - **The three columns end on one line while they are close (#155, Mike 2026-11-02).** By default
   nothing stretches (`align-items:start`) and each column ends where its content ends. When the
   tallest column is at most `SHEET_STRETCH_MAX` (240px) taller than the shortest, `sheetLevel()`
@@ -96,18 +97,16 @@ The Sheet is one condensed page after Foundry VTT's sheet (spec
   its content does, but `#statusList`, `#resList`, `#skills` and the rail's rows always measure their
   content. Setting the class resizes the columns, which calls it once more; it measures the same
   heights and stops.
-- **Two columns at ≤1000px:** the rail beside one column of the strip (3 × 2), Skills, Defences,
-  Statuses, Resources; Features full width under both, as widths.html. That is the order it had
-  before Statuses moved: both stacks are `display:contents` here, and each card takes its own row
-  of column 2 (`grid-template-rows:auto auto auto auto 1fr auto`; strip 1, Skills 2, Defences 3,
-  Statuses 4, Resources 5, Features 6, the rail spanning 1–5). Resources' row is the 1fr one the
-  rail also spans, so a rail taller than the column grows that row below Resources and opens no gap
-  above Features. Nothing stretches here: `sheetLevel()` never sets `.cols-even` at this width, and
-  the query undoes it for the moment a resize takes to arrive.
+- **Two columns at ≤1000px:** the rail beside one column of the strip (3 × 2), then `.col-m`
+  (Skills, Statuses) and under it `.col-r` (Defences, Resources), whole; Features full width under
+  both, as widths.html. The stacks are not flattened and nothing is reordered, so the column reads
+  Skills, Statuses, Defences, Resources, the order Tab walks (Mike, 2026-11-02). The rail and
+  `.col-r` span a last 1fr row, so a rail taller than the column opens no gap above Features.
+  Nothing stretches here: `sheetLevel()` never sets `.cols-even` at this width, and the query undoes
+  it for the moment a resize takes to arrive.
 - **One column at ≤700px**, in the spec's order: rail, abilities, Defences, Statuses, Skills,
-  Resources, Features. Both stacks are already `display:contents` (from ≤1000px), so their cards are
-  grid items and `order` can interleave them; the query puts every card the two-column query placed
-  back in the one column (`grid-column:1;grid-row:auto`).
+  Resources, Features. Both stacks become `display:contents` inside that query, so their cards are
+  grid items and `order` can interleave them.
 - **The rail is dark by its own tokens.** `.rail` re-points `--panel`, `--ink`, `--ink-soft`,
   `--line` and the field tokens to `--rail-*` (all four palettes in `00-tokens.css`), so the
   cards' own rules draw it dark without a second set of selectors. In dark mode the rail is tinted
@@ -346,19 +345,21 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
   and in `wire()` that leaves every later listener unbound.
 - **A media query comes after the rule it overrides.** `rules-data.js` pins the grid's ≤1000px and
   ≤700px queries after `.sheet-grid`, and 30-sheet.css's strip (≤1000px) and rail (≤700px) queries
-  after `.strip .abilities` and `.rail`. `display:contents` on both stacks lives only inside the ≤1000px query (which
-  the ≤700px one inherits), scoped to `.sheet-grid`; an unscoped `.stack` rule once broke every one-stack tab.
+  after `.strip .abilities` and `.rail`. `display:contents` on both stacks lives only inside the ≤700px query, scoped to
+  `.sheet-grid`; an unscoped `.stack` rule once broke every one-stack tab.
 - **A card goes home to its own place.** The combat view leaves a marker where each card was —
   inside `.col-m` or `.col-r`, or on the grid itself for the rail, the strip and Features — and puts
   the card back in its place; `sheet.js` checks this against the real markup.
 - **Only a stack's last card grows, only at three columns, and only under `.cols-even` (#155).** A
   second `flex-grow` would move a heading in the stretched case; two columns and one keep
   `align-items:start`. `sheetShouldStretch()` is the one place the 240px rule lives.
-- **Where a card sits is the markup's business at three columns, and the queries' below it (#155).**
-  `sheetLevel()` measures `.col-m` and `.col-r` as they stand and names no card, so moving a card
-  between the stacks needs no change there. Two columns and one place each card themselves (rows,
-  then `order`), so a card that moves stacks must keep its row and its `order` there, or those
-  layouts change with it. `sheet.js` and `rules-data.js` pin both.
+- **At three columns and two, where a card sits is the markup's business (#155).** Both layouts keep
+  the stacks whole and reorder nothing, so the order on screen is the document order, which is the
+  order Tab walks; `sheetLevel()` measures `.col-m` and `.col-r` as they stand and names no card.
+  Moving a card, or adding one, is a markup change there and nothing else. Only the phone reorders:
+  a card added to a stack needs its own `order` in the ≤700px query, or it sorts before the rail.
+  `sheet.js` checks the two-column order against the document order; `rules-data.js` that the
+  two-column query flattens and reorders nothing.
 - **The levelling observes card contents, not just the columns.** Watching only the column boxes
   misses a stretched column's content shrinking (its box keeps the row's height), which is exactly
   when the spread can pass 240px.
@@ -414,7 +415,7 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 | The Sheet's layout (#103, #155) | One layout, no setting: header, rail, strip, then two independent stacks (Skills, Statuses · Defences, Resources) ending on one line with the rail while within 240px, and Features full width under all three, one card per row; three columns, two, one by width | A classic fallback: twice the CSS and screenshots until 2.0. Features following Skills in the middle stack (the 2026-10-23 answer): the rail and the right column ended early beside it, leaving long empty gutters (Mike, #155) |
 | When the columns end level (#155, Mike 2026-11-02) | Only while the tallest is at most 240px (`SHEET_STRETCH_MAX`) taller than the shortest; then each stack's last card grows, content at the top. Further apart, each column ends at its content | Always stretching (the first build, L8262): with many statuses or resources the rail and Skills became 1,200px empty frames. Stretching every card: moves every heading below the first. Never stretching: the gutters #155 was filed for |
 | How the 240px rule is measured (#155) | `sheetLevel()`: class off, measure, decide, in one task; a ResizeObserver on the columns and their cards' contents, debounced, plus the window's resize | CSS alone: it cannot compare column heights. Observing only the column boxes: a stretched column's content shrinking never resizes its box |
-| Where Statuses sits at three columns (#155, Mike 2026-11-02, "option 2") | Under Skills in the middle stack, always; the right stack is Defences, Resources. Two columns and one keep their order | Raising the 240px limit (to about 500px): the rail and Skills would stretch 210–250px down to Resources, and only very crowded sheets would end uneven. Balancing the side cards automatically (Defences, Statuses, Resources go wherever the columns come out most even): cards would move as content changes, four conditions rearranging the sheet. Features filling the gap beside the right column: Features narrower there, and an empty strip opening below Resources. Leaving Statuses in the right stack: Mike's everyday sheet ran about 250px past Skills, just over the limit |
+| Where Statuses sits (#155, Mike 2026-11-02, "option 2", then the review's risk 4) | Under Skills in the middle stack, always, at three columns and at two; the right stack is Defences, Resources. The phone keeps its order | Keeping the old two-column order (Skills, Defences, Statuses, Resources) by flattening the stacks and pinning each card to a grid row (the first build of this change): Tab walked Statuses before Defences while the eye read Defences first, and a new card without a row fell into an implicit row under Features. Raising the 240px limit (to about 500px): the rail and Skills would stretch 210–250px down to Resources, and only very crowded sheets would end uneven. Balancing the side cards automatically (Defences, Statuses, Resources go wherever the columns come out most even): cards would move as content changes, four conditions rearranging the sheet. Features filling the gap beside the right column: Features narrower there, and an empty strip opening below Resources. Leaving Statuses in the right stack: Mike's everyday sheet ran about 250px past Skills, just over the limit |
 | Features at three columns (#155, Mike 2026-11-02) | One card per row at full width, as at every width | Two across inside each group (the first build, L8262) |
 | Familiars on the Sheet (#103) | A paw in the header, shown by a per-character switch, opening a popover and a modal; the card stays in the DOM, hidden, for the combat view | A chip with the name: long names and several familiars don't fit. A side drawer: heavier than needed. Flattening `.stack` to sink the card on a phone (the 2026-08-15 answer): the stacks are gone |
 | The familiars' #97 pencil (#103) | None: `familiars` leaves `EDIT_CARDS` | The familiar's window honouring `editHide`: its only toggle would be on the card, reachable just in the combat view |
@@ -476,4 +477,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-10-25 — The Party card joins the registry as `party` (Bio, `nocv:true`) and `EDIT_CARDS` (twelve); the registry grows to 19 sections. → ledger L7097, #91
 - 2026-11-02 — Features & Traits becomes a full-width row under the three columns, its cards two across; the rail, Skills and the right stack end on one line (each stack's last card grows); two columns and one are unchanged. → ledger L8262, #155
 - 2026-11-02 — Mike's decisions: the columns level only while within 240px (`SHEET_STRETCH_MAX`, measured by `sheetLevel()`), and Features is one card per row at every width. → ledger L8301, #155
-- 2026-11-02 — Mike's decision ("option 2"): Statuses moves under Skills at three columns, so an everyday sheet levels; two columns keep Skills, Defences, Statuses, Resources by placing each card in its own row, and one column is unchanged. → ledger L8339, #155
+- 2026-11-02 — Mike's decisions ("option 2", then the review's risk 4): Statuses moves under Skills at three columns, so an everyday sheet levels, and at two, where the column now reads Skills, Statuses, Defences, Resources, the order Tab walks; one column is unchanged. → ledger L8339, #155
