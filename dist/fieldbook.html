@@ -251,11 +251,13 @@ html[data-tabs="icons"] .tabicon{display:block}
 
 /* ---- the Sheet (#103, spec §6.7; #155) ----
    Three columns: the rail down the left; the ability strip over the middle and
-   right; under it two independent stacks (Mike's ruling) — .col-m (Skills) and
-   .col-r (Defences, Statuses, Resources) — so no card waits on its neighbour's
-   row. The rail spans the strip's row and the stacks' 1fr row: a spanned
-   flexible track takes what the rail needs beyond the strip, so a rail taller
-   than the strip opens no gap above the stacks.
+   right; under it two independent stacks (Mike's ruling) — .col-m (Skills,
+   Statuses) and .col-r (Defences, Resources) — so no card waits on its
+   neighbour's row. Statuses sits under Skills (Mike, 2026-11-02), which brings
+   the two stacks close enough in height to level on an everyday sheet. The
+   rail spans the strip's row and the stacks' 1fr row: a spanned flexible
+   track takes what the rail needs beyond the strip, so a rail taller than the
+   strip opens no gap above the stacks.
    #155: Features & Traits is a full-width row of its own under the three
    columns, one card per row. The three columns end on one line only while
    they are close (Mike, 2026-11-02): sheetLevel() (40-sheet.js) measures each
@@ -283,12 +285,15 @@ html[data-tabs="icons"] .tabicon{display:block}
 .sheet-grid>.col-m,.sheet-grid>.col-r{display:flex;flex-direction:column;gap:clamp(12px,2vw,18px);min-width:0}
 .sheet-grid.cols-even{align-items:stretch}
 .sheet-grid.cols-even>.col-m>div.card:last-of-type,.sheet-grid.cols-even>.col-r>div.card:last-of-type{flex-grow:1}
-/* Two columns, as widths.html: the rail, and one column of the strip, Skills
-   and the right stack; Features full width under both. Nothing stretches here
-   (#155 changes the three-column layout only): sheetLevel() never sets
-   .cols-even at this width, and the rule below undoes it for the moment a
-   resize takes to reach it. The rail and the right stack span a last 1fr row,
-   so neither opens a gap above Features. */
+/* Two columns, as widths.html: the rail, and one column of the strip, then
+   the two stacks one above the other — Skills, Statuses (.col-m), then
+   Defences, Resources (.col-r) — and Features full width under both. The
+   stacks stay whole, so this layout follows the markup and Tab goes the way
+   the eye reads (Mike, 2026-11-02: Statuses under Skills here too). Nothing
+   stretches here: sheetLevel() never sets .cols-even at this width, and the
+   rule below undoes it for the moment a resize takes to reach it. The rail
+   and the right stack span a last 1fr row, so neither opens a gap above
+   Features. */
 @media(max-width:1000px){
   .sheet-grid{grid-template-columns:minmax(200px,240px) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto}
   .sheet-grid.cols-even{align-items:start}
@@ -1956,15 +1961,19 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
     </header>
     <!-- #103 (spec §6.2–6.7): one grid under the header. 10-chrome.css lays it
          out — the rail down the left, the strip over the other two columns,
-         and under it two independent stacks (Mike's ruling): .col-m (Skills)
-         and .col-r (Defences, Statuses, Resources), so no card waits on its
+         and under it two independent stacks (Mike's ruling): .col-m (Skills,
+         Statuses) and .col-r (Defences, Resources), so no card waits on its
          neighbour's row. #155: Features is a full-width row under all three,
          and the rail and the two stacks end on one line (each column's last
          card stretches) while they are within 240px of each other —
-         sheetLevel() in 40-sheet.js decides. It re-lays at ≤1000px (two columns: Features full
-         width under the rail) and ≤700px (one: both stacks open, so the cards
-         take the phone order by `order`). Every id recompute(), renderHP() and
-         the death-save code paint MOVED here unchanged. -->
+         sheetLevel() in 40-sheet.js decides. Statuses sits under Skills
+         (Mike, 2026-11-02) so the two stacks come out close in height.
+         It re-lays at ≤1000px (two columns: the stacks whole, one above the
+         other, so the cards read and tab Skills, Statuses, Defences,
+         Resources; Features full width under the rail) and ≤700px (one: both
+         stacks open, so the cards take the phone order by `order`). Every id
+         recompute(), renderHP() and the death-save code paint MOVED here
+         unchanged. -->
     <div class="sheet-grid">
       <!-- The rail: Vitals, dark by its own tokens (.rail in 30-sheet.css).
            The portrait came from the old Portrait card (that section is the
@@ -2044,6 +2053,14 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
             <b style="color:var(--ink-soft)">Tap dot to cycle</b>
           </div>
         </div>
+
+        <!-- #155 (Mike, 2026-11-02): Statuses under Skills, in the middle
+             stack, at three columns and two; on a phone `order` places it
+             (10-chrome.css). -->
+        <div class="card" data-note="statuses">
+          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="statusList"></div>
+        </div>
       </div>
 
       <div class="col-r">
@@ -2051,11 +2068,6 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
           <div class="label">Defences <span class="grow"></span></div>
           <div class="def-h">Resistances</div><div id="defResists"></div>
           <div class="def-h">Immunities</div><div id="defImmunes"></div>
-        </div>
-
-        <div class="card" data-note="statuses">
-          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
-          <div id="statusList"></div>
         </div>
 
         <div class="card" data-note="resources">
@@ -4156,14 +4168,17 @@ function renderFamiliars(){
 }
 
 /* ================= the Sheet's columns end level, when they are close (#155) =================
-   At three columns the rail, the middle stack (Skills) and the right stack
-   (Defences, Statuses, Resources) end on one line by stretching each column's
+   At three columns the rail, the middle stack (Skills, Statuses) and the right
+   stack (Defences, Resources) end on one line by stretching each column's
    last card — but only while they are close. Mike's rule (2026-11-02): the
    tallest column may be at most SHEET_STRETCH_MAX px taller than the shortest.
    Further apart (many statuses or resources), stretching would draw a long
-   empty frame down the rail and Skills, so nothing stretches and each column
-   ends where its content ends. The CSS (`.sheet-grid.cols-even`, 10-chrome.css)
-   does the stretching; this only decides. */
+   empty frame down the shorter columns, so nothing stretches and each column
+   ends where its content ends. Statuses moved under Skills (Mike, 2026-11-02)
+   because one condition and two resources had put the old right stack about
+   250px past Skills, just over the limit; the stacks are whatever the markup
+   holds, measured as they stand. The CSS (`.sheet-grid.cols-even`,
+   10-chrome.css) does the stretching; this only decides. */
 const SHEET_STRETCH_MAX=240;
 /* Pure, so the suite can pin the rule. `heights` is each column's own height
    (px); a column that is hidden or holds no card on the Sheet (every card of
