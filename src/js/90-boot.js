@@ -380,7 +380,6 @@ function wire(){
   document.getElementById("btnLoad").addEventListener("click",()=>document.getElementById("fileLoad").click());
   document.getElementById("fileLoad").addEventListener("change",e=>{const f=e.target.files[0];if(f)importChar(f);e.target.value="";});
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(settings.theme==="system")applyTheme();});
-  wireSheetLevel();   /* #155: the Sheet's three columns end level while they are close */
 }
 
 /* ================= boot ================= */

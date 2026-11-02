@@ -8404,3 +8404,69 @@ rail and both stacks without naming a card.
 
 Pages: [sections & layout](../wiki/ui/sections-and-layout.md), [overview](../wiki/overview.md),
 [decisions](../wiki/decisions.md); the #103 spec's As built.
+
+## #155 round 4: the three columns always end on one line, in CSS alone (Mike, 2026-11-02)
+
+Mike's decision, replacing round 2's 240px rule (L8301): at three columns the rail, the middle stack
+(Skills, Statuses) and the right stack (Defences, Resources) **always** end on one line, however far
+apart they are. The trigger was a sheet with two conditions: the middle column ran about 256px past
+Resources (572 / 739 / 482 on an SRD Paladin 1 with no resources or resistances), just over the
+limit, so nothing levelled and the rail and the right column stopped short. Statuses rarely gets
+long, so a very long stretch is an edge case he accepts.
+
+1. **The rule is plain CSS** (`10-chrome.css`). The base `.sheet-grid` is `align-items:stretch`, so
+   the grid stretches the rail (rows 1–2) and both stacks (row 2) to the row's height, and
+   `.sheet-grid>.col-m>div.card:last-of-type,.sheet-grid>.col-r>div.card:last-of-type{flex-grow:1}`
+   lets each stack's last card fill its column with its content at the top. No class is toggled.
+   The row's height is the grid's own work: row 2 is `1fr` in a grid of no fixed height, so it is
+   sized to the tallest of the two stacks and of the rail's need beyond the strip. Whichever column
+   is tallest, the other two draw down: the rail and Statuses when the right is tallest, the rail
+   and Resources when the middle is, Statuses and Resources when the rail is. The rail is one card,
+   a flex column with no justify (`30-sheet.css`), so its rows stay at the top; the strip's row is
+   its own height either way; Features, row 3, is untouched.
+2. **The threshold machinery is gone.** `SHEET_STRETCH_MAX`, `sheetShouldStretch()`, `sheetLevel()`,
+   `scheduleSheetLevel()`, `wireSheetLevel()` (and its call in `wire()`), the ResizeObserver and the
+   `.cols-even` class. They existed only to compare column heights, which CSS cannot do; with no
+   comparison left there is nothing to measure, and the grid follows every change of content (a
+   condition added or removed, a resource, the pencil, a resize) by itself.
+3. **Two columns and one are unchanged.** The ≤1000px query sets `align-items:start` on the grid and
+   `flex-grow:0` on the stacks' last cards, so every card is its content's height, as on main;
+   ≤700px inherits that and turns neither back on. Print builds `#printArea` from the character.
+   The combat view's cards are outside `.sheet-grid`, so the rule never reaches them; a card it
+   takes leaves a hidden `<span>` marker, and `:last-of-type` then picks the last card still at
+   home, as before.
+
+**Measured** (bottoms of the rail, `.col-m`, `.col-r` from the grid's top, at 1280; natural heights in
+brackets):
+
+| Sheet | Main (240px rule) | Now |
+|---|---|---|
+| SRD Paladin 1, two conditions, no resources (Mike's case) | 572 / 739 / 482, ragged | 739 / 739 / 739 (572 / 730 / 482) |
+| The same with six resources and no condition (right tallest) | 572 / 668 / 980, ragged | 980 / 980 / 980 |
+| Aldric (busy): 9 conditions, 8 resources | 572 / 1164 / 1161, ragged | 1164 / 1164 / 1164: the rail draws down about 590px |
+
+At 900 and 390 every card's box matches main to the pixel, and the full-page shots are
+byte-identical.
+
+**Driven** on the built file at 1280: + Add on Statuses saved a third condition (all three at 798) and
++ Resource a resource (still 798); Remove on each, with its confirm, took them out and the row came
+back to 739, with no height left behind; a 320px spacer injected into the rail (synthetic: an everyday
+sheet at this width rarely has the rail past Skills and Statuses) stretched Statuses and Resources to
+904 with the strip still 180, and came back to 739 when removed; a live resize 1280 → 900 → 1280
+gave main's two-column boxes and then 739 again; the combat view took Vitals, Statuses and
+Resources at their own heights and the Sheet tab sent them home level, no marker left; the Statuses
+pencil hid its edit buttons (the rows shortened, all three at 723) and showed them again; Features'
+Collapse all, Expand all and a favourite star worked; the note button opened "Note — Statuses &
+Conditions"; hiding Spells and Journal (set in code, not through Settings) left the Sheet as it was;
+print media showed `#printArea` with the conditions and the grid hidden.
+
+**Tests.** `rules-data.js`: the base grid is `align-items:stretch` and the last-card `flex-grow:1` is
+unconditional (one `flex-grow`, nothing spreading the stacks); the rail is a flex column with no
+`justify-content`; no `cols-even` in the stylesheets; two columns' `align-items:start` and
+`flex-grow:0`, one column turning neither back on; and no JS fragment naming the removed functions,
+`cols-even` or a ResizeObserver. `sheet.js`: the 240/241 cases and the stubbed `sheetLevel()` runs
+go; on the parsed markup the growing card is Statuses and Resources, Skills and Defences while the
+combat view holds those two (their markers are spans), and Statuses and Resources again once home.
+
+Pages: [sections & layout](../wiki/ui/sections-and-layout.md), [decisions](../wiki/decisions.md); the
+#103 spec's As built.
