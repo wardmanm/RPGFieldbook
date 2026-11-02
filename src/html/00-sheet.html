@@ -31,12 +31,14 @@
     </header>
     <!-- #103 (spec §6.2–6.7): one grid under the header. 10-chrome.css lays it
          out — the rail down the left, the strip over the other two columns,
-         and under it two independent stacks (Mike's ruling): .col-m (Skills,
-         Features) and .col-r (Defences, Statuses, Resources), so no card waits
-         on its neighbour's row. It re-lays at ≤1000px (two columns: .col-m
-         opens so Features runs full width under the rail) and ≤700px (one:
-         both open, so the cards take the phone order by `order`). Every id recompute(),
-         renderHP() and the death-save code paint MOVED here unchanged. -->
+         and under it two independent stacks (Mike's ruling): .col-m (Skills)
+         and .col-r (Defences, Statuses, Resources), so no card waits on its
+         neighbour's row. #155: the rail and the two stacks end on one line
+         (each column's last card stretches), and Features is a full-width row
+         under all three. It re-lays at ≤1000px (two columns: Features full
+         width under the rail) and ≤700px (one: both stacks open, so the cards
+         take the phone order by `order`). Every id recompute(), renderHP() and
+         the death-save code paint MOVED here unchanged. -->
     <div class="sheet-grid">
       <!-- The rail: Vitals, dark by its own tokens (.rail in 30-sheet.css).
            The portrait came from the old Portrait card (that section is the
@@ -116,11 +118,6 @@
             <b style="color:var(--ink-soft)">Tap dot to cycle</b>
           </div>
         </div>
-
-        <div class="card" data-note="features">
-          <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="featCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="featCollapseLbl">Collapse all</span></button></div>
-          <div id="featureList"></div>
-        </div>
       </div>
 
       <div class="col-r">
@@ -139,6 +136,16 @@
           <div class="label">Resources <button class="add" id="addResource"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Resource</button><span class="grow"></span></div>
           <div id="resList"></div>
         </div>
+      </div>
+
+      <!-- #155: Features & Traits is its own full-width row under the three
+           columns, a direct child of the grid (no longer in .col-m), so the
+           rail, .col-m and .col-r share one row and end on one line. At three
+           columns its groups lay their feature cards two across (30-sheet.css);
+           at two and one column it stays full width at the bottom, one across. -->
+      <div class="card" data-note="features">
+        <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="featCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="featCollapseLbl">Collapse all</span></button></div>
+        <div id="featureList"></div>
       </div>
 
       <!-- Familiars open from the header's paw (spec §6.6). The card stays in
