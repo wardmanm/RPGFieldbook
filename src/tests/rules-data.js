@@ -1349,23 +1349,21 @@ function block(html, needle, tag) {
     ck('#103 no stack is flattened on the desktop grid', !/display:contents/.test(base));
     ck('#155 two columns: nothing stretches even with .cols-even',
        /\.sheet-grid\.cols-even\{align-items:start\}/.test(in1), in1);
-    // Statuses moved under Skills for three columns only (Mike, 2026-11-02):
-    // two columns open both stacks and give each card its own row of column 2,
-    // so they still read Skills, Defences, Statuses, Resources
-    {
-      const row = sel => { const m = new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{grid-column:([^;]+);grid-row:([^}]+)\\}').exec(in1); return m ? m[1] + '/' + m[2] : null; };
-      const got = ['.sheet-grid>.rail', '.sheet-grid>.strip', '.sheet-grid #skillsCard', '.sheet-grid [data-note="defences"]', '.sheet-grid [data-note="statuses"]',
-        '.sheet-grid [data-note="resources"]', '.sheet-grid>[data-note="features"]'].map(row);
-      ck('#155 two columns open both stacks', /\.sheet-grid>\.col-m,\.sheet-grid>\.col-r\{display:contents\}/.test(in1), in1);
-      ck('#155 two columns keep today\'s order: the rail beside strip, Skills, Defences, Statuses, Resources, one row each; Features full width under all',
-         JSON.stringify(got) === JSON.stringify(['1/1/6', '2/1', '2/2', '2/3', '2/4', '2/5', '1/-1/6']), got);
-      ck('#155 ...Resources\' row is the 1fr one, so a tall rail opens no gap above Features',
-         /\.sheet-grid\{grid-template-columns:minmax\(200px,240px\) minmax\(0,1fr\);grid-template-rows:auto auto auto auto 1fr auto\}/.test(in1), in1);
-    }
-    ck('#103 one column: both stacks open (from two columns), every placed card back in the one column, in the phone order',
-       !/display:contents/.test(in2) && /\.sheet-grid>\.col-m,\.sheet-grid>\.col-r\{display:contents\}/.test(in1) &&
-       ['.sheet-grid>.rail', '.sheet-grid>.strip', '.sheet-grid #skillsCard', '.sheet-grid [data-note="defences"]', '.sheet-grid [data-note="statuses"]',
-        '.sheet-grid [data-note="resources"]', '.sheet-grid>[data-note="features"]'].every(x => (/([^{}]*)\{grid-column:1;grid-row:auto\}/.exec(in2) || [, ''])[1].split(',').map(t => t.trim()).includes(x)) &&
+    // Mike, 2026-11-02: at two columns Statuses sits under Skills too. The
+    // stacks stay whole, .col-m over .col-r, so the cards read Skills,
+    // Statuses, Defences, Resources — the markup's order, which is also the
+    // order Tab walks. No flattening and no `order` here, or the two part.
+    ck('#155 two columns keep both stacks whole (no display:contents, no order), so the order is the markup\'s and Tab follows it',
+       !/display:contents/.test(in1) && !/\border:/.test(in1) && !/data-note="(skills|statuses|defences|resources)"|#skillsCard/.test(in1), in1);
+    ck('#155 two columns: the strip, then the middle stack (Skills, Statuses), then the right stack (Defences, Resources) under it; Features full width at the bottom',
+       /\.sheet-grid>\.strip\{grid-column:2;grid-row:1\}/.test(in1) &&
+       /\.sheet-grid>\.col-m\{grid-column:2;grid-row:2\}/.test(in1) && /\.sheet-grid>\.col-r\{grid-column:2;grid-row:3\/5\}/.test(in1) &&
+       /\.sheet-grid>\.rail\{grid-column:1;grid-row:1\/5\}/.test(in1) &&
+       /\.sheet-grid>\[data-note="features"\]\{grid-column:1\/-1;grid-row:5\}/.test(in1), in1);
+    ck('#155 ...the rail and the right stack span the last 1fr row, so a tall rail opens no gap above Features',
+       /\.sheet-grid\{grid-template-columns:minmax\(200px,240px\) minmax\(0,1fr\);grid-template-rows:auto auto auto 1fr auto\}/.test(in1), in1);
+    ck('#103 one column: both stacks open, in the phone order',
+       /\.sheet-grid>\.col-m,\.sheet-grid>\.col-r\{display:contents\}/.test(in2) &&
        ['defences"\]\{order:3', 'statuses"\]\{order:4', 'skillsCard\{order:5', 'resources"\]\{order:6', 'features"\]\{order:7'].every(x => new RegExp(x).test(in2)), in2);
     ck('#103 the stacks are only ever flattened inside .sheet-grid', !/(^|[}\s,])\.col-[mr]\{display:contents/.test(g) && !/\.stack\{display:contents/.test(g));
   }

@@ -4900,6 +4900,18 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     const order = grid.querySelectorAll('.card').map(c => c.attr('data-note'));
     ck('#155 the Sheet\'s section order: vitals, abilities, skills, statuses, defences, resources, features (familiars hidden last)',
        order.join() === 'vitals,abilities,skills,statuses,defences,resources,features,familiars', order);
+    // Mike, 2026-11-02: at two columns the stacks sit whole, the middle one over
+    // the right (rules-data.js pins the CSS), so the column reads the middle
+    // stack's cards then the right's — which must be the order Tab walks, the
+    // document order
+    {
+      const kids = cls => grid.children.find(c => (c.attr('class') || '').split(/\s+/).includes(cls)).children
+        .filter(c => (c.attr('class') || '').split(/\s+/).includes('card')).map(c => c.attr('data-note'));
+      const read = kids('col-m').concat(kids('col-r'));
+      const tab = order.filter(k => read.includes(k));
+      ck('#155 two columns read Skills, Statuses, Defences, Resources, and Tab walks them in that order',
+         read.join() === 'skills,statuses,defences,resources' && tab.join() === read.join(), {read, tab});
+    }
     ck('#155 the feature list renders into the Features card, a direct child of the grid (no stack)',
        !!fl && fl.parent.attr('data-note') === 'features' && fl.parent.parent === grid && !fl.closest('.col-m') && !fl.closest('.col-r'));
   }
