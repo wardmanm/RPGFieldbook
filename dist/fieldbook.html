@@ -249,38 +249,54 @@ html[data-tabs="icons"] .tabicon{display:block}
 .cols{display:grid;gap:clamp(12px,2vw,18px);grid-template-columns:minmax(0,320px) minmax(0,1fr);align-items:start}
 @media(max-width:820px){.cols{grid-template-columns:1fr}}
 
-/* ---- the Sheet (#103, spec §6.7) ----
+/* ---- the Sheet (#103, spec §6.7; #155) ----
    Three columns: the rail down the left; the ability strip over the middle and
-   right; under it two independent stacks (Mike's ruling) — .col-m (Skills,
-   Features) and .col-r (Defences, Statuses, Resources) — so Features follows
-   Skills instead of waiting for the taller right column's row. The rail spans
-   the stacks' 1fr row as well: a spanned flexible track takes what the rail
-   needs beyond the strip, so a rail taller than the strip opens no gap above
-   the stacks.
+   right; under it two independent stacks (Mike's ruling) — .col-m (Skills) and
+   .col-r (Defences, Statuses, Resources) — so no card waits on its neighbour's
+   row. The rail spans the strip's row and the stacks' 1fr row: a spanned
+   flexible track takes what the rail needs beyond the strip, so a rail taller
+   than the strip opens no gap above the stacks.
+   #155: Features & Traits is a full-width row of its own under the three
+   columns, one card per row. The three columns end on one line only while
+   they are close (Mike, 2026-11-02): sheetLevel() (40-sheet.js) measures each
+   column's own height and sets .cols-even when the tallest is at most
+   SHEET_STRETCH_MAX (240px) taller than the shortest. Then the grid stretches
+   the rail and both stacks to the row, and inside each stack the LAST card
+   grows to fill the rest (flex-grow), content at the top; the cards above keep
+   their own height, so no other heading moves. Further apart, nothing
+   stretches and each column ends where its content ends — a long empty frame
+   reads worse than a ragged edge. `div.card:last-of-type` rather than
+   :last-child, because the combat view leaves a hidden <span> marker where a
+   card was; the last card still at home then grows instead.
    The two queries come AFTER this base rule and override it at equal
    specificity — written above it, they would quietly do nothing (the trap in
    Sections & layout). Each stack is only ever flattened (display:contents)
    inside a query and scoped to .sheet-grid: an unscoped .stack rule once took
    the gap out from between the cards of every one-stack tab. */
 .sheet-grid{display:grid;gap:clamp(12px,2vw,18px);grid-template-columns:minmax(220px,260px) minmax(0,1.3fr) minmax(0,1fr);
-  grid-template-rows:auto 1fr;align-items:start}
+  grid-template-rows:auto 1fr auto;align-items:start}
 .sheet-grid>.rail{grid-column:1;grid-row:1/3}
 .sheet-grid>.strip{grid-column:2/4;grid-row:1}
 .sheet-grid>.col-m{grid-column:2;grid-row:2}
 .sheet-grid>.col-r{grid-column:3;grid-row:2}
-.sheet-grid>.col-m,.sheet-grid>.col-r{display:grid;gap:clamp(12px,2vw,18px);align-content:start;min-width:0}
+.sheet-grid>[data-note="features"]{grid-column:1/-1;grid-row:3}
+.sheet-grid>.col-m,.sheet-grid>.col-r{display:flex;flex-direction:column;gap:clamp(12px,2vw,18px);min-width:0}
+.sheet-grid.cols-even{align-items:stretch}
+.sheet-grid.cols-even>.col-m>div.card:last-of-type,.sheet-grid.cols-even>.col-r>div.card:last-of-type{flex-grow:1}
 /* Two columns, as widths.html: the rail, and one column of the strip, Skills
-   and the right stack; Features full width under both. .col-m opens so Skills
-   and Features are grid items of their own; .col-r stays a stack. The rail and
-   the right stack span a last 1fr row, so neither opens a gap above Features. */
+   and the right stack; Features full width under both. Nothing stretches here
+   (#155 changes the three-column layout only): sheetLevel() never sets
+   .cols-even at this width, and the rule below undoes it for the moment a
+   resize takes to reach it. The rail and the right stack span a last 1fr row,
+   so neither opens a gap above Features. */
 @media(max-width:1000px){
   .sheet-grid{grid-template-columns:minmax(200px,240px) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto}
-  .sheet-grid>.col-m{display:contents}
+  .sheet-grid.cols-even{align-items:start}
   .sheet-grid>.rail{grid-column:1;grid-row:1/5}
   .sheet-grid>.strip{grid-column:2;grid-row:1}
-  .sheet-grid #skillsCard{grid-column:2;grid-row:2}
+  .sheet-grid>.col-m{grid-column:2;grid-row:2}
   .sheet-grid>.col-r{grid-column:2;grid-row:3/5}
-  .sheet-grid [data-note="features"]{grid-column:1/-1;grid-row:5}
+  .sheet-grid>[data-note="features"]{grid-column:1/-1;grid-row:5}
 }
 /* One column, in the spec's order: rail, abilities, Defences, Statuses, Skills,
    Resources, Features. Both stacks open (display:contents, inside this query
@@ -289,7 +305,7 @@ html[data-tabs="icons"] .tabicon{display:block}
 @media(max-width:700px){
   .sheet-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
   .sheet-grid>.col-m,.sheet-grid>.col-r{display:contents}
-  .sheet-grid>.rail,.sheet-grid>.strip,.sheet-grid #skillsCard,.sheet-grid [data-note="features"]{grid-column:1;grid-row:auto}
+  .sheet-grid>.rail,.sheet-grid>.strip,.sheet-grid #skillsCard,.sheet-grid>[data-note="features"]{grid-column:1;grid-row:auto}
   .sheet-grid>.rail{order:1}
   .sheet-grid>.strip{order:2}
   .sheet-grid [data-note="defences"]{order:3}
@@ -702,9 +718,10 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
    controls on a second line under the name: the − count + group starts at
    the left edge, as on a wide row, and restore/edit/delete sit at the
    right. Only inside .sheet-grid's
-   stacks: no container is declared anywhere else, so no other card is
-   touched. */
-.sheet-grid>.col-m>.card,.sheet-grid>.col-r>.card{container-type:inline-size}
+   stacks and its Features row (#155: Features left .col-m and keeps its
+   container, so "Collapse all" still folds to its icon on a phone): no
+   container is declared anywhere else, so no other card is touched. */
+.sheet-grid>.col-m>.card,.sheet-grid>.col-r>.card,.sheet-grid>[data-note="features"]{container-type:inline-size}
 .sheet-grid .card>.label{white-space:nowrap}
 @container (max-width:460px){#featCollapseLbl{display:none}}
 @container (max-width:420px){.res{flex-wrap:wrap;justify-content:flex-start;row-gap:6px}.res-main{flex:1 0 100%}.res [data-res-reset]{margin-left:auto}}
@@ -1939,12 +1956,15 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
     </header>
     <!-- #103 (spec §6.2–6.7): one grid under the header. 10-chrome.css lays it
          out — the rail down the left, the strip over the other two columns,
-         and under it two independent stacks (Mike's ruling): .col-m (Skills,
-         Features) and .col-r (Defences, Statuses, Resources), so no card waits
-         on its neighbour's row. It re-lays at ≤1000px (two columns: .col-m
-         opens so Features runs full width under the rail) and ≤700px (one:
-         both open, so the cards take the phone order by `order`). Every id recompute(),
-         renderHP() and the death-save code paint MOVED here unchanged. -->
+         and under it two independent stacks (Mike's ruling): .col-m (Skills)
+         and .col-r (Defences, Statuses, Resources), so no card waits on its
+         neighbour's row. #155: Features is a full-width row under all three,
+         and the rail and the two stacks end on one line (each column's last
+         card stretches) while they are within 240px of each other —
+         sheetLevel() in 40-sheet.js decides. It re-lays at ≤1000px (two columns: Features full
+         width under the rail) and ≤700px (one: both stacks open, so the cards
+         take the phone order by `order`). Every id recompute(), renderHP() and
+         the death-save code paint MOVED here unchanged. -->
     <div class="sheet-grid">
       <!-- The rail: Vitals, dark by its own tokens (.rail in 30-sheet.css).
            The portrait came from the old Portrait card (that section is the
@@ -2024,11 +2044,6 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
             <b style="color:var(--ink-soft)">Tap dot to cycle</b>
           </div>
         </div>
-
-        <div class="card" data-note="features">
-          <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="featCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="featCollapseLbl">Collapse all</span></button></div>
-          <div id="featureList"></div>
-        </div>
       </div>
 
       <div class="col-r">
@@ -2047,6 +2062,15 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
           <div class="label">Resources <button class="add" id="addResource"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Resource</button><span class="grow"></span></div>
           <div id="resList"></div>
         </div>
+      </div>
+
+      <!-- #155: Features & Traits is its own full-width row under the three
+           columns, a direct child of the grid (no longer in .col-m), so the
+           rail, .col-m and .col-r share one row. One feature card per row, at
+           full width, at every width (Mike, 2026-11-02). -->
+      <div class="card" data-note="features">
+        <div class="label">Features &amp; Traits <button class="add" data-add="feature"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span><button class="add" id="featCollapseAll" title="Collapse or expand all"><svg viewBox="0 0 24 24"><path d="M8 9l4 4 4-4M8 15l4-4 4 4"/></svg><span id="featCollapseLbl">Collapse all</span></button></div>
+        <div id="featureList"></div>
       </div>
 
       <!-- Familiars open from the header's paw (spec §6.6). The card stays in
@@ -4129,6 +4153,69 @@ function renderFamiliars(){
   renderSheetHead();
   if(!has)return;
   el.innerHTML=character.familiars.map(f=>familiarCardHTML(f)).join("");
+}
+
+/* ================= the Sheet's columns end level, when they are close (#155) =================
+   At three columns the rail, the middle stack (Skills) and the right stack
+   (Defences, Statuses, Resources) end on one line by stretching each column's
+   last card — but only while they are close. Mike's rule (2026-11-02): the
+   tallest column may be at most SHEET_STRETCH_MAX px taller than the shortest.
+   Further apart (many statuses or resources), stretching would draw a long
+   empty frame down the rail and Skills, so nothing stretches and each column
+   ends where its content ends. The CSS (`.sheet-grid.cols-even`, 10-chrome.css)
+   does the stretching; this only decides. */
+const SHEET_STRETCH_MAX=240;
+/* Pure, so the suite can pin the rule. `heights` is each column's own height
+   (px); a column that is hidden or holds no card on the Sheet (every card of
+   it in the combat view) comes in as null or 0 and is left out — it has no
+   card to stretch. Fewer than two columns left: nothing to level. */
+function sheetShouldStretch(heights){
+  const h=(Array.isArray(heights)?heights:[]).filter(x=>typeof x==="number"&&isFinite(x)&&x>0);
+  if(h.length<2)return false;
+  return Math.max(...h)-Math.min(...h)<=SHEET_STRETCH_MAX;
+}
+/* Measures with .cols-even off, so it reads each column's own height, not the
+   stretched one, then sets it or leaves it off; both happen in one task, so
+   nothing paints in between. Heights are taken from the grid's top: the rail
+   starts there, and the two stacks start under the strip, so the three are
+   compared by where they end. Does nothing while the Sheet is hidden (another
+   tab, the combat view) or printing; at two columns and one it clears the
+   class, since only the three-column layout levels. */
+function sheetLevel(){
+  const grid=document.querySelector("#tab-sheet .sheet-grid");if(!grid||!grid.classList)return;
+  const mm=q=>!!(window.matchMedia&&window.matchMedia(q).matches);
+  if(mm("print"))return;
+  if(mm("(max-width:1000px)")){grid.classList.remove("cols-even");return;}
+  if(!grid.offsetParent)return;
+  grid.classList.remove("cols-even");
+  const top=grid.getBoundingClientRect().top;
+  const colH=el=>{
+    if(!el)return null;
+    const has=el.classList.contains("card")?el.offsetHeight>0:[...el.children].some(c=>c.classList.contains("card")&&c.offsetHeight>0);
+    return has?el.getBoundingClientRect().bottom-top:null;
+  };
+  const on=sheetShouldStretch([colH(grid.querySelector(":scope>.rail")),colH(grid.querySelector(":scope>.col-m")),colH(grid.querySelector(":scope>.col-r"))]);
+  grid.classList.toggle("cols-even",on);
+}
+let sheetLevelTimer=0;
+function scheduleSheetLevel(){clearTimeout(sheetLevelTimer);sheetLevelTimer=setTimeout(sheetLevel,60);}
+/* Wired once at boot. What moves a column's height: the window's width, a
+   status or resource added or removed, a card folded, the hit-dice box
+   opening, a card going to or from the combat view, the Sheet tab showing
+   again. A stretched card's own box does not move when its content shrinks,
+   so besides the grid and the three columns this watches every child of every
+   card in them — the static containers (#statusList, #resList, #skills, the
+   rail's rows…) whose height is always their content's. Toggling .cols-even
+   resizes the columns and so calls this once more; it measures the same
+   natural heights, decides the same, and stops. */
+function wireSheetLevel(){
+  const grid=document.querySelector("#tab-sheet .sheet-grid");if(!grid)return;
+  window.addEventListener("resize",scheduleSheetLevel);
+  if(typeof ResizeObserver!=="function"){scheduleSheetLevel();return;}
+  const ro=new ResizeObserver(scheduleSheetLevel);
+  const cols=[grid,...grid.querySelectorAll(":scope>.rail,:scope>.strip,:scope>.col-m,:scope>.col-r")];
+  cols.forEach(el=>ro.observe(el));
+  grid.querySelectorAll(":scope>.rail>*,:scope>.col-m>.card>*,:scope>.col-r>.card>*").forEach(el=>ro.observe(el));
 }
 
 /* ================= the sheet header (#103, spec §6.1, §6.6) =================
@@ -17312,6 +17399,7 @@ function wire(){
   document.getElementById("btnLoad").addEventListener("click",()=>document.getElementById("fileLoad").click());
   document.getElementById("fileLoad").addEventListener("change",e=>{const f=e.target.files[0];if(f)importChar(f);e.target.value="";});
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(settings.theme==="system")applyTheme();});
+  wireSheetLevel();   /* #155: the Sheet's three columns end level while they are close */
 }
 
 /* ================= boot ================= */
