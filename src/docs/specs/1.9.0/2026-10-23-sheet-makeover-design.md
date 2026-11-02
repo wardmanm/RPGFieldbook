@@ -397,6 +397,14 @@ What differs from the sections above, and why:
   columns land within about 130px and level. **§6.7's two columns now read Skills, Statuses,
   Defences, Resources** (§6.7 had Defences before Statuses): the stacks stay whole there, so the
   order on screen is the order Tab walks. §6.7's one-column order is kept.
+- **#155, the columns always end level (2026-11-02, L8408; Mike's decision, replacing the 240px
+  rule above).** At three columns the rail and both stacks always end on one line, however far
+  apart: the grid stretches them (`align-items:stretch`) and each stack's last card grows, content
+  at the top. The trigger was a Paladin 1 with two conditions whose middle column ran about 256px
+  past Resources, so nothing levelled. It is plain CSS: `SHEET_STRETCH_MAX`, `sheetShouldStretch()`,
+  `sheetLevel()`, `wireSheetLevel()`, its ResizeObserver and `.cols-even` are gone. A long stretch
+  (nine conditions draw the rail down about 590px) is an edge case Mike accepts. Two columns, one,
+  print and the combat view are unchanged.
 - **The ☰ section flyout is retired; a back-to-top button** (L6804, Mike 2026-10-24): the tabs are
   organised well enough to need no index, so `#btnToc`, `#tocFly` and `buildToc()` go (the rail's
   and strip's `.label`s above stay, for the note button, the combat toggle and the registry), and a

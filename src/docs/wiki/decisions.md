@@ -496,9 +496,9 @@ When a page gains a Decisions row, add its line here under that page.
 ### [Sections & layout](ui/sections-and-layout.md)
 
 - **How is a section identified?** — A stable `k` in `NOTE_SECTIONS`
-- **The Sheet's layout (#103, #155)** — One layout, no setting: header, rail, strip, then two independent stacks (Skills, Statuses · Defences, Resources) ending on one line with the rail while within 240px, and Features full width under all three, one card per row; three columns, two, one by width
-- **When the columns end level (#155, Mike 2026-11-02)** — Only while the tallest is at most 240px (`SHEET_STRETCH_MAX`) taller than the shortest; then each stack's last card grows, content at the top; further apart, each column ends at its content
-- **How the 240px rule is measured (#155)** — `sheetLevel()`: class off, measure, decide; a debounced ResizeObserver on the columns and their cards' contents, plus resize
+- **The Sheet's layout (#103, #155)** — One layout, no setting: header, rail, strip, then two independent stacks (Skills, Statuses · Defences, Resources) always ending on one line with the rail at three columns, and Features full width under all three, one card per row; three columns, two, one by width
+- **When the columns end level (#155, Mike 2026-11-02, round 4)** — Always, at three columns, however far apart: the grid stretches the rail and both stacks and each stack's last card grows, content at the top; replaces the 240px rule
+- **How the levelling is done (#155, round 4)** — Plain CSS (`align-items:stretch`, the last card's `flex-grow:1`), undone at ≤1000px; nothing measures the columns
 - **Where Statuses sits (#155, Mike 2026-11-02)** — Under Skills in the middle stack, always ("option 2"), at three columns and at two, where the column reads Skills, Statuses, Defences, Resources, the order Tab walks; the phone keeps its order
 - **Features at three columns (#155, Mike 2026-11-02)** — One card per row at full width, as at every width
 - **Familiars on the Sheet (#103)** — A paw in the header opening a popover and a modal; the card stays in the DOM, hidden, for the combat view
