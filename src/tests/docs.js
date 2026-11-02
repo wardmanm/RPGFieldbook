@@ -516,8 +516,8 @@ if (packsReg && Array.isArray(packsReg.packs)) {
      /case "\$PRIORITY" in P0\|P1\|P2\) ;; \*\)[^\n]*exit 1;; esac/.test(fb) && fb.indexOf('case "$PRIORITY"') < fb.indexOf('gh '), fb);
   ck('#127 ...looks up the Priority option before creating the issue, and stops when it is missing',
      fb.indexOf('PICK=') >= 0 && fb.indexOf('PICK=') < fb.indexOf('gh issue create') && /\[ -n "\$PICK" \][\s\S]{0,200}?exit 1/.test(fb), fb);
-  ck('#127 ...and passes the body on stdin, so no body file exists in the repo',
-     (fb.match(/URL=\$\(gh issue create/g) || []).length === 2 && (fb.match(/URL=\$\(gh issue create/g) || []).length === (fb.match(/--body-file - <<'BODY'/g) || []).length && !/--body-file (?!-[ `])/.test(pre), fb);
+  ck('#127 ...and passes the body on stdin, so no body file exists in the repo, never inside $(…) (bash 3.2)',
+     (fb.match(/gh issue create [^\n]*--body-file - > "\$OUT" <<'BODY'/g) || []).length === 1 && !/\$\(gh issue create/.test(fb) && /OUT=\$\(mktemp\)/.test(fb) && !/--body-file (?!-[ `])/.test(pre), fb);
   // the archived roadmap page has one name, the one /release reads
   ck('#127 /pre-release archives the roadmap page under the one name /release reads',
      pre.includes('always becomes `src/docs/archive/X.Y.Z/roadmap-X.Y.Z.md`') && rel.includes('`src/docs/archive/<version>/roadmap-<version>.md`'));

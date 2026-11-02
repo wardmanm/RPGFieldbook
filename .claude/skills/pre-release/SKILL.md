@@ -282,19 +282,19 @@ PRIO=$(F <<<'.fields[]|select(.name=="Priority")|.id')
 PICK=$(F <<<".fields[]|select(.name==\"Priority\")|.options[]|select(.name==\"$PRIORITY\")|.id")
 [ -n "$PROJ" ] && [ -n "$STATUS" ] && [ -n "$BACKLOG" ] && [ -n "$PRIO" ] && [ -n "$PICK" ] \
   || { echo "project #3 lookup failed (scope, network, or no Priority option $PRIORITY): nothing filed"; exit 1; }
+LABELS=(--label <bug|task>)
 if [ "$PRIORITY" = P0 ]; then
-  URL=$(gh issue create --title "<title>" --milestone "vX.Y.Z" --label <bug|task> --body-file - <<'BODY'
-<the body>
-BODY
-)
+  :   # a P0 carries no fix-version label
 else
   gh label list --search "$NEXT" --json name -q '.[].name' | grep -qx "$NEXT" \
     || gh label create "$NEXT" --color aaaaaa || exit 1
-  URL=$(gh issue create --title "<title>" --milestone "vX.Y.Z" --label <bug|task> --label "$NEXT" --body-file - <<'BODY'
+  LABELS+=(--label "$NEXT")
+fi
+OUT=$(mktemp)   # the body is never inside $(…): macOS bash 3.2 can't parse an apostrophe there
+gh issue create --title "<title>" --milestone "vX.Y.Z" "${LABELS[@]}" --body-file - > "$OUT" <<'BODY'
 <the body>
 BODY
-)
-fi
+URL=$(tail -1 "$OUT"); rm -f "$OUT"
 [ -n "$URL" ] || { echo "gh issue create failed: nothing filed"; exit 1; }
 echo "filed $URL"
 N=${URL##*/}

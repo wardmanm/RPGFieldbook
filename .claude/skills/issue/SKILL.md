@@ -106,10 +106,11 @@ fi
 ARGS=(--title "<title>" --label "$KIND")
 [ -n "$NEXT" ] && ARGS+=(--label "$NEXT")
 [ -n "$MILESTONE" ] && ARGS+=(--milestone "$MILESTONE")
-URL=$(gh issue create "${ARGS[@]}" --body-file - <<'BODY'
+OUT=$(mktemp)   # the body is never inside $(…): macOS bash 3.2 can't parse an apostrophe there
+gh issue create "${ARGS[@]}" --body-file - > "$OUT" <<'BODY'
 <the body>
 BODY
-)
+URL=$(tail -1 "$OUT"); rm -f "$OUT"
 [ -n "$URL" ] || { echo "gh issue create failed: nothing filed"; exit 1; }
 echo "filed $URL"
 N=${URL##*/}
