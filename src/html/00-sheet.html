@@ -31,15 +31,19 @@
     </header>
     <!-- #103 (spec §6.2–6.7): one grid under the header. 10-chrome.css lays it
          out — the rail down the left, the strip over the other two columns,
-         and under it two independent stacks (Mike's ruling): .col-m (Skills)
-         and .col-r (Defences, Statuses, Resources), so no card waits on its
+         and under it two independent stacks (Mike's ruling): .col-m (Skills,
+         Statuses) and .col-r (Defences, Resources), so no card waits on its
          neighbour's row. #155: Features is a full-width row under all three,
          and the rail and the two stacks end on one line (each column's last
          card stretches) while they are within 240px of each other —
-         sheetLevel() in 40-sheet.js decides. It re-lays at ≤1000px (two columns: Features full
-         width under the rail) and ≤700px (one: both stacks open, so the cards
-         take the phone order by `order`). Every id recompute(), renderHP() and
-         the death-save code paint MOVED here unchanged. -->
+         sheetLevel() in 40-sheet.js decides. Statuses sits under Skills
+         (Mike, 2026-11-02) so the two stacks come out close in height.
+         It re-lays at ≤1000px (two columns: the stacks whole, one above the
+         other, so the cards read and tab Skills, Statuses, Defences,
+         Resources; Features full width under the rail) and ≤700px (one: both
+         stacks open, so the cards take the phone order by `order`). Every id
+         recompute(), renderHP() and the death-save code paint MOVED here
+         unchanged. -->
     <div class="sheet-grid">
       <!-- The rail: Vitals, dark by its own tokens (.rail in 30-sheet.css).
            The portrait came from the old Portrait card (that section is the
@@ -119,6 +123,14 @@
             <b style="color:var(--ink-soft)">Tap dot to cycle</b>
           </div>
         </div>
+
+        <!-- #155 (Mike, 2026-11-02): Statuses under Skills, in the middle
+             stack, at three columns and two; on a phone `order` places it
+             (10-chrome.css). -->
+        <div class="card" data-note="statuses">
+          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
+          <div id="statusList"></div>
+        </div>
       </div>
 
       <div class="col-r">
@@ -126,11 +138,6 @@
           <div class="label">Defences <span class="grow"></span></div>
           <div class="def-h">Resistances</div><div id="defResists"></div>
           <div class="def-h">Immunities</div><div id="defImmunes"></div>
-        </div>
-
-        <div class="card" data-note="statuses">
-          <div class="label">Statuses &amp; Conditions <button class="add" data-add="status"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add</button><span class="grow"></span></div>
-          <div id="statusList"></div>
         </div>
 
         <div class="card" data-note="resources">

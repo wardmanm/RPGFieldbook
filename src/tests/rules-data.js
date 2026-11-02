@@ -1311,17 +1311,18 @@ function block(html, needle, tag) {
   // beyond the brief's block: what the grid is and where the cards sit in it
   ck('#103 the grid is rail · middle · right', /\.sheet-grid\{[^}]*grid-template-columns:minmax\(220px,260px\) minmax\(0,1\.3fr\) minmax\(0,1fr\)/.test(css));
   // Mike's layout ruling: the middle and right columns are independent stacks;
-  // #155: Features left the middle stack for a full-width row under all three
-  ck('#155 the Sheet\'s cards run rail, strip, the middle stack (Skills), the right stack (Defences, Statuses, Resources), then Features',
-     /data-note="vitals"[\s\S]*data-note="abilities"[\s\S]*<div class="col-m">\s*(?:<!--[\s\S]*?-->\s*)*<div class="card" data-note="skills"[\s\S]*<div class="col-r">\s*<div class="card" data-note="defences"[\s\S]*data-note="statuses"[\s\S]*data-note="resources"[\s\S]*data-note="features"/.test(sheet));
+  // #155: Features left the middle stack for a full-width row under all three,
+  // and Statuses moved under Skills (Mike, 2026-11-02, "option 2")
+  ck('#155 the Sheet\'s cards run rail, strip, the middle stack (Skills, Statuses), the right stack (Defences, Resources), then Features',
+     /data-note="vitals"[\s\S]*data-note="abilities"[\s\S]*<div class="col-m">\s*(?:<!--[\s\S]*?-->\s*)*<div class="card" data-note="skills"[\s\S]*data-note="statuses"[\s\S]*<div class="col-r">\s*<div class="card" data-note="defences"[\s\S]*data-note="resources"[\s\S]*data-note="features"/.test(sheet));
   {
     // comments out first: one inside the grid quotes `<div class="card" data-note="`, which block() would count
     const bare = sheet.replace(/<!--[\s\S]*?-->/g, '');
     const colM = block(bare, '<div class="col-m">'), colR = block(bare, '<div class="col-r">'), grid = block(bare, '<div class="sheet-grid">');
-    ck('#155 the middle stack holds exactly Skills',
-       JSON.stringify(colM.match(/data-note="[a-z]+"/g)) === JSON.stringify(['data-note="skills"']), colM.match(/data-note="[a-z]+"/g));
-    ck('#103 the right stack holds exactly Defences, Statuses, Resources',
-       JSON.stringify(colR.match(/data-note="[a-z]+"/g)) === JSON.stringify(['data-note="defences"', 'data-note="statuses"', 'data-note="resources"']), colR.match(/data-note="[a-z]+"/g));
+    ck('#155 the middle stack holds exactly Skills, then Statuses (Mike, 2026-11-02)',
+       JSON.stringify(colM.match(/data-note="[a-z]+"/g)) === JSON.stringify(['data-note="skills"', 'data-note="statuses"']), colM.match(/data-note="[a-z]+"/g));
+    ck('#155 the right stack holds exactly Defences, then Resources',
+       JSON.stringify(colR.match(/data-note="[a-z]+"/g)) === JSON.stringify(['data-note="defences"', 'data-note="resources"']), colR.match(/data-note="[a-z]+"/g));
     // a direct child of the grid: what the grid holds once both stacks are cut out of it
     const direct = grid.replace(colM, '').replace(colR, '');
     ck('#155 Features is a card of the grid itself, after both stacks, in no stack',
@@ -1346,10 +1347,21 @@ function block(html, needle, tag) {
        /\.sheet-grid\.cols-even>\.col-m>div\.card:last-of-type,\.sheet-grid\.cols-even>\.col-r>div\.card:last-of-type\{flex-grow:1\}/.test(base), base);
     ck('#155 ...only the LAST card grows, so no other heading moves', (base.match(/flex-grow/g) || []).length === 1);
     ck('#103 no stack is flattened on the desktop grid', !/display:contents/.test(base));
-    ck('#155 two columns keep today\'s stacking: nothing stretches even with .cols-even, Skills\' stack under the strip, Features full width at the bottom',
-       /\.sheet-grid\.cols-even\{align-items:start\}/.test(in1) && !/display:contents/.test(in1) &&
+    ck('#155 two columns: nothing stretches even with .cols-even',
+       /\.sheet-grid\.cols-even\{align-items:start\}/.test(in1), in1);
+    // Mike, 2026-11-02: at two columns Statuses sits under Skills too. The
+    // stacks stay whole, .col-m over .col-r, so the cards read Skills,
+    // Statuses, Defences, Resources — the markup's order, which is also the
+    // order Tab walks. No flattening and no `order` here, or the two part.
+    ck('#155 two columns keep both stacks whole (no display:contents, no order), so the order is the markup\'s and Tab follows it',
+       !/display:contents/.test(in1) && !/\border:/.test(in1) && !/data-note="(skills|statuses|defences|resources)"|#skillsCard/.test(in1), in1);
+    ck('#155 two columns: the strip, then the middle stack (Skills, Statuses), then the right stack (Defences, Resources) under it; Features full width at the bottom',
+       /\.sheet-grid>\.strip\{grid-column:2;grid-row:1\}/.test(in1) &&
        /\.sheet-grid>\.col-m\{grid-column:2;grid-row:2\}/.test(in1) && /\.sheet-grid>\.col-r\{grid-column:2;grid-row:3\/5\}/.test(in1) &&
+       /\.sheet-grid>\.rail\{grid-column:1;grid-row:1\/5\}/.test(in1) &&
        /\.sheet-grid>\[data-note="features"\]\{grid-column:1\/-1;grid-row:5\}/.test(in1), in1);
+    ck('#155 ...the rail and the right stack span the last 1fr row, so a tall rail opens no gap above Features',
+       /\.sheet-grid\{grid-template-columns:minmax\(200px,240px\) minmax\(0,1fr\);grid-template-rows:auto auto auto 1fr auto\}/.test(in1), in1);
     ck('#103 one column: both stacks open, in the phone order',
        /\.sheet-grid>\.col-m,\.sheet-grid>\.col-r\{display:contents\}/.test(in2) &&
        ['defences"\]\{order:3', 'statuses"\]\{order:4', 'skillsCard\{order:5', 'resources"\]\{order:6', 'features"\]\{order:7'].every(x => new RegExp(x).test(in2)), in2);
@@ -1369,7 +1381,9 @@ function block(html, needle, tag) {
       ck('#155 the levelling is wired once at boot', /\n  wireSheetLevel\(\);/.test(boot));
       ck('#155 ...watches the columns and their cards\' contents with a ResizeObserver, debounced, and the window\'s resize',
          /new ResizeObserver\(scheduleSheetLevel\)/.test(js) && /setTimeout\(sheetLevel,\d+\)/.test(js) && /addEventListener\("resize",scheduleSheetLevel\)/.test(js) &&
-         /:scope>\.col-r>\.card>\*/.test(js));
+         /:scope>\.col-m>\.card>\*/.test(js) && /:scope>\.col-r>\.card>\*/.test(js));
+      ck('#155 ...measures the rail and the two stacks as they stand (Statuses in .col-m), naming no card',
+         /:scope>\.rail"/.test(fn) && /:scope>\.col-m"/.test(fn) && /:scope>\.col-r"/.test(fn) && !/data-note|statusList|skillsCard/.test(fn));
       ck('#155 ...does nothing for print, clears the class at two columns and one, and skips a hidden Sheet',
          /mm\("print"\)\)return;/.test(fn) && /mm\("\(max-width:1000px\)"\)\)\{grid\.classList\.remove\("cols-even"\);return;\}/.test(fn) && /offsetParent\)return;/.test(fn));
       ck('#155 ...measures with the class off, then decides by sheetShouldStretch()',

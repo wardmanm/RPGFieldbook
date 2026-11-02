@@ -179,7 +179,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `45-combat.css` | the combat button and tab | [Combat view](features/combat-view.md) |
 | `47-journal.css` | the Journal tab | [Journal](features/journal.md) |
 | `50-modal.css` | the modal | [Shell](ui/shell.md) |
-| `00-sheet.html` | the Sheet tab: the header, then the grid (rail, strip, Skills, Defences/Statuses/Resources, Features) | [Sections & layout](ui/sections-and-layout.md) |
+| `00-sheet.html` | the Sheet tab: the header, then the grid (rail, strip, Skills/Statuses, Defences/Resources, Features) | [Sections & layout](ui/sections-and-layout.md) |
 | `10-inventory.html` | the Inventory tab | [Inventory](features/inventory.md) |
 | `20-spells.html` | the Spells tab | [Spells](features/spells.md) |
 | `30-story.html` | the Bio tab (`#tab-story`) | [Story & notes](features/story-and-notes.md) |
@@ -241,3 +241,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-28 — Homebrew moves to the private repo: the pack table, layout and glossary say SRD 5.2 is the one public pack. → ledger L7858, #125
 - 2026-10-29 — `87-combat-end.js` joins the code map (JS fragment count 38→39): the End of combat window, placed after `87-trackers.js`, whose renderers it calls. → ledger L7921, #105
 - 2026-10-29 — The layout gains the pre-release docs (`specs/<ver>/` and `plans/<ver>/`, `archive/<ver>/`, `qa/smoke.md`, the record and the checklist), `pre-release-record.js` and `move-docs.js`, and names every project skill; the glossary gains pre-release. → ledger L8070, #127
+- 2026-11-02 — The code map's `00-sheet.html` line: the grid's stacks are Skills/Statuses and Defences/Resources (Mike's decision). → ledger L8339, #155

@@ -4891,14 +4891,27 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   const KEYS = ['vitals', 'abilities', 'skills', 'features', 'defences', 'statuses', 'resources'];
   const before = KEYS.map(where);
   // #155: Features is the grid's own child, after the two stacks (rail #0,
-  // strip #1, .col-m #2, .col-r #3, Features #4)
+  // strip #1, .col-m #2, .col-r #3, Features #4); Statuses is second in .col-m,
+  // under Skills (Mike, 2026-11-02), and .col-r holds Defences and Resources
   ck('#155 the parsed Sheet has the two stacks and the Features row, in their places',
-     before.join() === 'sheet-grid#0,sheet-grid#1,col-m#0,sheet-grid#4,col-r#0,col-r#1,col-r#2', before);
+     before.join() === 'sheet-grid#0,sheet-grid#1,col-m#0,sheet-grid#4,col-r#0,col-m#1,col-r#1', before);
   {
     const grid = root.querySelector('.sheet-grid'), fl = root.querySelector('#featureList');
     const order = grid.querySelectorAll('.card').map(c => c.attr('data-note'));
-    ck('#155 the Sheet\'s section order: vitals, abilities, skills, defences, statuses, resources, features (familiars hidden last)',
-       order.join() === 'vitals,abilities,skills,defences,statuses,resources,features,familiars', order);
+    ck('#155 the Sheet\'s section order: vitals, abilities, skills, statuses, defences, resources, features (familiars hidden last)',
+       order.join() === 'vitals,abilities,skills,statuses,defences,resources,features,familiars', order);
+    // Mike, 2026-11-02: at two columns the stacks sit whole, the middle one over
+    // the right (rules-data.js pins the CSS), so the column reads the middle
+    // stack's cards then the right's — which must be the order Tab walks, the
+    // document order
+    {
+      const kids = cls => grid.children.find(c => (c.attr('class') || '').split(/\s+/).includes(cls)).children
+        .filter(c => (c.attr('class') || '').split(/\s+/).includes('card')).map(c => c.attr('data-note'));
+      const read = kids('col-m').concat(kids('col-r'));
+      const tab = order.filter(k => read.includes(k));
+      ck('#155 two columns read Skills, Statuses, Defences, Resources, and Tab walks them in that order',
+         read.join() === 'skills,statuses,defences,resources' && tab.join() === read.join(), {read, tab});
+    }
     ck('#155 the feature list renders into the Features card, a direct child of the grid (no stack)',
        !!fl && fl.parent.attr('data-note') === 'features' && fl.parent.parent === grid && !fl.closest('.col-m') && !fl.closest('.col-r'));
   }
@@ -4927,9 +4940,10 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     ck('#103 every card goes into the view, a marker left in its place',
        KEYS.every(k => root.querySelector('.card[data-note="' + k + '"]').parent === list) &&
        KEYS.every(k => root.querySelector('[data-cvhome="' + k + '"]')), KEYS.map(where));
-    ck('#155 ...the markers sit where the cards came from: Features on the grid, Skills and Statuses in their stacks',
+    ck('#155 ...the markers sit where the cards came from: Features on the grid, Skills and Statuses in the middle stack, Defences and Resources in the right',
        root.querySelector('[data-cvhome="features"]').parent.attr('class') === 'sheet-grid' && root.querySelector('[data-cvhome="skills"]').parent.attr('class') === 'col-m' &&
-       root.querySelector('[data-cvhome="statuses"]').parent.attr('class') === 'col-r');
+       root.querySelector('[data-cvhome="statuses"]').parent.attr('class') === 'col-m' && root.querySelector('[data-cvhome="defences"]').parent.attr('class') === 'col-r' &&
+       root.querySelector('[data-cvhome="resources"]').parent.attr('class') === 'col-r');
     ctx.emptyCombatView();
     const after = KEYS.map(where);
     ck('#103 after End, every card is back in its own stack, in its own place', JSON.stringify(after) === JSON.stringify(before), after);
@@ -4937,6 +4951,53 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   } finally {
     doc.getElementById = keep.g; doc.querySelector = keep.q; doc.querySelectorAll = keep.qa; doc.createElement = keep.c;
     ctx.addGrip = keep.ag; ctx.removeGrip = keep.rg; ctx.syncStatLock = keep.sl; ctx.renderCombatEmpty = keep.re; X.character = keep.ch;
+  }
+  // #155 (Mike, 2026-11-02, "option 2"): sheetLevel() measures the rail and the
+  // two stacks as the markup holds them — Statuses now under Skills in .col-m.
+  // Mike's sheet in round numbers (one condition, two resources): with
+  // Statuses in the right stack that ran 242px past Skills and nothing
+  // levelled; under Skills the three land within 142px and level.
+  {
+    const grid = root.querySelector('.sheet-grid'), GAP = 16, TOP = 216;   // the stacks start under the strip
+    const H = {vitals: 560, skills: 340, statuses: 130, defences: 150, resources: 270};
+    const cls = n => (n.attr('class') || '').split(/\s+/);
+    const dress = n => {
+      n.classList = {contains: c => cls(n).includes(c)};
+      Object.defineProperty(n, 'offsetHeight', {configurable: true, get: () => H[n.attr('data-note')] || 0});
+      n.getBoundingClientRect = () => {
+        if (cls(n).includes('rail')) return {top: 0, bottom: H.vitals};
+        const kids = n.children.filter(c => cls(c).includes('card') && c.offsetHeight > 0);
+        return {top: TOP, bottom: TOP + kids.reduce((a, c) => a + c.offsetHeight, 0) + GAP * Math.max(0, kids.length - 1)};
+      };
+      n.children.forEach(dress);
+    };
+    grid.children.forEach(dress);
+    const on = new Set();
+    grid.classList = {remove: c => on.delete(c), toggle: (c, v) => (v ? on.add(c) : on.delete(c)), contains: c => on.has(c)};
+    grid.offsetParent = {};
+    grid.getBoundingClientRect = () => ({top: 0});
+    grid.querySelector = sel => { const m = /^:scope>\.([\w-]+)$/.exec(sel); return m ? grid.children.find(c => cls(c).includes(m[1])) || null : null; };
+    const colM = grid.querySelector(':scope>.col-m'), colR = grid.querySelector(':scope>.col-r'), st = colM.querySelector('[data-note="statuses"]');
+    const keepQ = doc.querySelector, keepMM = ctx.window.matchMedia;
+    doc.querySelector = sel => (sel === '#tab-sheet .sheet-grid' ? grid : null);
+    try {
+      ctx.sheetLevel();
+      ck('#155 sheetLevel() levels Mike\'s sheet with Statuses under Skills (560 / 702 / 652)',
+         on.has('cols-even') && colM.getBoundingClientRect().bottom === 702 && colR.getBoundingClientRect().bottom === 652);
+      colR.appendChild(st);
+      ctx.sheetLevel();
+      ck('#155 ...and measures the stacks as they stand: the same cards with Statuses in the right stack (556 / 798) do not level',
+         !on.has('cols-even') && colM.getBoundingClientRect().bottom === 556 && colR.getBoundingClientRect().bottom === 798);
+      colM.appendChild(st);
+      ctx.sheetLevel();
+      const was = on.has('cols-even');
+      ctx.window.matchMedia = q => ({matches: q === '(max-width:1000px)'});
+      ctx.sheetLevel();
+      ck('#155 ...and clears the class at two columns', was && !on.has('cols-even'));
+    } finally {
+      doc.querySelector = keepQ; ctx.window.matchMedia = keepMM;
+    }
+    ck('#155 ...Statuses back under Skills', st.parent === colM && colM.children.indexOf(st) === 1);
   }
 }
 
