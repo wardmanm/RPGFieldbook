@@ -16,6 +16,7 @@ Humblewood playtests (the private repo's `docs/HUMBLEWOOD-PLAYTESTS.md`), [2.0](
 
 Known behaviour that is accepted for now.
 
+- **On a phone, Tab reaches Skills before Defences and Statuses**, which the phone layout shows above it (since #103). The cards are independent, so it is a small keyboard-order mismatch, not a lost control; tablet and desktop follow the markup since #155.
 - **Level down only lowers the number for a level with no record.** A level gained before #118
   has no `levelLog` record, so `doLevelDown()` keeps every trait, proficiency, grant and choice from
   it. Grants are keyed by source (`class:<Name>`), not by level. A level gained since has a record:
@@ -513,3 +514,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-29 — Removed: a loot trade's With can no longer exceed its typing limit; the End of combat window caps it at 60 characters. → ledger L8025, #105
 - 2026-10-30 — Corrected: the intro's stamp and the triage intro; multiclass prerequisites are stated, not checked; the old releases' assets are still attached, their deletion pending; the Deferred intro back under its heading, and private packs through a manifest added; the inventory log's size, existing Bards and pre-#66 multiclass sheets moved to Limitations; the Rules-tab keyboard sentence, three fixed stale comments and the now-tested functions dropped. Removed: the phone-width crowding (fixed by #57). The two "for Mike to confirm" decision sections archived to `src/docs/archive/1.9.0/` (pre-release 1.9.0, step 1).
 - 2026-10-30 — Issue numbers and Mike's decisions written back (pre-release 1.9.0, step 2).
+- 2026-11-02 — The phone layout's keyboard order (Skills before Defences and Statuses) recorded as a limitation, from #155's review.
