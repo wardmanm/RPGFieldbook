@@ -153,16 +153,6 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 @container (max-width:460px){#featCollapseLbl{display:none}}
 @container (max-width:420px){.res{flex-wrap:wrap;justify-content:flex-start;row-gap:6px}.res-main{flex:1 0 100%}.res [data-res-reset]{margin-left:auto}}
 @container (max-width:380px){.card>.label{letter-spacing:.08em;gap:6px}.card>.label .add{font-size:0;gap:0;padding:4px}}
-/* ---- Features & Traits as a full-width row (#155) ----
-   At three columns each group lays its feature cards two across; the group's
-   heading ("PALADIN (7)") spans both, so the folds read as before. Cards keep
-   their own height (align-items:start): a folded card beside an open one stays
-   a one-line row rather than a tall empty frame. Only on the Sheet's grid:
-   in the combat view the card is one narrow column, as before. Two columns
-   and one keep one card across (the query after the base rule). */
-.sheet-grid>[data-note="features"] .fgroup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;align-items:start}
-.sheet-grid>[data-note="features"] .fgroup>.fghead{grid-column:1/-1}
-@media(max-width:1000px){.sheet-grid>[data-note="features"] .fgroup{display:block}}
 
 /* ---- the rail (#103, spec §6.2; card `vitals`) ----
    Dark by its own tokens (00-tokens.css): the everyday tokens are re-pointed
