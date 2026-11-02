@@ -133,6 +133,7 @@ Started: 2026-10-30 · App was 1.8.1
 | S2-119 Humblewood pack `_note`s (private): `races.json` says skill choices are text-only; `subclasses.json` names the old spells file | KI:411-413 | Humblewood data notes are out of date | P2 task | file (grouped: Docs) | #152 |
 | S2-120 Ledger claims now wrong: L1426, L2538, L702, L3676 (append corrections; the ledger is append-only) | KI:414-420 | Append ledger corrections for four wrong claims | P2 task | file (grouped: Docs) | #152 |
 | S2-121 Two doc sentences to tighten: AMMO's As built "Old sheets" bullet and `ammunition.md`'s End combat row | ST:76-77; AMMO:288-292 | Tighten two ammunition doc sentences | P2 task | file (grouped: Docs) | #152 |
+| S2-122 The filing block reports "priority not set" when project #3 auto-adds the issue first (found filing step 2) | .claude/skills/pre-release/SKILL.md, Filing an issue | (added to the release-tooling group) | P2 task | file (grouped: Release tooling; Mike, 2026-11-02) | #150 |
 
 ## Step 4: bugs from QA
 | Line | Title | Priority | Issue | State |
