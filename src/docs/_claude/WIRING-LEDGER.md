@@ -8245,3 +8245,16 @@ project item-add` failed "Content already exists" and `/pre-release` reported 6 
 (`item-list`, three tries two seconds apart) and setting the fields on it. First used for #153.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md); CLAUDE.md.
+
+## `/pre-release` step 3: Mike's test pass and Claude's pre-drive come apart (2026-11-02)
+
+Mike, at the 1.9.0 pre-release: the QA checklist should be a high-level manual pass over everything new
+in the release, for a person, with nothing of Claude's in it. Step 3 now writes `QA-CHECKLIST.md` as a
+test pass: one section per feature (the milestone's closed issues and the notes), three to six
+scenario lines each, then across-the-app and device lines. Claude's detailed run (every check in the
+release's specs' testing sections, then `smoke.md`) is a separate report,
+`.claude/qa/pre-release-X.Y.Z/predrive.md`, outside the repo; its failures reach Mike as probable bugs
+in step 4, which he can dismiss. Decision 7 of the spec is amended (its As built, "Decided after the
+build"). The 1.9.0 run's first checklist became its pre-drive report.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md).

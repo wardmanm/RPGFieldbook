@@ -34,7 +34,7 @@ Mike's, in conversation, 2026-10-29.
 | 4 | Out-of-date docs | **Candidates found, Mike confirms each; finished docs move to `src/docs/archive/<ver>/`**, wrong ones are corrected in place. Nothing is deleted | Deleting: breaks old links, buries old decisions |
 | 5 | Filing issues | **Milestone = the release's (v1.9.0), label = the next fix version (`1.9.1`), added to project #3 (RPGFieldbook) with Status Backlog and a Priority Mike confirms**: P2 minor bug / visual / tweak; P1 medium bug, functionality affected, workaround exists, no data at risk; P0 blocker | A `blocker` label: the project already has Priority |
 | 6 | What blocks | **Only an open P0** in the release's milestone. A P0 gets no next-version label; it stays in the milestone and holds step 4 open until it is closed | P1 also blocking: it has a workaround and risks no data |
-| 7 | The QA checklist | **One file, rebuilt every run**, by app area, "New in this release" plus a standing "Still works" list, then a device pass; **Claude pre-drives what it can** in the project Playwright browser before Mike tests | A blank checklist: Mike tests everything Claude could have |
+| 7 | The QA checklist | **One file, rebuilt every run**, by app area, "New in this release" plus a standing "Still works" list, then a device pass; **Claude pre-drives what it can** in the project Playwright browser before Mike tests | A blank checklist: Mike tests everything Claude could have | *(Amended 2026-11-02: see Decided after the build.)*
 
 ## 3. The record: `src/docs/PRE-RELEASE.md`
 
@@ -431,6 +431,14 @@ The final fix wave's own (implementer's), each with its cost if wrong:
   inside `$(…)`), so nothing is filed — it fails safe; zsh, which Claude Code uses, is unaffected.
 
 ### Decided after the build
+
+- **The test pass is Mike's, and the pre-drive is separate** (Mike, 2026-11-02, amending decision 7 and
+  §4 step 3). `QA-CHECKLIST.md` is a high-level manual pass, one section per feature going into the
+  release with a few scenarios each, plus across-the-app and device lines, and nothing of Claude's in
+  it. Claude's detailed run (the specs' testing sections and `smoke.md`) goes to
+  `.claude/qa/pre-release-X.Y.Z/predrive.md`, outside the repo; its failures reach Mike as probable
+  bugs in step 4. Rejected: the per-area checklist with Claude's marks in it, which was hard to read
+  with most lines already ticked.
 
 - **A missing `project` scope at filing** (Mike, 2026-10-30): ruling e stands — the project fields are
   looked up before `gh issue create`, so a missing scope stops with nothing filed; §9 is amended to match.

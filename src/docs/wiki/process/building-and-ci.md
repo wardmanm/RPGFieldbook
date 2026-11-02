@@ -266,8 +266,9 @@ artifact rebuilt and committed if a `src/js/` comment changed); **2. Outstanding
 and the status log, filed in the `vX.Y.Z` milestone with the next fix version's label, Status
 Backlog and the Priority Mike confirms, and the numbers written back and committed straight after
 filing, each issue by one block run as one Bash call, which checks the priority and looks up the
-project's ids before it files, and passes the body on stdin); **3. QA checklist** (`QA-CHECKLIST.md`, rebuilt from the release's notes, closed issues and
-specs plus `src/docs/qa/smoke.md`, pre-driven in the project Playwright browser); **4. QA bugs**
+project's ids before it files, and passes the body on stdin); **3. Test pass** (`QA-CHECKLIST.md`: Mike's high-level manual pass, one section per feature in the
+release, with no marks of Claude's; Claude's own pre-drive of the specs' testing sections and
+`src/docs/qa/smoke.md` is a separate report outside the repo, whose failures become probable bugs); **4. QA bugs**
 (each failure filed; a P0 gets no fix-version label, and an open P0 in the milestone holds the
 step open); **5. Release notes** (the pending bullets read as a player would). Each step is
 recorded in the record and committed on main as `docs: pre-release X.Y.Z — step N`; it never
@@ -397,7 +398,7 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 | Out-of-date docs (#127) | Candidates found, Mike confirms each; finished docs move to `src/docs/archive/<ver>/`, wrong ones are corrected in place. Nothing is deleted (L8070) | Deleting: breaks old links, buries old decisions |
 | Filing issues (#127) | Milestone = the release's (v1.9.0), label = the next fix version (`1.9.1`), added to project #3 (RPGFieldbook) with Status Backlog and a Priority Mike confirms: P2 minor bug / visual / tweak; P1 medium bug, functionality affected, workaround exists, no data at risk; P0 blocker (L8070) | A `blocker` label: the project already has Priority |
 | What blocks a release (#127) | Only an open P0 in the release's milestone. A P0 gets no next-version label; it stays in the milestone and holds step 4 open until it is closed (L8070) | P1 also blocking: it has a workaround and risks no data |
-| The QA checklist (#127) | One file, rebuilt every run, by app area, "New in this release" plus a standing "Still works" list, then a device pass; Claude pre-drives what it can in the project Playwright browser before Mike tests (L8070) | A blank checklist: Mike tests everything Claude could have |
+| The QA checklist (#127) | One file, rebuilt every run, by app area, "New in this release" plus a standing "Still works" list, then a device pass; Claude pre-drives what it can in the project Playwright browser before Mike tests (L8070) | A blank checklist: Mike tests everything Claude could have | (amended 2026-11-02: the checklist is Mike's high-level test pass by feature, with no Claude marks; Claude's pre-drive is a separate report outside the repo)
 
 ## Open
 
@@ -435,3 +436,4 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 - 2026-10-29 — `/pre-release`: `release.js` refuses an app release without a complete pre-release record and files it under `src/docs/archive/<version>/`; `move-docs.js`; `dev.sh`'s checklist and `build.sh`'s closing line name it. → ledger L8070, #127
 - 2026-10-29 — The final fix wave: `move-docs.js` rewrites the private leak allowlist and the status log, checks every write first and prints exact undo commands on a failure; a record `release.js` cannot file leaves the cut standing; the record CLI's arguments; one filing block; the status log no longer counts as "main moved". → ledger L8167, #127
 - 2026-11-02 — `/issue` files a bug, feature or task; both filing blocks find the item project #3 auto-adds. → ledger L8230
+- 2026-11-02 — `/pre-release` step 3: the test pass is Mike's high-level manual pass by feature; Claude's pre-drive is a separate report. → ledger L8249

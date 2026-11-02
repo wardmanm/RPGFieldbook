@@ -1,6 +1,6 @@
 ---
 name: pre-release
-description: Use when Mike types /pre-release <version> to get an app release ready before it is cut — specs and plans filed by version, out-of-date docs archived or corrected, loose ends filed as issues, a QA checklist pre-driven in the browser, its bugs filed, and release notes a player can read. /release and ./build.sh --release refuse an app release until this is complete for that exact version.
+description: Use when Mike types /pre-release <version> to get an app release ready before it is cut — specs and plans filed by version, out-of-date docs archived or corrected, loose ends filed as issues, a high-level test pass for Mike over everything new plus Claude's separate pre-drive, their bugs filed, and release notes a player can read. /release and ./build.sh --release refuse an app release until this is complete for that exact version.
 argument-hint: <version X.Y.Z>
 disable-model-invocation: true
 ---
@@ -314,51 +314,63 @@ in this project": the block then finds that item by issue number and sets its fi
 If the block ends "filed …, but its project fields were not set", the issue exists: record it as
 "#N (priority not set)" and come back to it (the step is not done until it is set).
 
-## Step 3 — The QA checklist
+## Step 3 — The test pass, and Claude's pre-drive
+
+Two separate things (Mike, 2026-11-02): **the test pass** is Mike's, a high-level manual pass over
+everything new in the release, with nothing of Claude's in it; **the pre-drive** is Claude's own
+detailed run, kept out of the repo, whose failures reach Mike only as probable bugs in step 4.
 
 1. **Build** the release candidate: `./build.sh --no-zip`. It also bundles `dist/srd52_full.json`
    for the pre-drive.
-2. **Write `src/docs/QA-CHECKLIST.md` from scratch**, every run (a rebuild carries Mike's marks
+2. **Write the test pass, `src/docs/QA-CHECKLIST.md`, from scratch** (a rebuild carries Mike's marks
    forward: see 5 below):
-   - Top: `# QA checklist X.Y.Z`, then "Generated against `<short sha>` (<subject>) on YYYY-MM-DD",
-     the sha being `git rev-parse --short HEAD` now, then Mike's marks: `- [x]` when a line passes,
-     `FAIL: <what happened>` appended to a line that fails.
-   - One `## ` section per app area, in tab order: Home, Sheet, Combat, Spells, Inventory, Bio, Journal, Rules, Settings, Extensions and updates.
-     Each has **New in this release** (lines written from this version's `UNRELEASED.md` bullets,
-     the milestone's closed issues, `gh issue list --milestone vX.Y.Z --state closed -L 500 --json number,title`,
-     and the testing section of each spec in `src/docs/specs/X.Y.Z/`, each line ending with its
-     source, e.g. "(#105)"), then **Still works**: that area's lines from `src/docs/qa/smoke.md`,
-     word for word. Never edit `smoke.md`: Mike owns it.
-   - Last, `## Device pass`: touch, print, Safari and Firefox, real phones, his own characters, and
-     every specific device item in `.claude/status.md`'s Loose ends.
-   - Every line is a checkbox, `- [ ] <what to do>: <what you should see>`.
-3. **Pre-drive** every line you can, in the project's Playwright MCP (`mcp__playwright__*`, never a
-   plugin's: it refuses `file://`), at 1280 and 390 wide (`browser_resize`), in both skins: a
-   `newCharacter("QA", "dnd")` sheet is classic, a `newCharacter("QA", "humblewood")` sheet is
-   humblewood. Open `file://<repo>/dist/fieldbook.html`. A line that needs rules data: install
-   `dist/srd52_full.json` through Settings → Extensions → Manual install (`browser_file_upload`).
-   - a pass: `- [x] <line> ✓ Claude, Chrome 1280/390`;
-   - a failure: `- [ ] <line> ✗ Claude: <what happened>`, listed back to Mike as a probable bug, with
-     a screenshot in `.claude/qa/pre-release-X.Y.Z/`;
-   - a line you can't drive (touch, print, another browser, a real phone, his characters):
-     `- [ ] <line> (not driven: <why>)`.
+   - Top: `# Test pass X.Y.Z`, then "Generated against `<short sha>` (<subject>) on YYYY-MM-DD",
+     the sha being `git rev-parse --short HEAD` now, then how to mark: `- [x]` when a line holds,
+     `FAIL: <what happened>` appended to a line that doesn't.
+   - **One `## <feature> (#N)` section per thing going into the release**: the milestone's closed
+     issues that change what a player sees (`gh issue list --milestone vX.Y.Z --state closed -L 500
+     --json number,title,labels`) and the `UNRELEASED.md` bullets, one section per feature (several
+     issues of one feature share a section). Each has three to six **high-level** lines: a scenario
+     to play through and what should hold, the way a player would try it (e.g. "Level a character to
+     4 and take a feat you don't qualify for: the list, the warning and the +1 all make sense"). Not
+     one line per detail: the specs' testing sections and the pre-drive cover the detail.
+   - `## Across the app`: both skins, light and dark; phone width; offline; an old character
+     loading; print.
+   - Last, `## Device pass`: touch, Safari and Firefox, real phones, his own characters, and every
+     specific device item in `.claude/status.md`'s Loose ends.
+   - Every line is a checkbox, `- [ ] <scenario>: <what should hold>`. **No Claude marks** in this
+     file, ever: no ticks, no `✓ Claude`, no `(not driven)`.
+3. **Pre-drive, separately.** Claude's own detailed run, in the project's Playwright MCP
+   (`mcp__playwright__*`, never a plugin's: it refuses `file://`), at 1280 and 390 wide
+   (`browser_resize`), in both skins: a `newCharacter("QA", "dnd")` sheet is classic, a
+   `newCharacter("QA", "humblewood")` sheet is humblewood. Open `file://<repo>/dist/fieldbook.html`.
+   A line that needs rules data: install `dist/srd52_full.json` through Settings → Extensions →
+   Manual install (`browser_file_upload`).
+   - What it drives: a line for every check in the testing sections of this release's specs
+     (`src/docs/specs/X.Y.Z/`), each ending with its source, then every line of
+     `src/docs/qa/smoke.md` (the standing regression set; never edit it: Mike owns it), by app area
+     in tab order: Home, Sheet, Combat, Spells, Inventory, Bio, Journal, Rules, Settings, Extensions and updates.
+   - Its report: `.claude/qa/pre-release-X.Y.Z/predrive.md` (not in the repo), screenshots beside
+     it. A pass `- [x] <line> ✓`; a failure `- [ ] <line> ✗ <what happened>` with a screenshot;
+     a line it can't drive `- [ ] <line> (not driven: <why>)`.
+   - It never writes to `QA-CHECKLIST.md`. Its failures are listed to Mike as probable bugs.
 4. **Restore the build** after the pre-drive and before the commit, as always:
-   `git checkout -- dist/fieldbook.html docs/CHANGELOG.md`. Then commit, and tell Mike the
-   checklist is ready for his pass: how many lines, how many you drove, the probable bugs.
+   `git checkout -- dist/fieldbook.html docs/CHANGELOG.md`. Then commit, and tell Mike the test
+   pass is ready: how many features and lines, and the pre-drive's probable bugs.
 5. **A rebuild** (only after Mike says yes, see the preflight) never wipes his marks. Before
-   writing, read the old checklist. A line's text is the line without its checkbox and without
-   the marks (`✓ Claude…`, `✗ Claude: …`, `(not driven: …)`, `FAIL: …`). Every new line whose
-   text is unchanged keeps its old checkbox and marks: his ticks and `FAIL:` notes come forward
-   as they were. Pre-drive only the lines that are new or changed, plus any area Mike asks to be
-   re-driven. Say how many lines carried forward and how many changed.
+   writing, read the old test pass. A line's text is the line without its checkbox and without
+   `FAIL: …`. Every new line whose text is unchanged keeps his checkbox and `FAIL:` note. Re-run the
+   pre-drive for the areas the new work touched, and any Mike asks for. Say how many lines carried
+   forward and how many changed.
 
-**Done when** the checklist is written and the pre-drive has run over every line.
+**Done when** the test pass is written and the pre-drive report covers every line it lists.
 
 ## Step 4 — Bugs from QA
 
-1. Mike tests from the checklist (his device pass, and every line not driven) and marks it.
-2. Read every line with `FAIL:` and every `✗ Claude` line he has not dismissed (ticking it `- [x]`
-   dismisses it). For each, propose a title and a priority, and wait for his confirmation.
+1. Mike works through the test pass and marks it.
+2. Gather the failures: every `FAIL:` line in the test pass, and every `✗` line in the pre-drive
+   report. Show the pre-drive's as probable bugs; Mike dismisses any he disagrees with. For each
+   remaining one, propose a title and a priority, and wait for his confirmation.
 3. **P2 and P1** are filed as in step 2 (milestone, next fix version label, project, Backlog,
    Priority). **P0** is filed in the milestone with Priority P0 and no fix version label. Each goes in
    the record's "Step 4" table with its checklist line and its state.
@@ -372,7 +384,7 @@ If the block ends "filed …, but its project fields were not set", the issue ex
    ```
 5. Commit.
 
-**Done when** Mike says the checklist is finished, every failure has an issue with its priority
+**Done when** Mike says the test pass is finished, every failure has an issue with its priority
 set, and no P0 in the milestone is open.
 
 ## Step 5 — Release notes

@@ -689,7 +689,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **No project scope at filing (#127)** — Nothing is filed; the skill stops and says to run `gh auth refresh -s project`, so every filed issue carries its Priority and the open-P0 gate sees it (Mike, 2026-10-30)
 - **What blocks a release (#127)** — Only an open P0 in the release's milestone. A P0 gets no next-version label; it stays in the milestone and holds step 4 open until it is closed
 - **Moved docs and the private repo (#127, Ruling 24)** — `move-docs.js` rewrites the private leak scan's allowlist too, when `_private-data` is linked; `/pre-release` commits it in the private repo, and `/release` pushes it right after public main, never before
-- **The QA checklist (#127)** — One file, rebuilt every run, by app area, "New in this release" plus a standing "Still works" list, then a device pass; Claude pre-drives what it can in the project Playwright browser before Mike tests
+- **The QA checklist (#127)** — One file, rebuilt every run, by app area, "New in this release" plus a standing "Still works" list, then a device pass; Claude pre-drives what it can in the project Playwright browser before Mike tests (amended 2026-11-02: the checklist is Mike's high-level test pass by feature, with no Claude marks; Claude's pre-drive is a separate report outside the repo)
 
 ### [Testing](process/testing.md)
 
