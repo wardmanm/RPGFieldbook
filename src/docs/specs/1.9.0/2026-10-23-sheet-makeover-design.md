@@ -389,7 +389,8 @@ What differs from the sections above, and why:
   (Mike, 2026-11-02; the first build's two-across groups went). The rail, Skills and the right stack
   end on one line, each stack's last card growing to the tallest column, only while the tallest is
   at most 240px (`SHEET_STRETCH_MAX`) taller than the shortest (Mike, 2026-11-02); further apart,
-  each ends at its content. `sheetLevel()` measures. Two columns and one are unchanged.
+  each ended at its content, measured by `sheetLevel()`. *(Replaced the same day: the columns now
+  always level, in CSS alone; see the round 4 bullet below.)* Two columns and one are unchanged.
 - **#155, Statuses under Skills (2026-11-02, L8339; Mike's decisions, "option 2" and then the
   review's risk 4).** At three columns the middle stack is Skills, Statuses and the right stack
   Defences, Resources (§6.5 had Statuses with Defences and Resources). On an everyday sheet the old
