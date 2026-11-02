@@ -14,6 +14,8 @@ A feature that needs rules data wants SRD 5.2 installed (`dist/srd52_full.json` 
 - [ ] Add a resistance and an immunity on the Defences card, then on Bio add a sense with a range and a language: each is a chip whose × removes it, and Attacks now lives on the Inventory tab
 - [ ] With Humblewood loaded, give a character a species, then change it: the old species' language chips go and the new one's arrive, and languages you added yourself stay
 - [ ] Turn on Settings → Sheet display → Familiars & companions icon, then add, summon and dismiss a familiar from the paw in the header: the paw's menu does all of it and shows who is summoned
+- [ ] At desktop width, read down the Sheet: Vitals on the left; Abilities, Skills and Statuses & Conditions in the middle; Defences and Resources on the right; Features & Traits full width below, one card per row. On an everyday sheet the three columns end on one line; add conditions or resources until one column runs well past the others and they stop levelling, then remove them and they level again (#155)
+- [ ] Narrow the window to tablet width (about 900): Skills, Statuses, Defences, Resources read top to bottom, and Tab walks them in that order (#155)
 
 ## Level-up (#101)
 
