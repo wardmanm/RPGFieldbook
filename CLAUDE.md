@@ -92,6 +92,8 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
   it): docs filed by version, loose ends and QA bugs filed as issues, release notes checked, each
   step recorded in `src/docs/PRE-RELEASE.md`. `./build.sh --release` refuses until that record is
   complete for exactly that version.
+- **Filing a bug, feature or task: `/issue`** (`.claude/skills/issue/`, Mike types it). It drafts the
+  issue and files it only after his yes, with the milestone, labels and project #3 fields set.
 - **Screenshots are required for any UI-affecting change** — each affected tab, before and after for
   a change to existing UI, via the project's Playwright MCP server (`.mcp.json`), never a
   plugin-provided one (it refuses `file://`). Tab names are lowercase; `newCharacter(name, system)`

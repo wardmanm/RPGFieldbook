@@ -297,12 +297,20 @@ BODY
 fi
 [ -n "$URL" ] || { echo "gh issue create failed: nothing filed"; exit 1; }
 echo "filed $URL"
-ITEM=$(gh project item-add 3 --owner wardmanm --url "$URL" --format json --jq .id) && [ -n "$ITEM" ] \
+N=${URL##*/}
+ITEM=$(gh project item-add 3 --owner wardmanm --url "$URL" --format json --jq .id 2>/dev/null)
+for try in 1 2 3; do   # project #3 auto-adds new issues, so item-add can fail "already exists": find that item
+  [ -n "$ITEM" ] && break; sleep 2
+  ITEM=$(gh project item-list 3 --owner wardmanm --format json -L 2000 --jq ".items[]|select(.content.number==$N)|.id")
+done
+[ -n "$ITEM" ] \
   && gh project item-edit --id "$ITEM" --project-id "$PROJ" --field-id "$STATUS" --single-select-option-id "$BACKLOG" \
   && gh project item-edit --id "$ITEM" --project-id "$PROJ" --field-id "$PRIO" --single-select-option-id "$PICK" \
   || { echo "filed $URL, but its project fields were not set: record it as (priority not set)"; exit 1; }
 ```
 
+Project #3 adds every new issue to itself, so `item-add` often fails with "Content already exists
+in this project": the block then finds that item by issue number and sets its fields on it.
 If the block ends "filed …, but its project fields were not set", the issue exists: record it as
 "#N (priority not set)" and come back to it (the step is not done until it is set).
 

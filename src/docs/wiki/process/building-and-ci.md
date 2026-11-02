@@ -248,7 +248,7 @@ bumps `data/packs.json` and prints its commands, also running none. The last are
 checklist (`8`, which starts at step 0, `/pre-release X.Y.Z`), open the app (`9`) and where things
 live (`s`). It is Bash 3.2 compatible, and with no TTY it prints the menu and exits 0.
 
-### `/pre-release`, `/release` and `/status`
+### `/pre-release`, `/release`, `/issue` and `/status`
 
 `/pre-release X.Y.Z` (`.claude/skills/pre-release/`, #127) gets an app release ready before it is
 cut. It runs on main and refuses anywhere else, naming the branch: it never switches. Its
@@ -292,6 +292,13 @@ stays the reference it links to. `/status` (`.claude/skills/status/`) rewrites
 `.claude/status.md`, the session status log CLAUDE.md asks for, from git, the open milestone's
 issues and roadmap page, and `UNRELEASED.md`, and commits it on main as `docs(repo): status`. It is
 written on main only, so it never conflicts in a worktree merge ([WORKTREES](../../WORKTREES.md) §5).
+
+
+`/issue <bug|feature|task> <words>` (`.claude/skills/issue/`) files one issue: it reads the area's wiki page and code,
+checks for a duplicate, and drafts it in Mike's **What** / **Why** shape. A bug or task goes to the earliest open
+`vX.Y.Z` milestone with its kind label and the next fix version (none on a P0); a feature takes the milestone Mike
+names, or none. Nothing is filed before his yes. Its filing block, like `/pre-release`'s, sets project #3's Status,
+Priority and Size, and finds the item project #3 has already auto-added when `gh project item-add` says it exists.
 
 ## Rules that must hold
 
@@ -427,3 +434,4 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 - 2026-10-26 — Both release workflows check `releases/data/` against the build; `./build.sh --release` writes it. → ledger L7428, #102
 - 2026-10-29 — `/pre-release`: `release.js` refuses an app release without a complete pre-release record and files it under `src/docs/archive/<version>/`; `move-docs.js`; `dev.sh`'s checklist and `build.sh`'s closing line name it. → ledger L8070, #127
 - 2026-10-29 — The final fix wave: `move-docs.js` rewrites the private leak allowlist and the status log, checks every write first and prints exact undo commands on a failure; a record `release.js` cannot file leaves the cut standing; the record CLI's arguments; one filing block; the status log no longer counts as "main moved". → ledger L8167, #127
+- 2026-11-02 — `/issue` files a bug, feature or task; both filing blocks find the item project #3 auto-adds. → ledger L8230

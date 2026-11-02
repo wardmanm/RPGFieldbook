@@ -8226,3 +8226,22 @@ moved-main pathspec, and the private commit and push.
 Pages: [building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
 [decisions](../wiki/decisions.md), [private data](../wiki/data/private-data.md); [RELEASING](../RELEASING.md)
 §0 and §4; the spec's As built (Rulings 24, 25 and the wave's own, a–g).
+
+## `/issue`, and the filing block handles project #3's auto-add (2026-11-02)
+
+Mike asked for a skill to file bugs, features and tasks. `.claude/skills/issue/SKILL.md`: `/issue
+<bug|feature|task> <words>` reads the wiki and code for the area (naming a bug's cause only when seen
+in the code), checks open issues for a duplicate, and drafts in Mike's **What** / **Why** shape with
+steps and cause for a bug. Bugs and tasks go to the earliest open `vX.Y.Z` milestone with the kind
+label and the next fix version (patch + 1; none on a P0); a feature takes the milestone Mike names
+or none, and a Size only if he gives one. Nothing is filed before his yes; then one bash block files
+it and sets project #3's Status (Backlog), Priority and Size. During a pre-release it adds a bug to
+the record's step 4 table. Tested against a stub `gh`: P1, P0 (no fix label), a feature with a Size,
+and a lowercase priority refused.
+
+The fix in both filing blocks (S2-122, #150): project #3 adds every new issue to itself, so `gh
+project item-add` failed "Content already exists" and `/pre-release` reported 6 of its 25 issues as
+"priority not set". Now a failed `item-add` is followed by looking the item up by issue number
+(`item-list`, three tries two seconds apart) and setting the fields on it. First used for #153.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md); CLAUDE.md.
