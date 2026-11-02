@@ -5,7 +5,7 @@ Started: 2026-10-30 · App was 1.8.1
 |---|---|---|---|
 | 1. Docs | done | 2026-10-30 | 22 specs and 21 plans filed by version, roadmap 1.9.0 archived; 3 sections archived, 16 corrections; 426 references rewritten in 75 files |
 | 2. Outstanding issues | done | 2026-10-30 | 121 rows: 25 filed (#128 to #152; 17 P1, 8 grouped P2), 2 noted on #100, 7 decided by Mike and skipped; numbers written back |
-| 3. QA checklist | done | 2026-10-30 | 217 lines plus an 18-line device pass; Claude drove 192 (188 passed, 2 failed, 2 lines possibly wrong), 25 not driven; 8 more probable bugs found off the list |
+| 3. QA checklist | done | 2026-11-02 | Test pass: 12 feature sections, across the app and a device pass, 84 lines for Mike; Claude's pre-drive (217 lines: 188 passed, 2 failed, 25 not driven) kept apart, 10 probable bugs |
 | 4. QA bugs | open | | |
 | 5. Release notes | open | | |
 
@@ -139,3 +139,4 @@ Started: 2026-10-30 · App was 1.8.1
 | Line | Title | Priority | Issue | State |
 |---|---|---|---|---|
 | reported by Mike | Gold granted by an ancestry, class or background doesn't show in the coin boxes until a reload | P1 | #153 | open |
+| reported by Mike | A language granted by an ancestry or background doesn't appear as a pill until a reload | P2 | #154 | open |
