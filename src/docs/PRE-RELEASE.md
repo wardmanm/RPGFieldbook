@@ -138,3 +138,4 @@ Started: 2026-10-30 · App was 1.8.1
 ## Step 4: bugs from QA
 | Line | Title | Priority | Issue | State |
 |---|---|---|---|---|
+| reported by Mike | Gold granted by an ancestry, class or background doesn't show in the coin boxes until a reload | P1 | #153 | open |
