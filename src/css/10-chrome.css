@@ -139,11 +139,13 @@ html[data-tabs="icons"] .tabicon{display:block}
 
 /* ---- the Sheet (#103, spec §6.7; #155) ----
    Three columns: the rail down the left; the ability strip over the middle and
-   right; under it two independent stacks (Mike's ruling) — .col-m (Skills) and
-   .col-r (Defences, Statuses, Resources) — so no card waits on its neighbour's
-   row. The rail spans the strip's row and the stacks' 1fr row: a spanned
-   flexible track takes what the rail needs beyond the strip, so a rail taller
-   than the strip opens no gap above the stacks.
+   right; under it two independent stacks (Mike's ruling) — .col-m (Skills,
+   Statuses) and .col-r (Defences, Resources) — so no card waits on its
+   neighbour's row. Statuses sits under Skills (Mike, 2026-11-02), which brings
+   the two stacks close enough in height to level on an everyday sheet. The
+   rail spans the strip's row and the stacks' 1fr row: a spanned flexible
+   track takes what the rail needs beyond the strip, so a rail taller than the
+   strip opens no gap above the stacks.
    #155: Features & Traits is a full-width row of its own under the three
    columns, one card per row. The three columns end on one line only while
    they are close (Mike, 2026-11-02): sheetLevel() (40-sheet.js) measures each
@@ -171,29 +173,37 @@ html[data-tabs="icons"] .tabicon{display:block}
 .sheet-grid>.col-m,.sheet-grid>.col-r{display:flex;flex-direction:column;gap:clamp(12px,2vw,18px);min-width:0}
 .sheet-grid.cols-even{align-items:stretch}
 .sheet-grid.cols-even>.col-m>div.card:last-of-type,.sheet-grid.cols-even>.col-r>div.card:last-of-type{flex-grow:1}
-/* Two columns, as widths.html: the rail, and one column of the strip, Skills
-   and the right stack; Features full width under both. Nothing stretches here
-   (#155 changes the three-column layout only): sheetLevel() never sets
-   .cols-even at this width, and the rule below undoes it for the moment a
-   resize takes to reach it. The rail and the right stack span a last 1fr row,
-   so neither opens a gap above Features. */
+/* Two columns, as widths.html: the rail, and one column of the strip, Skills,
+   Defences, Statuses, Resources; Features full width under both. Statuses
+   lives in the middle stack now, but this layout keeps its own order (the
+   2026-11-02 move is for three columns only): both stacks open
+   (display:contents, from here down) and each card takes its own row of
+   column 2. Nothing stretches here: sheetLevel() never sets .cols-even at
+   this width, and the rule below undoes it for the moment a resize takes to
+   reach it. Resources' row is the 1fr one the rail also spans, so a rail
+   taller than column 2 grows that row (below Resources' content) and opens
+   no gap above Features. */
 @media(max-width:1000px){
-  .sheet-grid{grid-template-columns:minmax(200px,240px) minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto}
+  .sheet-grid{grid-template-columns:minmax(200px,240px) minmax(0,1fr);grid-template-rows:auto auto auto auto 1fr auto}
   .sheet-grid.cols-even{align-items:start}
-  .sheet-grid>.rail{grid-column:1;grid-row:1/5}
+  .sheet-grid>.col-m,.sheet-grid>.col-r{display:contents}
+  .sheet-grid>.rail{grid-column:1;grid-row:1/6}
   .sheet-grid>.strip{grid-column:2;grid-row:1}
-  .sheet-grid>.col-m{grid-column:2;grid-row:2}
-  .sheet-grid>.col-r{grid-column:2;grid-row:3/5}
-  .sheet-grid>[data-note="features"]{grid-column:1/-1;grid-row:5}
+  .sheet-grid #skillsCard{grid-column:2;grid-row:2}
+  .sheet-grid [data-note="defences"]{grid-column:2;grid-row:3}
+  .sheet-grid [data-note="statuses"]{grid-column:2;grid-row:4}
+  .sheet-grid [data-note="resources"]{grid-column:2;grid-row:5}
+  .sheet-grid>[data-note="features"]{grid-column:1/-1;grid-row:6}
 }
 /* One column, in the spec's order: rail, abilities, Defences, Statuses, Skills,
-   Resources, Features. Both stacks open (display:contents, inside this query
-   only) so their cards are grid items that `order` can interleave; nothing is
-   written twice in the markup. */
+   Resources, Features. Both stacks are already open (the query above) so
+   their cards are grid items that `order` can interleave; nothing is written
+   twice in the markup. Every card the query above placed is put back into
+   the one column here. */
 @media(max-width:700px){
   .sheet-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
-  .sheet-grid>.col-m,.sheet-grid>.col-r{display:contents}
-  .sheet-grid>.rail,.sheet-grid>.strip,.sheet-grid #skillsCard,.sheet-grid>[data-note="features"]{grid-column:1;grid-row:auto}
+  .sheet-grid>.rail,.sheet-grid>.strip,.sheet-grid #skillsCard,.sheet-grid [data-note="defences"],.sheet-grid [data-note="statuses"],
+  .sheet-grid [data-note="resources"],.sheet-grid>[data-note="features"]{grid-column:1;grid-row:auto}
   .sheet-grid>.rail{order:1}
   .sheet-grid>.strip{order:2}
   .sheet-grid [data-note="defences"]{order:3}

@@ -462,14 +462,17 @@ function renderFamiliars(){
 }
 
 /* ================= the Sheet's columns end level, when they are close (#155) =================
-   At three columns the rail, the middle stack (Skills) and the right stack
-   (Defences, Statuses, Resources) end on one line by stretching each column's
+   At three columns the rail, the middle stack (Skills, Statuses) and the right
+   stack (Defences, Resources) end on one line by stretching each column's
    last card — but only while they are close. Mike's rule (2026-11-02): the
    tallest column may be at most SHEET_STRETCH_MAX px taller than the shortest.
    Further apart (many statuses or resources), stretching would draw a long
-   empty frame down the rail and Skills, so nothing stretches and each column
-   ends where its content ends. The CSS (`.sheet-grid.cols-even`, 10-chrome.css)
-   does the stretching; this only decides. */
+   empty frame down the shorter columns, so nothing stretches and each column
+   ends where its content ends. Statuses moved under Skills (Mike, 2026-11-02)
+   because one condition and two resources had put the old right stack about
+   250px past Skills, just over the limit; the stacks are whatever the markup
+   holds, measured as they stand. The CSS (`.sheet-grid.cols-even`,
+   10-chrome.css) does the stretching; this only decides. */
 const SHEET_STRETCH_MAX=240;
 /* Pure, so the suite can pin the rule. `heights` is each column's own height
    (px); a column that is hidden or holds no card on the Sheet (every card of
