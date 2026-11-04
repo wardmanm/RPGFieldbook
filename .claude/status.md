@@ -7,6 +7,10 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 (release-note review) remain, then `/release 1.9.0` and the private data release. No branch open.
 
 ## Recent changes
+- 2026-11-04: Merged and pushed #168 (feature from the test pass): Balance trade fills the coins that even
+  a trade (yours biggest first, splitting a bigger coin for change; or the other side's in gp/sp/cp);
+  typed coins split too; Complete warns in the app's window when short or giving more. Mike approved
+  both rulings (typed coins split; Balance pays a sale's extra back). Pushed with #166 and #167.
 - 2026-11-04: Merged #167 (feature from the test pass, Mike's mockup picks), not pushed: an open journal
   page sits on a page, in a style picked per page in the editor (Sheet, the default; Notebook; Book;
   Parchment), in both skins and themes.
@@ -35,8 +39,6 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 - 2026-11-02: Merged #155, three rounds (Mike's calls): Features & Traits is a full-width row, one card
   per row; Statuses & Conditions sits under Skills; at three columns the columns always end level, in
   CSS alone. Closed by hand.
-- 2026-10-30: `/pre-release 1.9.0` steps 1–2: specs and plans filed by version with links rewritten;
-  25 issues filed (#128–#152), with Mike's decisions on each recorded in `src/docs/PRE-RELEASE.md`.
 
 ## Pending decisions
 - **Priorities for the pre-drive's 10 probable bugs** (raised 2026-11-02). Proposed P2 for most; the one
@@ -47,10 +49,9 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   traits printed before it in the packet. Options: comment on #160 / a separate issue.
 
 ## Loose ends
-- main is ahead of origin with the #166 and #167 merges and their artifacts, not pushed; both close when it is.
-- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#167 are uncommitted; the next `/pre-release`
+- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#168 are uncommitted; the next `/pre-release`
   run commits them.
-- 36 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
+- 37 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
 - Data releases (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs (#118), and
   Homebrew in the private repo (#125); filed as #138.
 - #102: the official source is untested against a real release; 1.9.0 is its first real run (#139).
