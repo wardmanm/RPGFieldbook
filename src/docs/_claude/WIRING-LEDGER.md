@@ -8641,3 +8641,49 @@ Pages: [combat view](../wiki/features/combat-view.md), [decisions](../wiki/decis
 and 480 to be shot. Driven 320–1280 with a long fight time: nothing overflows and the round stays
 between its arrows everywhere, but at 481–540px "1 min 18 sec" broke mid-phrase onto a second line.
 The time now stacks under the round up to 560px (was 480) and never splits (`white-space:nowrap`).
+
+## #166: End of combat's Loot is the trade window's You get alone (Mike, 2026-11-04)
+
+Mike, in the 1.9.0 test pass: the trade window after a battle should have no "You give" section; from
+there you only get things. #105 had opened the ordinary two-sided Trade ("the trade window lets the
+player edit it, as today"). Agreed with Mike before building: a loot version of the same window,
+used only by End of combat; the Equipment card's ⇄ Trade unchanged.
+
+**What changed.** `openTrade({loot:true})` makes a loot draft (`newTradeDraft()`: no give side,
+whatever it is seeded with; it starts on You get; only `loot:true` makes one). `tradeHTML()` then
+draws From for With (no chips: they name trading partners), the You get side alone, no tabs, no
+Apply item value switch (with nothing given, values always count), "Worth N gp" for the balance
+(`tradeBalHTML()`), and Take loot for Complete Trade (the ✓ on a phone is labelled Take loot).
+`tradeBalance()` is never short for loot. `completeTrade()` titles the line "Looted from <From>" (or
+"Looted"), keeps `kind:"trade"` so it files under Trades and undoes as a trade, writes `meta.loot`,
+and ends the receipt with "Worth N gp" in place of the give/get and item-value lines. The window is
+titled Loot and × on a filled one asks "Discard this loot?". In `87-combat-end.js` the row reads
+"Open loot…", the button Open loot, and after a loot the row shows its title, "Looted from …".
+CSS: one column, and `.modal.wide:has(.tr-loot)` sizes the window one side wide (520px) and as tall
+as its content, up to the wide modal's height, as End of combat's own rule does.
+
+Ruling: a rules item taken as loot arrives with origin **Found** (detail: the From text), a custom one
+with origin Custom, "looted from <From>" — they were not traded, and Found is the existing origin
+for this. Cost if wrong: a label on new items only; the trade path is unchanged.
+
+Ruling: the button keeps its id `ecTrade` (focus after the round trip, its tests). Only its words
+changed.
+
+**Driven** (Playwright, 1280 and 390, light skin; the CSS adds no colours): End of combat → Open loot
+→ the Loot window (From "Goblin 1, Bugbear", You get only, Worth, Take loot); a custom item ×2 at
+0.5 gp, 12 gp and 7 sp read "Worth 13.7 gp"; Take loot came back to End of combat reading "Looted
+from Goblin 1, Bugbear" with focus on Open loot; the inventory log's line and receipt; its Undo took
+everything back. The finder round trip: Rope through + Find an item came back to Loot and arrived
+"Found — Goblin 1". At 390: one column, no tabs, no page overflow, the ✓ labelled Take loot; Escape
+on a filled loot asked "Discard this loot?" and declining kept it. The Equipment card's ⇄ Trade
+still has With, both sides, both switches and Complete Trade.
+
+**Tests.** `sheet.js`: a loot draft drops a seeded give side and starts on You get; only `loot:true`
+makes one; never short; the window's From, no chips, no You give, no tabs, no switches, Worth and
+Take loot, while a trade keeps all of them; the line's title, `meta.loot`, its receipt, the origins,
+the coins, its Undo; "Looted" with no From; a trade still "Traded with …"; the window's title and
+both discard questions; #105's loot checks now read Open loot, `loot:true` and the Loot window.
+`rules-data.js`: the one column and the fitted window.
+
+Pages: [inventory](../wiki/features/inventory.md), [combat view](../wiki/features/combat-view.md),
+[decisions](../wiki/decisions.md).

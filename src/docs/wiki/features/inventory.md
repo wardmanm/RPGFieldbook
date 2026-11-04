@@ -179,7 +179,8 @@ grant, and End combat's recovery has its own Undo, in the End of combat window (
 **The trade window (#47).** **⇄ Trade** on the Equipment card opens `openTrade(opts)`, a wide
 dialog over a draft (`newTradeDraft()`; `opts` may seed `{with, give, get}`). `opts.onClose` (#105)
 is run once when the trade window closes for good, however it closes; the End of combat window's
-Loot uses both, seeding `with` with the fallen and coming back on close (below).
+Loot uses both, seeding `with` with the fallen and coming back on close (below). `opts.loot` (#166,
+only `true`) makes it the **Loot** window, described after the layout.
 - **With**: free text, and chips from the Party card and the names of earlier trades.
 - **You give**: items picked from the inventory, each with a − / + stepper capped at what you own
   and its worth; a coin box per `coinKeys()` denomination, capped at what you hold; and an **Apply
@@ -212,6 +213,16 @@ Loot uses both, seeding `with` with the fallen and coming back on close (below).
 - **Layout**: the two sides side by side above 700px, with Cancel and Complete Trade at the foot;
   at 700px and under, tabs "You give · n" and "You get · n" and a ✓ button labelled "Complete
   trade". The balance is always in view. Every target is at least 44px.
+- **Loot (#166)**, End of combat's only: things only come in. `newTradeDraft()` drops any seeded
+  give side and starts on You get. The window is titled Loot: **From** for With (no chips, which
+  name trading partners), the You get side alone, no tabs, no Apply item value switch (with nothing
+  given the values always count), **Worth N gp** for the balance (never short), and **Take loot**
+  for Complete Trade (the ✓ on a phone is labelled Take loot). It is one column, one side wide
+  (520px) and as tall as its content (`.modal.wide:has(.tr-loot)`, as End of combat's rule). Take
+  loot logs a `trade` line, so it files under Trades and undoes as one, titled "Looted from *From*"
+  (or "Looted"), with `meta.loot` and a receipt ending "Worth N gp". Rules items arrive with origin
+  Found (the From text), custom ones Custom, "looted from *From*". × on a filled one asks "Discard
+  this loot?".
 
 **Weight and encumbrance.** All measured values use `fnum()` (parseFloat), never `num()`.
 `carriedWeight()` is items × qty plus coins (50 to the pound, every denomination held, unless
@@ -397,3 +408,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-25 — Edit lines keep only what changed; coins received never make a trade red; grant lines that moved gold file under Coins. → ledger L7401, #47
 - 2026-10-29 — `openTrade({onClose})` and `tradeClosed()`: the hook runs once however the trade closes (Cancel, Complete Trade, ×, Escape, a backdrop tap), never for the finder; the End of combat window's Loot seeds `with` with the fallen and comes back on close. → ledger L7921, #105
 - 2026-10-29 — The finder's way back focuses ⇄ Trade only for a trade with no `onClose`; Loot's seeded `with` is capped at 60 characters. → ledger L8025, #105
+- 2026-11-04 — End of combat's Loot opens the trade window as Loot (`openTrade({loot:true})`): From, You get alone, Worth, Take loot; logged "Looted from …" under Trades; rules items arrive Found. → ledger L8645, #166

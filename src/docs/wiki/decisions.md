@@ -412,6 +412,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The XP box (#105)** — One box with a "Split among N" switch (the roster plus this character, rounded down), remembered per character; the level-up opens after Done when the XP reaches a level
 - **The End of combat layout (#105)** — Folded sections: the summary open, each other section a one-line row that opens on a tap and remembers being open, per character
 - **Loot's other party (#105)** — The fallen foes only, or "Combat loot"
+- **What Loot opens (#166)** — The trade window as Loot: its You get side alone, From, Worth, Take loot, logged "Looted from …" under Trades; the Equipment card's Trade unchanged
 - **Closing the End of combat window with XP typed (#105)** — Refuse the dismissal and ask in the warning window; Add XP is Done, Don't add closes without it
 - **Show rolls (#91)** — A switch (`initShowRolls`, default on)
 - **Ties (#91)** — Act earlier / Act later in the combatant dialog, never a drag on the table
