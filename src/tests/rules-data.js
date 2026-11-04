@@ -3047,6 +3047,8 @@ function block(html, needle, tag) {
   ck('#165 the header in a fight: three rows, the round line centred between equal zones, a centred foot',
      /\.cv-head\.fighting\{flex-direction:column/.test(cc) && /\.cv-top \.cv-z\{flex:1 1 0;min-width:44px/.test(cc) &&
      /\.cv-foot\{[^}]*justify-content:center[^}]*border-top:1px dotted/.test(cc));
+  ck('#165 the fight time never splits, and stacks under the round up to 560px (a long time broke mid-phrase at 500)',
+     /\.cv-time\{white-space:nowrap\}\s*@media\(max-width:560px\)\{\s*\.cv-round\{[^}]*\}\s*\.cv-round \.cv-sep\{display:none\}\s*\.cv-round \.cv-time\{display:block/.test(cc));
   ck('#165 a narrow phone shortens the round line: the word at 400px, the swords at 360px',
      /@media\(max-width:400px\)\{\.cv-round \.cv-tw,\.cv-round \.cv-tsep\{display:none\}\}/.test(cc) && /@media\(max-width:360px\)\{\.cv-round \.cv-title\{display:none\}\}/.test(cc));
   {

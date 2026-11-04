@@ -97,7 +97,7 @@ left one, so the round sits over the strip's centred actor; then the strip; then
 combat** centred behind a dotted rule, End well apart from ◀ ▶. The ✦ is an
 Inspiration toggle (`data-inspire`, no id) wired to `toggleInspiration()`, the same as the Sheet
 header's `#starBtn`, and `recompute()` paints both: the star left Vitals for the header in #103, so
-the view carries its own. The rests stay out of the view. ≤480px the time stacks under the round;
+the view carries its own. The rests stay out of the view. ≤560px the time stacks under the round (it never splits);
 ≤400px the line drops the word "Combat" (`.cv-tw`) and ≤360px the swords too, so "Round N" stays on
 one line between the arrows at 320px; both zones keep 44px so ◀ never covers ✦.
 Start combat opens Roll initiative (below), whose Start ▸ ends in `combatStart()`: active, round 1,

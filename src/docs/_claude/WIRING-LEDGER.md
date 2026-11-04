@@ -8636,3 +8636,8 @@ actor; the three-row header, its zones and centred foot; the narrow-phone line; 
 `renderCombatHeader()`, resize and fonts; scroll closing the list; the +N's aria.
 
 Pages: [combat view](../wiki/features/combat-view.md), [decisions](../wiki/decisions.md).
+
+**Re-review** (sonnet): A1–A4 and the header confirmed from the code; it asked for widths between 400
+and 480 to be shot. Driven 320–1280 with a long fight time: nothing overflows and the round stays
+between its arrows everywhere, but at 481–540px "1 min 18 sec" broke mid-phrase onto a second line.
+The time now stacks under the round up to 560px (was 480) and never splits (`white-space:nowrap`).
