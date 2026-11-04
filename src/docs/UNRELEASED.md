@@ -112,3 +112,7 @@ Bullets below this line — leave the heading in place.
 - Trackers and journal pages have a "Show after combat" switch. Switched on, an open tracker's tile and a page's
   text, checkboxes and all, appear in the End of combat window, so you can count the kills and tick off the loot
   list there.
+- Humblewood's Ambassador, Underscout, Courtier, Seaborn, Stonesinger, Warrenborn and Wonderstruck
+  backgrounds can now be picked from the list. The Add background window no longer shows them empty
+  ability-score boxes, and adds them in one click; their info cards no longer show empty Ability
+  Scores and Feat lines.

@@ -8470,3 +8470,43 @@ combat view holds those two (their markers are spans), and Statuses and Resource
 
 Pages: [sections & layout](../wiki/ui/sections-and-layout.md), [decisions](../wiki/decisions.md); the
 #103 spec's As built.
+
+## #159: a background with no ability scores can be added (Mike, 2026-11-04)
+
+Found in the 1.9.0 test pass. Seven Humblewood backgrounds (Ambassador, Underscout, Courtier, Seaborn,
+Stonesinger, Warrenborn, Wonderstruck, all from the playtest packets) are the older shape: skills,
+tools, languages, equipment and a feature, with no ability increase and no feat. `openAddBackground()`
+drew the ability section for every background, so for these it showed "Ability scores ()" over two
+empty selects, and Add read the two blanks as the same ability ("Choose two different abilities")
+and refused. None of the seven could be added from the list; typing the name in Or custom name
+worked, because that path never drew the selects. Present since the seven arrived in 1.3.0. The
+species, feat and level-up pickers already handled a missing list.
+
+**Fix** (`54-background.js`): the preview draws the ability section only when `abilityScores` has
+entries, and "Also grants" only when there is a skill, tool or language to name (it also no longer
+starts " · " when a background has tools but no skills). Add reads the pickers only for a background
+that has ability scores, so the check keys on the rules entry, not on what the DOM happens to hold.
+`openBackgroundInfo()` leaves out the Ability Scores and Feat lines when the background has neither.
+
+**Tests** (`sheet.js`, the recorder DOM): a feature-only background, one with a skill, and a 2024 one.
+No pickers and no empty lines for the first two; Add in one click with no alert, the feature granted
+and no ability feature; the 2024 one keeps its pickers, still refuses the same ability twice, and
+adds +2/+1; the info card omits both lines only when they would be empty.
+
+**Driven** on the built file with the Humblewood pack: Stonesinger previews as its description only
+and adds in one click (Stonewise granted); its info card has no empty lines; Bandit Defector still
+shows STR/DEX/WIS, refuses STR twice, and adds +2 STR / +1 DEX with its feat and feature.
+
+**Not fixed here** (#160, the data): the seven carry only a description and feature; the packets
+also list skills, tools, languages and equipment. Stonesinger's feature text also runs on into two
+species traits printed before it in the packet.
+
+Pages: [character building](../wiki/features/character-building.md).
+
+**Review** (opus, approve with nits): no correctness findings; the 2024 `opts` carries the same values
+(key order only). One fix round: the #159 tests now run on a DOM where the window's own `bg*` ids it
+did not draw are `null`, as in the browser, so the `#bgMode` guard is pinned (removing it fails five
+tests); a tools-and-feat background with no ability scores is covered (no " · " lead, the feat
+granted); the release note says what the window and info card now do. Left for its own issue: typing
+a 2024 background's name in Or custom name adds it with no ability increase (mode falls back to
+"2-1" with no picks), a path older than this branch.
