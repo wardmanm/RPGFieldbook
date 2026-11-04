@@ -210,15 +210,19 @@ function combatHeaderHTML(c){
      view does not carry, so the view has its own star: class-based (no id — the
      sheet's #starBtn is the one id), the same toggle, painted by recompute(). */
   const on=!!(c&&c.inspiration);
-  const title=`<span class="cv-title">${iconSVG("ui","Combat")}Combat</span>`+
-    `<button type="button" class="starbtn cv-star${on?" on":""}" data-inspire title="Inspiration" aria-label="Toggle inspiration" aria-pressed="${on?"true":"false"}">&#10022;</button>`;
-  if(!inCombat(c))return title+`<span class="grow"></span><button class="tbtn primary" id="cvStart">Start combat</button>`;
+  const ttl=`<span class="cv-title">${iconSVG("ui","Combat")}<span class="cv-tw">Combat</span></span>`,
+    star=`<button type="button" class="starbtn cv-star${on?" on":""}" data-inspire title="Inspiration" aria-label="Toggle inspiration" aria-pressed="${on?"true":"false"}">&#10022;</button>`;
+  if(!inCombat(c))return ttl+star+`<span class="grow"></span><button class="tbtn primary" id="cvStart">Start combat</button>`;
   const r=num(c.combatRound);
-  return title+
+  /* In a fight, three rows (#165, Mike's layout D with a centred foot): the
+     title and round as one line centred between the round arrows, ✦ at the
+     left; the initiative strip, its actor under the round; then the list
+     button and End combat, centred, as the last things in the header. */
+  return `<div class="cv-top"><span class="cv-z">${star}</span>`+
     `<span class="cv-track"><button class="tbtn" id="cvPrev" aria-label="Previous round"${r<=1?" disabled":""}>◀</button>`+
-    `<span class="cv-round">Round <b>${r}</b><span class="cv-sep"> · </span><span class="cv-time">${fmtCombatTime(combatElapsedSec(c))}</span></span>`+
-    `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span>`+
-    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`+initStripHTML(c);
+    `<span class="cv-round">${ttl}<span class="cv-tsep"> · </span>Round <b>${r}</b><span class="cv-sep"> · </span><span class="cv-time">${fmtCombatTime(combatElapsedSec(c))}</span></span>`+
+    `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span><span class="cv-z"></span></div>`+
+    initStripHTML(c)+`<div class="cv-foot">${initTableBtnHTML(c)}<button class="tbtn danger" id="cvEnd">End combat</button></div>`;
 }
 /* Repainting replaces every button, so focus is carried across by id. When that
    button is gone or disabled — ◀ at round 1, Start once combat starts, End once
@@ -226,13 +230,12 @@ function combatHeaderHTML(c){
 function renderCombatHeader(){
   const h=document.getElementById("cvHead");if(!h)return;
   const a=document.activeElement,had=a&&a.id&&h.contains(a)?a.id:"";
-  const oc=h.querySelector(".ini-chips"),sl=oc?oc.scrollLeft:0;   /* the strip's sideways scroll, kept (#91 I2) */
   h.innerHTML=combatHeaderHTML(character);
   h.classList.toggle("fighting",inCombat(character));   // the two-row phone layout is for combat only
   if(!inCombat(character))cvLiveRound=0;
   else if(num(character.combatRound)!==cvLiveRound){cvLiveRound=num(character.combatRound);setCombatLive("Round "+cvLiveRound);}
-  initKeepActorInView(sl);
-  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart",cvTurn:"cvNext"};
+  initFitStrip();   /* the strip's chips that don't fit go into its +N (#165) */
+  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart",cvTurn:"cvNext",cvTurnPrev:"cvTurn"};
   for(let id=had,i=0;id&&i<4;id=instead[id],i++){
     const b=document.getElementById(id);
     if(b&&!b.disabled){b.focus();break;}

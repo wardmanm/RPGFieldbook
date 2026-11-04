@@ -35,8 +35,9 @@ its own tab. Leaving the tab never ends combat.
 `combatantBar()`, `initRollCheck()`, `initRollLine()`, `initModOf()`, `youAC()`,
 `buildCombatants()`, `initFreshId()`; `irState()`, `irFoeRowHTML()`, `initRollHTML()`, `irPaint()`, `irSetTyped()`,
 `irRoll()`, `startInitFight()`, `openInitRoll()`, `irStart()`; `hbBarHTML()`, `combatantHealthText()`,
-`initChipHTML()`, `initRowHTML()`, `initStripHTML()`, `initTableHTML()`, `initChipScroll()`,
-`initKeepActorInView()`, `renderInitStrip()`, `renderInitTable()`, `toggleInitTable()`, `initNext()`,
+`initChipHTML()`, `initRowHTML()`, `initStripHTML()`, `initTableHTML()`, `initFitCount()`,
+`initFitSide()`, `initFitStrip()`, `iniMoreHTML()`, `openIniFly()`, `closeIniFly()`, `renderInitStrip()`,
+`renderInitTable()`, `toggleInitTable()`, `initNext()`, `initPrevTurn()`, `initCanPrev()`, `initPrev()`,
 `setInitMode()`, `toggleInitRolls()`; `initTie()`, `combatantDialogHTML()`, `setCombatant()`,
 `initTurnWrapped()`, `removeCombatant()`, `moveCombatant()`, `addCombatant()`, `openCombatant()`,
 `cdRefocus()`, `openAddCombatant()` · `renderHP()` in `66-coins-hp.js` (it ends in
@@ -88,13 +89,17 @@ id and does nothing after a switch. Removing by keyboard from inside the view fo
 Esc from it lands on the grip of the next *shown* card (`cvNeighbours()`, recorded before removal),
 else the previous one, else the swords (`#btnCombat`).
 
-**The tracker.** `combatHeaderHTML()` draws title · ✦ · Start combat out of combat, and
-title · ✦ · ◀ Round N · time ▶ · (gap) · End combat in it — End set well apart from ▶. The ✦ is an
+**The tracker.** `combatHeaderHTML()` draws title · ✦ · Start combat out of combat, one row. In a
+fight (`.fighting`, set by `renderCombatHeader()`) it is three rows (#165, Mike's layout D with a
+centred foot): `.cv-top` centres "◀ ⚔ Combat · Round N · time ▶" between two equal zones, ✦ in the
+left one, so the round sits over the strip's centred actor; then the strip; then `.cv-foot`,
+**Combatants ▾** (`initTableBtnHTML()`, the full table's button, absent with no rows) and **End
+combat** centred behind a dotted rule, End well apart from ◀ ▶. The ✦ is an
 Inspiration toggle (`data-inspire`, no id) wired to `toggleInspiration()`, the same as the Sheet
 header's `#starBtn`, and `recompute()` paints both: the star left Vitals for the header in #103, so
-the view carries its own. The rests stay out of the view. On a phone the
-header is one row out of combat and two in it (`.fighting`, set by `renderCombatHeader()`): the title,
-then the tracker with End at the far right.
+the view carries its own. The rests stay out of the view. ≤560px the time stacks under the round (it never splits);
+≤400px the line drops the word "Combat" (`.cv-tw`) and ≤360px the swords too, so "Round N" stays on
+one line between the arrows at 320px; both zones keep 44px so ◀ never covers ✦.
 Start combat opens Roll initiative (below), whose Start ▸ ends in `combatStart()`: active, round 1,
 active spells untouched. (`startCombatNow()` is the same start with no roll and no list; no button
 calls it since #91, only the combat-view and ammunition tests.) ◀ and ▶ are
@@ -121,8 +126,7 @@ edge or the window's, and the order is read back off the DOM on release. ↑/↓
 between.
 
 **Layout.** One centred column. The header is sticky at `--cv-top`, the tab bar's **measured**
-height (`cvStickyTop()`, on open and resize); ≤640px it wraps to two rows and ≤480px the time stacks
-under the round. Active Spells and Familiars, which hide on their own tab when empty, always show in
+height (`cvStickyTop()`, on open and resize); its rows are above (The tracker). Active Spells and Familiars, which hide on their own tab when empty, always show in
 the view with "None right now." (Familiars is always hidden on the Sheet, so the view is the one
 place its card shows; its toggle on the Sheet is the **Combat view** item in the header paw's menu,
 the same `[data-combatbtn="familiars"]` hook); Trackers stays hidden when Settings hides it. `cvCardShown()` tests computed style. `renderCombatEmpty()` shows the
@@ -186,21 +190,36 @@ Rounds→Turns keeps a stored actor only while alive, else lands on the first li
 
 **The strip** (`initStripHTML()`, drawn inside `combatHeaderHTML()`'s in-combat branch, so it
 sticks with `#cvHead` and repaints on every header redraw) is a row of chips, each showing the
-initiative (if `initShowRolls`), the name, and a bar: a four-segment band bar, a smooth share bar
+initiative (if `initShowRolls`), the name (a chip is at most 170px, a long name ellipsized), and a bar: a four-segment band bar, a smooth share bar
 for you and for a party member on Exact with a max HP, or a grey "?" when nothing is known (a party
-member on Exact with no max reads "HP n" with a "?" bar). It scrolls sideways on a narrow screen and
-keeps the actor in view: `renderCombatHeader()` carries `.ini-chips`' `scrollLeft` across its
-repaint and `initKeepActorInView()` scrolls only as far as the acting chip needs
-(`initChipScroll()`, setting `scrollLeft` directly rather than scrolling the chip into view, which can move the page).
+member on Exact with no max reads "HP n" with a "?" bar). **It never scrolls sideways (#165).** In
+Turns mode the acting chip sits in the middle of `.ini-line`, between two `.ini-side`s that share the
+width equally (`flex:1 1 0`), so it stays centred whatever the names: the left side holds who has
+acted this round, the right who is still to come, and nothing wraps into the next round, so at the
+top or bottom of a round one side is empty and the actor does not move. Every chip is drawn;
+`initFitStrip()` (after each header repaint, on resize, and once `document.fonts.ready`, since names
+change width with the font) runs `initFitSide()` on each side: it measures, hides the chips farthest
+from the actor that don't fit (`initFitCount()`, nearest first, keeping room for the +N once a side
+overflows) and shows that side's **+N** with their ids in initiative order. A +N opens
+`#iniFly` (outside `#cvHead`, which a repaint replaces; `position:fixed` under the button, since the
+strip is in the sticky header) holding the table's own rows (`iniMoreHTML()` → `initRowHTML()`), headed
+"Earlier this round" or "Still to come", so a tap opens that combatant's dialog through the
+`[data-inirow]` route; any other tap, Escape, or a repaint closes it. Rounds mode (or no actor) is one
+side from the top of the order, with its +N at the right. **◂ Prev** (`#cvTurnPrev`, Turns only) is
+Next's mirror: `initPrev()` steps back over the dead (`initPrevTurn()`), and passing the top of a
+round goes to the last living row and calls `advanceRound(-1)`, the header's ◀, so spell and
+condition timers rewind with it; `initCanPrev()` greys it on round 1's first turn, where there is
+nothing before it. At ≤640px Prev and Next drop their words (`.ini-w`) to leave the strip room.
 **Your chip and table row follow your HP**: `renderHP()` ends in `renderInitStrip()`, which patches
 those two nodes in place — never the whole strip (see Traps) — and returns at once with the view
-closed or no fight. The right end holds Next ▸ (Turns) and **▾**, which toggles the read-only table
-(`initTableHTML()`) below it. The ▾ open/closed state (`_iniTableOpen`) is a module-level flag, not
+closed or no fight. The right end holds Next ▸ (Turns); **Combatants ▾**, in the header's foot
+(#165), toggles the read-only table (`initTableHTML()`) below the header. The ▾ open/closed state (`_iniTableOpen`) is a module-level flag, not
 a dataset attribute on the panel: the panel sits outside `#cvHead`, so a dataset flag on it could
 never agree with the header's own full repaint (see Traps). `toggleInitTable()` is the one place
 that flips it; it closes itself whenever there is no fight or no rows, so a later fight always
-starts collapsed. `.cv-init-table` shares `.cv-head`/`#cvList`'s `max-width:780px;margin:0 auto`,
-so the table never runs wider than the column it sits under.
+starts collapsed. `.cv-init-table` shares `.cv-head`/`#cvList`'s `max-width:780px;margin:0 auto`
+and is `width:100%` (#165; without it the auto margins shrank it to its content, about 410px), so
+it is exactly as wide as the header above it.
 
 **The combatant dialog** (`openCombatant()`, one per combatant, opened from a chip or a table row,
 every target ≥44px): a **foe** gets five full-width band buttons (Healthy…Dead, each with the DM's
@@ -383,6 +402,12 @@ XP; the fight itself had already ended and saved.
   "past the next shown section". → L3470
 - **The header breakpoint was measured, not guessed**: the one-row header needs about 610px in
   combat, so it wraps at 640px, not 480px. → L3470
+- **The +N slivers (#165 review).** The two sides were `min-width:0` and the actor chip would not
+  shrink, so a long name on a phone ("Hobgoblin Captain" at 390px) squeezed each side to 14px and
+  cut both +N to slivers; at 360px they vanished and at 320px the chip ran over Next. Each side
+  keeps 48px and the actor gives way (`flex:0 1 auto`, its name ellipsized). → L8605
+- **The round line ran into ✦ and broke over three lines at 320px (#165).** The zones were
+  `min-width:0`; both keep 44px, and the line sheds "Combat" ≤400px and the swords ≤360px. → L8605
 - **A dialog opened over the view focused a `<select>`** and type-ahead rewrote a whole item form;
   `MODAL_FOCUS_FIELDS` never includes `select` — see [Shell](../ui/shell.md). → L3470
 - **The ▾ button forgot the table was open (#91).** Its glyph/`aria-expanded` were hard-coded
@@ -408,6 +433,9 @@ XP; the fight itself had already ended and saved.
 - **The "I rolled" box dropped under its words (#162)**, here, in Spend a Hit Die and in the level-up
   HP step: `input{width:100%}` filled the label. `.hd-how label` is an inline flex row with a 60px
   box. → L8514
+- **A chip the fit pass hid stayed on screen (#165).** `.ini-chip` is `display:flex`, which beats
+  the browser's own `[hidden]{display:none}`; `.ini-chip[hidden],.ini-more[hidden]{display:none}`
+  puts it back. Caught by `rules-data.js` before it shipped. → L8554
 - **The last Fire toast outlived the fight (#105).** End combat used to replace it with its own
   toast. With no toast of its own any more, the Fire toast stayed up over the End of combat window and
   its Undo took a shot back into an ended fight: 8 spent shots came back on record, to be recovered a
@@ -439,6 +467,9 @@ Settled in the [initiative tracker spec](../../specs/1.9.0/2026-10-25-initiative
 | Where the fight is kept | Saved with the character while a fight is on, beside `combatActive`/`combatRound`; End combat clears it | Session only: a phone reload mid-fight loses the order. Kept after End: stale |
 | Turns or rounds | Both, per character (`initMode`); Turns shows a marker and Next, skipping the dead, wrapping to `advanceRound(1)`; Rounds has neither | One mode only: Mike wants the granular marker and plain rounds both |
 | Where it sits | A strip of chips stuck under the combat header; ▾ opens the full table | A card at the top: scrolls away. A side column: cramped, and a phone needs the strip anyway |
+| What the strip shows (#165) | **The actor centred; who has acted on its left, who is to come on its right, this round only**; overflow under +N at each end; no sideways scroll (Mike, 2026-11-04, with mockups) | A ring wrapping into the next round, so the right always shows who's next: Mike chose the line. The #91 strip scrolled sideways: the scrollbar looked broken and lost the actor |
+| Going back a turn (#165) | **◂ Prev**, Next's mirror at the strip's left end; across the top of a round it steps the round back through `advanceRound(-1)`; greyed on round 1's first turn (Mike) | None: a Next pressed by mistake could only be undone by tapping through the whole round |
+| The header in a fight (#165) | **Three rows:** "◀ ⚔ Combat · Round N · time ▶" centred, ✦ at the left; the strip; **Combatants ▾** and **End combat** centred at the foot behind a dotted rule (Mike, 2026-11-04: layout D with C's foot, foot centred) | Title left, round centre, End right (A); a centred stack with End top right (B); End at the foot alone (C); the foot split left and right: Mike's picks, with mockups |
 | Editing a combatant | One dialog per combatant, targets ≥44px; the table is read-only | Inline segments and inputs in the table: too small to tap on a phone (Mike) |
 | Health | Five bands (Healthy·Injured·Bloodied·Near death·Dead) plus "?" for not set, a four-segment bar coloured by band; "Bloodied" over the issue's "Severely injured", matching the 2024 rules | Exact HP for everyone: enemy HP is never known |
 | A party member's health | Exact HP (a stepper and a smooth bar) or Estimate (band buttons), chosen per member, flippable any time; starts on Exact when the party list gives a max HP | Exact only: friends' HP is often unknown (Mike) |
@@ -502,3 +533,5 @@ Settled in the [End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-d
 - 2026-10-29 — The final fix wave: XP the sheet can't read is never overwritten (Ruling 21); a strict text box with "Whole numbers only", Enter is Done; focus back on Open trade after a trade; tracker focus stays in the window; After combat reads "All done"; the window fits its content (Ruling 19); Loot's name capped at 60. → ledger L8025, #105
 - 2026-10-30 — Corrected: the Bio tab's Party is the second section left out of the view, beside the Sheet's header (pre-release 1.9.0, step 1).
 - 2026-11-04 — Roll initiative is the ordinary dialog, which grows and scrolls, so Start is always reachable; the "I rolled" box sits beside its words. → ledger L8514, #161, #162
+- 2026-11-04 — The strip keeps the actor centred, with who has acted on its left and who is to come on its right, no sideways scroll, the overflow under +N at each end, and ◂ Prev to step back a turn. → ledger L8554, #165
+- 2026-11-04 — The fight header is three rows: the title and round centred between the arrows, the strip, and Combatants ▾ with End combat centred at the foot; the +N never shrinks to a sliver on a phone; the open table matches the header's width. → ledger L8605, #165

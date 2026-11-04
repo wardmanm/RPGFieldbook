@@ -8550,3 +8550,94 @@ initiative tracker are announced in the same Pending list), so they would have d
 windows players have not had. shell.md no longer says End of combat was clipped: it had `.ec-scroll`
 from the start, and Ruling 19 fixed the opposite, a tall empty box. The guard counts every `wide:` in
 the code with block comments left out, so `{ wide: true }` or `{wide:!0,…}` count too.
+
+## #165: the initiative strip keeps the actor centred, overflow under +N, and ◂ Prev (Mike, 2026-11-04)
+
+Found in the 1.9.0 test pass: with more combatants than fit, #91's strip scrolled sideways under a
+scrollbar that looked broken, and the actor could sit off screen. Brainstormed with mockups (two
+ideas: a ring that wraps into the next round, my pick; a line, this round only). **Mike chose the
+line**, and asked for a **Previous** button. Sized as a small change: agreed in chat, no spec.
+
+**The strip** (`initStripHTML()`): in Turns mode the actor sits in `.ini-line` between two
+`.ini-side`s that share the width (`flex:1 1 0`), so it is centred whatever the names; the left side
+is who has acted this round, the right who is still to come. Every chip is drawn, then
+`initFitStrip()` (after each `renderCombatHeader()`, on resize, once `document.fonts.ready`) runs
+`initFitSide()` per side: measure, hide the farthest that don't fit (`initFitCount()`, pure, nearest
+first, keeping room for the +N once a side overflows), and show the side's +N with the hidden ids in
+initiative order. A +N opens `#iniFly` (new in `70-combat.html`, outside `#cvHead`; fixed under the
+button) with the table's own rows (`iniMoreHTML()` → `initRowHTML()`), so a tap opens the combatant's
+dialog through `[data-inirow]`; any other tap, Escape (focus back to the +N) or a repaint closes it.
+Rounds mode (or no actor) is one side from the top with its +N at the right. Chips cap at 170px with
+the name ellipsized. `initChipScroll()`, `initKeepActorInView()` and the scroll carried across the
+header repaint are gone with the scroll.
+
+**◂ Prev** (`#cvTurnPrev`): `initPrevTurn()` mirrors `initNextTurn()`; `initPrev()` steps back over
+the dead and, across the top of a round, to the last living row with `advanceRound(-1)` (the header's
+◀: spell and condition timers rewind). `initCanPrev()` greys it on round 1's first turn, where
+`advanceRound()` will not go below 1. At ≤640px Prev and Next show only their arrows (`.ini-w`).
+
+**Rulings.** The empty side at a round's edge is plain space, not the mockup's dashed boxes: the
+equal sides already keep the actor still, and boxes of a guessed width would not match the real
+chips. The +N list is the table's rows, not new markup, so it carries health and AC and opens the
+same dialog. `.ini-chip[hidden]` needs its own `display:none`: `.ini-chip`'s `display:flex` beats the
+browser's `[hidden]` rule.
+
+**Tests.** `sheet.js`: `initPrevTurn()` (back over the dead, the wrap, an unknown actor, a lone
+survivor); `initFitCount()`; the strip's sides, the hidden +Ns and Prev greyed on round 1;
+`initPrev()` across a round (round stepped back, announced) and within one, and doing nothing on
+round 1's first turn; Rounds mode with no Prev and one side; `initFitSide()` on stub sides (left
+keeps the nearest, the earliest go into +N in order; right fits; narrowed, the later goes); the +N
+list's rows in order with its heading. `rules-data.js`: no sideways scroll, `[hidden]` really hides,
+the +N is 44px, phone arrows only. The #91 I2 scroll tests went with the scroll.
+
+**Driven** on the built file. 1280, classic: eight combatants, Big Boss acting, exactly centred
+(0px), Kaela and Bree left, Goblin 1 and +4 right; +4 lists Goblin 2, Goblin 3, Wolf, Ogre ("Still
+to come"); tapping Wolf closed the list and opened Wolf's dialog; Next slid everyone; the left +1
+read "Earlier this round"; an outside tap closed it; at round 5's top Kaela stood centred with an
+empty left; ◂ Prev went to the Ogre and round 4, then to the Wolf; round 1's first turn greyed Prev.
+390: ◂ +2 Big Boss +5 ▸ ▾, centred, nothing past the edge; the list on screen; Escape closed it with
+focus on the +5. Humblewood, dark: the strip and list read as the rest of the header; an 18-letter
+name capped at 170px with an ellipsis, still centred; Rounds mode from the top with +1 at the right.
+Not driven: touch, a real phone, Mike's own fights.
+
+Pages: [combat view](../wiki/features/combat-view.md), [decisions](../wiki/decisions.md).
+
+## #165 round 2: the fight header in three rows; the review's fixes (Mike, 2026-11-04)
+
+**The header.** Mike found the fight header awkward around the new strip and picked, from mockups,
+layout D (title and round as one centred line) with End combat dropped to the foot as in C, beside
+the combatant list, the foot centred. `combatHeaderHTML()` in a fight: `.cv-top` (✦ in the left
+`.cv-z`, ◀ "⚔ Combat · Round N · time" ▶ centred, an empty `.cv-z` to balance), the strip, then
+`.cv-foot`: **Combatants ▾** (`initTableBtnHTML()`, the table button that was the strip's ▾; absent
+with no rows) and End combat, centred behind a dotted rule. `.cv-head.fighting` is a column; the old
+≤640px reorder (`.grow` as a row break, `order` on the tracker, End and the strip) is gone with the
+two-row layout. Driven: round, actor and foot share one centre at 1280, 640, 400, 390 and 360 (320:
+the round within 5px). Two things the first build showed: at 360px ◀ covered ✦ (the zones were
+`min-width:0`; both keep 44px), and at 320px "⚔ Combat · Round 4" broke over three lines (≤400px it
+drops the word, ≤360px the swords: "Round 4" fits). The open table was about 410px under a 780px
+header, as on main: `.cv-init-table`'s auto margins shrink-wrapped it; `width:100%` gives #91's
+intended match (Ruling: one line in the area being reworked).
+
+**The review** (opus, changes needed). (1) On a phone a long acting name squeezed the sides to 14px
+slivers and hid both +N (driven with "Hobgoblin Captain"; my 390 drive had used "Big Boss"): each
+side keeps 48px and the actor gives way, `flex:0 1 auto` with its name ellipsized; driven at 390,
+360, 320, both +N whole, the actor 136, 106 and 66px. (2) The +N list stayed put when the page
+scrolled: a scroll closes it. (3) A row's dialog gave focus back to the swords, the row being gone:
+`closeIniFly()` moves focus to its +N first, so the dialog returns there (driven). (4) The +N said
+`aria-haspopup="true"` (a menu): now `"dialog"` with `aria-controls="iniFly"`. (5) A stale comment
+in `renderInitStrip()`. Accepted, not fixed: a page scrollbar appearing fires no resize, so the fit
+can be a scrollbar's width stale until the next repaint (overflow:hidden clips rather than spills).
+
+**Tests.** `sheet.js`: the top row's order (✦ zone, ◀, title, round, ▶, balancing zone); End in the
+foot after the strip; no Combatants with no list; the foot's Combatants then End; the ▾ checks now
+read `initTableBtnHTML()`; the +N list opening (rows, aria-expanded, focus), closing from inside
+(focus to the +N), and a second tap closing it. `rules-data.js`: the sides' 48px and the shrinking
+actor; the three-row header, its zones and centred foot; the narrow-phone line; the fit called from
+`renderCombatHeader()`, resize and fonts; scroll closing the list; the +N's aria.
+
+Pages: [combat view](../wiki/features/combat-view.md), [decisions](../wiki/decisions.md).
+
+**Re-review** (sonnet): A1–A4 and the header confirmed from the code; it asked for widths between 400
+and 480 to be shot. Driven 320–1280 with a long fight time: nothing overflows and the round stays
+between its arrows everywhere, but at 481–540px "1 min 18 sec" broke mid-phrase onto a second line.
+The time now stacks under the round up to 560px (was 480) and never splits (`white-space:nowrap`).

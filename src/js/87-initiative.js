@@ -50,6 +50,23 @@ function initNextTurn(list,turnId){
   for(let j=0;j<=i;j++)if(!combatantDead(list[j]))return {turnId:list[j].id,wrapped:true};
   return {turnId:list[i].id,wrapped:true};
 }
+/* Next's mirror (#165): the living row before turnId. Passing the top is a
+   wrap: the caller steps the round back once. An unknown actor starts at the
+   top, no wrap. */
+function initPrevTurn(list,turnId){
+  const n=list.length;if(!n)return {turnId:"",wrapped:false};
+  const i=list.findIndex(r=>r.id===turnId);
+  if(i<0)return {turnId:initFirstAlive(list),wrapped:false};
+  for(let j=i-1;j>=0;j--)if(!combatantDead(list[j]))return {turnId:list[j].id,wrapped:false};
+  for(let j=n-1;j>=i;j--)if(!combatantDead(list[j]))return {turnId:list[j].id,wrapped:true};
+  return {turnId:list[i].id,wrapped:true};
+}
+/* Round 1's first turn has nothing before it: advanceRound() will not go
+   below round 1, so a wrap there would move the marker without the round. */
+function initCanPrev(ch){
+  if(ch.initMode==="rounds"||!ch.combatTurn)return false;
+  return !initPrevTurn(ch.combatants||[],ch.combatTurn).wrapped||num(ch.combatRound)>1;
+}
 function bandOfShare(hp,max){
   const m=num(max),h=num(hp);if(!(m>0))return null;
   if(h>=m)return 0;if(h>m/2)return 1;if(h>m/4)return 2;return 3;
@@ -223,12 +240,28 @@ function combatantHealthText(r){
   if(r.kind==="party"&&r.track==="exact"&&r.hp!=="")return `HP ${num(r.hp)}`;   /* no max known: just the number */
   return bar.band===null?"Health not set":HB_NAMES[bar.band];
 }
+/* The strip (#165): the actor in the middle, who has acted this round on its
+   left and who is still to come on its right; nothing wraps into the next
+   round. The two sides share the width equally, so the actor stays centred
+   whatever the names. Every chip is drawn; initFitStrip() then hides those
+   farthest from the actor that don't fit and shows that side's +N. Rounds
+   mode (or no actor) is one side from the top of the order. */
 function initStripHTML(ch){
   const list=ch.combatants||[];
   if(!list.length)return `<div class="cv-init"><span class="hint">No initiative yet.</span><span class="grow"></span><button type="button" class="tbtn primary" id="iniRollNow">Roll initiative</button></div>`;
-  const turns=ch.initMode==="turns";
-  return `<div class="cv-init"><div class="ini-chips">`+list.map(r=>initChipHTML(r,ch)).join("")+`</div>`+(turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn">Next ▸</button>`:"")+
-    `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">${_iniTableOpen?"▴":"▾"}</button></div>`;
+  const turns=ch.initMode==="turns",a=turns?list.findIndex(r=>r.id===ch.combatTurn):-1;
+  const chips=rs=>rs.map(r=>initChipHTML(r,ch)).join("");
+  const more=k=>`<button type="button" class="ini-more" data-inimore="${esc(k)}" aria-haspopup="dialog" aria-controls="iniFly" aria-expanded="false" hidden></button>`;
+  const line=a<0?`<div class="ini-line"><div class="ini-side r">${chips(list)}${more("r")}</div></div>`
+    :`<div class="ini-line"><div class="ini-side l">${more("l")}${chips(list.slice(0,a))}</div>${initChipHTML(list[a],ch)}<div class="ini-side r">${chips(list.slice(a+1))}${more("r")}</div></div>`;
+  return `<div class="cv-init">`+(turns?`<button type="button" class="tbtn" id="cvTurnPrev" aria-label="Previous turn"${initCanPrev(ch)?"":" disabled"}>◂<span class="ini-w"> Prev</span></button>`:"")+line+
+    (turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn"><span class="ini-w">Next </span>▸</button>`:"")+`</div>`;
+}
+/* The full table's button, in the header's foot beside End combat (#165).
+   Nothing to list, no button: the table closes itself with no rows. */
+function initTableBtnHTML(ch){
+  if(!(ch.combatants||[]).length)return "";
+  return `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">Combatants ${_iniTableOpen?"▴":"▾"}</button>`;
 }
 function initChipHTML(r,ch){
   const turns=ch.initMode==="turns",show=ch.initShowRolls!==false;
@@ -249,27 +282,63 @@ function initTableHTML(ch){
     `<span class="seg">${[["turns","Turns"],["rounds","Rounds"]].map(([v,l])=>`<button type="button" data-inimode="${esc(v)}" class="${mode===v?"on":""}" aria-pressed="${mode===v?"true":"false"}">${esc(l)}</button>`).join("")}</span>`+
     `<button type="button" class="switch ${ch.initShowRolls!==false?"on":""}" id="iniRolls" role="switch" aria-checked="${ch.initShowRolls!==false?"true":"false"}" aria-label="Show rolls"></button><span class="ini-kind">Show rolls</span></div>`;
 }
-/* Where the chip row should be scrolled so the acting chip shows (final
-   review I2): `sl` is its scrollLeft now, `box` and `chip` client rects
-   ({left,right}). A chip already in view, or no actor, keeps `sl` — the
-   player's own sideways scroll survives a repaint. Pure, for the tests. */
-function initChipScroll(sl,box,chip){
-  if(!chip||!box)return sl;
-  const pad=8;
-  if(chip.left<box.left)return Math.max(0,Math.round(sl-(box.left-chip.left)-pad));
-  if(chip.right>box.right)return Math.round(sl+Math.min(chip.right-box.right+pad,chip.left-box.left));
-  return sl;
+/* How many chips fit on one side (#165), nearest the actor first: all of them
+   when they fit, else as many as fit beside the side's +N. Pure, for the tests. */
+function initFitCount(widths,avail,gap,moreW){
+  const total=widths.reduce((t,w)=>t+w,0)+gap*Math.max(0,widths.length-1);
+  if(total<=avail)return widths.length;
+  let used=0,n=0;
+  for(const w of widths){const need=used+(n?gap:0)+w;if(need>avail-moreW-gap)break;used=need;n++;}
+  return n;
 }
-/* After every repaint of the strip, which builds a fresh .ini-chips at
-   scrollLeft 0: put back where it was (`sl`), then bring the actor in. Sets
-   scrollLeft directly rather than scrollIntoView(), which may also scroll the
-   page. */
-function initKeepActorInView(sl){
-  const row=document.querySelector("#cvHead .ini-chips");if(!row)return;
-  row.scrollLeft=num(sl);
-  const n=row.querySelector(".ini-chip.now");if(!n)return;
-  const to=initChipScroll(row.scrollLeft,row.getBoundingClientRect(),n.getBoundingClientRect());
-  if(to!==row.scrollLeft)row.scrollLeft=to;
+/* One side: show every chip, measure, hide the farthest that don't fit, and
+   give the +N their ids in initiative order (the list it opens reads them). */
+function initFitSide(side){
+  const chips=[...side.querySelectorAll("[data-inichip]")],more=side.querySelector("[data-inimore]");if(!more)return;
+  chips.forEach(c=>{c.hidden=false;});
+  more.hidden=false;more.textContent="+"+chips.length+" ▾";   /* the widest it can read, measured */
+  const cs=typeof getComputedStyle==="function"?getComputedStyle(side):null,gap=cs?parseFloat(cs.columnGap)||0:0;
+  const near=side.classList.contains("l")?chips.slice().reverse():chips;
+  near.slice(initFitCount(near.map(c=>c.offsetWidth),side.clientWidth,gap,more.offsetWidth)).forEach(c=>{c.hidden=true;});
+  const off=chips.filter(c=>c.hidden);
+  more.hidden=!off.length;more.dataset.iniids=off.map(c=>c.dataset.inichip).join(",");
+  more.textContent=off.length?"+"+off.length+" ▾":"";
+  more.setAttribute("aria-label",off.length?`${off.length} more ${side.classList.contains("l")?"earlier this round":"still to come"}`:"");
+}
+/* After every repaint of the strip, on resize and once the fonts are in:
+   names change width with the font, so the fit is measured, never guessed. */
+function initFitStrip(){
+  closeIniFly();
+  document.querySelectorAll("#cvHead .ini-side").forEach(initFitSide);
+}
+/* The +N list: the table's own rows (initRowHTML), so a tap opens that
+   combatant's dialog through the same [data-inirow] route a table row uses. */
+function iniMoreHTML(ch,ids,k){
+  const set=new Set(ids),rows=(ch.combatants||[]).filter(r=>set.has(r.id));
+  const head=k==="l"?"Earlier this round":ch.initMode==="turns"?"Still to come":"Further down the order";
+  return `<div class="ini-fly-h">${esc(head)}</div>`+rows.map(r=>initRowHTML(r,ch)).join("");
+}
+let _iniFly=null;
+function openIniFly(btn){
+  const fly=document.getElementById("iniFly");if(!fly||!btn)return;
+  const was=_iniFly&&_iniFly.btn===btn;closeIniFly();if(was)return;   /* a second tap closes it */
+  const ids=String(btn.dataset.iniids||"").split(",").filter(Boolean);if(!ids.length)return;
+  fly.innerHTML=iniMoreHTML(character,ids,btn.dataset.inimore);
+  fly.hidden=false;_iniFly={btn};btn.setAttribute("aria-expanded","true");
+  /* fixed, under its +N: the strip sits in the sticky combat header */
+  const r=btn.getBoundingClientRect(),w=fly.offsetWidth||0,vw=document.documentElement.clientWidth||w;
+  fly.style.top=Math.round(r.bottom+4)+"px";
+  fly.style.left=Math.round(Math.max(6,Math.min(btn.dataset.inimore==="l"?r.left:r.right-w,vw-w-6)))+"px";
+  const first=fly.querySelector("button");if(first&&first.focus)first.focus({preventScroll:true});
+}
+/* Focus inside the list goes back to its +N before the list empties, so a
+   row's tap opens the combatant's dialog with the +N as its opener. */
+function closeIniFly(){
+  const fly=document.getElementById("iniFly");
+  if(fly&&_iniFly&&_iniFly.btn&&fly.contains&&fly.contains(document.activeElement)&&_iniFly.btn.focus)_iniFly.btn.focus({preventScroll:true});
+  if(fly){fly.hidden=true;fly.innerHTML="";}
+  if(_iniFly&&_iniFly.btn&&_iniFly.btn.setAttribute)_iniFly.btn.setAttribute("aria-expanded","false");
+  _iniFly=null;
 }
 /* Your chip and table row read your HP live (spec §4), so renderHP() calls
    this (final review I1). It patches YOUR chip and row in place, never the
@@ -278,7 +347,8 @@ function initKeepActorInView(sl){
    fires on the mousedown of the next tap, and a Next ▸ replaced between that
    mousedown and its mouseup never gets the click — driven: a tap on Next
    right after typing an HP did nothing. Patched in place, every other button
-   stays the same element, and the scroll and focus stay put. Cheap when
+   stays the same element, and focus stays put; the chip keeps its width and
+   whether the fit pass hid it. Cheap when
    there is no fight or the view is closed; a node that would come out the
    same is not touched. */
 function renderInitStrip(){
@@ -315,6 +385,21 @@ function initNext(){
   /* AFTER the repaint, which may have written "Round N" into the same live
      region. A screen reader speaks only the last write of a task, so a wrap
      says both in one message (final review m2). */
+  const a=(character.combatants||[]).find(x=>x.id===r.turnId);
+  if(!a)return;
+  const who=`${a.kind==="you"?(character.name||"You"):a.name}'s turn`;
+  if(r.wrapped){cvLiveRound=num(character.combatRound);setCombatLive(`Round ${cvLiveRound} — ${who}`);}
+  else setCombatLive(who);
+}
+/* Next's mirror (#165). Passing the top of a round steps the round back
+   through advanceRound(-1), the header's ◀, so spell and condition timers
+   rewind with it; round 1's first turn has nothing before it. */
+function initPrev(){
+  if(!initCanPrev(character))return;
+  const r=initPrevTurn(character.combatants||[],character.combatTurn);
+  character.combatTurn=r.turnId;
+  if(r.wrapped)advanceRound(-1);
+  renderCombatChrome();renderInitTable();scheduleSave();
   const a=(character.combatants||[]).find(x=>x.id===r.turnId);
   if(!a)return;
   const who=`${a.kind==="you"?(character.name||"You"):a.name}'s turn`;
