@@ -10,6 +10,8 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 - 2026-11-04: Merged #167 (feature from the test pass, Mike's mockup picks), not pushed: an open journal
   page sits on a page, in a style picked per page in the editor (Sheet, the default; Notebook; Book;
   Parchment), in both skins and themes.
+  Follow-up merged the same day (Mike: "really tight margins"): Notebook's rules 30px apart, room above,
+  below and beside the writing.
 - 2026-11-04: Merged #166 (P2 from the test pass), not pushed: End of combat's Open loot opens the trade
   window as Loot, its You get side alone (From, Worth, Take loot; no You give, tabs or switches), logged
   "Looted from …" under Trades; the Equipment card's Trade is unchanged. Mike: looted rules items read
@@ -37,9 +39,6 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   25 issues filed (#128–#152), with Mike's decisions on each recorded in `src/docs/PRE-RELEASE.md`.
 
 ## Pending decisions
-- **File the Balance trade feature** (raised 2026-11-04; design agreed, "all good"). The trade window gains
-  Balance trade (you pay the difference, splitting coins; or the other side pays in gp/sp/cp) and warns
-  before you give more than you get. Blocks: building it.
 - **Priorities for the pre-drive's 10 probable bugs** (raised 2026-11-02). Proposed P2 for most; the one
   open question is #1, Undo recovery re-recovering ammo in the next fight: P1 or P0. Blocks: step 4.
 - **File "a 2024 background typed into Or custom name gets no ability increase"** (raised 2026-11-04,
