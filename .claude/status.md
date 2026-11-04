@@ -2,11 +2,14 @@
 Updated: 2026-11-04 · Branch: main
 
 ## Current focus
-`/pre-release 1.9.0`, step 4: Mike is working through the test pass (`src/docs/QA-CHECKLIST.md`) and
-reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are done; steps 4 and 5
-(release-note review) remain, then `/release 1.9.0` and the private data release. No branch open.
+Releasing 1.9.0. Mike's test pass is finished (all 86 lines ticked, no FAIL lines) and every bug it
+found is fixed or filed for 1.9.1. Next: `/release 1.9.0`, which (since #180) closes the pre-release's
+step 4, runs step 5 (release notes), then the version gate and the cut; then the private data
+release. No branch open.
 
 ## Recent changes
+- 2026-11-04: Merged and pushed #180 (Mike): one command for a release. `/release X.Y.Z` runs the open
+  pre-release steps first, stops when one waits on Mike, and goes on to the cut; `/pre-release` is gone.
 - 2026-11-04: Filed the pre-drive's probable bugs with Mike's priorities: #170 (Undo recovery gives ammo
   back again, P1), #171 (high-level start's ASIs past the cap, P1), #172–#179 (P2), all for 1.9.1. #179 was
   filed through the REST API while GitHub's project API was rate-limited; its Priority and Status are
@@ -40,17 +43,12 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   Add background window drew empty +2/+1 boxes and refused. Their missing skills, tools, languages and
   equipment are #160 (P1, 1.9.1). Mike: keep the accidental test issues #156 and #157 (closed, not
   planned), don't delete them.
-- 2026-11-02: Test-pass bugs filed for 1.9.1: #153 (granted gold not in the coin boxes), #154 (granted
-  language pill; also on changing ancestry), #158 (the familiar paw always dim; icon colour, not faint).
-- 2026-11-02: Merged #155, three rounds (Mike's calls): Features & Traits is a full-width row, one card
-  per row; Statuses & Conditions sits under Skills; at three columns the columns always end level, in
-  CSS alone. Closed by hand.
 
 ## Pending decisions
 - None open.
 
 ## Loose ends
-- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#168 are uncommitted; the next `/pre-release`
+- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#179 are uncommitted; the next `/release`
   run commits them.
 - 37 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
 - Data releases (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs (#118), and
