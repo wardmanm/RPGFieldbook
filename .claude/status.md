@@ -7,6 +7,10 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 (release-note review) remain, then `/release 1.9.0` and the private data release. No branch open.
 
 ## Recent changes
+- 2026-11-04: Filed the pre-drive's probable bugs with Mike's priorities: #170 (Undo recovery gives ammo
+  back again, P1), #171 (high-level start's ASIs past the cap, P1), #172–#179 (P2), all for 1.9.1. #179 was
+  filed through the REST API while GitHub's project API was rate-limited; its Priority and Status are
+  set after the hourly reset.
 - 2026-11-04: Filed #169 (P2, 1.9.1: a 2024 background typed into Or custom name gets no ability
   increase) and noted Stonesinger's run-on Stonewise text on #160 (Mike's yes to both).
 - 2026-11-04: Merged and pushed #168 (feature from the test pass): Balance trade fills the coins that even
@@ -43,8 +47,7 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   CSS alone. Closed by hand.
 
 ## Pending decisions
-- **Priorities for the pre-drive's 10 probable bugs** (raised 2026-11-02). Proposed P2 for most; the one
-  open question is #1, Undo recovery re-recovering ammo in the next fight: P1 or P0. Blocks: step 4.
+- None open.
 
 ## Loose ends
 - `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#168 are uncommitted; the next `/pre-release`
