@@ -3051,6 +3051,8 @@ function block(html, needle, tag) {
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
   const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
   const sc = fs.readFileSync(path.join(__dirname, '..', 'css', '30-sheet.css'), 'utf8');
+  /* any spelling of the option, comments left out: {wide:true}, { wide: true }, {wide:!0, …} */
+  const wideCalls = js.replace(/\/\*[\s\S]*?\*\//g, '').match(/\bwide\s*:[^,})]*/g) || [];
   /* The wide dialog is Settings' frame: a fixed height and a body that does
      not scroll, because Settings scrolls its own two panes. Roll initiative
      has no scroller of its own, so its rows past the bottom were clipped,
@@ -3060,7 +3062,7 @@ function block(html, needle, tag) {
      /openModal\("Roll initiative",initRollHTML\(party,mid\)\);/.test(js) && !/openModal\("Roll initiative"[^\n]*wide/.test(js));
   ck('#161 only the four dialogs that scroll their own panes open wide (Settings, Trade, the Inventory log, ' +
      'End of combat): a new wide dialog is clipped, not scrolled (wiki: shell.md)',
-     (js.match(/,\{wide:true\}\)/g) || []).length === 4, (js.match(/,\{wide:true\}\)/g) || []).length);
+     wideCalls.length === 4, wideCalls);
   /* every input is width:100%, so the box filled its label and dropped under
      "I rolled", 12px below Roll for me and Apply (initiative, hit dice, level-up HP) */
   ck('#162 the "I rolled" box sits beside its words, at a fixed width',

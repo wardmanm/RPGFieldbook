@@ -8541,3 +8541,12 @@ Not here: on a phone a monster row's Init box wraps under its name (#91's layout
 Companions from the paw in initiative is #163.
 
 Pages: [combat view](../wiki/features/combat-view.md), [shell](../wiki/ui/shell.md).
+
+**Review** (opus, approve with nits): the code is right — nothing reads the wide class but
+`openModal()`, the ordinary dialog caps at 90dvh and its body scrolls, and the `.hd-how` rules touch
+only the three rows' one label each. One fix round, docs and test only. The two UNRELEASED bullets
+are dropped: v1.8.1 has no Roll initiative and no "I rolled" box (Spend a hit die and the
+initiative tracker are announced in the same Pending list), so they would have described fixes to
+windows players have not had. shell.md no longer says End of combat was clipped: it had `.ec-scroll`
+from the start, and Ruling 19 fixed the opposite, a tall empty box. The guard counts every `wide:` in
+the code with block comments left out, so `{ wide: true }` or `{wide:!0,…}` count too.

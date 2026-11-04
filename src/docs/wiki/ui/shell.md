@@ -360,10 +360,11 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
   and Settings comes back wide.
 - **The wide dialog is a frame for panes, not a bigger dialog.** `.modal.wide` is a fixed height and
   its `.m-body` never scrolls (with 4px of right padding), because Settings scrolls its own two panes.
-  A window with no scroller of its own is clipped there: the Inventory log (#47), End of combat (#105)
-  and Roll initiative (#161, Start ▸ out of reach on a phone) all hit it. Open wide only a window that
+  A window with no scroller of its own is clipped there, as the Inventory log (#47) and Roll
+  initiative (#161, Start ▸ out of reach on a phone) were; a short one is left a tall empty box, as
+  End of combat was until its own `:has(.ec-wrap)` rule (#105). Open wide only a window that
   scrolls its own content, as Settings, Trade, the Inventory log and End of combat do;
-  `rules-data.js` counts the `,{wide:true})` calls (four) and fails on a fifth. → ledger L8514
+  `rules-data.js` counts every `wide:` in the code (four) and fails on a fifth. → ledger L8514
 - **The modal title is `textContent`, the body is `innerHTML`.** Callers escape the body and must
   not escape the title. `rules-data.js` pins the assignment and reads every `openModal()` call's
   first argument, refusing `esc(` or an entity in it.
