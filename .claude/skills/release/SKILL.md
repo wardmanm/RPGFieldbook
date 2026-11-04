@@ -1,6 +1,6 @@
 ---
 name: release
-description: Use when Mike types /release to cut and publish a Fieldbook release — an app release, a public rules-data release, or a private data release.
+description: Use when Mike types /release to prepare, cut and publish a Fieldbook release — an app release (its pre-release steps first, then the cut), a public rules-data release, or a private data release.
 argument-hint: [app|data|private] [version]
 disable-model-invocation: true
 ---
@@ -11,7 +11,8 @@ Arguments: `$ARGUMENTS` — optional kind (`app`, `data`, `private`), optional v
 
 ## Who decides what
 
-Mike typing `/release` is his instruction to prepare and cut a release; CLAUDE.md's "never cut a
+Mike typing `/release` is his instruction to prepare and cut a release — for an app release, the
+pre-release steps included (§1a); CLAUDE.md's "never cut a
 release on your own" means *without* this command, never *despite* it. Two gates stay his:
 
 - **Gate 1 — the number.** Nothing is cut until he confirms the exact version you show him.
@@ -25,11 +26,27 @@ release. "Skip the checks" never skips preflight or a gate: say so in one line a
 
 | What's waiting | Release |
 |---|---|
-| bullets under `## Pending` in `src/docs/UNRELEASED.md` | **app** (`./build.sh --release`), which carries changed public data too; it needs `/pre-release X.Y.Z` complete first |
+| bullets under `## Pending` in `src/docs/UNRELEASED.md` | **app** (`./build.sh --release`), which carries changed public data too; its pre-release comes first (§1a) |
 | no bullets; `node scripts/data-release.js --dry-run` lists changed packs | **data** |
 | `_private-data` has changed packs (`node scripts/data-release.js --registry _private-data/data/packs.json --data-root _private-data/data --dry-run`) | **private**, after any public release above |
 
 If the argument names a kind that isn't due, say so and recommend the one that is.
+
+## 1a. An app release: the pre-release first
+
+An app release needs its pre-release record complete for the exact version (#127): `release.js`
+refuses the cut otherwise. Name the version first — the one Mike typed; else show the current
+`APP_VERSION`, suggest the next, and ask — then run `node scripts/pre-release-record.js X.Y.Z`:
+
+- **complete:** go on to §2.
+- **anything else:** follow [pre-release.md](pre-release.md) from its preflight. It creates or
+  resumes the record `src/docs/PRE-RELEASE.md` and runs the open steps in order, with Mike's
+  confirmations, committing each on main. When a step waits on him (the test pass, a P0 being
+  fixed), stop and say what it waits on; his next `/release X.Y.Z` resumes there. When step 5 is
+  done, go on to §2 in the same run.
+
+Naming the version here is not Gate 1: Gate 1 still asks for the exact number before the cut.
+(The pre-release was its own command, `/pre-release`, until #180.)
 
 ## 2. Preflight — report every line with its result
 
@@ -39,12 +56,12 @@ git status --porcelain                                        # every line
 PATH="$PWD/.venv/bin:$PATH" ./src/tests/run.sh                # all suites; PDF suites run
 git worktree list; git branch --no-merged main                # nothing half-merged
 git -C _private-data status -sb                               # committed; pushed unless releasing it
-node scripts/pre-release-record.js                            # app only: the /pre-release record is complete
+node scripts/pre-release-record.js                            # app only: the pre-release record is complete
 ```
 
 - **The pre-release record (app releases only, #127).** `node scripts/pre-release-record.js`
-  checks `src/docs/PRE-RELEASE.md`, the record `/pre-release` keeps; the version it names is the
-  one you propose at Gate 1. Then check that no issue in that milestone with Priority P0 is open:
+  checks `src/docs/PRE-RELEASE.md`, the record §1a keeps; the version it names is the one you
+  propose at Gate 1. Then check that no issue in that milestone with Priority P0 is open:
   a number printed by both of these is an open P0.
 
   ```bash
@@ -53,11 +70,11 @@ node scripts/pre-release-record.js                            # app only: the /p
     --jq '.items[]|select(.content.type=="Issue" and .milestone.title=="vX.Y.Z" and .priority=="P0")|.content.number'
   ```
 
-  An incomplete record, a missing one, or an open P0: stop, say which, and send Mike to
-  `/pre-release X.Y.Z`. Do not propose a version. Data and private releases skip both checks.
+  An incomplete record, a missing one, or an open P0: say which and go back to §1a (an open P0
+  reopens step 4). Do not propose a version. Data and private releases skip both checks.
 
 - **The private repo ahead of its remote** by exactly a `docs: pre-release X.Y.Z — paths moved`
-  commit (app releases): expected. `/pre-release` step 1 made it when `move-docs.js` rewrote the
+  commit (app releases): expected. The pre-release's step 1 made it when `move-docs.js` rewrote the
   private leak allowlist, and it is pushed right after public main (Gate 2), never before. Anything
   else unpushed there: say so and ask.
 - **`??` lines:** an untracked file is missing from the tagged build. Ask whether each should be
@@ -65,7 +82,7 @@ node scripts/pre-release-record.js                            # app only: the /p
 - **` M` lines:** list each and ask whether it belongs in this release; `git add -A` will include it.
   Do not propose a version until Mike has answered.
 - **The milestone:** read the open roadmap page (`src/docs/wiki/roadmap/<version>.md`, or
-  `src/docs/archive/<version>/roadmap-<version>.md` once `/pre-release` has archived it). If this
+  `src/docs/archive/<version>/roadmap-<version>.md` once the pre-release has archived it). If this
   release ships part of a milestone, say which items are in and which are not.
 - Check memory for a release freeze. Read the pending bullets back to Mike.
 
@@ -74,8 +91,8 @@ node scripts/pre-release-record.js                            # app only: the /p
 Propose it: for an app release, the version the pre-release record names; for data, the data
 script's `X.Y.Z-N`. A typed version is checked (higher than current; `X.Y.Z` for app, `X.Y.Z-N` for data).
 "Minor" once meant 1.7.1, so always ask: "Cut **vX.Y.Z**?" — then wait. If Mike answers with an
-app version the record doesn't name, stop: that number needs its own `/pre-release` (`release.js`
-would refuse it anyway).
+app version the record doesn't name, stop: that number needs its own pre-release, §1a with it
+(`release.js` would refuse it anyway).
 
 ## 4. Cut
 
@@ -128,5 +145,6 @@ On a failure: `RELEASING.md` §2 and §4. Then run `/status`, and report the rel
 | "He's in a hurry, skip tests" | Preflight is the release; one line to say so, then run it |
 | "Those `M` files are probably part of it" | Ask; `git add -A` takes them all |
 | "Pushed, done" | Not until CI is green and the assets are checked |
-| "The pre-release is nearly done, cut anyway" | `release.js` refuses; send Mike to `/pre-release` |
+| "The pre-release is nearly done, cut anyway" | `release.js` refuses; finish it first (§1a) |
+| "The pre-release named the version, so Gate 1 is done" | Gate 1 still asks for the exact number |
 | "A P1 is open in the milestone, stop" | Only an open P0 blocks; P1s carry the next fix version's label |

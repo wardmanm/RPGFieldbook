@@ -1,13 +1,10 @@
----
-name: pre-release
-description: Use when Mike types /pre-release <version> to get an app release ready before it is cut — specs and plans filed by version, out-of-date docs archived or corrected, loose ends filed as issues, a high-level test pass for Mike over everything new plus Claude's separate pre-drive, their bugs filed, and release notes a player can read. /release and ./build.sh --release refuse an app release until this is complete for that exact version.
-argument-hint: <version X.Y.Z>
-disable-model-invocation: true
----
+# Pre-release (part of /release)
 
-# Pre-release
-
-Arguments: `$ARGUMENTS` — the version being prepared, `X.Y.Z`. It is required: ask for it if missing.
+`/release` follows this for an app release whose pre-release record isn't complete (`SKILL.md`
+§1a): specs and plans filed by version, out-of-date docs archived or corrected, loose ends filed as
+issues, a high-level test pass for Mike over everything new plus Claude's separate pre-drive, their
+bugs filed, and release notes a player can read. `X.Y.Z` is the version `/release` named. (It was
+its own command, `/pre-release`, until #180.)
 
 The design, which binds this procedure: `src/docs/specs/1.9.0/2026-10-29-pre-release-design.md`. The
 record this skill keeps is what `scripts/release.js` checks: `./build.sh --release X.Y.Z` refuses
@@ -17,8 +14,8 @@ until `src/docs/PRE-RELEASE.md` names exactly `X.Y.Z` with all five steps `done`
 
 ## Who decides what
 
-Mike typing `/pre-release` is his instruction to prepare the release. **He decides; you propose and
-then carry out what he confirmed.** He confirms:
+Mike typing `/release` for an app release is his instruction to prepare it. **He decides; you
+propose and then carry out what he confirmed.** He confirms:
 
 - the move list, and archive, correct or keep for each out-of-date doc (step 1);
 - file, skip or merge with #N for each loose end, and its priority (step 2);
@@ -26,7 +23,8 @@ then carry out what he confirmed.** He confirms:
 - each release-note rewrite, and the final yes (step 5).
 
 Nothing is written to GitHub (issues, labels, project fields, comments) before his confirmation.
-You commit each step on main. **You never push, and you never cut the release:** that is `/release`.
+You commit each step on main. **You never push here, and nothing is cut here:** the cut and the
+push are `/release`'s own gates (`SKILL.md` §3–§5), after step 5.
 "Skip the checks" never skips a step: say so in one line and keep going.
 
 ## 0. Preflight, every run
@@ -78,7 +76,7 @@ grep -o 'APP_VERSION="[^"]*"' src/js/30-version.js    # the current version
   (3, 4 and 5: new work can bring new release notes), and carries his marks forward (step 3).
 - **Every step already done.** Run `node scripts/pre-release-record.js X.Y.Z`, then re-check two
   things: whether main has moved (above), and whether a P0 is open (step 4's query). If neither,
-  say "Pre-release X.Y.Z is complete — run /release X.Y.Z." and change nothing. If main moved,
+  say "Pre-release X.Y.Z is complete." and go on to `/release`'s preflight (`SKILL.md` §2). If main moved,
   ask about the rebuild, as above. If a P0 is open, step 4's "done when" no longer holds: say
   so, name it, and reopen step 4, which reopens every later step.
 
@@ -400,8 +398,9 @@ set, and no P0 in the milestone is open.
    one item per bullet, a wrapped bullet joined into one line. Ask for a final yes.
 4. Commit.
 
-**Done when** Mike gives the final yes. Then say: "Pre-release X.Y.Z is complete — run /release
-X.Y.Z." Stop there.
+**Done when** Mike gives the final yes. Then say "Pre-release X.Y.Z is complete." and go on to
+`/release`'s preflight (`SKILL.md` §2) in the same run: Gate 1 still asks for the number before
+anything is cut.
 
 ## Red flags — stop
 
@@ -418,6 +417,7 @@ X.Y.Z." Stop there.
 | "The tree is dirty, but it's only his checklist marks" | Commit the two files as the record commit first; anything else, refuse |
 | "It's a P0, but the template adds the fix-version label" | A P0 never gets the fix-version label; set `PRIORITY` and the commands branch |
 | "I'll run the filing block in two calls" | One Bash call: variables do not survive between calls |
-| "Every step is done, I'll run /release" | Stop. `/release` is Mike's to type |
+| "Every step is done, I'll cut" | Go on to `/release`'s preflight and Gate 1: the number is Mike's to confirm |
+| "The test pass isn't finished, I'll go on to step 5" | Stop and say what step 4 waits on; his next `/release X.Y.Z` resumes |
 | "I'll push the step commits" | Never: they go up with the release |
 | "The private allowlist is committed, I'll push it" | Never before public main: `/release` pushes it right after |

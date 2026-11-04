@@ -6,7 +6,7 @@ How a version gets from your working copy to a player's download. Dev-only — t
 Publishing is automated. **You never upload assets by hand.** Pushing a tag is the whole trigger,
 and nothing goes public until Mike approves the run's `publish` job in GitHub (§2, the approval gate).
 
-**For Claude: Mike starts a release by typing `/release`** — the `release` skill (`.claude/skills/release/`) runs the steps below with his two confirmations, the exact version and "publish" (#109). An app release needs **`/pre-release X.Y.Z`** finished first (§0, #127).
+**For Claude: Mike starts a release by typing `/release`** — the `release` skill (`.claude/skills/release/`) runs the steps below with his two confirmations, the exact version and "publish" (#109). An app release runs its **pre-release** first (§0, #127): `/release X.Y.Z` does the open steps before it cuts (#180).
 
 **`./dev.sh` drives all of this from a menu** — build, tests, cut a release, cut a data release, and a
 condensed copy of the checklist — so you shouldn't need this file for the routine path. It's here for the detail:
@@ -14,11 +14,16 @@ what each guard refuses and why, and how to recover.
 
 ---
 
-## 0. Before you cut: `/pre-release`
+## 0. Before you cut: the pre-release
 
-An app release starts with **`/pre-release X.Y.Z`** in Claude Code (#127; the `pre-release` skill,
-`.claude/skills/pre-release/`). It runs on **main** and refuses on any other branch: it names the
-branch and stops, and never switches (`/release`, by contrast, switches to main itself). It also
+An app release starts with its **pre-release**, which **`/release X.Y.Z`** in Claude Code runs before
+it cuts (#127; part of the `release` skill since #180, `.claude/skills/release/pre-release.md`; it
+was its own command, `/pre-release`, before that). `/release` runs the open steps in order; when one
+waits on Mike (his test pass, a P0 being fixed) it stops and says so, and his next `/release X.Y.Z`
+resumes there; after step 5 it goes on to the cut in the same run, with Gate 1 still asking for the
+exact number. The pre-release runs on **main** and refuses on any other branch: it names the
+branch and stops, and never switches (`/release`'s own preflight switches to main only once the
+pre-release is complete). It also
 refuses a dirty tree, except for its own two files, `src/docs/PRE-RELEASE.md` and
 `src/docs/QA-CHECKLIST.md`, which it commits first on a resume (`docs: pre-release X.Y.Z — record`).
 It works through five steps, in strict order, each confirmed by Mike and committed on main as
@@ -47,8 +52,8 @@ them in `src/docs/PRE-RELEASE.md`:
 Reopening a step reopens every later step. If main moves after step 3 (a merged P0 fix, say; the
 pre-release's own commits and a `docs(repo): status` commit don't count), a rerun lists what arrived and asks whether to rebuild the checklist, which keeps Mike's marks on
 every unchanged line and reopens steps 3 to 5; declined, the checklist records "Kept at `<sha>`"
-and the next rerun counts from there. With every step done, a rerun changes nothing and says to
-run `/release X.Y.Z`.
+and the next rerun counts from there. With every step done, `/release` goes straight on to its
+preflight and the cut.
 
 **The gate.** `./build.sh --release` (in `scripts/release.js`) refuses, before it writes anything,
 unless the record names exactly the version being cut (the resolved one: `patch` becomes a number
@@ -92,7 +97,7 @@ because that state publishes nothing and produces no error anywhere.
 
 ### The steps
 
-**0. `/pre-release X.Y.Z`** (§0). `--release` refuses until it is complete.
+**0. The pre-release** (§0), which `/release X.Y.Z` runs first. `--release` refuses until it is complete.
 
 **1. Write the notes as you work.** One `- ` bullet per player-visible change in
 `src/docs/UNRELEASED.md`. The header counts them; `--release` refuses if there are none.

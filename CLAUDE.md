@@ -88,10 +88,12 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly three 
   say a release is ready, and stop. **Mike typing `/release` is the exception:** the `release` skill
   (`.claude/skills/release/`) runs the release, cutting only after he confirms the exact version and
   publishing only after he says "publish". Procedure: [RELEASING](src/docs/RELEASING.md).
-  **An app release needs `/pre-release <ver>` first** (`.claude/skills/pre-release/`, Mike types
-  it): docs filed by version, loose ends and QA bugs filed as issues, release notes checked, each
-  step recorded in `src/docs/PRE-RELEASE.md`. `./build.sh --release` refuses until that record is
-  complete for exactly that version.
+  **An app release starts with its pre-release** (`.claude/skills/release/pre-release.md`, part of
+  `/release` since #180): docs filed by version, loose ends and QA bugs filed as issues, release
+  notes checked, each step recorded in `src/docs/PRE-RELEASE.md`. `/release X.Y.Z` runs the open
+  steps first, stops when one waits on Mike (his next `/release` resumes), and goes on to the cut
+  once all five are done. `./build.sh --release` refuses until that record is complete for exactly
+  that version.
 - **Filing a bug, feature or task: `/issue`** (`.claude/skills/issue/`, Mike types it). It drafts the
   issue and files it only after his yes, with the milestone, labels and project #3 fields set.
 - **Screenshots are required for any UI-affecting change** — each affected tab, before and after for
@@ -193,7 +195,7 @@ At the end of any task that changed behaviour, data, the converter, the build or
 
 Keep `.claude/status.md` current so Mike's daily update knows where this project stands. Update it before every push and before ending a session, even if no code changed, with the `status` skill (`/status`). It is written on main only: worktree branches never touch it, so it never conflicts in a merge (#108).
 
-A commit that changes only this file goes straight to main (docs(repo): status). It's the one exception to working on a branch (Mike, 2026-10-19), besides release preparation: `/pre-release` commits its steps on main, and `/release` its release commit.
+A commit that changes only this file goes straight to main (docs(repo): status). It's the one exception to working on a branch (Mike, 2026-10-19), besides release preparation: `/release` commits the pre-release's steps and its release commit on main.
 
 Keep the file under ~60 lines, in this structure:
 

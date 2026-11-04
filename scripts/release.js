@@ -9,7 +9,7 @@
  *
  *   node scripts/release.js patch|minor|major|X.Y.Z
  *
- * An app release needs `/pre-release <version>` finished first (#127): it
+ * An app release needs its pre-release finished first (#127; `/release` runs it, #180): it
  * refuses unless src/docs/PRE-RELEASE.md names exactly the new version with
  * every step done, and after the cut it files that record under
  * src/docs/archive/<version>/ (scripts/pre-release-record.js).
@@ -91,7 +91,7 @@ const cmp = (a, b) => {
 if (cmp(next, cur) <= 0) die(`refusing to go from ${cur} to ${next} — the new version must be higher`);
 
 /* ---------------- the pre-release record (#127) ----------------
-   An app release needs `/pre-release <next>` finished first: the record
+   An app release needs its pre-release for <next> finished first: the record
    src/docs/PRE-RELEASE.md naming exactly `next`, every step done (spec
    2026-10-29-pre-release-design.md §5). Checked here, after `next` is known and
    before anything is written. Offline on purpose: the open-P0 check against
@@ -162,7 +162,7 @@ const keep = raw.slice(0, raw.indexOf("\n## Pending"));
 fs.writeFileSync(NOTEBOOK, keep + "\n## Pending\n\n_Nothing yet._\n");
 
 /* ---------------- file the pre-release record (#127, spec §3) ----------------
-   Last, so a refusal above leaves it where /pre-release can resume it. The cut is
+   Last, so a refusal above leaves it where /release can resume the pre-release. The cut is
    written by now, so a failed move does not undo or stop it (build.sh runs under
    `set -e`, and stopping here would leave a half-built release): it says so, with
    the exact command that files the record by hand, and the cut carries on.

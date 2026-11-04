@@ -347,28 +347,28 @@ const record = (ver, open = []) => [
      p.version === '1.9.0' && p.steps.length === 5 && p.steps[3].state === 'open' && p.steps[0].state === 'done', p);
   ck('#127 the steps are the spec\'s five, in order', same(rec.STEPS, ['Docs', 'Outstanding issues', 'QA checklist', 'QA bugs', 'Release notes']));
   ck('#127 a complete record for exactly that version passes', rec.recordProblem(record('1.9.0'), '1.9.0') === null);
-  ck('#127 no record: refused, naming /pre-release',
-     rec.recordProblem(null, '1.9.0') === 'no pre-release record for 1.9.0 (src/docs/PRE-RELEASE.md does not exist). Run /pre-release 1.9.0 first.');
+  ck('#127 no record: refused, naming /release',
+     rec.recordProblem(null, '1.9.0') === 'no pre-release record for 1.9.0 (src/docs/PRE-RELEASE.md does not exist). Run /release 1.9.0 first.');
   ck('#127 a record for another version: refused, naming both',
-     rec.recordProblem(record('1.9.1'), '1.9.0') === 'src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /pre-release 1.9.0 first.');
+     rec.recordProblem(record('1.9.1'), '1.9.0') === 'src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /release 1.9.0 first.');
   ck('#127 ...1.9.0 is not 1.9.00', rec.recordProblem(record('1.9.00'), '1.9.0') !== null);
   ck('#127 an open step: refused, naming the first open one',
-     rec.recordProblem(record('1.9.0', [5, 3]), '1.9.0') === 'pre-release 1.9.0 is not finished: step 3. QA checklist is open. Run /pre-release 1.9.0 to finish it.');
+     rec.recordProblem(record('1.9.0', [5, 3]), '1.9.0') === 'pre-release 1.9.0 is not finished: step 3. QA checklist is open. Run /release 1.9.0 to finish it.');
   ck('#127 a state that is not exactly "done" is open', rec.recordProblem(record('1.9.0').replace('| 2. Outstanding issues | done', '| 2. Outstanding issues | Done'), '1.9.0')
      .includes('step 2. Outstanding issues is open'));
   ck('#127 a missing step row: refused', rec.recordProblem(record('1.9.0').replace(/^\| 5\. .*\n/m, ''), '1.9.0') ===
-     'src/docs/PRE-RELEASE.md has no row for step 5. Release notes. Run /pre-release 1.9.0 to finish it.');
+     'src/docs/PRE-RELEASE.md has no row for step 5. Release notes. Run /release 1.9.0 to finish it.');
   /* #127 ruling 18: each step has exactly one row, or the record is invalid (fail closed) */
   const row3 = '| 3. QA checklist | done | 2026-10-30 | ok |\n';
   ck('#127 a duplicated step row, done then open: refused, naming the row',
      rec.recordProblem(record('1.9.0').replace(row3, row3 + '| 3. QA checklist | open | | |\n'), '1.9.0') ===
-     'src/docs/PRE-RELEASE.md has 2 rows for step 3. QA checklist. Run /pre-release 1.9.0 to finish it.');
+     'src/docs/PRE-RELEASE.md has 2 rows for step 3. QA checklist. Run /release 1.9.0 to finish it.');
   ck('#127 a duplicated step row, done then done: refused too',
      rec.recordProblem(record('1.9.0').replace(row3, row3 + row3), '1.9.0') ===
-     'src/docs/PRE-RELEASE.md has 2 rows for step 3. QA checklist. Run /pre-release 1.9.0 to finish it.');
+     'src/docs/PRE-RELEASE.md has 2 rows for step 3. QA checklist. Run /release 1.9.0 to finish it.');
   ck('#127 a missing row 4: refused, naming it',
      rec.recordProblem(record('1.9.0').replace(/^\| 4\. .*\n/m, ''), '1.9.0') ===
-     'src/docs/PRE-RELEASE.md has no row for step 4. QA bugs. Run /pre-release 1.9.0 to finish it.');
+     'src/docs/PRE-RELEASE.md has no row for step 4. QA bugs. Run /release 1.9.0 to finish it.');
   ck('#127 ...an invalid record is refused as invalid even with an earlier step open',
      rec.recordProblem(record('1.9.0', [1]).replace(row3, row3 + row3), '1.9.0').includes('has 2 rows for step 3'));
   ck('#127 no heading: refused', rec.recordProblem('just text\n', '1.9.0').includes('has no "# Pre-release X.Y.Z" heading'));
@@ -380,9 +380,9 @@ const record = (ver, open = []) => [
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'fb-record-'));
   const cli = (...a) => spawnSync('node', [RECORD_JS, ...a, '--root', d], {encoding: 'utf8'});
   let r = cli('1.9.0');
-  ck('#127 the CLI with no record exits 1 with the gate\'s words', r.status === 1 && r.stderr.includes('Run /pre-release 1.9.0 first'), r.stderr);
+  ck('#127 the CLI with no record exits 1 with the gate\'s words', r.status === 1 && r.stderr.includes('Run /release 1.9.0 first'), r.stderr);
   r = cli();
-  ck('#127 ...and with no version either', r.status === 1 && r.stderr.includes('Run /pre-release X.Y.Z first'), r.stderr);
+  ck('#127 ...and with no version either', r.status === 1 && r.stderr.includes('Run /release X.Y.Z first'), r.stderr);
   fs.mkdirSync(path.join(d, 'src/docs'), {recursive: true});
   fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.0', [4]));
   r = cli();
@@ -428,7 +428,7 @@ const record = (ver, open = []) => [
   r = cli();
   ck('#127 the CLI with no version refuses a heading that is not X.Y.Z, as release.js does',
      r.status === 1 && !r.stdout.includes('complete') &&
-     r.stderr.trim() === "pre-release: src/docs/PRE-RELEASE.md's heading names v1.9.0, which is not a version X.Y.Z: release.js refuses it. Run /pre-release X.Y.Z first.", r.stdout + r.stderr);
+     r.stderr.trim() === "pre-release: src/docs/PRE-RELEASE.md's heading names v1.9.0, which is not a version X.Y.Z: release.js refuses it. Run /release X.Y.Z first.", r.stdout + r.stderr);
   fs.writeFileSync(path.join(d, rec.RECORD), 'just text\n');
   r = cli();
   ck('#127 ...and a record with no heading', r.status === 1 && r.stderr.includes('has no "# Pre-release X.Y.Z" heading'), r.stderr);
@@ -436,11 +436,11 @@ const record = (ver, open = []) => [
   fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.0', [2]));
   r = cli('1.9.0');
   ck('#127 a refusal that names the step reads "pre-release" once',
-     r.status === 1 && r.stderr.trim() === 'pre-release 1.9.0 is not finished: step 2. Outstanding issues is open. Run /pre-release 1.9.0 to finish it.', r.stderr);
+     r.status === 1 && r.stderr.trim() === 'pre-release 1.9.0 is not finished: step 2. Outstanding issues is open. Run /release 1.9.0 to finish it.', r.stderr);
   fs.writeFileSync(path.join(d, rec.RECORD), record('1.9.1'));
   r = cli('1.9.0');
   ck('#127 ...and any other refusal is prefixed "pre-release: " once',
-     r.status === 1 && r.stderr.trim() === 'pre-release: src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /pre-release 1.9.0 first.', r.stderr);
+     r.status === 1 && r.stderr.trim() === 'pre-release: src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /release 1.9.0 first.', r.stderr);
   fs.rmSync(d, {recursive: true, force: true});
 }
 

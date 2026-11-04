@@ -411,13 +411,13 @@ d = checkout()
 rec_path = os.path.join(d, "src/docs/PRE-RELEASE.md")
 for name, rec, level, msg in [
         ("no record", None, "1.9.0",
-         "no pre-release record for 1.9.0 (src/docs/PRE-RELEASE.md does not exist). Run /pre-release 1.9.0 first."),
+         "no pre-release record for 1.9.0 (src/docs/PRE-RELEASE.md does not exist). Run /release 1.9.0 first."),
         ("a record for another version", ("1.9.1", ()), "1.9.0",
-         "src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /pre-release 1.9.0 first."),
+         "src/docs/PRE-RELEASE.md is for 1.9.1, not 1.9.0. Run /release 1.9.0 first."),
         ("an open step, naming the first", ("1.9.0", (3, 5)), "1.9.0",
-         "pre-release 1.9.0 is not finished: step 3. QA checklist is open. Run /pre-release 1.9.0 to finish it."),
+         "pre-release 1.9.0 is not finished: step 3. QA checklist is open. Run /release 1.9.0 to finish it."),
         ("a level that resolves to another version", ("1.9.0", ()), "patch",
-         "src/docs/PRE-RELEASE.md is for 1.9.0, not 1.8.1. Run /pre-release 1.8.1 first.")]:
+         "src/docs/PRE-RELEASE.md is for 1.9.0, not 1.8.1. Run /release 1.8.1 first.")]:
     if os.path.exists(rec_path):
         os.remove(rec_path)
     if rec:
@@ -448,7 +448,7 @@ ck("#127 release.js refuses a version whose tag exists: cut before",
    and git(d, "diff", "--stat").stdout.strip() == "" and untracked_all(d) == "?? src/docs/PRE-RELEASE.md", (r.stderr, untracked_all(d)))
 shutil.rmtree(d)
 
-# ---------- #127 ruling 17: a cut undone with `git checkout -- .` (the record committed, as /pre-release does)
+# ---------- #127 ruling 17: a cut undone with `git checkout -- .` (the record committed, as the pre-release does)
 d = checkout()
 prerelease(d, "1.9.0")
 git(d, "add", "-A")

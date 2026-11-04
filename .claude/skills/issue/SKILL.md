@@ -44,7 +44,7 @@ file anyway, or add it as a comment on #N (`gh issue comment <N> --body-file -`,
   A **bug** or **task** goes there. A **feature** goes in the milestone Mike names, or none.
 - **Labels.** The kind: `bug`, `feature` or `task`. A bug or task also carries the **next fix
   version**: the milestone's patch plus one (`v1.9.0` → `1.9.1`), except a **P0**, which carries no
-  fix version label (it stays in the milestone, where `/pre-release`'s open-P0 check finds it).
+  fix version label (it stays in the milestone, where the pre-release's open-P0 check finds it).
 - **Project #3 (RPGFieldbook):** Status **Backlog**, and for a bug or task a **Priority**:
   - **P2**: a minor bug, a visual problem, a tweak.
   - **P1**: a medium bug; functionality is affected, a workaround exists, no data is at risk.
@@ -135,7 +135,7 @@ with `bash <file>`.
 - Report the number and link, and what was set.
 - **A pre-release in progress** (`src/docs/PRE-RELEASE.md` exists, for the milestone's version):
   add a row to its "Step 4: bugs from QA" table for a bug found in testing, `| <checklist line or
-  "reported by Mike"> | <title> | <Pn> | #N | open |`. Don't commit: the next `/pre-release` run
+  "reported by Mike"> | <title> | <Pn> | #N | open |`. Don't commit: the next `/release` run
   commits the record first.
 - Nothing else changes: no code, no other file.
 

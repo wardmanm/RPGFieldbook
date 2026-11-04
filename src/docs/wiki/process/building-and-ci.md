@@ -15,7 +15,7 @@ several branches at once is [WORKTREES](../../WORKTREES.md).
 `scripts/data-release.js`, `scripts/data-release-notes.js`; `scripts/move-docs.js` (`findRefs()`,
 `rewriteText()`, `planMoves()`, `writeProblems()`, `applyPlan()`, `undoCommands()`, `scanFiles()`);
 `scripts/pre-release-record.js` (`recordProblem()`, `gateProblem()`, `archiveRecord()`,
-`archiveByHand()`); `.claude/skills/pre-release/`, `.claude/skills/release/`;
+`archiveByHand()`); `.claude/skills/release/` (`SKILL.md` and `pre-release.md`);
 `APP_VERSION` and `DATA_VERSIONS` in `30-version.js` · **Data:** `data/packs.json`, `tools/data-kit/example-pack/example-pack.json` ·
 **Tests:** `docs.js` (zip allowlist vs README §9, README names the archive and the kit,
 `data/packs.json` against `DATA_VERSIONS`; every link to a spec, plan or archived doc resolves; the
@@ -60,8 +60,8 @@ filing included), `pre-release.js` (`move-docs.js` on a scratch tree, the record
     (tools/data-kit/fbdata.py)" — `--no-zip` is no help by this point, since it needs Python too
     (step 6 already ran).
 11. **The player zip**, then its allowlist guard (below); then **the data kit zip** (below).
-12. The closing line. With notes pending it says how many, and how to release: `/pre-release X.Y.Z`
-    first, then `--release`, which refuses until that record is complete.
+12. The closing line. With notes pending it says how many, and how to release: `/release X.Y.Z`,
+    which runs the pre-release first; `--release` refuses until that record is complete.
 
 A bare `./build.sh` never changes `APP_VERSION`, `CHANGELOG`, the notebook or `data/packs.json`, so
 it is safe to run constantly. It does **not** run the test suites; `./src/tests/run.sh` is separate,
@@ -242,16 +242,19 @@ commands (#90); it refuses those three, saying to link the private repo first, w
 `_private-data` is not linked (#85). Then
 there is commit (`c`), which builds a `type [26/30]: message, closes #26, closes #30` subject, stages
 with `git add -A` and pushes without `--follow-tags`. Release (`7`) confirms (saying `--release`
-refuses without a complete `/pre-release` record), runs `--release`, then prints the commit, tag and
+refuses without a complete pre-release record), runs `--release`, then prints the commit, tag and
 push commands and runs none of them. Data release (`d`) runs `data-release.js --dry-run`, asks, then
 bumps `data/packs.json` and prints its commands, also running none. The last are the release
-checklist (`8`, which starts at step 0, `/pre-release X.Y.Z`), open the app (`9`) and where things
+checklist (`8`, which starts at step 0, `/release X.Y.Z` running the pre-release), open the app (`9`) and where things
 live (`s`). It is Bash 3.2 compatible, and with no TTY it prints the menu and exits 0.
 
-### `/pre-release`, `/release`, `/issue` and `/status`
+### `/release` (with its pre-release), `/issue` and `/status`
 
-`/pre-release X.Y.Z` (`.claude/skills/pre-release/`, #127) gets an app release ready before it is
-cut. It runs on main and refuses anywhere else, naming the branch: it never switches. Its
+The **pre-release** (#127; `.claude/skills/release/pre-release.md`) gets an app release ready before
+it is cut. Since #180 it is part of `/release X.Y.Z`, not a command of its own: `/release` reads the
+record first (§1a) and runs the open steps in order; when one waits on Mike (the test pass, a P0
+being fixed) it stops and says so, and his next `/release X.Y.Z` resumes; after step 5 it goes on to
+the cut in the same run, Gate 1 still asking for the exact number. The pre-release runs on main and refuses anywhere else, naming the branch: it never switches. Its
 clean-tree check lets through exactly two files, the record `src/docs/PRE-RELEASE.md` and the
 checklist `src/docs/QA-CHECKLIST.md`, which a resume commits first (`docs: pre-release X.Y.Z —
 record`). It works through five steps in strict order, and reopening one reopens every later one:
@@ -277,14 +280,15 @@ If main moves after step 3 (its own commits and `docs(repo): status` commits don
 asks whether to rebuild the checklist, carrying Mike's marks
 forward on every unchanged line; declined, it records "Kept at `<sha>`" and counts from there.
 `/release`'s preflight then runs `node scripts/pre-release-record.js` and the open-P0 query (the
-same query `/pre-release` uses, which `docs.js` keeps identical) before proposing a version.
+same query the pre-release's step 4 uses, which `docs.js` keeps identical) before proposing a version.
 
 Two more project skills, typed as slash commands (#108, #109). `/release [app|data|private] [version]`
-(`.claude/skills/release/`) runs a release for Mike: it works out which kind is due, runs the
+(`.claude/skills/release/`) runs a release for Mike: it works out which kind is due, for an app
+release runs the pre-release above until it is complete, then runs the
 preflight (on main and not behind, no untracked or unexplained modified files, every suite with
 `.venv/bin` on `PATH`, nothing half-merged, the private repo's state, where the milestone stands,
-and for an app release the pre-release record and no open P0; unlike `/pre-release`, it switches to
-main itself),
+and for an app release the pre-release record and no open P0; unlike the pre-release, which refuses
+off main, this preflight switches to main itself),
 asks Mike to confirm the exact version, cuts it, shows the changelog, and only after he says
 "publish" commits, tags and pushes; then it watches the workflow and checks the release's assets and
 "latest". `disable-model-invocation: true` means Claude never starts one on its own; CLAUDE.md's
@@ -298,7 +302,7 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 `/issue <bug|feature|task> <words>` (`.claude/skills/issue/`) files one issue: it reads the area's wiki page and code,
 checks for a duplicate, and drafts it in Mike's **What** / **Why** shape. A bug or task goes to the earliest open
 `vX.Y.Z` milestone with its kind label and the next fix version (none on a P0); a feature takes the milestone Mike
-names, or none. Nothing is filed before his yes. Its filing block, like `/pre-release`'s, sets project #3's Status,
+names, or none. Nothing is filed before his yes. Its filing block, like the pre-release's, sets project #3's Status,
 Priority and Size, and finds the item project #3 has already auto-added when `gh project item-add` says it exists.
 
 ## Rules that must hold
@@ -437,3 +441,4 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 - 2026-10-29 — The final fix wave: `move-docs.js` rewrites the private leak allowlist and the status log, checks every write first and prints exact undo commands on a failure; a record `release.js` cannot file leaves the cut standing; the record CLI's arguments; one filing block; the status log no longer counts as "main moved". → ledger L8167, #127
 - 2026-11-02 — `/issue` files a bug, feature or task; both filing blocks find the item project #3 auto-adds. → ledger L8230
 - 2026-11-02 — `/pre-release` step 3: the test pass is Mike's high-level manual pass by feature; Claude's pre-drive is a separate report. → ledger L8249
+- 2026-11-04 — The pre-release becomes part of `/release` (`.claude/skills/release/pre-release.md`): one command runs the open steps, stops when one waits on Mike, and goes on to the cut. → ledger L8860, #180

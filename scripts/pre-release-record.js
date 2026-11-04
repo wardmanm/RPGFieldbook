@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /*
  * The pre-release record, src/docs/PRE-RELEASE.md (#127; spec
- * 2026-10-29-pre-release-design.md §3, §5). `/pre-release X.Y.Z` writes it;
+ * 2026-10-29-pre-release-design.md §3, §5). `/release X.Y.Z` writes it, running the pre-release (#180);
  * scripts/release.js refuses to cut X.Y.Z until it names exactly X.Y.Z with all
  * five steps done, and files it under src/docs/archive/X.Y.Z/ after the cut.
  * Offline by design: the open-P0 check against GitHub is the release skill's.
@@ -45,7 +45,7 @@ function parseRecord(text) {
 
 /* null when `text` is a complete record for exactly `version`, else why not */
 function recordProblem(text, version) {
-  const run = "Run /pre-release " + version;
+  const run = "Run /release " + version;
   if (text == null) return "no pre-release record for " + version + " (" + RECORD + " does not exist). " + run + " first.";
   const rec = parseRecord(text);
   if (!rec.version) return RECORD + ' has no "# Pre-release X.Y.Z" heading. ' + run + " first.";
@@ -111,7 +111,7 @@ function archiveRecord(root, version) {
 }
 
 /* the commands that file the record by hand when archiveRecord() failed after a cut:
-   git mv when git tracks the record (as /pre-release leaves it), plain mv otherwise */
+   git mv when git tracks the record (as the pre-release leaves it), plain mv otherwise */
 function archiveByHand(root, version) {
   const mv = gitOk(root, ["ls-files", "--error-unmatch", "--", RECORD]) ? "git mv" : "mv";
   return "mkdir -p " + path.posix.dirname(archivePath(version)) + " && " + mv + " " + RECORD + " " + archivePath(version);
@@ -147,12 +147,12 @@ function main(argv) {
   if (version !== undefined && !VERSION.test(version)) return usage(version + " is not a version X.Y.Z");
   if (version === undefined) {
     const text = readRecord(root);
-    if (text == null) return refuse("no record (" + RECORD + " does not exist). Run /pre-release X.Y.Z first.");
+    if (text == null) return refuse("no record (" + RECORD + " does not exist). Run /release X.Y.Z first.");
     const named = parseRecord(text).version;
-    if (!named) return refuse(RECORD + ' has no "# Pre-release X.Y.Z" heading. Run /pre-release X.Y.Z first.');
+    if (!named) return refuse(RECORD + ' has no "# Pre-release X.Y.Z" heading. Run /release X.Y.Z first.');
     /* the same exact-heading rule release.js applies: it compares the heading with
        the X.Y.Z it is cutting, so a heading that is not X.Y.Z never passes there */
-    if (!VERSION.test(named)) return refuse(RECORD + "'s heading names " + named + ", which is not a version X.Y.Z: release.js refuses it. Run /pre-release X.Y.Z first.");
+    if (!VERSION.test(named)) return refuse(RECORD + "'s heading names " + named + ", which is not a version X.Y.Z: release.js refuses it. Run /release X.Y.Z first.");
     version = named;
   }
   const p = gateProblem(root, version);
