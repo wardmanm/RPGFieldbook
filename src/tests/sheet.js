@@ -55,6 +55,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'jnlStr', 'jnlTime', 'tagLabel', 'tagKey', 'groupByTag', 'attrSel', 'jnlPages', 'jnlTitle', 'jnlSort',
   'jnlQuery', 'jnlFind', 'jnlMatch', 'jnlSnippet', 'jnlSavePage', 'jnlDeletePage', 'jnlTagList',
   'jnlGroupOpen', 'jnlStampText', 'insertLine', 'insertMarker', 'journalListHTML', 'journalPageHTML', 'journalEditorHTML', 'jnlEntryHTML', 'NOTE_FMT_HINT',
+  'JNL_LOOKS', 'jnlLook', 'jnlLooksHTML',
   'fmtWhen', 'noteWhen', 'jnlWhen',
   'TRK_TYPES', 'trkList', 'trkType', 'trkInt', 'trkName', 'showTrackers', 'trkParse', 'trkProgress',
   'trkApply', 'trkStep', 'trkSetValue', 'trkClose', 'trkReopen',
@@ -7879,6 +7880,59 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
      !('afterCombat' in X.jnlSavePage(c, {id: 'n2'}, {title: 'Other'}, 6)));
   ctx.jnlReset();
   ck('#105 not while nothing is being edited', ctx.jnlToggleAfterCombat() === false);
+  X.character = keep;
+}
+
+/* ---------- #167 a journal page's style: Sheet, Notebook, Book or Parchment */
+{
+  const src167 = n => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', n), 'utf8');
+  const keep = X.character;
+  ck('#167 four styles, Sheet first', X.JNL_LOOKS.map(l => l[0]).join() === 'sheet,notebook,book,parchment');
+  ck('#167 a page with no style, or one this list doesn\'t know, reads as Sheet',
+     X.jnlLook({}) === 'sheet' && X.jnlLook({look: 'scroll'}) === 'sheet' && X.jnlLook({look: 7}) === 'sheet' && X.jnlLook(null) === 'sheet' && X.jnlLook({look: 'book'}) === 'book');
+  const pg = {id: 'p1', title: 'Quest', tag: 'Quest', text: '[ ] kill a goblin', at: 1000, editedAt: 2000};
+  const order = h => ['jnl-h', 'jnl-meta', 'n-body'].map(k => h.indexOf('class="' + k)).join();
+  const sheet = X.journalPageHTML(pg);
+  ck('#167 the page sits on a sheet: bar outside, title, meta and text inside',
+     /<\/div><div class="jnl-sheet jnl-look-sheet"><h3 class="jnl-h" id="jnlHead"/.test(sheet) && sheet.indexOf('data-jnlback') < sheet.indexOf('jnl-sheet') && /<\/div><\/div>$/.test(sheet), sheet);
+  const h = l => X.journalPageHTML(Object.assign({}, pg, {look: l}));
+  ck('#167 Notebook and Parchment keep the title above the meta', /jnl-look-notebook/.test(h('notebook')) && /jnl-look-parchment/.test(h('parchment')) &&
+     h('notebook').indexOf('jnl-h') < h('notebook').indexOf('jnl-meta') && h('parchment').indexOf('jnl-h') < h('parchment').indexOf('jnl-meta'));
+  const bk = h('book');
+  ck('#167 Book runs the meta along the top, then the title and its ornament', /jnl-look-book/.test(bk) &&
+     bk.indexOf('class="jnl-meta') < bk.indexOf('class="jnl-h') && /<\/h3><div class="jnl-orn" aria-hidden="true">~ ✦ ~<\/div><div class="n-body">/.test(bk), bk);
+  ck('#167 an unknown style draws as Sheet', /jnl-look-sheet/.test(h('<i>')) && !/<i>/.test(h('<i>')));
+  ck('#167 an empty page is on its sheet too', /jnl-look-notebook"><h3[\s\S]*<div class="empty">/.test(X.journalPageHTML({id: 'e', title: 'x', text: '', look: 'notebook'})));
+  // the editor's row
+  const row = X.journalEditorHTML({id: 'p', title: 't', tag: '', text: '', look: 'book'}, []);
+  ck('#167 the editor has a Page style group of four, the page\'s own pressed',
+     /<span class="f" id="jnlLookLbl">Page style<\/span><div class="jnl-looks" role="group" aria-labelledby="jnlLookLbl">/.test(row) &&
+     (row.match(/data-jnllook="/g) || []).length === 4 && /class="jnl-look on" data-jnllook="book" aria-pressed="true"/.test(row) &&
+     /data-jnllook="sheet" aria-pressed="false"/.test(row), row);
+  ck('#167 ...under the writing tools, before Show after combat', row.indexOf('data-jnlck') < row.indexOf('jnlLookLbl') && row.indexOf('jnlLookLbl') < row.indexOf('data-jnlac'));
+  ck('#167 ...on Sheet for a page with none', /class="jnl-look on" data-jnllook="sheet" aria-pressed="true"/.test(X.journalEditorHTML({id: 'p', title: '', tag: '', text: ''}, [])));
+  ck('#167 ...each button names its style and hides its picture', /aria-hidden="true"><span><\/span><span><\/span><span><\/span><\/span>Parchment<\/button>/.test(row));
+  ck('#167 the row is wired in the dispatcher', /if\(\(m=t\.closest\("\[data-jnllook\]"\)\)\)return jnlSetLook\(m\.dataset\.jnllook\);/.test(src167('90-boot.js')));
+  // choosing
+  const c = X.blankChar(); X.character = c;
+  c.journal = [{id: 'p1', title: 'Quest', tag: '', text: 'x', at: 1, editedAt: 1}];
+  ck('#167 not while nothing is being edited', ctx.jnlSetLook('book') === false && !('look' in c.journal[0]));
+  ctx.renderJournal(); ctx.jnlStartEdit('p1', 1, 'jnlText');
+  ck('#167 on a saved page it writes the page at once, and its edited date stays', ctx.jnlSetLook('notebook') === 'notebook' && c.journal[0].look === 'notebook' && c.journal[0].editedAt === 1);
+  ck('#167 ...a style this list doesn\'t know is Sheet', ctx.jnlSetLook('scroll') === 'sheet' && !('look' in c.journal[0]));
+  ck('#167 ...and Sheet removes the key', (ctx.jnlSetLook('book'), ctx.jnlSetLook('sheet')) === 'sheet' && !('look' in c.journal[0]));
+  ctx.jnlNewPage();
+  ck('#167 on a draft it is held until the page exists', ctx.jnlSetLook('parchment') === 'parchment' && c.journal.length === 1);
+  ck('#167 ...and the new page takes it; Sheet is never written', X.jnlSavePage(c, {id: 'n1', look: 'parchment'}, {title: 'New'}, 5).look === 'parchment' &&
+     !('look' in X.jnlSavePage(c, {id: 'n2', look: 'sheet'}, {title: 'Other'}, 6)) && !('look' in X.jnlSavePage(c, {id: 'n3'}, {title: 'Third'}, 7)));
+  ck('#167 typing on a page keeps its style', (X.jnlSavePage(c, {id: 'n1'}, {title: 'New', text: 'more'}, 8), c.journal.find(p => p.id === 'n1').look === 'parchment'));
+  ctx.jnlReset();
+  // the data
+  const m = X.migrate({abilities: {}, journal: [{id: 'a', title: 'A', look: 'book'}, {id: 'b', title: 'B'}, {id: 'c', title: 'C', look: 'scroll'}]});
+  ck('#167 migrate keeps a page\'s style, and one from a newer Fieldbook, untouched', m.journal[0].look === 'book' && !('look' in m.journal[1]) && m.journal[2].look === 'scroll');
+  const back = X.migrate(JSON.parse(JSON.stringify(m)));
+  ck('#167 ...through a save → load round trip', back.journal[0].look === 'book' && !('look' in back.journal[1]) && back.journal[2].look === 'scroll');
+  ck('#167 a new character\'s journal is still empty', JSON.stringify(X.blankChar().journal) === '[]');
   X.character = keep;
 }
 

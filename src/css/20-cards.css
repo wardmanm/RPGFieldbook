@@ -13,7 +13,8 @@ html[data-rough="on"] .card::before{filter:url(#rough)}
 .label .add.sub:hover{background:color-mix(in srgb,var(--ink-soft) 14%,transparent)}
 .label .add svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
 
-label.f{display:block;font-family:var(--head);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+/* span.f names a group of buttons (#167: the journal's Page style), which a <label> can't */
+label.f,span.f{display:block;font-family:var(--head);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink-soft);font-weight:600;margin-bottom:4px}
 input,select,textarea{width:100%;font-family:var(--body);font-size:16px;color:var(--ink);
   background:var(--field);border:1.5px solid var(--hair);border-radius:6px;padding:9px 10px;min-height:42px}

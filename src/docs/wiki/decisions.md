@@ -347,6 +347,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Page order** — Newest created first
 - **Where a blank page goes** — Never saved: a page exists only while it has a title or text
 - **Editing** — Inline, built once
+- **How an open page looks (#167)** — On a sheet, in one of four styles picked per page in the editor (Sheet, Notebook, Book, Parchment); Sheet by default; only the open page changes
 - **Existing checklist and task trackers (#95)** — Migrated into journal pages by `migrate()`; Trackers becomes counters only
 - **A checkbox in a rendered page (#95)** — Tickable in the read view: a tap flips it and rewrites that line
 - **Closed checklists and tasks (#95)** — Migrated too: a closed checklist keeps each item's real tick plus a "Closed <date>" line (not every item ticked, the first choice, which lost the real ticks); a closed task is ticked with its date

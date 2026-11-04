@@ -84,6 +84,7 @@ function jnlSavePage(c,draft,fields,now){
     if(!draft.at)draft.at=now;
     const p={id:draft.id,title,tag,text,at:draft.at,editedAt:now};
     if(draft.afterCombat===true)p.afterCombat=true;   /* #105: set on the draft before the page existed */
+    if(jnlLook(draft)!=="sheet")p.look=draft.look;   /* #167: likewise */
     c.journal.push(p);return p;
   }
   const p=c.journal[i];
@@ -164,14 +165,29 @@ function journalListHTML(c,q){
   }).join("");
 }
 function jnlWhen(p){return jnlTime(p.at)?noteWhen({at:jnlTime(p.at),editedAt:jnlTime(p.editedAt)}):"";}
+/* #167: the page's style. `look` is stored only when it isn't Sheet; a value
+   this list doesn't know reads as Sheet and is left on the page, so a style a
+   newer Fieldbook adds survives a load here. */
+const JNL_LOOKS=[["sheet","Sheet"],["notebook","Notebook"],["book","Book"],["parchment","Parchment"]];
+function jnlLook(p){const k=p&&p.look;return JNL_LOOKS.some(l=>l[0]===k)?k:"sheet";}
+/* The bar stays on the card; the title, its meta line and the text sit on the
+   sheet. A book page runs its meta along the top, above a centred title. */
 function journalPageHTML(p){
-  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text)),pr=noteProgress(jnlStr(p.text));
+  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text)),pr=noteProgress(jnlStr(p.text)),look=jnlLook(p);
+  const head=`<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`;
+  const meta=(tag||when||pr.total)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"";
   return `<div class="jnl-bar"><button type="button" class="tbtn" data-jnlback>← All pages</button><span class="grow"></span>`+
     `<button type="button" class="tbtn ed" data-jnledit="${esc(p.id)}">Edit</button>`+
     `<button type="button" class="tbtn danger ed" data-jnldel="${esc(p.id)}">Delete</button></div>`+
-    `<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`+
-    ((tag||when||pr.total)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
-    (body?`<div class="n-body">${body}</div>`:`<div class="empty">${editHidden(character,"journal")?"Nothing written yet.":"Nothing written yet — tap Edit."}</div>`);
+    `<div class="jnl-sheet jnl-look-${esc(look)}">`+
+    (look==="book"?meta+head+`<div class="jnl-orn" aria-hidden="true">~ ✦ ~</div>`:head+meta)+
+    (body?`<div class="n-body">${body}</div>`:`<div class="empty">${editHidden(character,"journal")?"Nothing written yet.":"Nothing written yet — tap Edit."}</div>`)+
+    `</div>`;
+}
+function jnlLooksHTML(look){
+  return `<div class="field"><span class="f" id="jnlLookLbl">Page style</span><div class="jnl-looks" role="group" aria-labelledby="jnlLookLbl">`+
+    JNL_LOOKS.map(([k,l])=>`<button type="button" class="jnl-look${look===k?" on":""}" data-jnllook="${esc(k)}" aria-pressed="${look===k?"true":"false"}">`+
+      `<span class="jnl-mini jnl-mini-${esc(k)}" aria-hidden="true"><span></span><span></span><span></span></span>${esc(l)}</button>`).join("")+`</div></div>`;
 }
 /* Built ONCE per edit (renderJournal() leaves it alone after), so it can keep
    the player's caret. Everything typed is written straight to the page. */
@@ -185,6 +201,7 @@ function journalEditorHTML(p,tags){
     `<div class="field"><label class="f" for="jnlText">Page</label>`+
     `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
     `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button><button type="button" class="tbtn" data-jnlck>Insert checkbox</button></div>`+
+    jnlLooksHTML(jnlLook(p))+
     `<div class="toggle"><div><div class="t-lbl">Show after combat</div></div>`+
       `<button type="button" class="switch ${p.afterCombat===true?"on":""}" data-jnlac role="switch" aria-checked="${p.afterCombat===true?"true":"false"}" aria-label="Show after combat"></button></div>`+
     NOTE_FMT_HINT+(when?`<p class="hint">${esc(when)}</p>`:"");
@@ -280,6 +297,17 @@ function jnlToggleAfterCombat(){
   const b=document.querySelector("[data-jnlac]");
   if(b){b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");}
   return on;
+}
+/* The page style (#167), from the editor: as Show after combat, a saved page
+   takes it at once and keeps its editedAt (a style is not content), and a draft
+   holds it until its first keystroke makes the page. Patched in place. */
+function jnlSetLook(k){
+  if(!jnlUI.editing||!jnlUI.draft)return false;
+  const look=jnlLook({look:k}),p=jnlPages(character).find(x=>x.id===jnlUI.draft.id);
+  [jnlUI.draft].concat(p?[p]:[]).forEach(o=>{if(look==="sheet")delete o.look;else o.look=look;});
+  if(p)scheduleSave();
+  document.querySelectorAll("[data-jnllook]").forEach(b=>{const on=b.dataset.jnllook===look;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on?"true":"false");});
+  return look;
 }
 function jnlDelete(id){
   const p=jnlPages(character).find(x=>x.id===id);if(!p)return false;

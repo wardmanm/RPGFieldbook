@@ -183,8 +183,11 @@ removed".
 - **Every palette defines every token.** `rules-data.js` asserts that `--warn` appears as often as
   `--brick`. A token missing from a classic block would quietly fall back to the Humblewood value.
   The two deliberate exceptions, each defined once rather than per palette and asserted as such,
-  are the level-up scene's tokens (once per **skin**, #101) and the initiative tracker's band
-  tokens (once on bare `:root`, shared by all four palettes, #91).
+  are the level-up scene's tokens (once per **skin**, #101), the initiative tracker's band
+  tokens (once on bare `:root`, shared by all four palettes, #91), and the Parchment page style's
+  ink (`--parch-ink`, `--parch-soft`, `--parch-hair`, `--parch-accent`: once per skin, #167, since
+  parchment is cream with dark ink in both themes). Every palette defines the journal page's
+  `--sheet`, `--sheet-edge`, `--sheet-lift`, `--sheet-gutter` and `--parch` ([Journal](../features/journal.md)).
 - **`applyTheme()` is the only writer of the four attributes**, and the template keeps its defaults.
   A test asserts `data-tabs="labels"` is on the root element.
 
@@ -256,3 +259,4 @@ removed".
 - 2026-10-25 — `--hb-healthy`, `--hb-injured`, `--hb-bloodied`, `--hb-near` and `--hb-empty` join `:root`, one set for all four palettes, for the initiative tracker's health bands. → ledger L7097, #91
 - 2026-10-25 — `--on-accent` joins every palette and the rail; every rule with text on an accent fill uses it. → ledger L7401, #47
 - 2026-10-28 — The emblem coverage check walks `srd52` alone; homebrew's moves to the private suite with the pack. → ledger L7858, #125
+- 2026-11-04 — `--sheet`, `--sheet-edge`, `--sheet-lift`, `--sheet-gutter` and `--parch` join every palette, and the parchment ink each skin, for the journal's page styles. → ledger L8699, #167

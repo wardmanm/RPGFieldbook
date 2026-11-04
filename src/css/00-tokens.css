@@ -8,6 +8,9 @@
   --lu-night:#0d1a12; --lu-night-2:#2a4433; --lu-glow:#e6d98a; --lu-spark:#e2b44c;
   /* #91: the initiative strip's health bands — one set for both skins and themes */
   --hb-healthy:#2f8a3a; --hb-injured:#c99a15; --hb-bloodied:#d0651e; --hb-near:#b3261e; --hb-empty:rgba(128,120,100,.28);
+  /* #167: a journal page's Parchment style is cream with dark ink in both
+     themes; its paper (--parch) is per theme, below */
+  --parch-ink:#1d1913; --parch-soft:#5f5440; --parch-hair:rgba(24,20,16,.22); --parch-accent:#265a4d;
 }
 html[data-theme="light"]{
   --paper:#f4edda;      /* warm cream page */
@@ -29,6 +32,10 @@ html[data-theme="light"]{
   --field-focus:#fffdf6;
   --shadow:0 10px 26px rgba(40,30,12,.20);
   --ground:#cdbf9c;
+  /* #167: an open journal page's sheet, lifted off the card; --sheet-gutter is
+     the Book style's spine */
+  --sheet:#fffcf3; --sheet-edge:rgba(24,20,16,.14); --sheet-lift:0 1px 0 rgba(24,20,16,.08),0 6px 14px rgba(60,40,10,.16);
+  --sheet-gutter:rgba(80,55,20,.16); --parch:#ead9b2;
   /* #103: the Sheet's dark rail. Its own palette, so a light page still has a
      dark rail; .rail (30-sheet.css) maps the everyday tokens onto these, so
      every control inside it (inputs, dots, the death saves) follows. */
@@ -53,6 +60,8 @@ html[data-theme="dark"]{
   --field-focus:#2c2720;
   --shadow:0 10px 30px rgba(0,0,0,.5);
   --ground:#0e0b08;
+  --sheet:#2e2820; --sheet-edge:rgba(231,220,194,.16); --sheet-lift:0 1px 0 rgba(0,0,0,.4),0 8px 18px rgba(0,0,0,.45);
+  --sheet-gutter:rgba(0,0,0,.45); --parch:#ece0c2;
   /* the rail is TINTED in dark mode, not darker: the page ground is already
      near-black, so a darker rail read as one more card (#103 QA) */
   --rail-bg:#1c2925; --rail-ink:#efe6d0; --rail-soft:#c4b48c; --rail-line:#d8a544;
@@ -61,7 +70,8 @@ html[data-theme="dark"]{
 }
 /* ---- Classic D&D skin (parchment + red/gold, Roman-cap display) ---- */
 html[data-skin="classic"]{ --display:"Cinzel", Georgia, "Times New Roman", serif;
-  --lu-night:#1d1826; --lu-night-2:#3a2f4a; --lu-glow:#9fd4ff; --lu-spark:#e2b44c; }
+  --lu-night:#1d1826; --lu-night-2:#3a2f4a; --lu-glow:#9fd4ff; --lu-spark:#e2b44c;
+  --parch-ink:#1c1710; --parch-soft:#5f5440; --parch-hair:rgba(42,32,24,.22); --parch-accent:#24548a; }
 html[data-skin="classic"][data-theme="light"]{
   --paper:#efe7d3; --paper-2:#e4d9be; --panel:#f5efdf;
   --ink:#1c1710; --ink-soft:#6b6047; --line:#2a2018; --hair:rgba(42,32,24,.22);
@@ -72,6 +82,8 @@ html[data-skin="classic"][data-theme="light"]{
   --warn:#9a6a05;        /* dark gold — --accent is the red here, so it can't serve */
   --field:rgba(255,255,255,.5); --field-focus:#fffdf5;
   --shadow:0 10px 26px rgba(40,25,10,.2); --ground:#c7b795;
+  --sheet:#fffdf5; --sheet-edge:rgba(42,32,24,.14); --sheet-lift:0 1px 0 rgba(42,32,24,.08),0 6px 14px rgba(40,25,10,.16);
+  --sheet-gutter:rgba(70,45,15,.16); --parch:#e6d5ad;
   --rail-bg:#2b2b2b; --rail-ink:#eeeeee; --rail-soft:#bfae86; --rail-line:#bfae86;
   --rail-hair:rgba(238,238,238,.2); --rail-field:rgba(255,255,255,.06); --rail-field-focus:#383838;
   --rail-accent:#e2564a; --rail-good:#78acdd; --rail-bad:#e2564a; --rail-warn:#dcae4e;
@@ -86,6 +98,8 @@ html[data-skin="classic"][data-theme="dark"]{
   --warn:#dcae4e;        /* pale gold */
   --field:rgba(255,255,255,.05); --field-focus:#282218;
   --shadow:0 10px 30px rgba(0,0,0,.55); --ground:#0c0a07;
+  --sheet:#2a231b; --sheet-edge:rgba(232,220,192,.16); --sheet-lift:0 1px 0 rgba(0,0,0,.4),0 8px 18px rgba(0,0,0,.45);
+  --sheet-gutter:rgba(0,0,0,.45); --parch:#ebdfc3;
   /* slate against the brown cards: tinted, as in the walnut palette above */
   --rail-bg:#27303a; --rail-ink:#efe7d4; --rail-soft:#c9bb96; --rail-line:#bfae86;
   --rail-hair:rgba(232,220,192,.2); --rail-field:rgba(255,255,255,.06); --rail-field-focus:#313b46;
