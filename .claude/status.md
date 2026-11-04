@@ -9,7 +9,8 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 ## Recent changes
 - 2026-11-04: Merged #166 (P2 from the test pass), not pushed: End of combat's Open loot opens the trade
   window as Loot, its You get side alone (From, Worth, Take loot; no You give, tabs or switches), logged
-  "Looted from …" under Trades; the Equipment card's Trade is unchanged.
+  "Looted from …" under Trades; the Equipment card's Trade is unchanged. Mike: looted rules items read
+  Found, as built, and loot sources stay as name chips in the ordinary Trade's With box.
 - 2026-11-04: Merged #165 (feature from the test pass, Mike's mockup picks): the initiative strip keeps
   the acting combatant in the middle, overflow goes into +N lists in order, and ◂ Prev steps back a turn
   (across a round's top too); during a fight the header is three rows: title and round centred between
@@ -35,10 +36,6 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   25 issues filed (#128–#152), with Mike's decisions on each recorded in `src/docs/PRE-RELEASE.md`.
 
 ## Pending decisions
-- **How a looted rules item's origin reads** (raised 2026-11-04, #166). As built: Found, "Found — Goblin 1,
-  Bugbear" (custom ones Custom, "looted from …"). Option: Traded, as before #166.
-- **Loot sources as name chips in the ordinary Trade's With box** (raised 2026-11-04, #166's review). Mike
-  decided on 2026-10-30 that they stay; asked again now that Loot is its own window. Options: keep / drop.
 - **Priorities for the pre-drive's 10 probable bugs** (raised 2026-11-02). Proposed P2 for most; the one
   open question is #1, Undo recovery re-recovering ammo in the next fight: P1 or P0. Blocks: step 4.
 - **File "a 2024 background typed into Or custom name gets no ability increase"** (raised 2026-11-04,
