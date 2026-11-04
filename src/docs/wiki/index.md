@@ -65,7 +65,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 
 ## Process
 
-- [Building & CI](process/building-and-ci.md) — `build.sh`, the zip allowlist, CI, the git hooks, `/pre-release` and the release gate
+- [Building & CI](process/building-and-ci.md) — `build.sh`, the zip allowlist, CI, the git hooks, `/release` (with its pre-release) and the release gate
 - [Testing](process/testing.md) — the suites, the harness, and why a green check is not proof
 - [Screenshot QA](process/screenshot-qa.md) — the Playwright MCP launcher, its flags, and the traps
 
@@ -76,7 +76,7 @@ fragment is covered by some page, and every ledger `L<n>` a page cites is still 
 
 ## Elsewhere (indexed in place, not moved)
 
-- [RELEASING](../RELEASING.md) — `/pre-release` first, then cutting and publishing a release, what CI refuses, rollback
+- [RELEASING](../RELEASING.md) — `/release`: the pre-release first, then cutting and publishing a release, what CI refuses, rollback
 - [1.9.0 roadmap (archived)](../archive/1.9.0/roadmap-1.9.0.md) — record of the last feature release before 2.0: the fifteen items, their dependencies, the five waves, how a wave runs
 - [WORKTREES](../WORKTREES.md) — several issues at once in parallel worktrees
 - [ADR-001](../ADR-001-source-split.md) — why the source is split and still ships as one file

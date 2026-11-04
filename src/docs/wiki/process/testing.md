@@ -133,14 +133,15 @@ its extractor.
   `plans/` or `archive/` or a dated doc, since plans quote other pages' links; a link to a folder
   counts when the folder exists; and an `X.Y.Z`, `YYYY` or `example-` path is an illustration;
 - that `qa/smoke.md` has one section per app area, in tab order, each with a line (#127);
-- that the `pre-release` and `release` skills agree with the gate (#127): the record template's
-  five step rows are the ones `release.js` reads, the checklist names the smoke list's areas, both
-  skills hold the same open-P0 query, `/release` runs the record check, `/pre-release` refuses off
-  main and never switches, its clean-tree check allows exactly the record and the checklist, its
+- that the pre-release and `/release` agree with the gate (#127): `/release` is Mike's to start and
+  the pre-release is part of it, run before the cut and resumed by the next `/release` when a step
+  waits on Mike (#180); the record template's five step rows are the ones `release.js` reads, the
+  checklist names the smoke list's areas, both hold the same open-P0 query, `/release` runs the
+  record check, the pre-release refuses off main and never switches, its clean-tree check allows exactly the record and the checklist, its
   filing commands hard-code no priority and give a P0 no fix-version label, filing and the project
   fields are one block that checks the priority and looks up the Priority option before it files
   and passes the body on stdin, the archived roadmap page has the one name `/release` reads, the
-  moved-main check ignores the status log, a moved private allowlist is committed by `/pre-release`
+  moved-main check ignores the status log, a moved private allowlist is committed by the pre-release
   and pushed by `/release` after public main, and reopening a step reopens every later step.
 
 ### Throwaway checks
@@ -278,3 +279,4 @@ written before `src/tests/` existed was lost along with its scratchpad.
 - 2026-10-28 — Homebrew's checks move to the private suite with the pack; the public suites test SRD 5.2 and invented packs only, `requires`' two tooltip forms on an invented pack; the staleness test lends itself a second baseline, so a one-pack `DATA_VERSIONS` passes; the private-pack scan covers the homebrew folder. → ledger L7858, #125
 - 2026-10-29 — Eleven suites: `pre-release.js` (`move-docs.js` and the record); `data-kit.py` tests `release.js`'s pre-release gate and the record's filing; `docs.js` checks every link to a spec, plan or archived doc, the smoke list's areas, and the two release skills against the gate. → ledger L8070, #127
 - 2026-10-29 — The final fix wave's cases: the private allowlist, read-only refusals and part-way failures in `move-docs.js`; the record CLI's arguments; a failed record move; RELEASING's staged undo; the filing block, roadmap name, moved-main pathspec and private push in the skills. → ledger L8167, #127
+- 2026-11-04 — `docs.js` checks the pre-release is part of `/release` and runs before the cut. → ledger L8860, #180

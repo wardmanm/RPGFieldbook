@@ -282,7 +282,7 @@ imports the public archive and then the private one resolves a shared table name
   `CLASS_BLURB` line, a correction's `find`) leaves its entry matching nothing, and the private
   suite goes red in the public run. Remove the entry in the private repo in the same change.
   Moving an allowlisted file does the same, since an entry names its file by repo path: when
-  `/pre-release` files docs by version, `scripts/move-docs.js` rewrites the allowlist's paths
+  the pre-release (part of `/release`) files docs by version, `scripts/move-docs.js` rewrites the allowlist's paths
   through `_private-data`, the skill commits that in the private repo, and `/release` pushes it
   right after public main (#127, Ruling 24). A checkout branched before such a move reports stale
   entries until it merges main, since every checkout shares the one private clone.

@@ -398,7 +398,7 @@ if (packsReg && Array.isArray(packsReg.packs)) {
 }
 
 // ---------- links to specs, plans and the archive resolve (#127, pre-release spec §6)
-// /pre-release files specs and plans by version and archives finished docs, and
+// The pre-release files specs and plans by version and archives finished docs, and
 // scripts/move-docs.js rewrites every reference. This is the net under it: every
 // path or link that names src/docs/specs/, plans/ or archive/ must exist. The
 // files are move-docs.js's own list (scanFiles()) minus src/tests/, whose
@@ -444,7 +444,7 @@ if (packsReg && Array.isArray(packsReg.packs)) {
 }
 
 // ---------- the standing QA list (#127, pre-release spec §4 step 3)
-// /pre-release copies each area's lines from it into the release's checklist,
+// The pre-release copies each area's lines from it into the release's checklist,
 // area by area, so its headings are the app's areas in tab order.
 {
   const AREAS = ['Home', 'Sheet', 'Combat', 'Spells', 'Inventory', 'Bio', 'Journal', 'Rules', 'Settings', 'Extensions and updates'];
@@ -455,23 +455,31 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   ck('#127 ...and every section has at least one line', empty.length === 0, empty);
 }
 
-// ---------- the pre-release and release skills agree with the gate (#127, spec §5)
-// release.js reads the record's step rows; the skill writes them. And /release's
-// preflight must run the same check before Mike is asked for a number.
+// ---------- the pre-release and the release agree with the gate (#127, spec §5)
+// release.js reads the record's step rows; the pre-release writes them. And
+// /release's preflight must run the same check before Mike is asked for a number.
+// Since #180 the pre-release is part of /release: one command for Mike.
 {
-  const pre = read('.claude/skills/pre-release/SKILL.md');
+  const pre = read('.claude/skills/release/pre-release.md');
   const rel = read('.claude/skills/release/SKILL.md');
   const {STEPS} = require('../../scripts/pre-release-record.js');
-  ck('#127 /pre-release is Mike\'s to start', /^---\nname: pre-release\n/.test(pre) &&
-     /^disable-model-invocation: true$/m.test(pre) && /^argument-hint: /m.test(pre));
+  ck('#180 /release is Mike\'s to start, and the pre-release is part of it, not a command of its own',
+     /^---\nname: release\n/.test(rel) && /^disable-model-invocation: true$/m.test(rel) &&
+     !/^---/.test(pre) && /^# Pre-release \(part of \/release\)/.test(pre) &&
+     !fs.existsSync(path.join(ROOT, '.claude/skills/pre-release')));
+  ck('#180 /release runs the open pre-release steps before the cut, and goes on to the cut after step 5',
+     /^## 1a\. An app release: the pre-release first$/m.test(rel) && rel.includes('follow [pre-release.md](pre-release.md) from its preflight') &&
+     rel.indexOf('## 1a.') < rel.indexOf('## 2. Preflight') && pre.replace(/\s+/g, ' ').includes("go on to `/release`'s preflight (`SKILL.md` §2) in the same run"));
+  ck('#180 ...and stops, to resume on the next /release, when a step waits on Mike',
+     rel.includes('stop and say what it waits on; his next `/release X.Y.Z` resumes there'));
   const rows = STEPS.map((s, i) => '| ' + (i + 1) + '. ' + s + ' | open | | |');
   ck('#127 its record template has the five step rows release.js reads', rows.every(r => pre.includes(r)), rows.filter(r => !pre.includes(r)));
   const areas = [...read('src/docs/qa/smoke.md').matchAll(/^## (.+)$/gm)].map(m => m[1].trim());
   ck('#127 its checklist names the smoke list\'s areas, in order', pre.includes(areas.join(', ')), areas.join(', '));
   ck('#127 /release\'s preflight runs the record check and the open-P0 check',
      rel.includes('node scripts/pre-release-record.js') && rel.includes('.priority=="P0"'));
-  // Each skill keeps its own open-P0 query, since each must run on its own; the
-  // two copies must stay one query (#127 ruling 5). A fenced block is compared
+  // The pre-release (step 4) and /release's preflight each keep the open-P0
+  // query; the two copies must stay one query (#127 ruling 5). A fenced block is compared
   // with its fence's indent removed, as a list item indents it.
   const fenced = text => {
     const out = []; let cur = null, ind = '';
@@ -485,17 +493,17 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   };
   const p0 = text => fenced(text).filter(b => b.includes('.priority=="P0"'));
   const [a, b] = [p0(pre), p0(rel)];
-  ck('#127 both skills hold one open-P0 query, and it is the same query',
+  ck('#127 the pre-release and /release each hold one open-P0 query, and it is the same query',
      a.length === 1 && b.length === 1 && a[0] === b[0], {pre: a, release: b});
   // spec §7: it runs on main and refuses elsewhere; it never switches branch (#127 ruling 8)
-  ck('#127 /pre-release refuses off main and never switches branch',
+  ck('#127 the pre-release refuses off main and never switches branch',
      pre.includes('git branch --show-current') && !pre.includes('git switch'));
   // #127 ruling 19: the clean-tree check lets through exactly the two files a
   // pre-release keeps between sessions, the record and Mike's marked checklist
   const preflight = fenced(pre.split(/^## 0\. Preflight/m)[1] || '')[0] || '';
   const porcelain = preflight.split('\n').filter(l => l.includes('git status --porcelain'));
   const allowed = porcelain.flatMap(l => [...l.matchAll(/':!([^']+)'/g)].map(m => m[1])).sort();
-  ck('#127 /pre-release\'s clean-tree check allows exactly the record and the checklist',
+  ck('#127 the pre-release\'s clean-tree check allows exactly the record and the checklist',
      porcelain.length === 1 && JSON.stringify(allowed) === JSON.stringify(['src/docs/PRE-RELEASE.md', 'src/docs/QA-CHECKLIST.md']), allowed);
   // #127 ruling 22: filing uses the priority Mike confirmed, and a P0 never gets
   // the fix-version label (spec decision 6), in the commands, not just the prose
@@ -519,14 +527,14 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   ck('#127 ...and passes the body on stdin, so no body file exists in the repo, never inside $(…) (bash 3.2)',
      (fb.match(/gh issue create [^\n]*--body-file - > "\$OUT" <<'BODY'/g) || []).length === 1 && !/\$\(gh issue create/.test(fb) && /OUT=\$\(mktemp\)/.test(fb) && !/--body-file (?!-[ `])/.test(pre), fb);
   // the archived roadmap page has one name, the one /release reads
-  ck('#127 /pre-release archives the roadmap page under the one name /release reads',
+  ck('#127 the pre-release archives the roadmap page under the one name /release reads',
      pre.includes('always becomes `src/docs/archive/X.Y.Z/roadmap-X.Y.Z.md`') && rel.includes('`src/docs/archive/<version>/roadmap-<version>.md`'));
   // #127 ruling 25: a routine status commit is not "main moved"
   const moved = fenced(pre).filter(b => b.includes('--invert-grep'));
   ck('#127 the moved-main check ignores the record, the checklist and the status log',
      moved.length === 1 && [':!src/docs/PRE-RELEASE.md', ':!src/docs/QA-CHECKLIST.md', ':!.claude/status.md'].every(x => moved[0].includes("'" + x + "'")), moved);
   // #127 ruling 24: the private allowlist is committed in step 1, and pushed by /release right after public main
-  ck('#127 a moved private allowlist is committed by /pre-release and pushed by /release after public main',
+  ck('#127 a moved private allowlist is committed by the pre-release and pushed by /release after public main',
      pre.includes('git -C _private-data commit -m "docs: pre-release X.Y.Z — paths moved"') &&
      /git push --follow-tags`; then[^\n]*`git -C _private-data push`, right after/.test(rel));
   // #127 ruling 20: steps are strictly ordered

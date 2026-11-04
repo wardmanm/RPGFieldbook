@@ -1,6 +1,6 @@
 # Smoke list: still works
 
-The standing "Still works" lines for each release's QA checklist. `/pre-release` copies each area's
+The standing "Still works" lines for each release's QA checklist. The pre-release (part of `/release`) copies each area's
 lines, word for word, into `src/docs/QA-CHECKLIST.md` under that area, and never edits this file:
 Mike does, as the app grows. One line is one thing to do and what you should see. The areas are the
 app's, in tab order; keep the `## ` headings as they are, because the skill and the docs suite read

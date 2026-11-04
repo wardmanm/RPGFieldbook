@@ -8856,3 +8856,36 @@ current; (4) a coin count below 0 from a hand-edited file skewed the cap's bound
 (5) `tradeClamp()` makes seeded give coins whole and never below 0 before the plan, not only when it
 fails. Tests for each, plus Complete's click going through `tradeAskComplete()` and an answer that
 lands after its trade closed (nothing happens). The reviewer's probes rerun clean.
+
+## #180: one command for a release — the pre-release is part of /release (Mike, 2026-11-04)
+
+Mike, about to cut 1.9.0: "Can we just roll our pre-release skill steps into release so I don't have
+to do them both?" Agreed: keep the five steps, the record, `release.js`'s refusal and both gates;
+change only how they start.
+
+**What changed.** `.claude/skills/pre-release/SKILL.md` moves to `.claude/skills/release/pre-release.md`
+(`git mv`, so its history follows), no longer a skill of its own (no frontmatter; `/pre-release` is
+gone). `/release`'s `SKILL.md` gains §1a: for an app release it names the version (typed, else it
+suggests the next and asks), runs `node scripts/pre-release-record.js X.Y.Z`, and when the record
+isn't complete follows `pre-release.md` from its preflight, step by step with Mike's confirmations,
+committing each on main; when a step waits on him (the test pass, a P0 being fixed) it stops and
+says so, and his next `/release X.Y.Z` resumes; after step 5 it goes on to §2 (preflight), Gate 1
+(the exact number, still asked) and the cut, in the same run. The preflight's incomplete-record
+branch goes back to §1a instead of sending Mike to `/pre-release`. In `pre-release.md` only the
+entry and exit change: who starts it, "never push here, nothing is cut here", and "go on to
+`/release`'s preflight" where it said "run /release X.Y.Z".
+
+Reworded to match: the refusals of `release.js`/`pre-release-record.js` ("Run /release X.Y.Z first.",
+"…to finish it."), `build.sh`'s closing line, `dev.sh`'s release prompt and checklist, CLAUDE.md,
+RELEASING.md §0, the issue skill, and the wiki (building & CI, testing, overview's glossary and code
+map, private data, decisions, the index), `src/docs/qa/smoke.md`. History lines and archived records
+keep the old name.
+
+**Tests.** `docs.js` reads the procedure at its new path and checks that `/release` is Mike's to
+start with the pre-release part of it (no frontmatter, no `.claude/skills/pre-release/`), that §1a
+comes before the preflight and follows `pre-release.md`, that the pre-release goes on to the
+preflight in the same run, and that a waiting step stops and resumes on the next `/release`. The
+gate's expected refusal text in `pre-release.js` and `data-kit.py` reads `/release`.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
+[overview](../wiki/overview.md), [decisions](../wiki/decisions.md).
