@@ -8757,3 +8757,22 @@ and 2.7:1. It is `--parch-accent` inside the sheet now; measured 6.0:1 (Humblewo
 since #105, which the style shared. The draft now starts with the page's `look` and `afterCombat`.
 The harness gains `jnlUI` in `MUTABLE`, so a test can read the draft. Left: the style labels are
 9.5px at phone width (they fit, checked at 390).
+
+## #167 follow-up: Notebook gets room (Mike, 2026-11-04)
+
+Mike, after the merge: "notebook theme has really tight margins, need to clean that up a little"
+(his shot: the title hard under the sheet's top, the text 16px from the margin line, the sheet
+ending one rule after the last line). Notebook's spacing is now one value, `--nb` (30px, was 26):
+the rules, the title (two rules), the meta line, text, headings and the checkbox's offset all follow
+it. The sheet's padding grows from 10/20/14/58 to 18/24/40/66 (a blank strip above the title, a ruled
+line or two under the last line, 20px from the margin line to the text; the line moves 42 → 46),
+and on a phone from 10/12/14/40 to 16/14/36/46 (line 28 → 32). The title's edge-to-edge background
+keeps the negative margins equal to the padding.
+
+**Driven** (Playwright): before and after in Humblewood dark at 1280 and D&D light at 390, plus a
+one-checkbox page like Mike's at both widths; every line starts on a rule and is one or two rules
+tall; no page overflow. **Tests** (`rules-data.js`): the rule spacing is `--nb` at 30px and
+everything named above reads it; the ruling starts where the padding ends, and the title's
+background reaches the sheet's edges, both checked against the padding on desktop and phone.
+
+Pages: [journal](../wiki/features/journal.md).
