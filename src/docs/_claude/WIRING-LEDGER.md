@@ -8748,3 +8748,12 @@ tokens; the display face; Notebook's 26px rhythm; Parchment's tokens; 44px butto
 
 Pages: [journal](../wiki/features/journal.md), [theming & icons](../wiki/ui/theming-and-icons.md),
 [character model](../wiki/architecture/character-model.md), [decisions](../wiki/decisions.md).
+
+**Review** (sonnet): nothing must-fix. Fixed: (1) Parchment re-pointed every colour token but
+`--accent`, which a `[Table: …]` link (`.tblref`) uses: gold or red on cream in dark, about 1.7:1
+and 2.7:1. It is `--parch-accent` inside the sheet now; measured 6.0:1 (Humblewood) and 5.9:1
+(classic) in dark. (2) `jnlStartEdit()` made the draft `{id, at}`, so a saved page cleared to nothing
+(and so removed) and typed again came back as Sheet and without Show after combat — the flag's gap
+since #105, which the style shared. The draft now starts with the page's `look` and `afterCombat`.
+The harness gains `jnlUI` in `MUTABLE`, so a test can read the draft. Left: the style labels are
+9.5px at phone width (they fit, checked at 390).

@@ -65,9 +65,10 @@
 .jnl-look-book .jnl-h{text-align:center;margin-top:16px}
 .jnl-orn{text-align:center;color:var(--ink-soft);font-size:13px;letter-spacing:.4em;margin:2px 0 12px}
 /* Parchment: as Sheet, on cream with dark ink in both themes; the tokens inside
-   are the parchment's, so everything drawn on it (boxes, tags, rules) follows */
+   are the parchment's, so everything drawn on it (boxes, tags, rules, a
+   [Table: …] link in --accent, which was gold on cream in dark) follows */
 .jnl-look-parchment{--ink:var(--parch-ink);--ink-soft:var(--parch-soft);--line:var(--parch-ink);--hair:var(--parch-hair);
-  --accent-2:var(--parch-accent);--field:rgba(255,255,255,.35);background:var(--parch);color:var(--ink);border-color:rgba(24,20,16,.25);border-radius:4px}
+  --accent-2:var(--parch-accent);--accent:var(--parch-accent);--field:rgba(255,255,255,.35);background:var(--parch);color:var(--ink);border-color:rgba(24,20,16,.25);border-radius:4px}
 /* the editor's Page style row: four small pictures of the styles */
 .jnl-looks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .jnl-look{display:flex;flex-direction:column;gap:5px;min-height:44px;padding:6px 6px 5px;border:1.5px solid var(--hair);border-radius:9px;background:var(--field);

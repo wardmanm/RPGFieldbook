@@ -255,7 +255,9 @@ the same way. The three views:
   `span.f`), a **Show after combat** switch (`[data-jnlac]`, #105), the formatting key
   (`NOTE_FMT_HINT`) and Done. A style (`jnlSetLook()`) is saved as the switch is: a saved page takes
   it at once and keeps its `editedAt`, a draft holds it until its first keystroke (`jnlSavePage()`
-  carries `draft.look`), the buttons are patched in place, and Sheet removes the key. The switch (`jnlToggleAfterCombat()`) is
+  carries `draft.look`), the buttons are patched in place, and Sheet removes the key. Editing a
+  saved page starts its draft with the page's `look` and `afterCombat` (`jnlStartEdit()`), so a page
+  cleared to nothing (and so removed) and typed again comes back with both. The switch (`jnlToggleAfterCombat()`) is
   patched in place, never rebuilding the editor. A saved page takes it at once and keeps its
   `editedAt` (a flag is not content); a draft that is not a page yet holds it until its first
   keystroke makes the page (`jnlSavePage()` carries `draft.afterCombat` over). Every keystroke calls

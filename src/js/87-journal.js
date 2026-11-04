@@ -259,7 +259,12 @@ function jnlBack(){
    instead of keeping the one it finds. The caret goes to the END of the text:
    that is where a timestamp lands before the player clicks into the page. */
 function jnlStartEdit(id,at,focusId){
-  jnlUI.open=id;jnlUI.editing=true;jnlUI.draft={id,at};
+  /* The draft carries the page's own settings, so a page cleared to nothing
+     (and so removed) and typed again comes back with them (#167 review). */
+  const p=jnlPages(character).find(x=>x.id===id),draft={id,at};
+  if(p&&p.afterCombat===true)draft.afterCombat=true;
+  if(p&&jnlLook(p)!=="sheet")draft.look=p.look;
+  jnlUI.open=id;jnlUI.editing=true;jnlUI.draft=draft;
   const box=document.getElementById("jnlBody");if(box)box.innerHTML="";
   renderJournal();jnlShowCard();
   jnlFocus(focusId,true);

@@ -3054,7 +3054,7 @@ function block(html, needle, tag) {
      /transparent 0 25px,[^)]*\)[^)]*\) 25px 26px\)/.test(jc) && /\.jnl-look-notebook \.jnl-h\{line-height:52px;margin:0 -20px 0 -58px/.test(jc) &&
      /\.jnl-look-notebook \.jnl-meta\{display:block;line-height:26px/.test(jc) && /\.jnl-look-notebook \.n-body,\.jnl-look-notebook \.empty\{line-height:26px\}/.test(jc) &&
      /\.jnl-look-notebook \.n-h\{margin:0;line-height:26px\}/.test(jc) && /\.jnl-look-notebook \.jnl-meta>\*\{[^}]*line-height:1\}/.test(jc));
-  ck('#167 Parchment re-points the tokens, so what is drawn on it follows', /\.jnl-look-parchment\{--ink:var\(--parch-ink\);--ink-soft:var\(--parch-soft\);--line:var\(--parch-ink\);--hair:var\(--parch-hair\);\s*--accent-2:var\(--parch-accent\)/.test(jc));
+  ck('#167 Parchment re-points the tokens, so what is drawn on it follows', /\.jnl-look-parchment\{--ink:var\(--parch-ink\);--ink-soft:var\(--parch-soft\);--line:var\(--parch-ink\);--hair:var\(--parch-hair\);\s*--accent-2:var\(--parch-accent\);--accent:var\(--parch-accent\);/.test(jc));
   ck('#167 each style button is a 44px target', /\.jnl-look\{[^}]*min-height:44px/.test(jc));
   ck('#167 the Page style label is styled as the other labels', /label\.f,span\.f\{display:block;font-family:var\(--head\)/.test(fs.readFileSync(path.join(__dirname, '..', 'css', '20-cards.css'), 'utf8')));
 }

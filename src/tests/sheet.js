@@ -7927,6 +7927,16 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
      !('look' in X.jnlSavePage(c, {id: 'n2', look: 'sheet'}, {title: 'Other'}, 6)) && !('look' in X.jnlSavePage(c, {id: 'n3'}, {title: 'Third'}, 7)));
   ck('#167 typing on a page keeps its style', (X.jnlSavePage(c, {id: 'n1'}, {title: 'New', text: 'more'}, 8), c.journal.find(p => p.id === 'n1').look === 'parchment'));
   ctx.jnlReset();
+  /* review: a page cleared to nothing is removed; typed again, it keeps its style and its flag */
+  c.journal = [{id: 'k1', title: 'Loot', tag: '', text: 'x', at: 1, editedAt: 1, look: 'book', afterCombat: true}];
+  ctx.jnlStartEdit('k1', 1, 'jnlText');
+  const dr = X.jnlUI.draft;
+  ck('#167 editing a page starts a draft with its style and its after-combat flag', dr.look === 'book' && dr.afterCombat === true, dr);
+  X.jnlSavePage(c, dr, {title: '', text: ''}, 9);
+  ck('#167 ...cleared to nothing, the page goes', c.journal.length === 0);
+  const again = X.jnlSavePage(c, dr, {title: 'Loot'}, 10);
+  ck('#167 ...and typed again it comes back a Book page, still after combat', again.look === 'book' && again.afterCombat === true, again);
+  ctx.jnlReset();
   // the data
   const m = X.migrate({abilities: {}, journal: [{id: 'a', title: 'A', look: 'book'}, {id: 'b', title: 'B'}, {id: 'c', title: 'C', look: 'scroll'}]});
   ck('#167 migrate keeps a page\'s style, and one from a newer Fieldbook, untouched', m.journal[0].look === 'book' && !('look' in m.journal[1]) && m.journal[2].look === 'scroll');
