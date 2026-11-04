@@ -14,17 +14,20 @@ function openAddBackground(){
     if(!d){prev.innerHTML="";return;}
     const abils=(d.abilityScores||[]).map(a=>a.toUpperCase());
     const feats=bgFeatList(d);
+    const grants=[(d.skills||[]).join(", "),d.tools,d.languages].filter(Boolean);
+    /* #159: an older-shape background (seven Humblewood ones) has no ability
+       increase and no feat, so it gets no pickers and no empty lines */
     prev.innerHTML=`<p class="hint">${esc(d.description||"")}</p>
-      <div class="field"><label class="f">Ability scores (${esc(abils.join(", "))})</label>
+      ${abils.length?`<div class="field"><label class="f">Ability scores (${esc(abils.join(", "))})</label>
         <div class="seg" id="bgMode"><button type="button" data-m="2-1" class="on">+2 / +1</button><button type="button" data-m="1-1-1">+1 / +1 / +1</button></div></div>
       <div class="g2" id="bg21">
         <div class="field"><label class="f">+2 to</label><select id="bgA2">${(d.abilityScores||[]).map(a=>`<option value="${esc(a)}">${esc(String(a).toUpperCase())}</option>`).join("")}</select></div>
         <div class="field"><label class="f">+1 to</label><select id="bgA1">${(d.abilityScores||[]).map(a=>`<option value="${esc(a)}">${esc(String(a).toUpperCase())}</option>`).join("")}</select></div>
-      </div>
+      </div>`:""}
       ${feats.length>1?`<div class="field"><label class="f">Feat</label><select id="bgFeat">${feats.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join("")}</select></div>`:(feats.length?`<p class="hint">Feat: <b>${esc(feats[0])}</b></p>`:"")}
-      <p class="hint">Also grants: ${esc((d.skills||[]).join(", "))}${d.tools?" · "+esc(d.tools):""}${d.languages?" · "+esc(d.languages):""}</p>`;
+      ${grants.length?`<p class="hint">Also grants: ${esc(grants.join(" · "))}</p>`:""}`;
     const modeSeg=document.getElementById("bgMode"),bg21=document.getElementById("bg21");
-    modeSeg.addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;modeSeg.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));bg21.style.display=b.dataset.m==="2-1"?"":"none";});
+    if(modeSeg)modeSeg.addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;modeSeg.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));bg21.style.display=b.dataset.m==="2-1"?"":"none";});
   }
   if(sel)sel.addEventListener("change",drawPrev);
   document.getElementById("bgCancel").addEventListener("click",closeModal);
@@ -34,10 +37,16 @@ function openAddBackground(){
     const d=findBackgroundDef(raw);
     let opts={};
     if(d){
-      const mode=(document.querySelector("#bgMode .on")||{}).dataset?document.querySelector("#bgMode .on").dataset.m:"2-1";
-      const a2=document.getElementById("bgA2"),a1=document.getElementById("bgA1"),ft=document.getElementById("bgFeat");
-      if(mode==="2-1"&&a2&&a1&&a2.value===a1.value){alert("Choose two different abilities for +2 and +1.");return;}
-      opts={mode, a2:a2?a2.value:null, a1:a1?a1.value:null, feat:ft?ft.value:(bgFeatList(d)[0]||null)};
+      const ft=document.getElementById("bgFeat");
+      opts={feat:ft?ft.value:(bgFeatList(d)[0]||null)};
+      /* #159: the pickers are read only when the background has them — two
+         absent selects are not "the same ability twice" */
+      if((d.abilityScores||[]).length){
+        const mode=(document.querySelector("#bgMode .on")||{}).dataset?document.querySelector("#bgMode .on").dataset.m:"2-1";
+        const a2=document.getElementById("bgA2"),a1=document.getElementById("bgA1");
+        if(mode==="2-1"&&a2&&a1&&a2.value===a1.value){alert("Choose two different abilities for +2 and +1.");return;}
+        Object.assign(opts,{mode, a2:a2?a2.value:null, a1:a1?a1.value:null});
+      }
     }
     const _bp=applyBackground(raw,opts);closeModal();runExtraChoices(_bp);
   });
@@ -100,8 +109,8 @@ function openBackgroundInfo(name,opts){
   const d=findBackgroundDef(name);
   if(!d){openModal(name,`<p class="hint">No rules data loaded for this background — it was added as a custom name.</p>`+bgInfoFoot(ref,[name]),iconSVG("backgrounds",name,"lg"));return;}
   let b=`<p>${esc(d.description||"")}</p>`;
-  b+=`<p><b>Ability Scores:</b> ${esc((d.abilityScores||[]).map(a=>String(a).toUpperCase()).join(", "))}</p>`;
-  b+=`<p><b>Feat:</b> ${esc(bgFeatList(d).join(" or "))}</p>`;
+  if((d.abilityScores||[]).length)b+=`<p><b>Ability Scores:</b> ${esc(d.abilityScores.map(a=>String(a).toUpperCase()).join(", "))}</p>`;
+  if(bgFeatList(d).length)b+=`<p><b>Feat:</b> ${esc(bgFeatList(d).join(" or "))}</p>`;
   if(d.skills)b+=`<p><b>Skill Proficiencies:</b> ${esc(d.skills.join(", "))}</p>`;
   if(d.tools)b+=`<p><b>Tool Proficiencies:</b> ${esc(d.tools)}</p>`;
   if(d.languages)b+=`<p><b>Languages:</b> ${esc(d.languages)}</p>`;

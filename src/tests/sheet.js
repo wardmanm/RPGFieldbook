@@ -5870,6 +5870,65 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     X.character = X.blankChar();
   }
 
+  /* ---- #159: a background with no ability scores ----
+     Seven Humblewood backgrounds are the older shape: skills, tools, languages,
+     equipment and a feature, with no ability increase and no feat. The Add
+     window drew two empty +2/+1 selects for them, and Add read the two blanks
+     as "the same ability" and refused, so none of the seven could be added. */
+  {
+    const why = res => res.err ? String(res.err.stack || res.err).split('\n').slice(0, 3).join(' | ') : undefined;
+    X.rules = {backgrounds: [
+      {name: 'Stonecutter', description: 'An older background.', skills: ['Insight'],
+       feature: {name: 'Stonewise', description: 'You know stone.'}},
+      {name: 'Wanderer', description: 'Only a feature, as the Humblewood pack has these today.', feature: {name: 'Wayfinding', description: 'You find the way.'}},
+      {name: 'Mason', description: 'A 2024 background.', abilityScores: ['str', 'con', 'wis'], feat: 'Tough', skills: ['Athletics']}]};
+    X.reindexRules();   /* it numbers the ids, so the tests find them by name */
+    const idOf = nm => X.rules.backgrounds.find(b => b.name === nm)._id;
+    const fresh = () => { X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {system: 'humblewood'})))); };
+    const hadAlert = ctx.alert;
+    let alerted = null;
+    ctx.alert = m => { alerted = m; };
+    const pick = nm => { ctx.openAddBackground(); el('bgSel').value = idOf(nm); fire('bgSel', 'change'); };
+
+    fresh();
+    let res = capture(() => pick('Stonecutter'));
+    ck('#159 Add background draws no ability pickers for a background with no ability scores',
+       !res.err && !/id="bgA2"|id="bgA1"|id="bgMode"|Ability scores/.test(res.html), why(res) || res.html);
+    ck('#159 ...nor a Feat line, and "Also grants" names what it grants',
+       !/Feat:/.test(res.html) && /Also grants: Insight/.test(res.html), res.html);
+    res = capture(() => pick('Wanderer'));
+    ck('#159 a background that grants nothing but its feature has no empty "Also grants:" line',
+       !res.err && !/Also grants/.test(res.html) && /Only a feature/.test(res.html), why(res) || res.html);
+    res = capture(() => { pick('Stonecutter'); fire('bgAdd', 'click'); });
+    ck('#159 ...and Add takes it in one click: no alert, its feature granted, no ability feature',
+       !res.err && alerted === null && X.character.bg && X.character.bg.name === 'Stonecutter' && X.character.bg.abils === null &&
+       X.character.features.some(f => f.name === 'Stonewise') && !X.character.features.some(f => /Ability Scores/.test(f.name)),
+       why(res) || alerted || JSON.stringify(X.character.bg));
+
+    /* the 2024 shape is unchanged: the pickers, the same-ability check, the increase */
+    fresh(); alerted = null;
+    res = capture(() => pick('Mason'));
+    ck('#159 a background with ability scores still draws its +2 / +1 pickers',
+       !res.err && /id="bgA2"/.test(res.html) && /id="bgMode"/.test(res.html) && /Ability scores \(STR, CON, WIS\)/.test(res.html), why(res) || res.html);
+    res = capture(() => { pick('Mason'); el('bgA2').value = 'str'; el('bgA1').value = 'str'; fire('bgAdd', 'click'); });
+    ck('#159 ...still refuses the same ability twice', !res.err && /two different abilities/.test(alerted || '') && !X.character.bg, why(res) || alerted);
+    alerted = null;
+    res = capture(() => { pick('Mason'); el('bgA2').value = 'str'; el('bgA1').value = 'con'; fire('bgAdd', 'click'); });
+    ck('#159 ...and adds +2 STR / +1 CON',
+       !res.err && alerted === null && X.character.bg && JSON.stringify(X.character.bg.abils) === JSON.stringify([{target: 'ability.str', value: 2}, {target: 'ability.con', value: 1}]),
+       why(res) || alerted || JSON.stringify(X.character.bg));
+
+    /* the info card lists only what the background has */
+    res = capture(() => ctx.openBackgroundInfo(idOf('Stonecutter'), {ref: true}));
+    ck('#159 the info card of a background with no ability scores or feat leaves both lines out',
+       !res.err && !/Ability Scores:/.test(res.html) && !/<b>Feat:/.test(res.html) && /Stonewise/.test(res.html) && /Insight/.test(res.html), why(res) || res.html);
+    res = capture(() => ctx.openBackgroundInfo(idOf('Mason'), {ref: true}));
+    ck('#159 ...and a 2024 background still shows them', !res.err && /Ability Scores:<\/b> STR, CON, WIS/.test(res.html) && /<b>Feat:<\/b> Tough/.test(res.html), why(res) || res.html);
+
+    ctx.alert = hadAlert;
+    X.character = X.blankChar();
+  }
+
   Object.assign(doc, saved);
   if (!hadFR) delete ctx.FileReader;
   X.activeId = null;

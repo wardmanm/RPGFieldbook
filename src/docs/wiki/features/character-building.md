@@ -78,7 +78,11 @@ tab's Species rows open it with `{ref:true}` (#99): the window shows the species
 
 **Background.** `openAddBackground()` previews the 2024 shape: the three eligible abilities as
 +2/+1 or +1/+1/+1, a feat (a select when the background offers more than one), the granted skills,
-tools and languages. `applyBackground()` adds the ability feature, the skill grants, the feat through
+tools and languages. Each part shows only when the background has it (#159): seven Humblewood
+backgrounds are the older shape, with no ability increase and no feat, and get no pickers; Add reads
+the pickers only for a background with `abilityScores`, so it never refuses two absent selects as
+"the same ability". `openBackgroundInfo()` leaves out an empty Ability Scores or Feat line the same
+way. `applyBackground()` adds the ability feature, the skill grants, the feat through
 `grantFeatDef()`, the single background `feature`, `equipmentGrants`, appends tools to
 Proficiencies, and grants its `languages` as chips stamped `bg:<Name>`. A `{type:"feat"}` in a
 background's `choices` is queued with the `bg:` sid and opens the same list as a species' (#118).
@@ -601,3 +605,4 @@ they are built: [Converter](../data/converter.md).
   Epic Boon shows once on the level-19 card. → ledger L7710, #118
 - 2026-10-27 — Fix round 1: an "or" prerequisite is named whole ("Strength 13 or Dexterity 13"), not just its closest alternative. → ledger L7710, #118
 - 2026-10-30 — Corrected: `NO_RULES_HINT` points to Settings → Extensions, not Settings → Rules (pre-release 1.9.0, step 1).
+- 2026-11-04 — A background with no ability scores or feat (seven Humblewood ones) previews and adds without empty pickers, and Add no longer refuses it; its info card drops the empty lines. → ledger L8474, #159
