@@ -92,7 +92,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'initNext', 'setInitMode', 'toggleInitRolls', 'toggleInitTable',
   'initTie', 'combatantDialogHTML', 'setCombatant', 'removeCombatant', 'moveCombatant',
   'addCombatant', 'openCombatant', 'openAddCombatant',
-  'renderInitStrip', 'initChipScroll', 'irStart', 'renderCombatHeader',
+  'renderInitStrip', 'irStart', 'renderCombatHeader',
+  'initPrevTurn', 'initPrev', 'initCanPrev', 'initFitCount', 'initFitSide', 'iniMoreHTML',
   'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
   'cleanInvLog', 'logInv', 'logGrant', 'logItemSave', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
@@ -6245,6 +6246,21 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#91 everyone else dead: you again, and every Next wraps', X.initNextTurn(solo, 'y').turnId === 'y' && X.initNextTurn(solo, 'y').wrapped === true);
   ck('#91 you are never dead', X.combatantDead({kind: 'you', band: 4, dead: true}) === false);
 
+  /* #165 previous turn: Next's mirror */
+  const pt = (t) => X.initPrevTurn(L, t);
+  ck('#165 Prev steps back over the dead', pt('f3').turnId === 'y' && pt('f3').wrapped === false, pt('f3'));
+  ck('#165 Prev before the first living row wraps to the last living one, once', pt('f1').turnId === 'f3' && pt('f1').wrapped === true, pt('f1'));
+  ck('#165 an unknown actor starts at the first living row without a wrap', pt('gone').turnId === 'f1' && pt('gone').wrapped === false);
+  ck('#165 everyone else dead: you again, and every Prev wraps', X.initPrevTurn(solo, 'y').turnId === 'y' && X.initPrevTurn(solo, 'y').wrapped === true);
+
+  /* #165 how many chips fit on one side of the actor, nearest first; a side
+     that overflows keeps room for its +N */
+  const fc = X.initFitCount;
+  ck('#165 all fit: every chip, no +N', fc([80, 90], 200, 5, 40) === 2);
+  ck('#165 too many: the nearest that fit beside the +N', fc([80, 90, 70], 200, 5, 40) === 1, fc([80, 90, 70], 200, 5, 40));
+  ck('#165 not even one: just the +N', fc([120], 100, 5, 40) === 0);
+  ck('#165 an empty side', fc([], 100, 5, 40) === 0);
+
   /* bands */
   ck('#91 bandOfShare: full Healthy, >½ Injured, ≤½ Bloodied, ≤¼ Near death (0 too), no max → null',
      X.bandOfShare(22, 22) === 0 && X.bandOfShare(12, 22) === 1 && X.bandOfShare(11, 22) === 2 && X.bandOfShare(5, 22) === 3 && X.bandOfShare(0, 22) === 3 && X.bandOfShare(5, '') === null);
@@ -6339,6 +6355,14 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#91 ...strikes the dead and shows rolls', /class="ini-chip dead"/.test(s) && />19</.test(s));
     ck('#91 ...a not-set band is a "?" bar; yours is a share', /hb-q/.test(s) && /hb-share/.test(s));
     ck('#91 ...Next and ▾ in Turns mode', /id="cvTurn"/.test(s) && /id="cvInitMore"/.test(s));
+    {
+      const [left, rest] = s.split('class="ini-side r"');
+      ck('#165 the actor sits between two sides: who has acted on the left (nobody yet), who is to come on the right',
+         /class="ini-side l"/.test(left) && !/data-inichip=/.test(left.split('class="ini-side l"')[1].split('class="ini-chip now"')[0]) &&
+         /class="ini-chip now"/.test(left) && (rest.match(/data-inichip=/g) || []).length === 2, s);
+      ck('#165 ...each side has its +N, hidden until the fit pass shows it', /data-inimore="l"[^>]*hidden/.test(s) && /data-inimore="r"[^>]*hidden/.test(s), s);
+      ck('#165 ◂ Prev in Turns mode, greyed on round 1\'s first turn', /id="cvTurnPrev"[^>]*disabled/.test(s), s);
+    }
     X.character.initShowRolls = false;
     ck('#91 Show rolls off hides the numbers', !/class="ini-n"/.test(X.initStripHTML(X.character)));
     X.character.initShowRolls = true;
@@ -6346,8 +6370,27 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#91 Next moves to Mira and announces it', X.character.combatTurn === X.character.combatants[1].id && live === "Mira's turn" && rounds === 0, live);
     X.initNext();
     ck('#91 Next past the end (the Wolf is dead) wraps and advances the round once', X.character.combatTurn === X.character.combatants[0].id && rounds === 1, rounds);
+    X.character.combatRound = 2;
+    X.initPrev();
+    ck('#165 Prev at the top of a round goes back to the last living row and steps the round back',
+       X.character.combatTurn === X.character.combatants[1].id && rounds === 0 && /Mira's turn/.test(live), [X.character.combatTurn, rounds, live]);
+    X.initPrev();
+    ck('#165 ...and within a round it moves back one, with no round change', X.character.combatTurn === X.character.combatants[0].id && rounds === 0, rounds);
+    X.character.combatRound = 1;
+    X.initPrev();
+    ck('#165 on round 1\'s first turn there is nothing before it: Prev is greyed and does nothing',
+       X.initCanPrev(X.character) === false && /id="cvTurnPrev"[^>]*disabled/.test(X.initStripHTML(X.character)) &&
+       X.character.combatTurn === X.character.combatants[0].id && rounds === 0);
+    X.character.combatTurn = X.character.combatants[1].id;
+    ck('#165 ...with someone before the actor it is live', X.initCanPrev(X.character) === true && !/id="cvTurnPrev"[^>]*disabled/.test(X.initStripHTML(X.character)));
+    X.character.combatTurn = X.character.combatants[0].id;
     X.setInitMode('rounds');
     ck('#91 Rounds mode: no marker, no Next', X.character.initMode === 'rounds' && X.character.combatTurn === '' && !/id="cvTurn"/.test(X.initStripHTML(X.character)));
+    {
+      const r = X.initStripHTML(X.character);
+      ck('#165 Rounds mode: no Prev, one side from the top of the order, and its +N at the right',
+         !/id="cvTurnPrev"/.test(r) && !/class="ini-side l"/.test(r) && /class="ini-side r"/.test(r) && (r.match(/data-inichip=/g) || []).length === 3 && /data-inimore="r"/.test(r), r);
+    }
     X.setInitMode('turns');
     ck('#91 back to Turns: the marker on the first living row', X.character.combatTurn === X.character.combatants[0].id);
     const t = X.initTableHTML(X.character);
@@ -6457,13 +6500,31 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     }
     ctx.renderInitTable = () => {};
 
-    /* I2: the actor kept in view */
-    const box = {left: 0, right: 240};
-    ck('#91 I2 an actor past the right edge scrolls into view', X.initChipScroll(0, box, {left: 580, right: 645}) === 413, X.initChipScroll(0, box, {left: 580, right: 645}));
-    ck('#91 I2 ...one past the left edge too', X.initChipScroll(400, box, {left: -100, right: -40}) === 292, X.initChipScroll(400, box, {left: -100, right: -40}));
-    ck('#91 I2 ...one already in view keeps the scroll', X.initChipScroll(120, box, {left: 30, right: 95}) === 120);
-    ck('#91 I2 ...and nobody acting keeps it too', X.initChipScroll(120, box, null) === 120);
-    ck('#91 I2 ...never below 0', X.initChipScroll(5, box, {left: -20, right: 40}) === 0);
+    /* #165 the fit pass: the chips farthest from the actor go into that side's +N */
+    {
+      const hadCS = ctx.getComputedStyle;
+      ctx.getComputedStyle = () => ({columnGap: '5px'});
+      const mk = (id, w) => ({hidden: false, offsetWidth: w, dataset: {inichip: id}});
+      const side = (cls, chips, w) => {
+        const more = {hidden: true, offsetWidth: 40, textContent: '', dataset: {}, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }};
+        return {classList: {contains: c => c === cls}, clientWidth: w, querySelectorAll: () => chips, querySelector: () => more, more, chips};
+      };
+      const Ls = side('l', [mk('a', 80), mk('b', 80), mk('c', 80)], 200);   // DOM order a b c; c is nearest the actor
+      const Rs = side('r', [mk('d', 80), mk('e', 80)], 200);
+      X.initFitSide(Ls); X.initFitSide(Rs);
+      ck('#165 left: the nearest that fit stay, the earliest go into +N',
+         Ls.chips.map(c => c.hidden).join() === 'true,true,false' && Ls.more.hidden === false && /\+2/.test(Ls.more.textContent) && Ls.more.dataset.iniids === 'a,b',
+         [Ls.chips.map(c => c.hidden), Ls.more]);
+      ck('#165 right: everyone fits, so no +N', Rs.chips.every(c => !c.hidden) && Rs.more.hidden === true);
+      Rs.clientWidth = 130; X.initFitSide(Rs);   // 80 + 5 + the 40px +N fit; a second chip does not
+      ck('#165 ...narrowed, the later one goes into +N and the nearest stays', Rs.chips.map(c => c.hidden).join() === 'false,true' && Rs.more.dataset.iniids === 'e', Rs.more);
+      ctx.getComputedStyle = hadCS;
+      const L2 = X.character.combatants;
+      const m = X.iniMoreHTML(X.character, [L2[2].id, L2[0].id], 'r');
+      ck('#165 the +N list: the table\'s rows for those combatants, in initiative order, each opening its dialog',
+         (m.match(/data-inirow=/g) || []).length === 2 && m.indexOf(L2[0].id) < m.indexOf(L2[2].id) && /Still to come/.test(m), m);
+      ck('#165 ...the left one says who has acted', /Earlier this round/.test(X.iniMoreHTML(X.character, [L2[0].id], 'l')));
+    }
 
     /* I3: Start ▸ applies a typed roll */
     {

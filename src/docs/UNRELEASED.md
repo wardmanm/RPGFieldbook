@@ -66,7 +66,10 @@ Bullets below this line — leave the heading in place.
   you and your hit-point roll.
 - Paladin and Ranger spell slots follow the 2024 rule (half your levels, rounded up), so a level 1
   Paladin has its two slots.
-- An initiative tracker in the combat view: roll initiative when combat starts, follow the order turn by turn or round by round, and track everyone's health at a glance.
+- An initiative tracker in the combat view: roll initiative when combat starts, follow the order turn by
+  turn or round by round, and track everyone's health at a glance. Whoever is acting stays in the middle
+  of the strip, with who has gone on the left and who is still to come on the right; anyone who doesn't
+  fit is a tap away under +N, and Prev steps back a turn.
 - A Party card on the Bio tab: your companions join every fight you start.
 - Trade from the Inventory tab: give items and coins, get items and coins, see whether it
   balances, and complete it in one step. Selling for more than something is worth reads as in

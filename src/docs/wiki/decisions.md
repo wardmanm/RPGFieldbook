@@ -397,6 +397,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the fight is kept (#91)** — Saved with the character while a fight is on, beside `combatActive`/`combatRound`; End combat clears it
 - **Turns or rounds (#91)** — Both, per character (`initMode`); Turns has a marker and Next, Rounds has neither
 - **Where the tracker sits (#91)** — A strip of chips stuck under the combat header; ▾ opens the full table
+- **What the strip shows (#165)** — The actor centred, who has acted on its left and who is to come on its right, this round only; overflow under +N; no sideways scroll
+- **Going back a turn (#165)** — ◂ Prev, Next's mirror; across a round's top it steps the round back; greyed on round 1's first turn
 - **Editing a combatant (#91)** — One dialog per combatant, targets ≥44px; the table is read-only
 - **Health (#91)** — Five bands (Healthy·Injured·Bloodied·Near death·Dead) plus "?" for not set
 - **A party member's health (#91)** — Exact HP or Estimate, chosen per member, flippable any time

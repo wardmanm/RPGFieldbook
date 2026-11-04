@@ -34,6 +34,8 @@ function wire(){
        then runs its own hook, here or further down (subclass, Remove, + Add). */
     if(t.closest("#shBack"))return closeShFly();
     if(_shFly&&t.closest("#shFly button"))closeShFly();
+    /* the strip's +N list (#165): any tap closes it, a row's own tap then opens its dialog */
+    if(_iniFly&&!t.closest("[data-inimore]"))closeIniFly();
     if((m=t.closest("[data-shcls]")))return openShFly("class",num(m.dataset.shcls),m);
     if(t.closest("[data-shaddcls]"))return openAddClass();
     if((m=t.closest("[data-shrace]")))return openRaceInfo(m.dataset.shrace);
@@ -165,6 +167,8 @@ function wire(){
     if(t.closest("#cvEnd"))return endCombatAsk();
     // the initiative strip and table (#91)
     if(t.closest("#cvTurn"))return initNext();
+    if(t.closest("#cvTurnPrev"))return initPrev();
+    if((m=t.closest("[data-inimore]")))return openIniFly(m);
     if(t.closest("#iniRollNow"))return openInitRoll();
     if(t.closest("#cvInitMore"))return toggleInitTable();
     if((m=t.closest("[data-inimode]")))return setInitMode(m.dataset.inimode);
@@ -236,6 +240,11 @@ function wire(){
     if(e.key!=="Escape"||!_shFly)return;
     const a=_shFly.anchor;closeShFly();if(a&&a.isConnected&&a.focus)a.focus();
   });
+  /* ...and the initiative strip's +N list (#165) the same way */
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape"||!_iniFly)return;
+    const b=_iniFly.btn;closeIniFly();if(b&&b.isConnected&&b.focus)b.focus();
+  });
   document.addEventListener("keydown",e=>{
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
     if(e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);return;}
@@ -251,7 +260,9 @@ function wire(){
   /* The combat tab's header sticks under the tab bar, whose height changes with
      the width (labels become icons at 860px). No Esc handler: the view is a tab
      now, not a layer over the page, and Esc is not how you leave a tab. */
-  window.addEventListener("resize",()=>{if(combatViewOpen())cvStickyTop();});
+  window.addEventListener("resize",()=>{if(combatViewOpen()){cvStickyTop();initFitStrip();}});
+  /* names change width when the fonts arrive: fit the strip again (#165) */
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(combatViewOpen())initFitStrip();});
   /* Arranging the combat view: the grip is the only drag handle. */
   document.addEventListener("pointerdown",e=>{
     const g=e.target.closest&&e.target.closest("[data-cvgrip]");

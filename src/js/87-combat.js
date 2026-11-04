@@ -226,13 +226,12 @@ function combatHeaderHTML(c){
 function renderCombatHeader(){
   const h=document.getElementById("cvHead");if(!h)return;
   const a=document.activeElement,had=a&&a.id&&h.contains(a)?a.id:"";
-  const oc=h.querySelector(".ini-chips"),sl=oc?oc.scrollLeft:0;   /* the strip's sideways scroll, kept (#91 I2) */
   h.innerHTML=combatHeaderHTML(character);
   h.classList.toggle("fighting",inCombat(character));   // the two-row phone layout is for combat only
   if(!inCombat(character))cvLiveRound=0;
   else if(num(character.combatRound)!==cvLiveRound){cvLiveRound=num(character.combatRound);setCombatLive("Round "+cvLiveRound);}
-  initKeepActorInView(sl);
-  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart",cvTurn:"cvNext"};
+  initFitStrip();   /* the strip's chips that don't fit go into its +N (#165) */
+  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart",cvTurn:"cvNext",cvTurnPrev:"cvTurn"};
   for(let id=had,i=0;id&&i<4;id=instead[id],i++){
     const b=document.getElementById(id);
     if(b&&!b.disabled){b.focus();break;}

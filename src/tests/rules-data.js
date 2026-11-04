@@ -3038,6 +3038,13 @@ function block(html, needle, tag) {
   const root = tk.slice(tk.indexOf(':root{'), tk.indexOf('}', tk.indexOf(':root{')));
   ck('#91 the band colours are tokens', ['--hb-healthy', '--hb-injured', '--hb-bloodied', '--hb-near', '--hb-empty'].every(t => root.includes(t + ':')));
   ck('#91 strip chips are at least 44px tall', /\.ini-chip\{[^}]*min-height:44px/.test(cc));
+  /* #165: the actor centred between two equal sides; no sideways scroll, and
+     .ini-chip's display:flex would beat the [hidden] the fit pass sets */
+  ck('#165 the strip never scrolls sideways', !/\.ini-chips\{/.test(cc) && !/\.ini-(?:line|side)\{[^}]*overflow-x:auto/.test(cc) &&
+     /\.ini-side\{flex:1 1 0;min-width:0;[^}]*overflow:hidden/.test(cc) && /\.ini-side\.l\{justify-content:flex-end\}/.test(cc));
+  ck('#165 a chip or +N the fit pass hides is really hidden', /\.ini-chip\[hidden\],\.ini-more\[hidden\]\{display:none\}/.test(cc));
+  ck('#165 the +N is a 44px target', /\.ini-more\{[^}]*min-height:44px;min-width:44px/.test(cc));
+  ck('#165 on a phone Prev and Next keep their arrows only', /@media\(max-width:640px\)\{[\s\S]*?\.cv-init \.ini-w\{display:none\}/.test(cc));
 }
 
 // ---------- #91 the combatant dialog's targets are big enough to tap

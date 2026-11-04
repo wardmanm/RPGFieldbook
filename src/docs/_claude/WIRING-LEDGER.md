@@ -8550,3 +8550,54 @@ initiative tracker are announced in the same Pending list), so they would have d
 windows players have not had. shell.md no longer says End of combat was clipped: it had `.ec-scroll`
 from the start, and Ruling 19 fixed the opposite, a tall empty box. The guard counts every `wide:` in
 the code with block comments left out, so `{ wide: true }` or `{wide:!0,…}` count too.
+
+## #165: the initiative strip keeps the actor centred, overflow under +N, and ◂ Prev (Mike, 2026-11-04)
+
+Found in the 1.9.0 test pass: with more combatants than fit, #91's strip scrolled sideways under a
+scrollbar that looked broken, and the actor could sit off screen. Brainstormed with mockups (two
+ideas: a ring that wraps into the next round, my pick; a line, this round only). **Mike chose the
+line**, and asked for a **Previous** button. Sized as a small change: agreed in chat, no spec.
+
+**The strip** (`initStripHTML()`): in Turns mode the actor sits in `.ini-line` between two
+`.ini-side`s that share the width (`flex:1 1 0`), so it is centred whatever the names; the left side
+is who has acted this round, the right who is still to come. Every chip is drawn, then
+`initFitStrip()` (after each `renderCombatHeader()`, on resize, once `document.fonts.ready`) runs
+`initFitSide()` per side: measure, hide the farthest that don't fit (`initFitCount()`, pure, nearest
+first, keeping room for the +N once a side overflows), and show the side's +N with the hidden ids in
+initiative order. A +N opens `#iniFly` (new in `70-combat.html`, outside `#cvHead`; fixed under the
+button) with the table's own rows (`iniMoreHTML()` → `initRowHTML()`), so a tap opens the combatant's
+dialog through `[data-inirow]`; any other tap, Escape (focus back to the +N) or a repaint closes it.
+Rounds mode (or no actor) is one side from the top with its +N at the right. Chips cap at 170px with
+the name ellipsized. `initChipScroll()`, `initKeepActorInView()` and the scroll carried across the
+header repaint are gone with the scroll.
+
+**◂ Prev** (`#cvTurnPrev`): `initPrevTurn()` mirrors `initNextTurn()`; `initPrev()` steps back over
+the dead and, across the top of a round, to the last living row with `advanceRound(-1)` (the header's
+◀: spell and condition timers rewind). `initCanPrev()` greys it on round 1's first turn, where
+`advanceRound()` will not go below 1. At ≤640px Prev and Next show only their arrows (`.ini-w`).
+
+**Rulings.** The empty side at a round's edge is plain space, not the mockup's dashed boxes: the
+equal sides already keep the actor still, and boxes of a guessed width would not match the real
+chips. The +N list is the table's rows, not new markup, so it carries health and AC and opens the
+same dialog. `.ini-chip[hidden]` needs its own `display:none`: `.ini-chip`'s `display:flex` beats the
+browser's `[hidden]` rule.
+
+**Tests.** `sheet.js`: `initPrevTurn()` (back over the dead, the wrap, an unknown actor, a lone
+survivor); `initFitCount()`; the strip's sides, the hidden +Ns and Prev greyed on round 1;
+`initPrev()` across a round (round stepped back, announced) and within one, and doing nothing on
+round 1's first turn; Rounds mode with no Prev and one side; `initFitSide()` on stub sides (left
+keeps the nearest, the earliest go into +N in order; right fits; narrowed, the later goes); the +N
+list's rows in order with its heading. `rules-data.js`: no sideways scroll, `[hidden]` really hides,
+the +N is 44px, phone arrows only. The #91 I2 scroll tests went with the scroll.
+
+**Driven** on the built file. 1280, classic: eight combatants, Big Boss acting, exactly centred
+(0px), Kaela and Bree left, Goblin 1 and +4 right; +4 lists Goblin 2, Goblin 3, Wolf, Ogre ("Still
+to come"); tapping Wolf closed the list and opened Wolf's dialog; Next slid everyone; the left +1
+read "Earlier this round"; an outside tap closed it; at round 5's top Kaela stood centred with an
+empty left; ◂ Prev went to the Ogre and round 4, then to the Wolf; round 1's first turn greyed Prev.
+390: ◂ +2 Big Boss +5 ▸ ▾, centred, nothing past the edge; the list on screen; Escape closed it with
+focus on the +5. Humblewood, dark: the strip and list read as the rest of the header; an 18-letter
+name capped at 170px with an ellipsis, still centred; Rounds mode from the top with +1 at the right.
+Not driven: touch, a real phone, Mike's own fights.
+
+Pages: [combat view](../wiki/features/combat-view.md), [decisions](../wiki/decisions.md).
