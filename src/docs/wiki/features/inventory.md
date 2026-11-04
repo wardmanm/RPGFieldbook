@@ -199,10 +199,12 @@ only `true`) makes it the **Loot** window, described after the layout.
   you get." (Go back / Complete trade), and doesn't ask when even or in your favour. The trade stays
   open under the question, and the answer acts only on that same trade.
 - **Splitting coins (#168).** The purse pays what is in the You give boxes by splitting bigger coins
-  when it lacks the small ones: `tradeSplitPlan()` meets each shortfall, smallest coin first, from the
-  smallest bigger coin with one to spare, split into the coin below it (`TRADE_SPLIT`: pp→gp, gp→sp,
-  ep→sp, sp→cp; never into electrum, never upward), only among the character's own coins; `null`
-  when the purse can't pay. A note under the boxes (`#trSplit`) says "Splits 1 GP into 10 SP to make
+  when it lacks the small ones: `tradeSplitPlan()` meets each shortfall, smallest coin first, from a
+  bigger coin with some to spare whose chain of splits comes down to it — the smallest that covers
+  the shortfall alone, else the smallest — split into the coin below it (`TRADE_SPLIT`: pp→gp,
+  gp→sp, ep→sp, sp→cp; never into electrum, never upward), only among the character's own coins,
+  whole and none below 0; `null` when the purse can't pay. Each You give box's `max` is its cap,
+  kept current as the player types (`tradeRefresh()`). A note under the boxes (`#trSplit`) says "Splits 1 GP into 10 SP to make
   change."; Complete makes the splits first, each a receipt line, inside the one `coins` undo part,
   so Undo restores the purse exactly. Typed coins and Balance's split alike.
 - **Balance trade (#168)** (`#trBalance`, beside Cancel; ⚖ alone at 700px and under; not in Loot;

@@ -7029,6 +7029,8 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#168 ...nor beyond the purse', X.tradeSplitPlan({gp: 11}, {gp: 10}, HW) === null && X.tradeSplitPlan({sp: 101}, {gp: 10}, HW) === null);
     ck('#168 ...only the character\'s own coins: Humblewood leaves platinum alone', X.tradeSplitPlan({gp: 5}, {pp: 1}, HW) === null && X.tradeSplitPlan({gp: 5}, {pp: 1}, DND) !== null);
     ck('#168 ...splitting many at once, not one by one', (() => { const t = Date.now(), pl = X.tradeSplitPlan({cp: 99999}, {pp: 100}, DND); return pl && pl.length === 3 && Date.now() - t < 200; })());
+    ck('#168 review: nothing splits into electrum, so a purse of gold answers no at once', (() => { const t = Date.now(); return X.tradeSplitPlan({ep: 1}, {gp: 1e6}, DND) === null && X.tradeSplitPlan({ep: 3}, {pp: 1e6, ep: 1}, DND) === null && Date.now() - t < 50; })());
+    ck('#168 review: one coin that covers it is split, not two', same(X.tradeSplitPlan({sp: 6}, {ep: 1, gp: 1}, DND), [{from: 'gp', into: 'sp', n: 1}]));
     ck('#168 the receipt\'s words', same(X.tradeSplitText([{from: 'gp', into: 'sp', n: 2}, {from: 'pp', into: 'gp', n: 1}]), ['2 GP into 20 SP', '1 PP into 10 GP']));
     // Humblewood: gold, silver, copper
     const c = X.blankChar(); c.system = 'humblewood'; X.character = c;
@@ -7038,6 +7040,9 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#168 a box holds what the purse can pay, splitting', X.tradeGiveCap(d, c, 'gp') === 10 && X.tradeGiveCap(d, c, 'sp') === 100 && X.tradeGiveCap(d, c, 'cp') === 1000);
     d.give.coins = {sp: 5};
     ck('#168 ...with the other boxes as they are', X.tradeGiveCap(d, c, 'gp') === 9, X.tradeGiveCap(d, c, 'gp'));
+    ck('#168 review: a coin count below 0 (a hand-edited file) counts as none', X.tradeGiveCap({give: {coins: {}}}, {coins: {gp: 10, sp: -50}}, 'gp') === 10);
+    ck('#168 review: a seeded coin the purse can pay by splitting stays; one below 0 is none',
+       X.newTradeDraft({give: {coins: {sp: 5}}}).give.coins.sp === 5 && X.newTradeDraft({give: {coins: {gp: -2, sp: 2.6}}}).give.coins.gp === 0 && X.newTradeDraft({give: {coins: {sp: 2.6}}}).give.coins.sp === 2);
     d.give.coins = {};
     ck('#168 Balance: you owe 3.5 gp from a purse of gold: 3 gp and 5 sp', same(X.tradeBalanceFill(d, c), {side: 'give', add: {gp: 3, sp: 5}}), X.tradeBalanceFill(d, c));
     d.give.coins = {gp: 1};
@@ -7066,6 +7071,14 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#168 ...the split is its own receipt line, before the coins', rl.indexOf('Split 1 GP into 10 SP') === 0 && rl.indexOf('-3 GP') > 0 && rl.indexOf('-5 SP') > 0, rl);
     ck('#168 ...one coins part holds it all', same(tr.undo.parts.find(p => p.kind === 'coins').u.delta, {gp: -4, sp: 5}), tr.undo.parts);
     ck('#168 ...and Undo puts the purse back exactly', X.invUndo(tr.id) === '' && c.coins.gp === 10 && c.coins.sp === 0 && !c.inventory.some(i => i.name === 'Potion'), c.coins);
+    // review: a purse with a coin below 0 moves what the receipt says
+    {
+      const dn2 = X.blankChar(); dn2.system = 'dnd'; X.character = dn2; dn2.coins = {pp: 1, gp: -5}; dn2.invLog = [];
+      const dd = X.newTradeDraft({}); dd.give.coins = {gp: 8};
+      const t2 = X.completeTrade(dd), l2 = t2.lines.map(l => l.dir + l.text);
+      ck('#168 review: a coin below 0 is none: 1 pp splits, 8 gp go, as the receipt says', l2.includes('Split 1 PP into 10 GP') && l2.includes('-8 GP') && t2.meta.giveCp === 800 && dn2.coins.pp === 0 && dn2.coins.gp === -3, [l2, dn2.coins]);
+      X.character = c;
+    }
     // the window
     d = X.newTradeDraft({with: 'Olvin'});
     let h = X.tradeHTML(d, c);
@@ -7084,6 +7097,8 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#168 the button adds the coins to the side that is behind, shows that side, and repaints; short, it says so',
        /if\(t\.closest\("#trBalance"\)\)\{\s*const f=tradeBalanceFill\(d,character\);if\(!f\)return;\s*if\(f\.short\)\{toast\(`You're \$\{cpToGpText\(f\.short\.need-f\.short\.have\)\} short of covering it — you have \$\{cpToGpText\(f\.short\.have\)\}\.`\);return;\}\s*const side=d\[f\.side\];[^\n]*\n\s*d\.tab=f\.side;[^\n]*\n\s*return tradePaint\(\);/.test(src));
     ck('#168 a typed coin is capped at what the purse can pay', /if\(side==="give"\)v=Math\.min\(v,tradeGiveCap\(d,character,k\)\);/.test(src));
+    ck('#168 Complete goes through the question', /if\(t\.closest\("#trComplete"\)\)\{\s*if\(tradeEmpty\(d\)\)return;\s*tradeAskComplete\(d\);\s*return;\s*\}/.test(src));
+    ck('#168 review: typing keeps every You give box\'s max current', /body\.querySelectorAll\('\[data-trcoin\^="give:"\]'\)\.forEach\(el=>\{el\.max=String\(tradeGiveCap\(_trade,character,el\.dataset\.trcoin\.slice\(5\)\)\);\}\);/.test(src));
     ck('#168 typing refreshes the note and the button', /const bt=document\.getElementById\("trBalance"\);if\(bt\)bt\.disabled=!tradeBalance\(_trade,character\)\.diff;/.test(src) && /const sp=document\.getElementById\("trSplit"\);if\(sp\)sp\.innerHTML=tradeSplitNoteHTML\(_trade,character\);/.test(src));
   } finally {
     Object.assign(ctx, {scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, renderCoins: keep.rc, recompute: keep.rq});
@@ -9069,6 +9084,13 @@ async function t168Ask() {
     d = open(t => { t.give.items = [{id: 'missing', qty: 1}]; t.give.coins = {gp: 2}; t.get.coins = {gp: 5}; });
     await ctx.tradeAskComplete(d);
     ck('#168 in your favour, it doesn\'t ask', asked.length === 0 && c.invLog.length === 2, asked);
+    /* review: the trade closed while the question was open: the answer does nothing */
+    let release; ctx.askConfirm = o => { asked.push(o); return new Promise(r => { release = r; }); };
+    c.inventory.push({id: 'dg2', name: 'Dagger', qty: 1, cost: 2});
+    d = open(t => { t.give.items = [{id: 'dg2', qty: 1}]; });
+    const pending = ctx.tradeAskComplete(d);
+    ctx.tradeClosed(null); release(true); await pending;
+    ck('#168 review: a trade closed while it asked is not completed by the answer', c.invLog.length === 2 && c.inventory.some(i => i.id === 'dg2'), c.invLog.length);
   } catch (err) {
     ck('#168 t168Ask ran without throwing', false, String(err && err.stack || err));
   } finally {

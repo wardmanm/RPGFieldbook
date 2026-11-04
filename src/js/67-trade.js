@@ -275,9 +275,11 @@ function newTradeDraft(opts){
 function tradeClamp(d,ch){
   const inv=(ch&&ch.inventory)||[],held=(ch&&ch.coins)||{},seen=new Set();
   d.give.items=d.give.items.filter(g=>{const it=inv.find(x=>x.id===g.id);if(!it||seen.has(g.id))return false;seen.add(g.id);g.qty=Math.min(Math.max(0,num(g.qty)),itemQty(it));return g.qty>0;});
-  /* coins are capped by what the purse can pay, splitting bigger coins (#168);
-     one it can't pay at all falls back to each coin's own count */
-  if(!tradeSplitPlan(d.give.coins,held))Object.keys(d.give.coins).forEach(k=>{d.give.coins[k]=Math.min(Math.max(0,num(d.give.coins[k])),Math.max(0,num(held[k])));});
+  /* coins are whole and never below 0, and capped by what the purse can pay,
+     splitting bigger coins (#168); coins it can't pay at all fall back to
+     each coin's own count */
+  Object.keys(d.give.coins).forEach(k=>{d.give.coins[k]=Math.max(0,Math.round(num(d.give.coins[k])));});
+  if(!tradeSplitPlan(d.give.coins,held))Object.keys(d.give.coins).forEach(k=>{d.give.coins[k]=Math.min(d.give.coins[k],Math.max(0,Math.floor(num(held[k]))));});
   Object.keys(d.get.coins).forEach(k=>{d.get.coins[k]=Math.max(0,num(d.get.coins[k]));});
   return d;
 }
@@ -307,10 +309,16 @@ function tradeSplitPlan(give,held,keys){
   for(const k of Object.keys(give||{}))if(ks.indexOf(k)<0&&Math.round(num(give[k]))>Math.max(0,num((held||{})[k])))return null;
   ks.forEach(k=>{have[k]=Math.max(0,Math.floor(num((held||{})[k])));want[k]=Math.max(0,Math.round(num((give||{})[k])));});
   if(ks.reduce((t,k)=>t+want[k]*COIN_CP[k],0)>ks.reduce((t,k)=>t+have[k]*COIN_CP[k],0))return null;
+  /* a coin is a source only if its chain of splits comes down to k: nothing
+     reaches electrum, so a want for it fails at once instead of splitting the
+     whole purse looking (#168 review) */
+  const reaches=(j,k)=>{let c=j;while(c&&COIN_CP[c]>COIN_CP[k]){c=TRADE_SPLIT[c];if(ks.indexOf(c)<0)return false;}return c===k;};
   for(const k of ks){
     while(have[k]<want[k]){
-      const src=ks.find(j=>COIN_CP[j]>COIN_CP[k]&&ks.indexOf(TRADE_SPLIT[j])>=0&&have[j]>want[j]);
-      if(!src)return null;
+      const srcs=ks.filter(j=>COIN_CP[j]>COIN_CP[k]&&have[j]>want[j]&&reaches(j,k));
+      if(!srcs.length)return null;
+      /* the smallest one that covers the shortfall on its own, else the smallest */
+      const need=(want[k]-have[k])*COIN_CP[k],src=srcs.find(j=>(have[j]-want[j])*COIN_CP[j]>=need)||srcs[0];
       const into=TRADE_SPLIT[src],r=COIN_CP[src]/COIN_CP[into];
       const n=Math.min(have[src]-want[src],Math.ceil((want[k]-have[k])*COIN_CP[k]/COIN_CP[src]));
       have[src]-=n;have[into]+=n*r;
@@ -330,7 +338,9 @@ function tradeGiveCap(d,ch,k){
   if(!v)return Math.max(0,num(held[k]));
   const ok=n=>{g[k]=n;return !!tradeSplitPlan(g,held);};
   if(!ok(0))return 0;
-  let lo=0,hi=Math.floor(coinsToCp(held)/v);
+  /* the purse as the plan sees it: whole coins, none below 0 */
+  const pv=coinKeys().filter(j=>j in COIN_CP).reduce((t,j)=>t+Math.max(0,Math.floor(num(held[j])))*COIN_CP[j],0);
+  let lo=0,hi=Math.floor(pv/v);
   while(lo<hi){const m=Math.ceil((lo+hi)/2);if(ok(m))lo=m;else hi=m-1;}
   return lo;
 }
@@ -445,7 +455,7 @@ function completeTrade(d){
   plan.forEach(x=>{const r=COIN_CP[x.from]/COIN_CP[x.into];sd[x.from]=(sd[x.from]||0)-x.n;sd[x.into]=(sd[x.into]||0)+x.n*r;});
   tradeSplitText(plan).forEach(t=>lines.push({dir:"",text:"Split "+t}));
   Object.keys(COIN_CP).reverse().forEach(k=>{
-    const gv=Math.min(Math.max(0,Math.round(num(d.give.coins[k]))),Math.max(0,num(character.coins[k])+(sd[k]||0))),gt=Math.max(0,Math.round(num(d.get.coins[k])));
+    const gv=Math.min(Math.max(0,Math.round(num(d.give.coins[k]))),Math.max(0,Math.floor(num(character.coins[k])))+(sd[k]||0)),gt=Math.max(0,Math.round(num(d.get.coins[k])));
     if(gv)lines.push({dir:"-",text:`${gv} ${cl(k)}`});
     if(gt)lines.push({dir:"+",text:`${gt} ${cl(k)}`});
     const v=gt-gv+(sd[k]||0);if(v){delta[k]=v;character.coins[k]=num(character.coins[k])+v;}
@@ -514,6 +524,8 @@ function tradeRefresh(){
   const done=document.getElementById("trComplete");if(done)done.disabled=tradeEmpty(_trade);
   const bt=document.getElementById("trBalance");if(bt)bt.disabled=!tradeBalance(_trade,character).diff;
   const sp=document.getElementById("trSplit");if(sp)sp.innerHTML=tradeSplitNoteHTML(_trade,character);
+  /* each You give box's max follows the others (#168 review) */
+  body.querySelectorAll('[data-trcoin^="give:"]').forEach(el=>{el.max=String(tradeGiveCap(_trade,character,el.dataset.trcoin.slice(5)));});
 }
 function showTrade(){
   openModal(_trade.loot?"Loot":"Trade",tradeHTML(_trade,character),"",{wide:true});

@@ -8839,3 +8839,20 @@ the new rule. The harness gains `_trade` in `MUTABLE`. `rules-data.js`: the phon
 note.
 
 Pages: [inventory](../wiki/features/inventory.md), [decisions](../wiki/decisions.md).
+
+**Mike** (2026-11-04) approved both rulings: typed coins split as Balance does, and Balance pays a
+sale's extra back to make it even.
+
+**Review** (opus, nothing must-fix; its 3,000 random purses against a brute-force search, 400 caps,
+and 4,000 random Balance → Complete → Undo runs found no money error). Fixed: (1) a want for
+electrum split the whole purse one coin a pass looking for it (6 s for `tradeHTML()` with 1,000,000
+pp, every repaint, since the caps are worked out there): a source must now have a chain of splits
+that comes down to the coin wanted, and nothing reaches electrum, so it answers at once (now 0–1 ms
+at any size); (2) a split chose the smallest bigger coin even when it couldn't cover the shortfall
+alone (6 sp from 1 ep 1 gp split both): it now takes the smallest that covers it alone, else the
+smallest; (3) the boxes' `max` went stale while typing: `tradeRefresh()` keeps every You give box's
+current; (4) a coin count below 0 from a hand-edited file skewed the cap's bound and the receipt
+(gave 5 gp, said 8): the cap and Complete read whole coins, none below 0, as the plan does;
+(5) `tradeClamp()` makes seeded give coins whole and never below 0 before the plan, not only when it
+fails. Tests for each, plus Complete's click going through `tradeAskComplete()` and an answer that
+lands after its trade closed (nothing happens). The reviewer's probes rerun clean.
