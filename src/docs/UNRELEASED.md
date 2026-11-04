@@ -116,3 +116,7 @@ Bullets below this line — leave the heading in place.
   backgrounds can now be picked from the list. The Add background window no longer shows them empty
   ability-score boxes, and adds them in one click; their info cards no longer show empty Ability
   Scores and Feat lines.
+- Roll initiative grows with its list and scrolls, so Start is always in reach, even on a phone with
+  several kinds of monster; its boxes no longer touch the window's right edge.
+- The "I rolled" box in Roll initiative, Spend a Hit Die and the level-up Hit Points step sits beside
+  its words, in line with Roll for me and Apply.

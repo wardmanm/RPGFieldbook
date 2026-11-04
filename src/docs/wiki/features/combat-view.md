@@ -160,7 +160,8 @@ names a blank foe "Unnamed" and a blank party row "Party member", and sets `comb
 Turns mode, never to a dead row. The combatants array order **is** the turn
 order; `initSort()` (stable, unrolled rows last) re-sorts it whenever a row's initiative changes.
 
-**Roll initiative** (`initRollHTML()`) lists you first (🎲 Roll for me — a d20 plus your initiative
+**Roll initiative** (`initRollHTML()`) is the ordinary dialog, not the wide one (#161): it grows
+with its rows and its body scrolls, so Start ▸ is always reachable. It lists you first (🎲 Roll for me — a d20 plus your initiative
 modifier, or a typed roll + Apply, with an Advantage switch that rolls two and keeps the higher,
 and a working line like "14 + 3 = 17"), then every `party` row (a typed total, blank allowed), then
 foe rows (name, a `× N` count that becomes "Name 1" … "Name N" sharing one roll, an optional AC, a
@@ -400,6 +401,13 @@ XP; the fight itself had already ended and saved.
   won for every box with no flex override, so a party row's initiative box and a foe row's ×/AC/Init
   boxes each landed alone on their own line under `flex-wrap:wrap`; fixed with scoped widths. →
   L7097
+- **Roll initiative clipped Start (#161).** It opened in the wide dialog, Settings' frame: a fixed
+  height and a body that never scrolls, with 4px of right padding. On a phone, three monster rows
+  pushed Cancel and Start out of reach, and the Init box sat on the border. It is the ordinary dialog
+  now; only dialogs that scroll their own panes open wide (see [shell](../ui/shell.md)). → L8514
+- **The "I rolled" box dropped under its words (#162)**, here, in Spend a Hit Die and in the level-up
+  HP step: `input{width:100%}` filled the label. `.hd-how label` is an inline flex row with a 60px
+  box. → L8514
 - **The last Fire toast outlived the fight (#105).** End combat used to replace it with its own
   toast. With no toast of its own any more, the Fire toast stayed up over the End of combat window and
   its Undo took a shot back into an ended fight: 8 spent shots came back on record, to be recovered a
@@ -493,3 +501,4 @@ Settled in the [End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-d
 - 2026-10-29 — End combat asks in the app's warning window and opens the End of combat window: the time and the fallen, folded rows for Ammunition (Undo recovery), Experience (Split among N, Done into the level-up, "Add N XP?" on close), Loot (a trade with the fallen, and back) and After combat (flagged tiles and pages); `endCombatNow()`, `87-combat-end.js`. → ledger L7921, #105
 - 2026-10-29 — The final fix wave: XP the sheet can't read is never overwritten (Ruling 21); a strict text box with "Whole numbers only", Enter is Done; focus back on Open trade after a trade; tracker focus stays in the window; After combat reads "All done"; the window fits its content (Ruling 19); Loot's name capped at 60. → ledger L8025, #105
 - 2026-10-30 — Corrected: the Bio tab's Party is the second section left out of the view, beside the Sheet's header (pre-release 1.9.0, step 1).
+- 2026-11-04 — Roll initiative is the ordinary dialog, which grows and scrolls, so Start is always reachable; the "I rolled" box sits beside its words. → ledger L8514, #161, #162

@@ -222,6 +222,10 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 .hd-pick.on .hd-pickbtn{background:color-mix(in srgb,var(--accent-2) 14%,transparent);outline:1.5px solid var(--accent-2)}
 .hd-used{display:flex;align-items:center;gap:4px;font-family:var(--head);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft);flex:none}
 .hd-how{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 0 0}
+/* #162: every input is width:100%, so "I rolled"'s box filled its label and
+   dropped under the words, below the buttons it sits between */
+.hd-how label{display:inline-flex;align-items:center;gap:6px}
+.hd-how label input{width:60px;flex:0 0 auto}
 .hd-res{min-height:1.4em;text-align:center;font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);margin-top:6px}
 /* the mode pill and the manual text field, now the box's own foot rather than
    the Rest card's heading */

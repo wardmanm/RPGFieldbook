@@ -175,7 +175,10 @@ function startInitFight(you,party,foes){
 function openInitRoll(){
   const mid=inCombat(character),party=cleanParty(character.party);
   _ir={faces:[],set:false,adv:false};
-  openModal("Roll initiative",initRollHTML(party,mid),"",{wide:true});
+  /* #161: the ordinary dialog, which grows with its rows and scrolls. The wide
+     one is Settings' frame (a fixed height, a body that never scrolls), and
+     clipped Start ▸ once three monsters were added on a phone. */
+  openModal("Roll initiative",initRollHTML(party,mid));
   const on=(id,ev,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener(ev,fn);};
   on("irRoll","click",irRoll);
   on("irApply","click",()=>irSetTyped(document.getElementById("irTyped").value));

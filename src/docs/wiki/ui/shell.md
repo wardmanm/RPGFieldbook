@@ -358,6 +358,12 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - **The `wide` class is set or cleared on every open** (`rules-data.js` asserts it), so a dialog
   opened from Settings — Import settings, the rules-update review — comes up at the normal width,
   and Settings comes back wide.
+- **The wide dialog is a frame for panes, not a bigger dialog.** `.modal.wide` is a fixed height and
+  its `.m-body` never scrolls (with 4px of right padding), because Settings scrolls its own two panes.
+  A window with no scroller of its own is clipped there: the Inventory log (#47), End of combat (#105)
+  and Roll initiative (#161, Start ▸ out of reach on a phone) all hit it. Open wide only a window that
+  scrolls its own content, as Settings, Trade, the Inventory log and End of combat do;
+  `rules-data.js` counts the `,{wide:true})` calls (four) and fails on a fifth. → ledger L8514
 - **The modal title is `textContent`, the body is `innerHTML`.** Callers escape the body and must
   not escape the title. `rules-data.js` pins the assignment and reads every `openModal()` call's
   first argument, refusing `esc(` or an entity in it.
@@ -479,3 +485,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-27 — Fix round 1: the warning's backdrop follows the dialog's rule (off by default; with it on, a 400 ms grace after opening), and `undoLevelUp()` and every `closeModal()` answer an open warning no. → ledger L7710, #118
 - 2026-10-27 — Fix round 2: a pointer click on either button is ignored for 400 ms after opening (`ASK_CLICK_GRACE`), so a double-click can't accept it unread. → ledger L7710, #118
 - 2026-10-29 — `askConfirm()` gains two users, End combat and the End of combat window's "Add N XP?"; that window's guard is the first to answer a dismissal through it, returning `true` and closing the window itself on the answer. → ledger L7921, #105
+- 2026-11-04 — The wide dialog is for windows that scroll their own panes; Roll initiative left it (#161), and a test counts the wide callers. → ledger L8514
