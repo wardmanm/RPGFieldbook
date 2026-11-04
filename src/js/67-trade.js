@@ -275,7 +275,11 @@ function newTradeDraft(opts){
 function tradeClamp(d,ch){
   const inv=(ch&&ch.inventory)||[],held=(ch&&ch.coins)||{},seen=new Set();
   d.give.items=d.give.items.filter(g=>{const it=inv.find(x=>x.id===g.id);if(!it||seen.has(g.id))return false;seen.add(g.id);g.qty=Math.min(Math.max(0,num(g.qty)),itemQty(it));return g.qty>0;});
-  Object.keys(d.give.coins).forEach(k=>{d.give.coins[k]=Math.min(Math.max(0,num(d.give.coins[k])),Math.max(0,num(held[k])));});
+  /* coins are whole and never below 0, and capped by what the purse can pay,
+     splitting bigger coins (#168); coins it can't pay at all fall back to
+     each coin's own count */
+  Object.keys(d.give.coins).forEach(k=>{d.give.coins[k]=Math.max(0,Math.round(num(d.give.coins[k])));});
+  if(!tradeSplitPlan(d.give.coins,held))Object.keys(d.give.coins).forEach(k=>{d.give.coins[k]=Math.min(d.give.coins[k],Math.max(0,Math.floor(num(held[k]))));});
   Object.keys(d.get.coins).forEach(k=>{d.get.coins[k]=Math.max(0,num(d.get.coins[k]));});
   return d;
 }
@@ -293,6 +297,73 @@ function tradeBalance(d,ch){
      you get are worth more than everything you give. */
   return {giveCp,getCp,diff:giveCp-getCp,short:!d.loot&&getItemsCp>giveCp};
 }
+/* ---- #168 splitting coins, and Balance trade ----
+   A purse pays what is in the You give boxes by splitting bigger coins when it
+   lacks the small ones, down the chain pp→gp, gp→sp, ep→sp, sp→cp (never into
+   electrum). tradeSplitPlan() is the splits it takes, smallest shortfall first,
+   each met from the smallest bigger coin with one to spare: [] when none, null
+   when the purse can't pay it. Only the character's own coins (coinKeys()). */
+const TRADE_SPLIT={pp:"gp",gp:"sp",ep:"sp",sp:"cp"};
+function tradeSplitPlan(give,held,keys){
+  const ks=(keys||coinKeys()).filter(k=>k in COIN_CP).sort((a,b)=>COIN_CP[a]-COIN_CP[b]),have={},want={},out=[];
+  for(const k of Object.keys(give||{}))if(ks.indexOf(k)<0&&Math.round(num(give[k]))>Math.max(0,num((held||{})[k])))return null;
+  ks.forEach(k=>{have[k]=Math.max(0,Math.floor(num((held||{})[k])));want[k]=Math.max(0,Math.round(num((give||{})[k])));});
+  if(ks.reduce((t,k)=>t+want[k]*COIN_CP[k],0)>ks.reduce((t,k)=>t+have[k]*COIN_CP[k],0))return null;
+  /* a coin is a source only if its chain of splits comes down to k: nothing
+     reaches electrum, so a want for it fails at once instead of splitting the
+     whole purse looking (#168 review) */
+  const reaches=(j,k)=>{let c=j;while(c&&COIN_CP[c]>COIN_CP[k]){c=TRADE_SPLIT[c];if(ks.indexOf(c)<0)return false;}return c===k;};
+  for(const k of ks){
+    while(have[k]<want[k]){
+      const srcs=ks.filter(j=>COIN_CP[j]>COIN_CP[k]&&have[j]>want[j]&&reaches(j,k));
+      if(!srcs.length)return null;
+      /* the smallest one that covers the shortfall on its own, else the smallest */
+      const need=(want[k]-have[k])*COIN_CP[k],src=srcs.find(j=>(have[j]-want[j])*COIN_CP[j]>=need)||srcs[0];
+      const into=TRADE_SPLIT[src],r=COIN_CP[src]/COIN_CP[into];
+      const n=Math.min(have[src]-want[src],Math.ceil((want[k]-have[k])*COIN_CP[k]/COIN_CP[src]));
+      have[src]-=n;have[into]+=n*r;
+      const e=out.find(x=>x.from===src&&x.into===into);if(e)e.n+=n;else out.push({from:src,into,n});
+    }
+  }
+  return out;
+}
+function tradeSplitText(plan){
+  const cl=k=>{const c=COIN_ALL.find(x=>x[0]===k);return c?c[1]:k.toUpperCase();};
+  return (plan||[]).map(x=>`${x.n} ${cl(x.from)} into ${x.n*COIN_CP[x.from]/COIN_CP[x.into]} ${cl(x.into)}`);
+}
+/* The most a You give box can hold with the others as they are: what the purse
+   can pay, splitting as it must. */
+function tradeGiveCap(d,ch,k){
+  const held=(ch&&ch.coins)||{},g=Object.assign({},d.give.coins),v=COIN_CP[k];
+  if(!v)return Math.max(0,num(held[k]));
+  const ok=n=>{g[k]=n;return !!tradeSplitPlan(g,held);};
+  if(!ok(0))return 0;
+  /* the purse as the plan sees it: whole coins, none below 0 */
+  const pv=coinKeys().filter(j=>j in COIN_CP).reduce((t,j)=>t+Math.max(0,Math.floor(num(held[j])))*COIN_CP[j],0);
+  let lo=0,hi=Math.floor(pv/v);
+  while(lo<hi){const m=Math.ceil((lo+hi)/2);if(ok(m))lo=m;else hi=m-1;}
+  return lo;
+}
+/* Balance trade: the coins that make the two sides even, added to the side that
+   is behind (coins already typed stay). You owe: from your purse, biggest coins
+   first, the rest in the coins below gold, split from a bigger coin. You give
+   more: the other side pays in gp, sp and cp, biggest first. null when even (or
+   loot); {short:{need,have}} when your purse can't cover what you owe. */
+function tradeBalanceFill(d,ch){
+  if(!d||d.loot)return null;
+  const b=tradeBalance(d,ch);if(!b.diff)return null;
+  const chain=["gp","sp","cp"].filter(k=>coinKeys().indexOf(k)>=0),add={};
+  const fillIn=(rem,ks,cap)=>{ks.forEach(k=>{const n=Math.min(cap?Math.max(0,cap(k)):Infinity,Math.floor(rem/COIN_CP[k]));if(n>0){add[k]=(add[k]||0)+n;rem-=n*COIN_CP[k];}});return rem;};
+  if(b.diff>0){fillIn(b.diff,chain);return {side:"get",add};}
+  const held=(ch&&ch.coins)||{},owe=-b.diff,keys=coinKeys().filter(k=>k in COIN_CP);
+  const have=keys.reduce((t,k)=>t+Math.max(0,Math.floor(num(held[k])))*COIN_CP[k],0)-coinsToCp(d.give.coins);
+  if(have<owe)return {side:"give",short:{need:owe,have:Math.max(0,have)}};
+  const desc=keys.slice().sort((a,c)=>COIN_CP[c]-COIN_CP[a]);
+  const rem=fillIn(owe,desc,k=>Math.floor(num(held[k]))-Math.round(num(d.give.coins[k])));
+  if(rem>0)fillIn(rem,chain);
+  const g=Object.assign({},d.give.coins);Object.keys(add).forEach(k=>{g[k]=Math.round(num(g[k]))+add[k];});
+  return tradeSplitPlan(g,held)?{side:"give",add}:{side:"give",short:{need:owe,have:Math.max(0,have)}};
+}
 /* "n is the number of lines": each item, and each coin that moves */
 function tradeCount(side){return side.items.length+Object.keys(side.coins||{}).filter(k=>num(side.coins[k])>0).length;}
 function tradeTabsInner(d){
@@ -308,6 +379,10 @@ function tradeCoinsHTML(side,coins,held){
   return `<div class="tr-coins">`+coinKeys().map(k=>{const c=COIN_ALL.find(x=>x[0]===k),lbl=c?c[1]:k.toUpperCase(),v=num((coins||{})[k]);
     const cap=held?` max="${esc(String(num(held[k])))}"`:"";
     return `<label class="tr-coin"><span>${esc(lbl)}</span><input type="number" inputmode="numeric" data-trcoin="${esc(side+":"+k)}" min="0"${cap} step="1" value="${esc(v?String(v):"")}" placeholder="0" aria-label="${esc((side==="give"?"Give ":"Get ")+(c?c[2]:k))}"></label>`;}).join("")+`</div>`;
+}
+function tradeSplitNoteHTML(d,ch){
+  const t=tradeSplitText(tradeSplitPlan(d.give.coins,(ch&&ch.coins)||{}));
+  return t.length?esc("Splits "+t.join(", ")+" to make change."):"";
 }
 function tradeSwitchHTML(id,on){
   return `<button type="button" class="tr-apply" id="${esc(id)}" role="switch" aria-checked="${on?"true":"false"}"><span>Apply item value</span><span class="switch${on?" on":""}" aria-hidden="true"></span></button>`;
@@ -344,12 +419,15 @@ function tradeHTML(d,ch){
     `<div class="tr-sides">`+
       (loot?"":`<section class="tr-side" data-side="give" id="trSideGive" role="tabpanel" aria-labelledby="trTabGive"><h5>You give</h5>${give}`+
         `<button type="button" class="tr-add" id="trPickGive" aria-expanded="${_trPick?"true":"false"}">+ From your inventory</button>${pick}`+
-        `${tradeCoinsHTML("give",d.give.coins,held)}${tradeSwitchHTML("trApplyGive",d.applyGive)}</section>`)+
+        `${tradeCoinsHTML("give",d.give.coins,Object.fromEntries(coinKeys().map(k=>[k,tradeGiveCap(d,ch,k)])))}`+
+        `<p class="tr-split" id="trSplit" aria-live="polite">${tradeSplitNoteHTML(d,ch)}</p>${tradeSwitchHTML("trApplyGive",d.applyGive)}</section>`)+
       `<section class="tr-side" data-side="get" id="trSideGet"${loot?"":` role="tabpanel" aria-labelledby="trTabGet"`}><h5>You get</h5>${get}`+
         `<div class="tr-adds"><button type="button" class="tr-add" id="trFind">+ Find an item</button><button type="button" class="tr-add" id="trCustom">+ Custom item</button></div>`+
         `${tradeCoinsHTML("get",d.get.coins,null)}${loot?"":tradeSwitchHTML("trApplyGet",d.applyGet)}</section>`+
     `</div>`+
-    `<div class="tr-foot">${tradeBalHTML(d,ch)}<div class="tr-acts"><button type="button" class="tbtn" id="trCancel">Cancel</button>`+
+    `<div class="tr-foot">${tradeBalHTML(d,ch)}<div class="tr-acts">`+
+      (loot?"":`<button type="button" class="tbtn" id="trBalance" aria-label="Balance trade" title="Balance trade"${tradeBalance(d,ch).diff?"":" disabled"}><span class="tr-bal-ic" aria-hidden="true">⚖\uFE0E</span><span class="tr-bal-lbl">Balance trade</span></button>`)+
+      `<button type="button" class="tbtn" id="trCancel">Cancel</button>`+
       `<button type="button" class="tbtn primary" id="trComplete" aria-label="${esc(done)}" title="${esc(done)}"${tradeEmpty(d)?" disabled":""}><span class="tr-done-ic" aria-hidden="true">✓</span><span class="tr-done-lbl">${loot?"Take loot":"Complete Trade"}</span></button></div></div>`+
   `</div>`;
 }
@@ -367,15 +445,20 @@ function completeTrade(d){
     giveRecs.push({id:g.id,qty:q,name:nm,snap:r.snap,atk:r.atk,at:r.at,atkAt:r.atkAt});
     lines.push({dir:"-",text:`${nm} ×${q}${invCostText(worth," (")}`});
   });
-  /* 2. coins: the net change per denomination, giving capped at what you hold;
-     the receipt lists them high to low, as the coin card does (pp → cp) */
+  /* 2. coins: first the splits the purse makes to pay (#168), each a receipt
+     line; then the net change per denomination, giving capped at what you hold
+     after them; the receipt lists them high to low, as the coin card does
+     (pp → cp). One coins part for the lot, so Undo puts the purse back exactly. */
   character.coins=character.coins||{};
-  const delta={},cl=k=>{const c=COIN_ALL.find(x=>x[0]===k);return c?c[1]:k.toUpperCase();};
+  const delta={},sd={},cl=k=>{const c=COIN_ALL.find(x=>x[0]===k);return c?c[1]:k.toUpperCase();};
+  const plan=tradeSplitPlan(d.give.coins,character.coins)||[];
+  plan.forEach(x=>{const r=COIN_CP[x.from]/COIN_CP[x.into];sd[x.from]=(sd[x.from]||0)-x.n;sd[x.into]=(sd[x.into]||0)+x.n*r;});
+  tradeSplitText(plan).forEach(t=>lines.push({dir:"",text:"Split "+t}));
   Object.keys(COIN_CP).reverse().forEach(k=>{
-    const gv=Math.min(Math.max(0,Math.round(num(d.give.coins[k]))),Math.max(0,num(character.coins[k]))),gt=Math.max(0,Math.round(num(d.get.coins[k])));
+    const gv=Math.min(Math.max(0,Math.round(num(d.give.coins[k]))),Math.max(0,Math.floor(num(character.coins[k])))+(sd[k]||0)),gt=Math.max(0,Math.round(num(d.get.coins[k])));
     if(gv)lines.push({dir:"-",text:`${gv} ${cl(k)}`});
     if(gt)lines.push({dir:"+",text:`${gt} ${cl(k)}`});
-    const v=gt-gv;if(v){delta[k]=v;character.coins[k]=num(character.coins[k])+v;}
+    const v=gt-gv+(sd[k]||0);if(v){delta[k]=v;character.coins[k]=num(character.coins[k])+v;}
   });
   /* 3. what you get: library items through the finder's own path (so they stack
      as the finder stacks them); custom items with origin `custom` (spec §6.2) */
@@ -439,6 +522,10 @@ function tradeRefresh(){
   const bal=body.querySelector(".tr-bal");if(bal)bal.outerHTML=tradeBalHTML(_trade,character);
   const tabs=body.querySelector(".tr-tabs");if(tabs)tabs.innerHTML=tradeTabsInner(_trade);
   const done=document.getElementById("trComplete");if(done)done.disabled=tradeEmpty(_trade);
+  const bt=document.getElementById("trBalance");if(bt)bt.disabled=!tradeBalance(_trade,character).diff;
+  const sp=document.getElementById("trSplit");if(sp)sp.innerHTML=tradeSplitNoteHTML(_trade,character);
+  /* each You give box's max follows the others (#168 review) */
+  body.querySelectorAll('[data-trcoin^="give:"]').forEach(el=>{el.max=String(tradeGiveCap(_trade,character,el.dataset.trcoin.slice(5)));});
 }
 function showTrade(){
   openModal(_trade.loot?"Loot":"Trade",tradeHTML(_trade,character),"",{wide:true});
@@ -478,6 +565,18 @@ function tradeFind(){
     onClose:back
   }));
 }
+/* Complete Trade asks first, in the app's own warning window, when the items
+   you get are worth more than everything you give (short), or when you give
+   more than you get (#168); the trade stays open under the question. */
+async function tradeAskComplete(d){
+  const b=tradeBalance(d,character),n=cpToGpText(Math.abs(b.diff));
+  const why=b.short?`You're ${n} short.`:b.diff>0?`You're giving ${n} more than you get.`:"";
+  if(why&&!await askConfirm({title:"Complete the trade anyway?",message:why,cancel:"Go back",ok:"Complete trade"}))return;
+  if(_trade!==d||!document.getElementById("trComplete"))return;
+  const done=completeTrade(d);closeModal();
+  if(done)toast(done.title+". It's in the log.");
+  tradeClosed(done);
+}
 function openTrade(opts){
   _trOnClose=(opts&&typeof opts.onClose==="function")?opts.onClose:null;   /* #105 */
   _trade=newTradeDraft(opts);_trPick=false;
@@ -512,13 +611,16 @@ function openTrade(opts){
     if(t.closest("#trCustom")){const k=uid();d.get.items.push({key:k,name:"",qty:1,cost:0,def:null,custom:true});d.tab="get";return tradePaint(attrSel("data-trname",k));}
     if(t.closest("#trFind"))return tradeFind();
     if(t.closest("#trCancel")){closeModal();tradeClosed(null);return;}
+    if(t.closest("#trBalance")){
+      const f=tradeBalanceFill(d,character);if(!f)return;
+      if(f.short){toast(`You're ${cpToGpText(f.short.need-f.short.have)} short of covering it — you have ${cpToGpText(f.short.have)}.`);return;}
+      const side=d[f.side];Object.keys(f.add).forEach(k=>{side.coins[k]=Math.round(num(side.coins[k]))+f.add[k];});
+      d.tab=f.side;   /* on a phone, the side that changed */
+      return tradePaint();
+    }
     if(t.closest("#trComplete")){
       if(tradeEmpty(d))return;
-      const b=tradeBalance(d,character);
-      if(b.short&&!confirm(`You're ${cpToGpText(-b.diff)} short. Complete the trade anyway?`))return;
-      const done=completeTrade(d);closeModal();
-      if(done)toast(done.title+". It's in the log.");
-      tradeClosed(done);
+      tradeAskComplete(d);
       return;
     }
   });
@@ -528,7 +630,7 @@ function openTrade(opts){
     if(t.id==="trWith"){d.with=t.value;return;}
     if(t.dataset.trcoin){
       const [side,k]=t.dataset.trcoin.split(":"),s=d[side==="get"?"get":"give"];let v=Math.max(0,num(t.value));
-      if(side==="give")v=Math.min(v,Math.max(0,num((character.coins||{})[k])));
+      if(side==="give")v=Math.min(v,tradeGiveCap(d,character,k));   /* #168: what the purse can pay, splitting */
       /* coins are whole: the box shows what the draft holds (2.5 → 2, −3 → 0, over the cap → the cap) */
       if(t.value!==""&&t.value!==String(v))t.value=String(v);
       s.coins[k]=v;return tradeRefresh();

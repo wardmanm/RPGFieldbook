@@ -19,7 +19,8 @@ can carry the player's own fields (quantity, origin, favourite, filing) alongsid
 `logInv()`, `cleanInvLog()`, `logGrant()`, `logFinderAdd()`, `logItemSave()`, `logCoins()`,
 `invSame()`, `invUndoShape()`, `invRemoveQty()`, `invRestore()`, `invUndoCheck()`, `invUndo()`,
 `invLogHTML()`, `openInvLog()`, `setInvLogSize()`, `INV_FILTERS`, `coinsToCp()`, `cpToGpText()`, `itemWorthCp()`, `newTradeDraft()`,
-`tradeClamp()`, `tradeBalance()`, `tradeHTML()`, `completeTrade()`, `showTrade()`, `tradeClosed()`, `openTrade()` in `67-trade.js` ·
+`tradeClamp()`, `tradeBalance()`, `TRADE_SPLIT`, `tradeSplitPlan()`, `tradeSplitText()`, `tradeGiveCap()`,
+`tradeBalanceFill()`, `tradeSplitNoteHTML()`, `tradeAskComplete()`, `tradeHTML()`, `completeTrade()`, `showTrade()`, `tradeClosed()`, `openTrade()` in `67-trade.js` ·
 `grantItemByName()` in `50-classrace.js` · markup `src/html/10-inventory.html` · **Data:**
 [rules-schema §6.8](../../../../docs/rules-schema.md) · **Tests:** `sheet.js`, `char-update.js`,
 `rules-data.js` · **See also:** [Armor & AC](armor-and-ac.md), [Attacks & damage](attacks-and-damage.md),
@@ -183,17 +184,36 @@ Loot uses both, seeding `with` with the fallen and coming back on close (below).
 only `true`) makes it the **Loot** window, described after the layout.
 - **With**: free text, and chips from the Party card and the names of earlier trades.
 - **You give**: items picked from the inventory, each with a − / + stepper capped at what you own
-  and its worth; a coin box per `coinKeys()` denomination, capped at what you hold; and an **Apply
-  item value** switch. `tradeClamp()` holds the caps, on a seeded draft and again at Complete.
+  and its worth; a coin box per `coinKeys()` denomination, capped at what the purse can pay,
+  splitting bigger coins (#168, `tradeGiveCap()`; below); and an **Apply item value** switch.
+  `tradeClamp()` holds the caps, on a seeded draft and again at Complete.
 - **You get**: "+ Find an item" opens the same finder Add uses (its Origin select hidden; a trade
   stamps Traded) and brings the choice back here, merging by name; "+ Custom item" adds a name, a
   quantity and a cost; coin boxes; and its own Apply item value switch.
 - **The balance** (`tradeBalance()`), worked in copper and shown in gp: what you give is its coins
   plus item worth when its switch is on; what you get, likewise. When the items you get are worth
-  more than everything you give, it reads "N gp short" in red and Complete asks "You're N gp short.
-  Complete the trade anyway?". Coins you receive never make it red: getting more than you give
-  because of them (selling) reads "N gp in your favour", and Complete doesn't ask. Giving more
-  reads "N gp over". It never blocks.
+  more than everything you give, it reads "N gp short" in red. Coins you receive never make it red:
+  getting more than you give because of them (selling) reads "N gp in your favour". Giving more
+  reads "N gp over". It never blocks: Complete (`tradeAskComplete()`, #168) asks in the warning
+  window, "Complete the trade anyway?", with "You're N gp short." or "You're giving N gp more than
+  you get." (Go back / Complete trade), and doesn't ask when even or in your favour. The trade stays
+  open under the question, and the answer acts only on that same trade.
+- **Splitting coins (#168).** The purse pays what is in the You give boxes by splitting bigger coins
+  when it lacks the small ones: `tradeSplitPlan()` meets each shortfall, smallest coin first, from a
+  bigger coin with some to spare whose chain of splits comes down to it — the smallest that covers
+  the shortfall alone, else the smallest — split into the coin below it (`TRADE_SPLIT`: pp→gp,
+  gp→sp, ep→sp, sp→cp; never into electrum, never upward), only among the character's own coins,
+  whole and none below 0; `null` when the purse can't pay. Each You give box's `max` is its cap,
+  kept current as the player types (`tradeRefresh()`). A note under the boxes (`#trSplit`) says "Splits 1 GP into 10 SP to make
+  change."; Complete makes the splits first, each a receipt line, inside the one `coins` undo part,
+  so Undo restores the purse exactly. Typed coins and Balance's split alike.
+- **Balance trade (#168)** (`#trBalance`, beside Cancel; ⚖ alone at 700px and under; not in Loot;
+  greyed when even). `tradeBalanceFill()` adds coins to the side that is behind, never taking typed
+  coins away: you owe, from your purse past what is already typed, biggest coins first, the rest in
+  gp/sp/cp for a split to cover (a 3.5 gp potion from 10 gp: 3 gp and 5 sp); you give more, the
+  other side pays the difference in gp, sp and cp, biggest first. A purse that can't cover it changes
+  nothing: "You're 1.3 gp short of covering it — you have 2.2 gp." It shows the side it filled (the
+  phone's tab).
 - **Complete** (`completeTrade()`) applies it as one step: given items are reduced or removed (and
   their attacks with them), coins move by the net per denomination, library items arrive through
   `addLibraryItems()` with origin Traded and the agreed cost, custom items with origin Custom
@@ -210,9 +230,9 @@ only `true`) makes it the **Loot** window, described after the layout.
   focus back there). `openTrade()` with no `onClose` drops any earlier opener's hook. The End of
   combat window's seeded `with` is capped at the With box's 60 characters, since a seeded value gets
   past `maxlength`.
-- **Layout**: the two sides side by side above 700px, with Cancel and Complete Trade at the foot;
-  at 700px and under, tabs "You give · n" and "You get · n" and a ✓ button labelled "Complete
-  trade". The balance is always in view. Every target is at least 44px.
+- **Layout**: the two sides side by side above 700px, with Balance trade, Cancel and Complete Trade
+  at the foot; at 700px and under, tabs "You give · n" and "You get · n", a ⚖ button labelled
+  "Balance trade" and a ✓ button labelled "Complete trade". The balance is always in view. Every target is at least 44px.
 - **Loot (#166)**, End of combat's only: things only come in. `newTradeDraft()` drops any seeded
   give side and starts on You get. The window is titled Loot: **From** for With (no chips, which
   name trading partners), the You get side alone, no tabs, no Apply item value switch (with nothing
@@ -409,3 +429,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-29 — `openTrade({onClose})` and `tradeClosed()`: the hook runs once however the trade closes (Cancel, Complete Trade, ×, Escape, a backdrop tap), never for the finder; the End of combat window's Loot seeds `with` with the fallen and comes back on close. → ledger L7921, #105
 - 2026-10-29 — The finder's way back focuses ⇄ Trade only for a trade with no `onClose`; Loot's seeded `with` is capped at 60 characters. → ledger L8025, #105
 - 2026-11-04 — End of combat's Loot opens the trade window as Loot (`openTrade({loot:true})`): From, You get alone, Worth, Take loot; logged "Looted from …" under Trades; rules items arrive Found. → ledger L8645, #166
+- 2026-11-04 — Balance trade; coins split to pay (typed or balanced), each split a receipt line; Complete warns, in the warning window, when short or giving more. → ledger L8780, #168

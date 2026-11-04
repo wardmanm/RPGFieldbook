@@ -413,6 +413,11 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .tr-acts{display:flex;gap:8px;flex:none}
 .tr-acts .tbtn{min-height:44px;min-width:44px}
 .tr-done-ic{display:none;font-size:20px;line-height:1}
+/* #168 Balance trade: its words beside Cancel; on a phone its ⚖ alone, as Complete's ✓.
+   The note under You give says which coins the purse splits to pay. */
+.tr-bal-ic{display:none;font-size:19px;line-height:1}
+.tr-split{margin:6px 0 0;font-size:13px;color:var(--ink-soft)}
+.tr-split:empty{display:none}
 /* #166 Loot is You get alone: one column, in a window as narrow as one side and
    as tall as its content (End of combat's rule), up to the wide modal's height.
    A browser without :has() shows it in the full wide frame, still whole. */
@@ -433,6 +438,8 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
   .tr-acts #trCancel{display:none}
   .tr-done-lbl{display:none}
   .tr-done-ic{display:inline}
+  .tr-bal-lbl{display:none}
+  .tr-bal-ic{display:inline}
 }
 /* #118 the ASI-or-feat step: one list, the ASI pinned first, and a panel below */
 .ft-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px}
