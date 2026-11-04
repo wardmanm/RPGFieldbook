@@ -7,6 +7,8 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 (release-note review) remain, then `/release 1.9.0` and the private data release. No branch open.
 
 ## Recent changes
+- 2026-11-04: Filed #169 (P2, 1.9.1: a 2024 background typed into Or custom name gets no ability
+  increase) and noted Stonesinger's run-on Stonewise text on #160 (Mike's yes to both).
 - 2026-11-04: Merged and pushed #168 (feature from the test pass): Balance trade fills the coins that even
   a trade (yours biggest first, splitting a bigger coin for change; or the other side's in gp/sp/cp);
   typed coins split too; Complete warns in the app's window when short or giving more. Mike approved
@@ -43,11 +45,6 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 ## Pending decisions
 - **Priorities for the pre-drive's 10 probable bugs** (raised 2026-11-02). Proposed P2 for most; the one
   open question is #1, Undo recovery re-recovering ammo in the next fight: P1 or P0. Blocks: step 4.
-- **File "a 2024 background typed into Or custom name gets no ability increase"** (raised 2026-11-04,
-  #159's review; older than 1.9.0). Proposed P2 for 1.9.1.
-- **Add Stonewise's run-on text to #160** (raised 2026-11-04): its feature text carries two species
-  traits printed before it in the packet. Options: comment on #160 / a separate issue.
-
 ## Loose ends
 - `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#168 are uncommitted; the next `/pre-release`
   run commits them.
