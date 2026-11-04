@@ -140,4 +140,26 @@ Started: 2026-10-30 · App was 1.8.1
 |---|---|---|---|---|
 | reported by Mike | Gold granted by an ancestry, class or background doesn't show in the coin boxes until a reload | P1 | #153 | open |
 | reported by Mike | A language granted by an ancestry or background doesn't appear as a pill until a reload | P2 | #154 | open |
+| reported by Mike | The familiar paw in the header always looks dim, with or without a companion | P2 | #158 | open |
+| reported by Mike | Seven Humblewood backgrounds can't be added: the window shows empty ability pickers and refuses | P0 | #159 | merged on main; closed 2026-11-04 |
+| reported by Mike | Humblewood's seven playtest backgrounds grant no skills, tools, languages or equipment | P1 | #160 | open |
+| reported by Mike | Roll initiative cuts off Start once a few monsters are added, and its boxes touch the right edge | P0 | #161 | merged on main; closed 2026-11-04 |
+| reported by Mike | The "I rolled" box drops below its label, out of line with Roll for me and Apply | P2 | #162 | merged on main; closed 2026-11-04 |
+| reported by Mike | Familiars and companions from the paw don't join initiative | P1 | #163 | open |
+| found while fixing #161 | On a phone, each Roll initiative monster row wraps its Init box onto a second line | P2 | #164 | open |
+| reported by Mike (a feature) | The initiative strip keeps the acting combatant centred, puts overflow in +N lists, and gains ◂ Prev | — | #165 | merged on main; closed 2026-11-04 |
+| reported by Mike | End of combat's loot opens a two-sided trade, with a You give side it has no use for | P2 | #166 | merged on main; closed 2026-11-04 |
+| reported by Mike (a feature) | Journal pages sit on a page, in a style you choose: Sheet, Notebook, Book or Parchment | — | #167 | merged on main; closed 2026-11-04 |
+| reported by Mike (a feature) | The trade window gains Balance trade, and warns before you give more than you get | — | #168 | merged on main; closed 2026-11-04 |
+| found by #159's review | A 2024 background typed into Or custom name is added with no ability increase | P2 | #169 | open |
+| Claude's pre-drive | Undo recovery gives the ammunition back again in the next fight | P1 | #170 | open |
+| Claude's pre-drive | Starting a high-level character leaves every ASI on its default, past the ability cap | P1 | #171 | open |
+| Claude's pre-drive | The feat step marks Fighting Style feats unqualified for a Fighter who has the feature | P2 | #172 | open |
+| Claude's pre-drive | The trade reads "short" by the whole difference when you get coins and an item together | P2 | #173 | open |
+| Claude's pre-drive | The tracker form shows Close when complete before a goal is set | P2 | #174 | open |
+| Claude's pre-drive | The toast's Undo button is hard to read on the gold toast | P2 | #175 | open |
+| Claude's pre-drive | Save names every character file humblewood-<name>.json, D&D characters included | P2 | #176 | open |
+| Claude's pre-drive | Add Background defaults both its +2 and its +1 to the same ability | P2 | #177 | open |
+| Claude's pre-drive | The combat view's Attacks heading pokes past its card at phone width | P2 | #178 | open |
+| Claude's pre-drive | At phone width the third tracker tile in a group is wider than the two above it | P2 | #179 | open |
 | The Sheet makeover (#103), Mike | Sheet: Features & Traits as a full-width row, and the three columns ending on one line | P0 | #155 | merged on main; closed 2026-11-02 |
