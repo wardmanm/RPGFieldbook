@@ -119,3 +119,5 @@ Bullets below this line — leave the heading in place.
   backgrounds can now be picked from the list. The Add background window no longer shows them empty
   ability-score boxes, and adds them in one click; their info cards no longer show empty Ability
   Scores and Feat lines.
+- The combat header is rearranged: the title and round sit together in the middle between the round
+  arrows, and End combat moves to the bottom, beside a Combatants button that opens the full list.

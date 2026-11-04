@@ -3041,7 +3041,23 @@ function block(html, needle, tag) {
   /* #165: the actor centred between two equal sides; no sideways scroll, and
      .ini-chip's display:flex would beat the [hidden] the fit pass sets */
   ck('#165 the strip never scrolls sideways', !/\.ini-chips\{/.test(cc) && !/\.ini-(?:line|side)\{[^}]*overflow-x:auto/.test(cc) &&
-     /\.ini-side\{flex:1 1 0;min-width:0;[^}]*overflow:hidden/.test(cc) && /\.ini-side\.l\{justify-content:flex-end\}/.test(cc));
+     /\.ini-side\{flex:1 1 0;[^}]*overflow:hidden/.test(cc) && /\.ini-side\.l\{justify-content:flex-end\}/.test(cc));
+  /* review: a long name on a phone squeezed the sides to slivers and hid both +N */
+  ck('#165 each side keeps room for its +N, and the actor gives way first', /\.ini-side\{[^}]*min-width:48px/.test(cc) && /\.ini-line>\.ini-chip\{flex:0 1 auto\}/.test(cc));
+  ck('#165 the header in a fight: three rows, the round line centred between equal zones, a centred foot',
+     /\.cv-head\.fighting\{flex-direction:column/.test(cc) && /\.cv-top \.cv-z\{flex:1 1 0;min-width:44px/.test(cc) &&
+     /\.cv-foot\{[^}]*justify-content:center[^}]*border-top:1px dotted/.test(cc));
+  ck('#165 a narrow phone shortens the round line: the word at 400px, the swords at 360px',
+     /@media\(max-width:400px\)\{\.cv-round \.cv-tw,\.cv-round \.cv-tsep\{display:none\}\}/.test(cc) && /@media\(max-width:360px\)\{\.cv-round \.cv-title\{display:none\}\}/.test(cc));
+  {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+    const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+    ck('#165 the fit runs after every header repaint, on resize and once the fonts are in',
+       /function renderCombatHeader\(\)\{[\s\S]*?initFitStrip\(\);[\s\S]*?\n\}/.test(js) && /addEventListener\("resize",\(\)=>\{if\(combatViewOpen\(\)\)\{cvStickyTop\(\);initFitStrip\(\);\}\}\)/.test(js) &&
+       /document\.fonts\.ready\.then\(\(\)=>\{if\(combatViewOpen\(\)\)initFitStrip\(\);\}\)/.test(js));
+    ck('#165 a page scroll closes the +N list, which is fixed under its button', /addEventListener\("scroll",\(\)=>\{if\(_iniFly\)closeIniFly\(\);\}/.test(js));
+    ck('#165 the +N says what it opens', /data-inimore="\$\{esc\(k\)\}" aria-haspopup="dialog" aria-controls="iniFly"/.test(js));
+  }
   ck('#165 a chip or +N the fit pass hides is really hidden', /\.ini-chip\[hidden\],\.ini-more\[hidden\]\{display:none\}/.test(cc));
   ck('#165 the +N is a 44px target', /\.ini-more\{[^}]*min-height:44px;min-width:44px/.test(cc));
   ck('#165 on a phone Prev and Next keep their arrows only', /@media\(max-width:640px\)\{[\s\S]*?\.cv-init \.ini-w\{display:none\}/.test(cc));

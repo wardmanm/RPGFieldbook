@@ -8601,3 +8601,38 @@ name capped at 170px with an ellipsis, still centred; Rounds mode from the top w
 Not driven: touch, a real phone, Mike's own fights.
 
 Pages: [combat view](../wiki/features/combat-view.md), [decisions](../wiki/decisions.md).
+
+## #165 round 2: the fight header in three rows; the review's fixes (Mike, 2026-11-04)
+
+**The header.** Mike found the fight header awkward around the new strip and picked, from mockups,
+layout D (title and round as one centred line) with End combat dropped to the foot as in C, beside
+the combatant list, the foot centred. `combatHeaderHTML()` in a fight: `.cv-top` (✦ in the left
+`.cv-z`, ◀ "⚔ Combat · Round N · time" ▶ centred, an empty `.cv-z` to balance), the strip, then
+`.cv-foot`: **Combatants ▾** (`initTableBtnHTML()`, the table button that was the strip's ▾; absent
+with no rows) and End combat, centred behind a dotted rule. `.cv-head.fighting` is a column; the old
+≤640px reorder (`.grow` as a row break, `order` on the tracker, End and the strip) is gone with the
+two-row layout. Driven: round, actor and foot share one centre at 1280, 640, 400, 390 and 360 (320:
+the round within 5px). Two things the first build showed: at 360px ◀ covered ✦ (the zones were
+`min-width:0`; both keep 44px), and at 320px "⚔ Combat · Round 4" broke over three lines (≤400px it
+drops the word, ≤360px the swords: "Round 4" fits). The open table was about 410px under a 780px
+header, as on main: `.cv-init-table`'s auto margins shrink-wrapped it; `width:100%` gives #91's
+intended match (Ruling: one line in the area being reworked).
+
+**The review** (opus, changes needed). (1) On a phone a long acting name squeezed the sides to 14px
+slivers and hid both +N (driven with "Hobgoblin Captain"; my 390 drive had used "Big Boss"): each
+side keeps 48px and the actor gives way, `flex:0 1 auto` with its name ellipsized; driven at 390,
+360, 320, both +N whole, the actor 136, 106 and 66px. (2) The +N list stayed put when the page
+scrolled: a scroll closes it. (3) A row's dialog gave focus back to the swords, the row being gone:
+`closeIniFly()` moves focus to its +N first, so the dialog returns there (driven). (4) The +N said
+`aria-haspopup="true"` (a menu): now `"dialog"` with `aria-controls="iniFly"`. (5) A stale comment
+in `renderInitStrip()`. Accepted, not fixed: a page scrollbar appearing fires no resize, so the fit
+can be a scrollbar's width stale until the next repaint (overflow:hidden clips rather than spills).
+
+**Tests.** `sheet.js`: the top row's order (✦ zone, ◀, title, round, ▶, balancing zone); End in the
+foot after the strip; no Combatants with no list; the foot's Combatants then End; the ▾ checks now
+read `initTableBtnHTML()`; the +N list opening (rows, aria-expanded, focus), closing from inside
+(focus to the +N), and a second tap closing it. `rules-data.js`: the sides' 48px and the shrinking
+actor; the three-row header, its zones and centred foot; the narrow-phone line; the fit called from
+`renderCombatHeader()`, resize and fonts; scroll closing the list; the +N's aria.
+
+Pages: [combat view](../wiki/features/combat-view.md), [decisions](../wiki/decisions.md).

@@ -93,7 +93,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'initTie', 'combatantDialogHTML', 'setCombatant', 'removeCombatant', 'moveCombatant',
   'addCombatant', 'openCombatant', 'openAddCombatant',
   'renderInitStrip', 'irStart', 'renderCombatHeader',
-  'initPrevTurn', 'initPrev', 'initCanPrev', 'initFitCount', 'initFitSide', 'iniMoreHTML',
+  'initPrevTurn', 'initPrev', 'initCanPrev', 'initFitCount', 'initFitSide', 'iniMoreHTML', 'initTableBtnHTML',
+  'openIniFly', 'closeIniFly',
   'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
   'cleanInvLog', 'logInv', 'logGrant', 'logItemSave', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
@@ -2462,8 +2463,19 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   ck('◀ is live after round 1', !/id="cvPrev"[^>]*disabled/.test(r3));
   ck('◀ is disabled at round 1',
      /id="cvPrev"[^>]*disabled/.test(X.combatHeaderHTML({combatActive: true, combatRound: 1})));
-  ck('End sits apart from the arrows',
-     r3.indexOf('id="cvNext"') < r3.indexOf('class="grow"') && r3.indexOf('class="grow"') < r3.indexOf('id="cvEnd"'));
+  /* #165: three rows — the title and round as one line centred between the
+     arrows (✦ in the left zone), the strip, and a centred foot with End */
+  {
+    const top = r3.slice(r3.indexOf('class="cv-top"'), r3.indexOf('class="cv-init"'));
+    const foot = r3.slice(r3.indexOf('class="cv-foot"'));
+    ck('#165 the top row: ✦ in its own zone, then ◀, the title inside the round line, ▶, and an empty zone to balance it',
+       /<span class="cv-z"><button[^>]*data-inspire/.test(top) && top.indexOf('id="cvPrev"') < top.indexOf('class="cv-title"') &&
+       top.indexOf('class="cv-title"') < top.indexOf('Round <b>3</b>') && top.indexOf('Round <b>3</b>') < top.indexOf('id="cvNext"') &&
+       top.indexOf('<span class="cv-z"></span></div>') > top.indexOf('id="cvNext"'), top);
+    ck('#165 End sits in the foot, after the strip, apart from the arrows',
+       r3.indexOf('class="cv-init"') < r3.indexOf('class="cv-foot"') && foot.includes('id="cvEnd"') && !top.includes('id="cvEnd"'), r3);
+    ck('#165 with no list there is nothing for Combatants to open, so the foot is End alone', !foot.includes('id="cvInitMore"'), foot);
+  }
   ck('#80 ...in combat too', !r3.includes('id="cvClose"') && !r3.includes('id="cvToc"') && !/✕|☰/.test(r3), r3);
 
   const c = X.blankChar(); c.combatRound = 4; X.character = c;
@@ -6354,7 +6366,11 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#91 the strip escapes names and marks the actor', s.includes('&lt;img onerror=1&gt;') && !s.includes('<img onerror') && /class="ini-chip now"/.test(s), s);
     ck('#91 ...strikes the dead and shows rolls', /class="ini-chip dead"/.test(s) && />19</.test(s));
     ck('#91 ...a not-set band is a "?" bar; yours is a share', /hb-q/.test(s) && /hb-share/.test(s));
-    ck('#91 ...Next and ▾ in Turns mode', /id="cvTurn"/.test(s) && /id="cvInitMore"/.test(s));
+    ck('#91 ...Next in Turns mode; ▾ (now Combatants) is in the header\'s foot', /id="cvTurn"/.test(s) && !/id="cvInitMore"/.test(s) && /id="cvInitMore"/.test(X.initTableBtnHTML(X.character)));
+    {
+      const h = X.combatHeaderHTML(X.character), foot = h.slice(h.indexOf('class="cv-foot"'));
+      ck('#165 the foot holds Combatants ▾ then End combat', foot.indexOf('id="cvInitMore"') > 0 && foot.indexOf('id="cvInitMore"') < foot.indexOf('id="cvEnd"') && /Combatants ▾</.test(foot), foot);
+    }
     {
       const [left, rest] = s.split('class="ini-side r"');
       ck('#165 the actor sits between two sides: who has acted on the left (nobody yet), who is to come on the right',
@@ -6397,11 +6413,11 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#91 the table: a row per combatant, + Add, the mode switch, Show rolls', (t.match(/data-inirow=/g) || []).length === 3 && /id="iniAdd"/.test(t) && /data-inimode="rounds"/.test(t) && /id="iniRolls"/.test(t), t);
     /* fix round 1: the ▾ button must not forget it is open across a repaint */
     X.toggleInitTable();
-    ck('#91 ▾ opens: ▴ and aria-expanded="true"', /aria-expanded="true"/.test(X.initStripHTML(X.character)) && />▴</.test(X.initStripHTML(X.character)));
+    ck('#91 ▾ opens: ▴ and aria-expanded="true"', /aria-expanded="true"/.test(X.initTableBtnHTML(X.character)) && /Combatants ▴</.test(X.initTableBtnHTML(X.character)));
     X.initNext();
-    ck('#91 ...a repaint (Next) still says so', /aria-expanded="true"/.test(X.initStripHTML(X.character)) && />▴</.test(X.initStripHTML(X.character)));
+    ck('#91 ...a repaint (Next) still says so', /aria-expanded="true"/.test(X.initTableBtnHTML(X.character)) && /Combatants ▴</.test(X.initTableBtnHTML(X.character)));
     X.toggleInitTable();
-    ck('#91 a second toggle closes it', /aria-expanded="false"/.test(X.initStripHTML(X.character)) && />▾</.test(X.initStripHTML(X.character)));
+    ck('#91 a second toggle closes it', /aria-expanded="false"/.test(X.initTableBtnHTML(X.character)) && /Combatants ▾</.test(X.initTableBtnHTML(X.character)));
     /* Review Focus 4: a fight with no list */
     X.character.combatants = []; X.character.combatTurn = '';
     ck('#91 a fight with no list offers Roll initiative', /id="iniRollNow"/.test(X.initStripHTML(X.character)));
@@ -6524,6 +6540,23 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       ck('#165 the +N list: the table\'s rows for those combatants, in initiative order, each opening its dialog',
          (m.match(/data-inirow=/g) || []).length === 2 && m.indexOf(L2[0].id) < m.indexOf(L2[2].id) && /Still to come/.test(m), m);
       ck('#165 ...the left one says who has acted', /Earlier this round/.test(X.iniMoreHTML(X.character, [L2[0].id], 'l')));
+      /* open and close, on a stub list and button */
+      const gid = ctx.document.getElementById, act = Object.getOwnPropertyDescriptor(ctx.document, 'activeElement');
+      const fly = {hidden: true, innerHTML: '', style: {}, offsetWidth: 240, kids: [], contains(x) { return x === this.row; }, querySelector() { return this.row; }};
+      fly.row = {focus() { ctx.document.activeElement = fly.row; }};
+      const btn = {dataset: {iniids: L2[2].id + ',' + L2[0].id, inimore: 'r'}, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; },
+                   focus() { ctx.document.activeElement = btn; }, getBoundingClientRect: () => ({left: 300, right: 344, bottom: 120})};
+      ctx.document.getElementById = id => id === 'iniFly' ? fly : gid(id);
+      ctx.document.documentElement = ctx.document.documentElement || {};
+      X.openIniFly(btn);
+      ck('#165 a +N opens its list: shown, its rows, aria-expanded, focus on the first row',
+         fly.hidden === false && (fly.innerHTML.match(/data-inirow=/g) || []).length === 2 && btn.attrs['aria-expanded'] === 'true' && ctx.document.activeElement === fly.row, [fly.hidden, btn.attrs]);
+      X.closeIniFly();
+      ck('#165 closing it from inside hands focus back to its +N, so a row\'s dialog returns there', fly.hidden === true && fly.innerHTML === '' && btn.attrs['aria-expanded'] === 'false' && ctx.document.activeElement === btn);
+      X.openIniFly(btn); X.openIniFly(btn);
+      ck('#165 a second tap on the same +N closes it', fly.hidden === true && btn.attrs['aria-expanded'] === 'false');
+      ctx.document.getElementById = gid;
+      if (act) Object.defineProperty(ctx.document, 'activeElement', act); else delete ctx.document.activeElement;
     }
 
     /* I3: Start ▸ applies a typed roll */

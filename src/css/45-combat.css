@@ -32,34 +32,37 @@
   padding:8px clamp(10px,2vw,18px);background:var(--paper-2);border:2px solid var(--line);border-top:0;
   border-radius:0 0 10px 10px;max-width:780px;width:100%;margin:calc(-1*clamp(12px,2.4vw,22px)) auto 0;box-sizing:border-box}
 .cv-head .grow{flex:1}
-/* Up to 640px in combat (.fighting): two rows. Row 1 is the title; the spacer
-   becomes a full-width row break; row 2 is the tracker with End pushed to the far
-   right, well clear of ◀ ▶. Out of combat the header is one row, title and Start.
-   640, not a phone width: the one-row header needs ~500px in combat, and between
-   the two it wrapped wherever it ran out of room. No ✕ of its own (#80). */
+/* In a fight (.fighting) the header is three rows (#165, Mike's layout D with
+   a centred foot): .cv-top centres the title-and-round line between two equal
+   zones (✦ in the left one), so the round sits over the strip's centred actor;
+   the strip; and .cv-foot, the list button and End combat centred behind a
+   dotted rule. Out of combat it stays one row, title and Start. No ✕ (#80). */
+.cv-head.fighting{flex-direction:column;align-items:stretch;flex-wrap:nowrap}
+.cv-top{display:flex;align-items:center;gap:8px}
+.cv-top .cv-z{flex:1 1 0;min-width:44px;display:flex;align-items:center}   /* both keep ✦'s room, so ◀ never covers it */
+.cv-foot{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;border-top:1px dotted var(--hair);padding-top:8px}
+/* A narrow phone: the line keeps its swords and drops the word, or "Combat ·
+   Round 4" breaks over three lines between the arrows at 320px. */
+@media(max-width:400px){.cv-round .cv-tw,.cv-round .cv-tsep{display:none}}
+@media(max-width:360px){.cv-round .cv-title{display:none}}   /* about 100px between the arrows: "Round 4" alone */
 @media(max-width:640px){
-  .cv-head{row-gap:0}
-  .cv-head.fighting .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}
-  .cv-head.fighting .cv-track{order:3}
-  .cv-head.fighting #cvEnd{order:4;margin-left:auto}
-  /* The strip is already last in the markup and full-width (flex:0 0 100%
-     below), but the reorder above gives .grow/.cv-track/#cvEnd an explicit
-     order while the strip keeps its default 0 — which would sort it ahead of
-     them, between the title and the tracker. Order it past #cvEnd instead. */
-  .cv-head.fighting .cv-init{order:5}
   /* #165: Prev and Next keep their arrows only, to leave the strip room */
   .cv-init .ini-w{display:none}
   #cvTurnPrev,#cvTurn{min-width:44px;padding-left:0;padding-right:0;justify-content:center}
 }
 /* ---- the initiative strip and table (#91) ---- */
-.cv-init{flex:0 0 100%;display:flex;align-items:center;gap:6px;margin-top:6px;min-width:0}
+.cv-init{display:flex;align-items:center;gap:6px;min-width:0}
 /* #165: no sideways scroll. The actor sits between two sides that share the
    width equally, so it stays centred; initFitStrip() hides the chips that don't
    fit and shows that side's +N. overflow:hidden only guards a mis-measure. */
 .ini-line{flex:1;min-width:0;display:flex;align-items:center;gap:5px}
-.ini-side{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:5px;overflow:hidden}
+/* Each side keeps room for its +N, and the actor gives way first, down to a
+   chip's 64px with its name ellipsized: a long name on a phone squeezed the
+   sides to slivers and hid both +N (#165 review). */
+.ini-side{flex:1 1 0;min-width:48px;display:flex;align-items:center;gap:5px;overflow:hidden}
+.ini-line>.ini-chip{flex:0 1 auto}
 .ini-side.l{justify-content:flex-end}
-.ini-more{flex:0 0 auto;min-height:44px;min-width:44px;padding:0 8px;border:1.5px dashed var(--line);border-radius:8px;background:var(--panel);
+.ini-more{flex:0 0 auto;min-height:44px;min-width:44px;padding:0 6px;border:1.5px dashed var(--line);border-radius:8px;background:var(--panel);
   color:var(--ink);font-family:var(--head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .ini-more[aria-expanded="true"]{border-style:solid;background:var(--field)}
 .ini-chip[hidden],.ini-more[hidden]{display:none}
@@ -85,7 +88,7 @@
 .hb-share{display:block;height:5px;border-radius:2px;background:var(--hb-empty);overflow:hidden}
 .hb-share b{display:block;height:100%}
 .hb-share .hb-0{background:var(--hb-healthy)}.hb-share .hb-1{background:var(--hb-injured)}.hb-share .hb-2{background:var(--hb-bloodied)}.hb-share .hb-3{background:var(--hb-near)}
-.cv-init-table{max-width:780px;margin:0 auto 8px;background:var(--panel);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;box-sizing:border-box}
+.cv-init-table{max-width:780px;width:100%;margin:0 auto 8px;background:var(--panel);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;box-sizing:border-box}
 .ini-table{display:flex;flex-direction:column}
 .ini-row{display:flex;align-items:center;gap:8px;min-height:44px;padding:4px 2px;border:0;border-bottom:1px dotted var(--hair);background:none;color:var(--ink);text-align:left;font:inherit;cursor:pointer}
 .ini-row .ini-nm{flex:1;min-width:0;font-weight:700}
@@ -145,10 +148,11 @@
 .cv-track{display:inline-flex;align-items:center;gap:6px}
 .cv-round{font-family:var(--head);font-size:14px;min-width:9.5em;text-align:center;color:var(--ink)}
 .cv-round b{font-size:18px}
-/* Phone width: the time stacks under the round, so the tracker and End share
-   row 2 even at 360px. After the rule above, which it overrides. */
+.cv-round .cv-title{vertical-align:-4px}   /* in the round line (#165): the swords and "Combat" first */
+/* Phone width: the time stacks under the title and round, so the line fits
+   between ◀ and ▶ at 360px. After the rule above, which it overrides. */
 @media(max-width:480px){
-  .cv-round{min-width:6em;line-height:1.15}
+  .cv-round{min-width:6em;line-height:1.15;white-space:nowrap}
   .cv-round .cv-sep{display:none}
   .cv-round .cv-time{display:block;font-size:12px;color:var(--ink-soft)}
 }

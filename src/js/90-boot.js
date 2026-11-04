@@ -263,6 +263,8 @@ function wire(){
   window.addEventListener("resize",()=>{if(combatViewOpen()){cvStickyTop();initFitStrip();}});
   /* names change width when the fonts arrive: fit the strip again (#165) */
   if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(combatViewOpen())initFitStrip();});
+  /* the +N list is fixed under its button; a page scroll would leave it behind */
+  window.addEventListener("scroll",()=>{if(_iniFly)closeIniFly();},{passive:true});
   /* Arranging the combat view: the grip is the only drag handle. */
   document.addEventListener("pointerdown",e=>{
     const g=e.target.closest&&e.target.closest("[data-cvgrip]");

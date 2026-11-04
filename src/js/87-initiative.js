@@ -251,12 +251,17 @@ function initStripHTML(ch){
   if(!list.length)return `<div class="cv-init"><span class="hint">No initiative yet.</span><span class="grow"></span><button type="button" class="tbtn primary" id="iniRollNow">Roll initiative</button></div>`;
   const turns=ch.initMode==="turns",a=turns?list.findIndex(r=>r.id===ch.combatTurn):-1;
   const chips=rs=>rs.map(r=>initChipHTML(r,ch)).join("");
-  const more=k=>`<button type="button" class="ini-more" data-inimore="${esc(k)}" aria-haspopup="true" aria-expanded="false" hidden></button>`;
+  const more=k=>`<button type="button" class="ini-more" data-inimore="${esc(k)}" aria-haspopup="dialog" aria-controls="iniFly" aria-expanded="false" hidden></button>`;
   const line=a<0?`<div class="ini-line"><div class="ini-side r">${chips(list)}${more("r")}</div></div>`
     :`<div class="ini-line"><div class="ini-side l">${more("l")}${chips(list.slice(0,a))}</div>${initChipHTML(list[a],ch)}<div class="ini-side r">${chips(list.slice(a+1))}${more("r")}</div></div>`;
   return `<div class="cv-init">`+(turns?`<button type="button" class="tbtn" id="cvTurnPrev" aria-label="Previous turn"${initCanPrev(ch)?"":" disabled"}>◂<span class="ini-w"> Prev</span></button>`:"")+line+
-    (turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn"><span class="ini-w">Next </span>▸</button>`:"")+
-    `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">${_iniTableOpen?"▴":"▾"}</button></div>`;
+    (turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn"><span class="ini-w">Next </span>▸</button>`:"")+`</div>`;
+}
+/* The full table's button, in the header's foot beside End combat (#165).
+   Nothing to list, no button: the table closes itself with no rows. */
+function initTableBtnHTML(ch){
+  if(!(ch.combatants||[]).length)return "";
+  return `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">Combatants ${_iniTableOpen?"▴":"▾"}</button>`;
 }
 function initChipHTML(r,ch){
   const turns=ch.initMode==="turns",show=ch.initShowRolls!==false;
@@ -326,8 +331,12 @@ function openIniFly(btn){
   fly.style.left=Math.round(Math.max(6,Math.min(btn.dataset.inimore==="l"?r.left:r.right-w,vw-w-6)))+"px";
   const first=fly.querySelector("button");if(first&&first.focus)first.focus({preventScroll:true});
 }
+/* Focus inside the list goes back to its +N before the list empties, so a
+   row's tap opens the combatant's dialog with the +N as its opener. */
 function closeIniFly(){
-  const fly=document.getElementById("iniFly");if(fly){fly.hidden=true;fly.innerHTML="";}
+  const fly=document.getElementById("iniFly");
+  if(fly&&_iniFly&&_iniFly.btn&&fly.contains&&fly.contains(document.activeElement)&&_iniFly.btn.focus)_iniFly.btn.focus({preventScroll:true});
+  if(fly){fly.hidden=true;fly.innerHTML="";}
   if(_iniFly&&_iniFly.btn&&_iniFly.btn.setAttribute)_iniFly.btn.setAttribute("aria-expanded","false");
   _iniFly=null;
 }
@@ -338,7 +347,8 @@ function closeIniFly(){
    fires on the mousedown of the next tap, and a Next ▸ replaced between that
    mousedown and its mouseup never gets the click — driven: a tap on Next
    right after typing an HP did nothing. Patched in place, every other button
-   stays the same element, and the scroll and focus stay put. Cheap when
+   stays the same element, and focus stays put; the chip keeps its width and
+   whether the fit pass hid it. Cheap when
    there is no fight or the view is closed; a node that would come out the
    same is not touched. */
 function renderInitStrip(){
