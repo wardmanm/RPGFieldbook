@@ -8510,3 +8510,43 @@ tests); a tools-and-feat background with no ability scores is covered (no " · "
 granted); the release note says what the window and info card now do. Left for its own issue: typing
 a 2024 background's name in Or custom name adds it with no ability increase (mode falls back to
 "2-1" with no picks), a path older than this branch.
+
+## #161, #162: Roll initiative is an ordinary dialog; the roll row's box beside its words (Mike, 2026-11-04)
+
+Found in the 1.9.0 test pass. **#161:** Roll initiative opened with `{wide:true}`, Settings' frame:
+`.modal.wide` is a fixed `height:min(680px,90dvh)` and its `.m-body` is `overflow:hidden` with 4px of
+right padding, because Settings scrolls its own two panes. Roll initiative has no scroller of its
+own, so rows past the bottom were clipped, Cancel and Start ▸ with them: on a phone (390 × 844) one
+party member and three monster rows hid both, and at 1280 × 800 nine rows did. The Init box sat 4px
+from the edge, on the dialog's drawn border, and one monster left a tall empty box. Third time the
+wide frame has caught a window: the Inventory log (#47) and End of combat (#105, Ruling 19) each got
+their own fix. **Fix:** `openInitRoll()` opens the ordinary dialog (560px, `max-height:90dvh`, a body
+that scrolls, 18px each side). The spec never asked for a wide window; only the plan's code did.
+**Guard:** `rules-data.js` counts the `,{wide:true})` calls: four (Settings, Trade, the Inventory
+log, End of combat), each with its own scroller; a fifth fails with a pointer to shell.md.
+
+**#162:** every `input` is `width:100%`, so in the shared `.hd-how` row the "I rolled" box filled its
+`<label>` and wrapped under the words, 12px below Roll for me and Apply, in Roll initiative, Spend a
+Hit Die and the level-up Hit Points step. #91's fix round sized the party and foe boxes and missed
+this one. **Fix** (`30-sheet.css`): `.hd-how label` is an inline flex row and its box 60px wide, the
+size of the initiative boxes.
+
+**Driven** on the built file. 1280: the window is 560 × 416 with a party member and a Goblin; the
+box is level with the buttons; the Init box has 18px to the edge. 390 × 844: six monsters scroll, a
+wheel scroll brings Cancel and Start into view, and Start began the fight with all eight
+combatants. Spend a Hit Die and the level-up HP step: the box level with the buttons, 60px. Not
+driven: the dark skin (layout only), touch, Mike's own characters.
+
+Not here: on a phone a monster row's Init box wraps under its name (#91's layout, unchanged).
+Companions from the paw in initiative is #163.
+
+Pages: [combat view](../wiki/features/combat-view.md), [shell](../wiki/ui/shell.md).
+
+**Review** (opus, approve with nits): the code is right — nothing reads the wide class but
+`openModal()`, the ordinary dialog caps at 90dvh and its body scrolls, and the `.hd-how` rules touch
+only the three rows' one label each. One fix round, docs and test only. The two UNRELEASED bullets
+are dropped: v1.8.1 has no Roll initiative and no "I rolled" box (Spend a hit die and the
+initiative tracker are announced in the same Pending list), so they would have described fixes to
+windows players have not had. shell.md no longer says End of combat was clipped: it had `.ec-scroll`
+from the start, and Ruling 19 fixed the opposite, a tall empty box. The guard counts every `wide:` in
+the code with block comments left out, so `{ wide: true }` or `{wide:!0,…}` count too.

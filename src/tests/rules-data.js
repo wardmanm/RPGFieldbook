@@ -3046,6 +3046,29 @@ function block(html, needle, tag) {
   ck('#91 the combatant dialog\'s band buttons are 48px and its steppers 44px', /\.cd-band\{[^}]*min-height:48px/.test(mc) && /\.cd-pm\{[^}]*min-(?:width|height):44px/.test(mc));
 }
 
+// ---------- #161 Roll initiative is an ordinary dialog; #162 the roll row's box beside its words
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const sc = fs.readFileSync(path.join(__dirname, '..', 'css', '30-sheet.css'), 'utf8');
+  /* any spelling of the option, comments left out: {wide:true}, { wide: true }, {wide:!0, …} */
+  const wideCalls = js.replace(/\/\*[\s\S]*?\*\//g, '').match(/\bwide\s*:[^,})]*/g) || [];
+  /* The wide dialog is Settings' frame: a fixed height and a body that does
+     not scroll, because Settings scrolls its own two panes. Roll initiative
+     has no scroller of its own, so its rows past the bottom were clipped,
+     Start ▸ with them (three monsters on a phone), and its 4px right padding
+     put the Init box on the border. */
+  ck('#161 Roll initiative opens as an ordinary dialog, which grows with its rows and scrolls',
+     /openModal\("Roll initiative",initRollHTML\(party,mid\)\);/.test(js) && !/openModal\("Roll initiative"[^\n]*wide/.test(js));
+  ck('#161 only the four dialogs that scroll their own panes open wide (Settings, Trade, the Inventory log, ' +
+     'End of combat): a new wide dialog is clipped, not scrolled (wiki: shell.md)',
+     wideCalls.length === 4, wideCalls);
+  /* every input is width:100%, so the box filled its label and dropped under
+     "I rolled", 12px below Roll for me and Apply (initiative, hit dice, level-up HP) */
+  ck('#162 the "I rolled" box sits beside its words, at a fixed width',
+     /\.hd-how label\{[^}]*display:inline-flex[^}]*align-items:center/.test(sc) && /\.hd-how label input\{[^}]*width:\d+px/.test(sc));
+}
+
 /* ================= Fetch all never loses what is loaded (issue #65) ===========
    fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
    imported from a file was discarded, and when the fetch then failed (offline,
