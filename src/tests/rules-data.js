@@ -3031,6 +3031,14 @@ function block(html, needle, tag) {
   ck('#52 a hidden tab button really leaves the bar', /\.tab\[hidden\]\{display:none!important\}/.test(chrome));
 }
 
+// ---------- #166 Loot is the trade window's You get alone: one column, fitted
+{
+  const mc = fs.readFileSync(path.join(__dirname, '..', 'css', '50-modal.css'), 'utf8');
+  ck('#166 Loot is one column', /\.tr-loot \.tr-sides\{grid-template-columns:minmax\(0,1fr\)\}/.test(mc));
+  ck('#166 ...in a window one side wide and as tall as its content, up to the wide modal\'s height',
+     /\.modal\.wide:has\(\.tr-loot\)\{width:min\(520px,100%\);height:auto;max-height:min\(680px,90dvh\)\}/.test(mc) && /\.modal\.wide:has\(\.tr-loot\) \.m-body\{min-height:0\}/.test(mc));
+}
+
 // ---------- #91 the strip's band colours are tokens, and chips are tall enough
 {
   const cc = fs.readFileSync(path.join(__dirname, '..', 'css', '45-combat.css'), 'utf8');

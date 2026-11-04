@@ -296,16 +296,17 @@ in `endCombatOpen`; the first time every row is folded.
   on, the line reads "450 ÷ 4 = 112 each", rounded down (`endFightXpMath()`). When the XP would make
   the level-up ready, "Level 5 ready — the level-up opens when you press Done."
   (`endFightReadyLevel()`). Typing patches the status and the two lines in place (`endFightXpPatch()`).
-- **Loot** (always): "Open trade…", then **Open trade** (`endFightOpenLoot()`), which calls
-  `openTrade({with, onClose: endFightReopen})` ([Inventory](inventory.md)). `with` is the fallen
+- **Loot** (always): "Open loot…", then **Open loot** (`endFightOpenLoot()`), which calls
+  `openTrade({loot: true, with, onClose: endFightReopen})`: the trade window as **Loot**, its You get
+  side alone, since from here things only come in (#166, [Inventory](inventory.md)). `with` is the fallen
   **foes'** names joined with commas, or "Combat loot" (`endFightLootWith()`): a fallen party member is
-  struck through but never named, since the loot came from the foes. It is capped at the With box's
+  struck through but never named, since the loot came from the foes. It is capped at the From box's
   60 characters (`endFightNamesCap()`): cut at a name, the rest counted, "Goblin 1, Goblin 2, … and
   3 more". The trade replaces the window
   (the modal has one layer); however it closes, `tradeClosed()` runs `endFightReopen()`, which redraws
   the window from `_endFight` with everything as it was, puts back the window's first opener (recorded
-  by `openEndOfCombat()`) for the final close, and focuses **Open trade**. After a completed trade the row reads the
-  trade's log title, "Traded with Goblin 1, Bugbear". If another dialog has taken the modal
+  by `openEndOfCombat()`) for the final close, and focuses **Open loot**. After Take loot the row reads the
+  line's log title, "Looted from Goblin 1, Bugbear". If another dialog has taken the modal
   meanwhile, nothing is drawn over it and the window's state is dropped.
 - **After combat** (when an open tracker or a page has `afterCombat` and the Journal tab is not hidden,
   #52): status "1 tracker · 1 page" (`endFightAfterStatus()`). The open flagged trackers, as tiles
@@ -535,3 +536,4 @@ Settled in the [End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-d
 - 2026-11-04 — Roll initiative is the ordinary dialog, which grows and scrolls, so Start is always reachable; the "I rolled" box sits beside its words. → ledger L8514, #161, #162
 - 2026-11-04 — The strip keeps the actor centred, with who has acted on its left and who is to come on its right, no sideways scroll, the overflow under +N at each end, and ◂ Prev to step back a turn. → ledger L8554, #165
 - 2026-11-04 — The fight header is three rows: the title and round centred between the arrows, the strip, and Combatants ▾ with End combat centred at the foot; the +N never shrinks to a sliver on a phone; the open table matches the header's width. → ledger L8605, #165
+- 2026-11-04 — Loot opens the trade window as Loot, You get alone (no You give, no switches), with Take loot; the row reads "Open loot…", then "Looted from …". → ledger L8645, #166

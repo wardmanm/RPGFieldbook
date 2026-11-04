@@ -413,6 +413,12 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .tr-acts{display:flex;gap:8px;flex:none}
 .tr-acts .tbtn{min-height:44px;min-width:44px}
 .tr-done-ic{display:none;font-size:20px;line-height:1}
+/* #166 Loot is You get alone: one column, in a window as narrow as one side and
+   as tall as its content (End of combat's rule), up to the wide modal's height.
+   A browser without :has() shows it in the full wide frame, still whole. */
+.tr-loot .tr-sides{grid-template-columns:minmax(0,1fr)}
+.modal.wide:has(.tr-loot){width:min(520px,100%);height:auto;max-height:min(680px,90dvh)}
+.modal.wide:has(.tr-loot) .m-body{min-height:0}
 @media(max-width:700px){
   .tr-tabs{display:flex}
   .tr-sides{grid-template-columns:minmax(0,1fr)}

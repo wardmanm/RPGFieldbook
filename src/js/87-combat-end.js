@@ -227,15 +227,15 @@ function endFightNamesCap(names,max){
   return cut+"…"+tail;
 }
 function endFightLootSection(st){
-  return {status:st.traded||"Open trade…",
-    body:`<p>Coins and items from the fight go through a trade, so they're in your inventory log.</p>`+
-      `<button type="button" class="tbtn" id="ecTrade">Open trade</button>`};
+  return {status:st.traded||"Open loot…",
+    body:`<p>Coins and items you take from the fight go in your inventory log, where they can be undone.</p>`+
+      `<button type="button" class="tbtn" id="ecTrade">Open loot</button>`};
 }
-/* The trade window replaces this one (the modal has one layer); its onClose
-   brings this back from _endFight, as it was. */
+/* The trade window, as Loot (#166: You get only), replaces this one (the modal
+   has one layer); its onClose brings this back from _endFight, as it was. */
 function endFightOpenLoot(){
   const st=endFightLive();if(!st)return false;
-  openTrade({with:endFightLootWith(st.combatants),onClose:endFightReopen});
+  openTrade({loot:true,with:endFightLootWith(st.combatants),onClose:endFightReopen});
   return true;
 }
 /* The trade's onClose (tradeClosed() runs it once, however the trade closed).
@@ -250,7 +250,7 @@ function endFightReopen(done){
   if(done&&typeof done==="object"&&done.title)st.traded=String(done.title);
   if(!endFightShow())return false;
   /* openModal() took whatever the trade left focused as this window's opener;
-     put back the one it had, and the player back on Open trade. */
+     put back the one it had, and the player back on Open loot. */
   _modalOpener=st.opener;_modalOpenerSel=st.openerSel;
   const b=document.getElementById("ecTrade");if(b&&b.focus)b.focus({preventScroll:true});
   return true;

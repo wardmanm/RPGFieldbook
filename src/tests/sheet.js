@@ -6956,6 +6956,58 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
 }
 
 
+// ---------- #166 Loot: the trade window's You get alone
+{
+  const keep = {ch: X.character, om: ctx.openModal, rs: ctx.scheduleSave, ri: ctx.renderInventory, ra: ctx.renderAttacks, rc: ctx.renderCoins, rq: ctx.recompute, conf: state.confirm};
+  ['scheduleSave', 'renderInventory', 'renderAttacks', 'renderCoins', 'recompute'].forEach(n => ctx[n] = () => {});
+  const opened = [];
+  try {
+    X.character = X.blankChar(); X.character.system = 'dnd'; X.character.attacks = [];
+    X.character.inventory = [{id: 'dg', name: 'Dagger', qty: 1, cost: 2}];
+    X.character.coins = {gp: 40, sp: 0, cp: 0};
+    X.character.invLog = [{meta: {with: 'Olvin'}}];   /* an earlier trade partner: a trade offers it as a chip */
+    const d = X.newTradeDraft({loot: true, with: 'Goblin 1, Bugbear', give: {items: [{id: 'dg', qty: 1}], coins: {gp: 10}}});
+    ck('#166 a loot draft has no give side, whatever it is seeded with, and starts on You get', d.loot === true && d.give.items.length === 0 && !Object.keys(d.give.coins).length && d.tab === 'get', d);
+    ck('#166 ...only loot:true makes one', X.newTradeDraft({loot: 'yes'}).loot === false && X.newTradeDraft({}).loot === false);
+    d.get.items = [{key: 'k1', name: 'Rope', qty: 2, cost: 1, def: {name: 'Rope', cost: '1 gp'}, custom: false}, {key: 'k2', name: 'Goblin ear', qty: 1, cost: 0.5, def: null, custom: true}];
+    d.get.coins = {gp: 12, sp: 7};
+    const b = X.tradeBalance(d, X.character);
+    ck('#166 items with nothing given are never "short"', b.short === false && b.getCp === 1520 && b.giveCp === 0, b);
+    const h = X.tradeHTML(d, X.character);
+    ck('#166 the window: From, You get, no You give, no tabs, no switches, no chips',
+       /class="tr-wrap tr-on-get tr-loot"/.test(h) && /for="trWith">From</.test(h) && /placeholder="Where it came from \(optional\)"/.test(h) && /id="trSideGet">/.test(h) &&
+       !/id="trSideGive"/.test(h) && !/data-trtab=/.test(h) && !/class="tr-apply"/.test(h) && !/class="tr-chips"/.test(h), h);
+    ck('#166 ...its foot reads "Worth" and Take loot', /<div class="tr-bal">Worth <b>15\.2 gp<\/b><\/div>/.test(h) && /id="trComplete" aria-label="Take loot" title="Take loot"/.test(h) && /class="tr-done-lbl">Take loot</.test(h), h);
+    const th = X.tradeHTML(X.newTradeDraft({}), X.character);
+    ck('#166 ...while a trade keeps With, its chips, both sides and Complete Trade', /for="trWith">With</.test(th) && /class="tr-chips"/.test(th) && /id="trSideGive"/.test(th) && /class="tr-done-lbl">Complete Trade</.test(th) && !/tr-loot/.test(th));
+    X.character.invLog = [];
+    const snap = () => JSON.stringify({inv: X.character.inventory.map(i => i.name + '×' + i.qty), gp: X.character.coins.gp, sp: X.character.coins.sp});
+    const before = snap(), e = X.completeTrade(d), inv = X.character.inventory;
+    const rope = inv.find(i => i.name === 'Rope'), ear = inv.find(i => i.name === 'Goblin ear'), lines = e ? e.lines.map(l => l.dir + l.text) : [];
+    ck('#166 Take loot: one trade line titled "Looted from …", marked loot', e && e.kind === 'trade' && e.title === 'Looted from Goblin 1, Bugbear' && e.meta.loot === true && e.meta.giveCp === 0 && e.meta.getCp === 1520 && X.character.invLog.length === 1, e);
+    ck('#166 ...its receipt is what came in and its worth: nothing given, no switches', lines[0] === '+12 GP' && lines[1] === '+7 SP' && lines.length === 5 && lines[4] === 'Worth 15.2 gp' && !lines.some(l => /^-|You gave|Item value/.test(l)), lines);
+    ck('#166 ...a rules item arrives Found, from the fallen; a custom one says it was looted',
+       rope && rope.qty === 2 && rope.origin.kind === 'found' && rope.origin.detail === 'Goblin 1, Bugbear' && ear && ear.origin.kind === 'custom' && ear.origin.detail === 'looted from Goblin 1, Bugbear', {rope, ear});
+    ck('#166 ...the Dagger stays, the coins arrive', inv.some(i => i.id === 'dg') && X.character.coins.gp === 52 && X.character.coins.sp === 7);
+    ck('#166 Undo takes it all back', X.invUndo(e.id) === '' && snap() === before, snap());
+    const d2 = X.newTradeDraft({loot: true}); d2.get.coins = {gp: 1};
+    ck('#166 with no From it is just "Looted"', X.completeTrade(d2).title === 'Looted');
+    const d3 = X.newTradeDraft({with: 'Olvin'}); d3.get.coins = {gp: 1}; const e3 = X.completeTrade(d3);
+    ck('#166 a trade is still a trade', e3.title === 'Traded with Olvin' && !e3.meta.loot && e3.lines.some(l => /^You gave /.test(l.text)), e3);
+    /* the window's title, and × on a filled one */
+    ctx.openModal = function (t) { opened.push(t); return keep.om.apply(null, arguments); };
+    ctx.openTrade({loot: true, with: 'Goblin 1', get: {coins: {gp: 5}}});
+    state.confirm = false; state.lastConfirm = null; ctx.dismissModal();
+    ck('#166 the window is titled Loot, and × on a filled one asks "Discard this loot?"', opened[opened.length - 1] === 'Loot' && state.lastConfirm === 'Discard this loot?', {opened, q: state.lastConfirm});
+    state.confirm = true; ctx.dismissModal();
+    ctx.openTrade({get: {coins: {gp: 5}}}); state.lastConfirm = null; ctx.dismissModal();
+    ck('#166 ...a trade is titled Trade and still asks "Discard this trade?"', opened[opened.length - 1] === 'Trade' && state.lastConfirm === 'Discard this trade?', {opened, q: state.lastConfirm});
+  } finally {
+    Object.assign(ctx, {openModal: keep.om, scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, renderCoins: keep.rc, recompute: keep.rq});
+    state.confirm = keep.conf; X.character = keep.ch;
+  }
+}
+
 // ---------- #47 final review fixes (K1, I1, I2, C1, C4, C5, M1-M9)
 {
   const fs = require('fs'), path = require('path');
@@ -8633,17 +8685,17 @@ async function t105Loot() {
     }
     ctx.openEndOfCombat({rounds: 3, sec: 18, combatants: foes});
     let h = opened[opened.length - 1].h;
-    ck('#105 Loot is always shown, reading "Open trade…"', /data-ecrow="loot"/.test(h) && /id="ecSt-loot">Open trade…</.test(h) && /id="ecTrade">Open trade</.test(h) &&
-       h.includes("<p>Coins and items from the fight go through a trade, so they're in your inventory log.</p>"), h);
+    ck('#105 Loot is always shown, reading "Open loot…" (#166)', /data-ecrow="loot"/.test(h) && /id="ecSt-loot">Open loot…</.test(h) && /id="ecTrade">Open loot</.test(h) &&
+       h.includes("<p>Coins and items you take from the fight go in your inventory log, where they can be undone.</p>"), h);
     ctx.endFightSetXp('450'); ctx.endFightToggle('xp'); ctx.endFightToggle('loot');
     ctx.openTrade = o => { trades.push(o); };
-    ck('#105 Open trade passes the fallen as the other party, and an onClose', ctx.endFightOpenLoot() === true && trades.length === 1 && trades[0].with === 'Goblin 1, Bugbear' && typeof trades[0].onClose === 'function', trades);
+    ck('#105 Open loot passes the fallen as the other party, an onClose, and loot (#166)', ctx.endFightOpenLoot() === true && trades.length === 1 && trades[0].with === 'Goblin 1, Bugbear' && typeof trades[0].onClose === 'function' && trades[0].loot === true, trades);
     opened.length = 0; trades[0].onClose(null);
     h = opened.length ? opened[0].h : '';
     ck('#105 a cancelled trade brings the window back, its state intact', opened.length === 1 && opened[0].t === 'End of combat' &&
-       /id="ecXp"[^>]*value="450"/.test(h) && /data-ecrow="xp" aria-expanded="true"/.test(h) && /data-ecrow="loot" aria-expanded="true"/.test(h) && /id="ecSt-loot">Open trade…</.test(h), h);
-    opened.length = 0; trades[0].onClose({title: 'Traded with Goblin 1, Bugbear'});
-    ck('#105 after a completed trade the row reads "Traded with …"', /id="ecSt-loot">Traded with Goblin 1, Bugbear</.test(opened[0].h));
+       /id="ecXp"[^>]*value="450"/.test(h) && /data-ecrow="xp" aria-expanded="true"/.test(h) && /data-ecrow="loot" aria-expanded="true"/.test(h) && /id="ecSt-loot">Open loot…</.test(h), h);
+    opened.length = 0; trades[0].onClose({title: 'Looted from Goblin 1, Bugbear'});
+    ck('#105 after a completed loot the row reads its log title, "Looted from …"', /id="ecSt-loot">Looted from Goblin 1, Bugbear</.test(opened[0].h));
     ck('#105 ...and another trade is allowed', ctx.endFightOpenLoot() === true && trades.length === 2);
     X.character = X.blankChar(); opened.length = 0; trades[1].onClose(null);
     ck('#105 a character change while trading drops the window; nothing reopens', opened.length === 0 && X._endFight === null);
@@ -8676,7 +8728,7 @@ async function t105Loot() {
     // end to end: the real trade over the real window, and back
     ctx.openEndOfCombat({rounds: 1, sec: 6, combatants: foes}); ctx.endFightSetXp('30');
     opened.length = 0; ctx.endFightOpenLoot();
-    ck('#105 the trade window replaces this one, with the fallen in its With box', opened.length === 1 && opened[0].t === 'Trade' && /id="trWith" value="Goblin 1, Bugbear"/.test(opened[0].h));
+    ck('#105 the Loot window replaces this one, with the fallen in its From box (#166)', opened.length === 1 && opened[0].t === 'Loot' && /for="trWith">From</.test(opened[0].h) && /id="trWith" value="Goblin 1, Bugbear"/.test(opened[0].h) && !/id="trSideGive"/.test(opened[0].h));
     ctx.dismissModal();
     ck('#105 ...and closing it brings End of combat back, state intact', opened.length === 2 && opened[1].t === 'End of combat' && /id="ecXp"[^>]*value="30"/.test(opened[1].h));
     const asked = []; const askKeep = ctx.askConfirm; ctx.askConfirm = o => { asked.push(o); return new Promise(() => {}); };
@@ -8685,7 +8737,7 @@ async function t105Loot() {
     X._endFight.asking = false;
     trades.length = 0; ctx.openTrade = o => { trades.push(o); };
     ctx.endFightClick({target: {closest: s => s === '#ecTrade' ? {} : null}});
-    ck('#105 the Open trade button opens the trade', trades.length === 1 && trades[0].with === 'Goblin 1, Bugbear');
+    ck('#105 the Open loot button opens the trade as Loot', trades.length === 1 && trades[0].with === 'Goblin 1, Bugbear' && trades[0].loot === true);
     const gid = ctx.document.getElementById;
     ctx.document.getElementById = id => id === 'modal' ? {classList: {contains: k => k === 'open'}} : id === 'ecDone' ? null : gid(id);
     opened.length = 0; const back = trades[0].onClose(null);
@@ -8700,8 +8752,8 @@ async function t105Loot() {
       trades.length = 0; ctx.endFightOpenLoot();
       ctx.document.activeElement = {id: 'btnTrade'};   /* what a finder round trip left focused */
       ctx.document.getElementById = id => id === 'ecTrade' ? {focus() { focused.push('ecTrade'); }} : gid(id);
-      try { trades[0].onClose({title: 'Traded with Goblin 1, Bugbear'}); } finally { ctx.document.getElementById = gid; delete ctx.document.activeElement; }
-      ck('#105 back from the trade, focus lands on Open trade', focused.length === 1 && focused[0] === 'ecTrade', focused);
+      try { trades[0].onClose({title: 'Looted from Goblin 1, Bugbear'}); } finally { ctx.document.getElementById = gid; delete ctx.document.activeElement; }
+      ck('#105 back from the loot, focus lands on Open loot', focused.length === 1 && focused[0] === 'ecTrade', focused);
       ck('#105 ...and the window keeps its first opener for the final close', X._modalOpener === opener && X._modalOpenerSel === '[id="cvEnd"]', [X._modalOpener, X._modalOpenerSel]);
     }
     // tradeFind()'s back(): to the Equipment card's Trade only for a trade opened there
