@@ -7,6 +7,9 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 (release-note review) remain, then `/release 1.9.0` and the private data release. No branch open.
 
 ## Recent changes
+- 2026-11-04: Merged #166 (P2 from the test pass), not pushed: End of combat's Open loot opens the trade
+  window as Loot, its You get side alone (From, Worth, Take loot; no You give, tabs or switches), logged
+  "Looted from …" under Trades; the Equipment card's Trade is unchanged.
 - 2026-11-04: Merged #165 (feature from the test pass, Mike's mockup picks): the initiative strip keeps
   the acting combatant in the middle, overflow goes into +N lists in order, and ◂ Prev steps back a turn
   (across a round's top too); during a fight the header is three rows: title and round centred between
@@ -26,14 +29,16 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 - 2026-11-02: Merged #155, three rounds (Mike's calls): Features & Traits is a full-width row, one card
   per row; Statuses & Conditions sits under Skills; at three columns the columns always end level, in
   CSS alone. Closed by hand.
-- 2026-11-02: `/issue` files a bug, feature or task (Mike types it). The filing blocks find project #3's
-  auto-added item, take jq on stdin, and never put the body inside `$(…)` (macOS bash 3.2).
 - 2026-11-02: `/pre-release` step 3 reworked (Mike): the test pass is his high-level manual pass, one
   section per feature; Claude's pre-drive is a separate report in `.claude/qa/`.
 - 2026-10-30: `/pre-release 1.9.0` steps 1–2: specs and plans filed by version with links rewritten;
   25 issues filed (#128–#152), with Mike's decisions on each recorded in `src/docs/PRE-RELEASE.md`.
 
 ## Pending decisions
+- **How a looted rules item's origin reads** (raised 2026-11-04, #166). As built: Found, "Found — Goblin 1,
+  Bugbear" (custom ones Custom, "looted from …"). Option: Traded, as before #166.
+- **Loot sources as name chips in the ordinary Trade's With box** (raised 2026-11-04, #166's review). Mike
+  decided on 2026-10-30 that they stay; asked again now that Loot is its own window. Options: keep / drop.
 - **Priorities for the pre-drive's 10 probable bugs** (raised 2026-11-02). Proposed P2 for most; the one
   open question is #1, Undo recovery re-recovering ammo in the next fight: P1 or P0. Blocks: step 4.
 - **File "a 2024 background typed into Or custom name gets no ability increase"** (raised 2026-11-04,
@@ -42,7 +47,8 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   traits printed before it in the packet. Options: comment on #160 / a separate issue.
 
 ## Loose ends
-- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#165 are uncommitted; the next `/pre-release`
+- main is 2 commits ahead of origin (the #166 merge and its artifact), not pushed; #166 closes when it is.
+- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#166 are uncommitted; the next `/pre-release`
   run commits them.
 - 36 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
 - Data releases (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs (#118), and
