@@ -18,6 +18,9 @@
   --lu-night:#0d1a12; --lu-night-2:#2a4433; --lu-glow:#e6d98a; --lu-spark:#e2b44c;
   /* #91: the initiative strip's health bands — one set for both skins and themes */
   --hb-healthy:#2f8a3a; --hb-injured:#c99a15; --hb-bloodied:#d0651e; --hb-near:#b3261e; --hb-empty:rgba(128,120,100,.28);
+  /* #167: a journal page's Parchment style is cream with dark ink in both
+     themes; its paper (--parch) is per theme, below */
+  --parch-ink:#1d1913; --parch-soft:#5f5440; --parch-hair:rgba(24,20,16,.22); --parch-accent:#265a4d;
 }
 html[data-theme="light"]{
   --paper:#f4edda;      /* warm cream page */
@@ -39,6 +42,10 @@ html[data-theme="light"]{
   --field-focus:#fffdf6;
   --shadow:0 10px 26px rgba(40,30,12,.20);
   --ground:#cdbf9c;
+  /* #167: an open journal page's sheet, lifted off the card; --sheet-gutter is
+     the Book style's spine */
+  --sheet:#fffcf3; --sheet-edge:rgba(24,20,16,.14); --sheet-lift:0 1px 0 rgba(24,20,16,.08),0 6px 14px rgba(60,40,10,.16);
+  --sheet-gutter:rgba(80,55,20,.16); --parch:#ead9b2;
   /* #103: the Sheet's dark rail. Its own palette, so a light page still has a
      dark rail; .rail (30-sheet.css) maps the everyday tokens onto these, so
      every control inside it (inputs, dots, the death saves) follows. */
@@ -63,6 +70,8 @@ html[data-theme="dark"]{
   --field-focus:#2c2720;
   --shadow:0 10px 30px rgba(0,0,0,.5);
   --ground:#0e0b08;
+  --sheet:#2e2820; --sheet-edge:rgba(231,220,194,.16); --sheet-lift:0 1px 0 rgba(0,0,0,.4),0 8px 18px rgba(0,0,0,.45);
+  --sheet-gutter:rgba(0,0,0,.45); --parch:#ece0c2;
   /* the rail is TINTED in dark mode, not darker: the page ground is already
      near-black, so a darker rail read as one more card (#103 QA) */
   --rail-bg:#1c2925; --rail-ink:#efe6d0; --rail-soft:#c4b48c; --rail-line:#d8a544;
@@ -71,7 +80,8 @@ html[data-theme="dark"]{
 }
 /* ---- Classic D&D skin (parchment + red/gold, Roman-cap display) ---- */
 html[data-skin="classic"]{ --display:"Cinzel", Georgia, "Times New Roman", serif;
-  --lu-night:#1d1826; --lu-night-2:#3a2f4a; --lu-glow:#9fd4ff; --lu-spark:#e2b44c; }
+  --lu-night:#1d1826; --lu-night-2:#3a2f4a; --lu-glow:#9fd4ff; --lu-spark:#e2b44c;
+  --parch-ink:#1c1710; --parch-soft:#5f5440; --parch-hair:rgba(42,32,24,.22); --parch-accent:#24548a; }
 html[data-skin="classic"][data-theme="light"]{
   --paper:#efe7d3; --paper-2:#e4d9be; --panel:#f5efdf;
   --ink:#1c1710; --ink-soft:#6b6047; --line:#2a2018; --hair:rgba(42,32,24,.22);
@@ -82,6 +92,8 @@ html[data-skin="classic"][data-theme="light"]{
   --warn:#9a6a05;        /* dark gold — --accent is the red here, so it can't serve */
   --field:rgba(255,255,255,.5); --field-focus:#fffdf5;
   --shadow:0 10px 26px rgba(40,25,10,.2); --ground:#c7b795;
+  --sheet:#fffdf5; --sheet-edge:rgba(42,32,24,.14); --sheet-lift:0 1px 0 rgba(42,32,24,.08),0 6px 14px rgba(40,25,10,.16);
+  --sheet-gutter:rgba(70,45,15,.16); --parch:#e6d5ad;
   --rail-bg:#2b2b2b; --rail-ink:#eeeeee; --rail-soft:#bfae86; --rail-line:#bfae86;
   --rail-hair:rgba(238,238,238,.2); --rail-field:rgba(255,255,255,.06); --rail-field-focus:#383838;
   --rail-accent:#e2564a; --rail-good:#78acdd; --rail-bad:#e2564a; --rail-warn:#dcae4e;
@@ -96,6 +108,8 @@ html[data-skin="classic"][data-theme="dark"]{
   --warn:#dcae4e;        /* pale gold */
   --field:rgba(255,255,255,.05); --field-focus:#282218;
   --shadow:0 10px 30px rgba(0,0,0,.55); --ground:#0c0a07;
+  --sheet:#2a231b; --sheet-edge:rgba(232,220,192,.16); --sheet-lift:0 1px 0 rgba(0,0,0,.4),0 8px 18px rgba(0,0,0,.45);
+  --sheet-gutter:rgba(0,0,0,.45); --parch:#ebdfc3;
   /* slate against the brown cards: tinted, as in the walnut palette above */
   --rail-bg:#27303a; --rail-ink:#efe7d4; --rail-soft:#c9bb96; --rail-line:#bfae86;
   --rail-hair:rgba(232,220,192,.2); --rail-field:rgba(255,255,255,.06); --rail-field-focus:#313b46;
@@ -337,7 +351,8 @@ html[data-rough="on"] .card::before{filter:url(#rough)}
 .label .add.sub:hover{background:color-mix(in srgb,var(--ink-soft) 14%,transparent)}
 .label .add svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
 
-label.f{display:block;font-family:var(--head);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+/* span.f names a group of buttons (#167: the journal's Page style), which a <label> can't */
+label.f,span.f{display:block;font-family:var(--head);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink-soft);font-weight:600;margin-bottom:4px}
 input,select,textarea{width:100%;font-family:var(--body);font-size:16px;color:var(--ink);
   background:var(--field);border:1.5px solid var(--hair);border-radius:6px;padding:9px 10px;min-height:42px}
@@ -1410,6 +1425,80 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .jnl-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
 .jnl-tag{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
 .jnl-tools{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 8px}
+/* ---- #167 an open page sits on a page, in its style ----
+   .jnl-sheet holds the title, the meta line and the text; the bar stays on the
+   card. Sheet is the base; the other three add to it. Colours are the skin's
+   --sheet* and --parch* tokens (00-tokens.css). */
+.jnl-sheet{position:relative;background:var(--sheet);border:1px solid var(--sheet-edge);border-radius:3px;box-shadow:var(--sheet-lift);padding:20px 24px 22px}
+.jnl-sheet .jnl-h{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.1;letter-spacing:.01em}
+.jnl-sheet .jnl-meta{margin:8px 0 14px;padding-bottom:10px;border-bottom:1px solid var(--hair)}
+.jnl-sheet .jnl-h+.n-body,.jnl-sheet .jnl-h+.empty{margin-top:14px}
+.jnl-sheet .n-body{font-size:16px;margin-top:0}
+/* Notebook: ruled every 26px with a margin line; the title takes two rules, the
+   meta line and each line of writing one. Headings, tables and pictures are
+   not one line tall and don't sit on the rules: the price of the style. */
+.jnl-look-notebook{border:0;padding:10px 20px 14px 58px;background-position:0 10px;
+  background-image:repeating-linear-gradient(to bottom,transparent 0 25px,color-mix(in srgb,var(--accent-2) 20%,transparent) 25px 26px)}
+.jnl-look-notebook::before{content:"";position:absolute;top:0;bottom:0;left:42px;border-left:1.5px solid color-mix(in srgb,var(--brick) 55%,transparent);pointer-events:none}
+/* the title's own sheet, edge to edge (the margin line is drawn over it), hides
+   the rules through it and keeps the one it sits on */
+.jnl-look-notebook .jnl-h{line-height:52px;margin:0 -20px 0 -58px;padding:0 20px 0 58px;
+  background:linear-gradient(var(--sheet),var(--sheet)) no-repeat;background-size:100% calc(100% - 1px)}
+.jnl-look-notebook .jnl-meta{display:block;line-height:26px;margin:0;padding:0;border:0}
+/* line-height:1 keeps the tag's pill and the small type inside the 26px line */
+.jnl-look-notebook .jnl-meta>*{vertical-align:middle;margin-right:8px;line-height:1}
+.jnl-look-notebook .jnl-h+.n-body,.jnl-look-notebook .jnl-h+.empty{margin-top:0}
+.jnl-look-notebook .n-body,.jnl-look-notebook .empty{line-height:26px}
+.jnl-look-notebook .n-body p,.jnl-look-notebook .n-body .n-ck,.jnl-look-notebook .n-body .n-ul,.jnl-look-notebook .n-body .n-ol{margin:0}
+.jnl-look-notebook .n-ck li,.jnl-look-notebook .n-ul li,.jnl-look-notebook .n-ol li{margin:0}
+.jnl-look-notebook .ck{margin-top:4px}
+/* a heading, a quote and a rule are each one line tall, so what follows stays on the rules */
+.jnl-look-notebook .n-h{margin:0;line-height:26px}
+.jnl-look-notebook .n-q{margin:0;padding:0 0 0 10px}
+.jnl-look-notebook .n-hr{margin:12px 0 13px}
+/* Book: the spine's shade at the left, the meta as a running head, the title
+   centred with an ornament, and a folded corner cut from the card's colour */
+.jnl-look-book{border-radius:2px 6px 6px 2px;padding:12px 26px 30px 34px;overflow:hidden}
+.jnl-look-book::before{content:"";position:absolute;left:0;top:0;bottom:0;width:22px;background:linear-gradient(to right,var(--sheet-gutter),transparent);pointer-events:none}
+.jnl-look-book::after{content:"";position:absolute;right:0;bottom:0;width:22px;height:22px;pointer-events:none;
+  background:linear-gradient(225deg,var(--panel) 50%,color-mix(in srgb,var(--sheet) 82%,var(--ink)) 50%);box-shadow:-2px -2px 4px rgba(0,0,0,.18)}
+.jnl-look-book .jnl-meta{margin:0;padding-bottom:6px}
+.jnl-look-book .jnl-meta .n-when{margin-left:auto}
+.jnl-look-book .jnl-h{text-align:center;margin-top:16px}
+.jnl-orn{text-align:center;color:var(--ink-soft);font-size:13px;letter-spacing:.4em;margin:2px 0 12px}
+/* Parchment: as Sheet, on cream with dark ink in both themes; the tokens inside
+   are the parchment's, so everything drawn on it (boxes, tags, rules, a
+   [Table: …] link in --accent, which was gold on cream in dark) follows */
+.jnl-look-parchment{--ink:var(--parch-ink);--ink-soft:var(--parch-soft);--line:var(--parch-ink);--hair:var(--parch-hair);
+  --accent-2:var(--parch-accent);--accent:var(--parch-accent);--field:rgba(255,255,255,.35);background:var(--parch);color:var(--ink);border-color:rgba(24,20,16,.25);border-radius:4px}
+/* the editor's Page style row: four small pictures of the styles */
+.jnl-looks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.jnl-look{display:flex;flex-direction:column;gap:5px;min-height:44px;padding:6px 6px 5px;border:1.5px solid var(--hair);border-radius:9px;background:var(--field);
+  color:var(--ink-soft);font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+.jnl-look.on{border-color:var(--accent-2);box-shadow:inset 0 0 0 1px var(--accent-2);color:var(--ink)}
+.jnl-look:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.jnl-mini{display:block;position:relative;height:46px;padding:6px 7px;overflow:hidden;border-radius:3px;text-align:left;background:var(--sheet);box-shadow:var(--sheet-lift)}
+.jnl-mini>span{display:block;height:3px;width:85%;margin-bottom:4px;border-radius:2px;background:color-mix(in srgb,var(--ink) 30%,transparent)}
+.jnl-mini>span:first-child{height:5px;width:45%;background:color-mix(in srgb,var(--ink) 70%,transparent)}
+.jnl-mini>span:last-child{width:70%}
+.jnl-mini-notebook{background-image:repeating-linear-gradient(to bottom,transparent 0 7px,color-mix(in srgb,var(--accent-2) 28%,transparent) 7px 8px)}
+.jnl-mini-notebook::before{content:"";position:absolute;top:0;bottom:0;left:9px;border-left:1px solid color-mix(in srgb,var(--brick) 60%,transparent)}
+.jnl-mini-notebook>span{margin-left:6px}
+.jnl-mini-book::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(to right,var(--sheet-gutter),transparent)}
+.jnl-mini-book::after{content:"";position:absolute;right:0;bottom:0;width:9px;height:9px;background:linear-gradient(225deg,var(--panel) 50%,color-mix(in srgb,var(--sheet) 82%,var(--ink)) 50%)}
+.jnl-mini-book>span:first-child{margin:2px auto 4px}
+.jnl-mini-parchment{--ink:var(--parch-ink);background:var(--parch)}
+@media(max-width:480px){
+  .jnl-sheet{padding:14px 14px 16px}
+  .jnl-sheet .jnl-h{font-size:26px}
+  .jnl-look-notebook{padding:10px 12px 14px 40px}
+  .jnl-look-notebook::before{left:28px}
+  .jnl-look-notebook .jnl-h{margin:0 -12px 0 -40px;padding:0 12px 0 40px}
+  .jnl-look-book{padding:10px 14px 26px 22px}
+  .jnl-look-book::before{width:14px}
+  .jnl-look{padding:5px 4px 4px;font-size:9.5px;letter-spacing:0}
+  .jnl-mini{height:38px;padding:5px}
+}
 /* ---- trackers ---- rows share the resource rows' −/+ buttons (.res-btn) */
 .trk-total{font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);font-variant-numeric:tabular-nums;margin-left:4px}
 .trk-sum{margin-left:auto;font-family:var(--head);font-weight:700;font-size:14px;color:var(--ink-soft);width:28px;height:28px}
@@ -13649,6 +13738,7 @@ function jnlSavePage(c,draft,fields,now){
     if(!draft.at)draft.at=now;
     const p={id:draft.id,title,tag,text,at:draft.at,editedAt:now};
     if(draft.afterCombat===true)p.afterCombat=true;   /* #105: set on the draft before the page existed */
+    if(jnlLook(draft)!=="sheet")p.look=draft.look;   /* #167: likewise */
     c.journal.push(p);return p;
   }
   const p=c.journal[i];
@@ -13729,14 +13819,29 @@ function journalListHTML(c,q){
   }).join("");
 }
 function jnlWhen(p){return jnlTime(p.at)?noteWhen({at:jnlTime(p.at),editedAt:jnlTime(p.editedAt)}):"";}
+/* #167: the page's style. `look` is stored only when it isn't Sheet; a value
+   this list doesn't know reads as Sheet and is left on the page, so a style a
+   newer Fieldbook adds survives a load here. */
+const JNL_LOOKS=[["sheet","Sheet"],["notebook","Notebook"],["book","Book"],["parchment","Parchment"]];
+function jnlLook(p){const k=p&&p.look;return JNL_LOOKS.some(l=>l[0]===k)?k:"sheet";}
+/* The bar stays on the card; the title, its meta line and the text sit on the
+   sheet. A book page runs its meta along the top, above a centred title. */
 function journalPageHTML(p){
-  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text)),pr=noteProgress(jnlStr(p.text));
+  const when=jnlWhen(p),tag=tagLabel(p.tag),body=noteHTML(jnlStr(p.text)),pr=noteProgress(jnlStr(p.text)),look=jnlLook(p);
+  const head=`<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`;
+  const meta=(tag||when||pr.total)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"";
   return `<div class="jnl-bar"><button type="button" class="tbtn" data-jnlback>← All pages</button><span class="grow"></span>`+
     `<button type="button" class="tbtn ed" data-jnledit="${esc(p.id)}">Edit</button>`+
     `<button type="button" class="tbtn danger ed" data-jnldel="${esc(p.id)}">Delete</button></div>`+
-    `<h3 class="jnl-h" id="jnlHead" tabindex="-1">${esc(jnlTitle(p))}</h3>`+
-    ((tag||when||pr.total)?`<div class="jnl-meta">${tag?`<span class="jnl-tag">${esc(tag)}</span>`:""}${pr.total?`<span class="jnl-prog">${esc(pr.done+"/"+pr.total)}</span>`:""}${when?`<span class="n-when">${esc(when)}</span>`:""}</div>`:"")+
-    (body?`<div class="n-body">${body}</div>`:`<div class="empty">${editHidden(character,"journal")?"Nothing written yet.":"Nothing written yet — tap Edit."}</div>`);
+    `<div class="jnl-sheet jnl-look-${esc(look)}">`+
+    (look==="book"?meta+head+`<div class="jnl-orn" aria-hidden="true">~ ✦ ~</div>`:head+meta)+
+    (body?`<div class="n-body">${body}</div>`:`<div class="empty">${editHidden(character,"journal")?"Nothing written yet.":"Nothing written yet — tap Edit."}</div>`)+
+    `</div>`;
+}
+function jnlLooksHTML(look){
+  return `<div class="field"><span class="f" id="jnlLookLbl">Page style</span><div class="jnl-looks" role="group" aria-labelledby="jnlLookLbl">`+
+    JNL_LOOKS.map(([k,l])=>`<button type="button" class="jnl-look${look===k?" on":""}" data-jnllook="${esc(k)}" aria-pressed="${look===k?"true":"false"}">`+
+      `<span class="jnl-mini jnl-mini-${esc(k)}" aria-hidden="true"><span></span><span></span><span></span></span>${esc(l)}</button>`).join("")+`</div></div>`;
 }
 /* Built ONCE per edit (renderJournal() leaves it alone after), so it can keep
    the player's caret. Everything typed is written straight to the page. */
@@ -13750,6 +13855,7 @@ function journalEditorHTML(p,tags){
     `<div class="field"><label class="f" for="jnlText">Page</label>`+
     `<textarea id="jnlText" data-jnlfield="text" class="n-edit" placeholder="What happened, who you met, what to remember…">${esc(jnlStr(p.text))}</textarea></div>`+
     `<div class="jnl-tools"><button type="button" class="tbtn" data-jnlstamp>Insert timestamp</button><button type="button" class="tbtn" data-jnlck>Insert checkbox</button></div>`+
+    jnlLooksHTML(jnlLook(p))+
     `<div class="toggle"><div><div class="t-lbl">Show after combat</div></div>`+
       `<button type="button" class="switch ${p.afterCombat===true?"on":""}" data-jnlac role="switch" aria-checked="${p.afterCombat===true?"true":"false"}" aria-label="Show after combat"></button></div>`+
     NOTE_FMT_HINT+(when?`<p class="hint">${esc(when)}</p>`:"");
@@ -13807,7 +13913,12 @@ function jnlBack(){
    instead of keeping the one it finds. The caret goes to the END of the text:
    that is where a timestamp lands before the player clicks into the page. */
 function jnlStartEdit(id,at,focusId){
-  jnlUI.open=id;jnlUI.editing=true;jnlUI.draft={id,at};
+  /* The draft carries the page's own settings, so a page cleared to nothing
+     (and so removed) and typed again comes back with them (#167 review). */
+  const p=jnlPages(character).find(x=>x.id===id),draft={id,at};
+  if(p&&p.afterCombat===true)draft.afterCombat=true;
+  if(p&&jnlLook(p)!=="sheet")draft.look=p.look;
+  jnlUI.open=id;jnlUI.editing=true;jnlUI.draft=draft;
   const box=document.getElementById("jnlBody");if(box)box.innerHTML="";
   renderJournal();jnlShowCard();
   jnlFocus(focusId,true);
@@ -13845,6 +13956,17 @@ function jnlToggleAfterCombat(){
   const b=document.querySelector("[data-jnlac]");
   if(b){b.classList.toggle("on",on);b.setAttribute("aria-checked",on?"true":"false");}
   return on;
+}
+/* The page style (#167), from the editor: as Show after combat, a saved page
+   takes it at once and keeps its editedAt (a style is not content), and a draft
+   holds it until its first keystroke makes the page. Patched in place. */
+function jnlSetLook(k){
+  if(!jnlUI.editing||!jnlUI.draft)return false;
+  const look=jnlLook({look:k}),p=jnlPages(character).find(x=>x.id===jnlUI.draft.id);
+  [jnlUI.draft].concat(p?[p]:[]).forEach(o=>{if(look==="sheet")delete o.look;else o.look=look;});
+  if(p)scheduleSave();
+  document.querySelectorAll("[data-jnllook]").forEach(b=>{const on=b.dataset.jnllook===look;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on?"true":"false");});
+  return look;
 }
 function jnlDelete(id){
   const p=jnlPages(character).find(x=>x.id===id);if(!p)return false;
@@ -17184,6 +17306,7 @@ function wire(){
     if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
     if(t.closest("[data-jnlck]"))return insertJournalCheckbox();
     if(t.closest("[data-jnlac]"))return jnlToggleAfterCombat();
+    if((m=t.closest("[data-jnllook]")))return jnlSetLook(m.dataset.jnllook);
     /* a checkbox in a rendered page, a Story field, a section note (#95), or a
        page in the End of combat window (#105): only those surfaces answer it —
        a box drawn in an item description does nothing */
