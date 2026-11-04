@@ -7,6 +7,9 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 (release-note review) remain, then `/release 1.9.0` and the private data release. No branch open.
 
 ## Recent changes
+- 2026-11-04: Merged #167 (feature from the test pass, Mike's mockup picks), not pushed: an open journal
+  page sits on a page, in a style picked per page in the editor (Sheet, the default; Notebook; Book;
+  Parchment), in both skins and themes.
 - 2026-11-04: Merged #166 (P2 from the test pass), not pushed: End of combat's Open loot opens the trade
   window as Loot, its You get side alone (From, Worth, Take loot; no You give, tabs or switches), logged
   "Looted from …" under Trades; the Equipment card's Trade is unchanged. Mike: looted rules items read
@@ -30,12 +33,13 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 - 2026-11-02: Merged #155, three rounds (Mike's calls): Features & Traits is a full-width row, one card
   per row; Statuses & Conditions sits under Skills; at three columns the columns always end level, in
   CSS alone. Closed by hand.
-- 2026-11-02: `/pre-release` step 3 reworked (Mike): the test pass is his high-level manual pass, one
-  section per feature; Claude's pre-drive is a separate report in `.claude/qa/`.
 - 2026-10-30: `/pre-release 1.9.0` steps 1–2: specs and plans filed by version with links rewritten;
   25 issues filed (#128–#152), with Mike's decisions on each recorded in `src/docs/PRE-RELEASE.md`.
 
 ## Pending decisions
+- **File the Balance trade feature** (raised 2026-11-04; design agreed, "all good"). The trade window gains
+  Balance trade (you pay the difference, splitting coins; or the other side pays in gp/sp/cp) and warns
+  before you give more than you get. Blocks: building it.
 - **Priorities for the pre-drive's 10 probable bugs** (raised 2026-11-02). Proposed P2 for most; the one
   open question is #1, Undo recovery re-recovering ammo in the next fight: P1 or P0. Blocks: step 4.
 - **File "a 2024 background typed into Or custom name gets no ability increase"** (raised 2026-11-04,
@@ -44,8 +48,8 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   traits printed before it in the packet. Options: comment on #160 / a separate issue.
 
 ## Loose ends
-- main is 2 commits ahead of origin (the #166 merge and its artifact), not pushed; #166 closes when it is.
-- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#166 are uncommitted; the next `/pre-release`
+- main is ahead of origin with the #166 and #167 merges and their artifacts, not pushed; both close when it is.
+- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#167 are uncommitted; the next `/pre-release`
   run commits them.
 - 36 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
 - Data releases (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs (#118), and
