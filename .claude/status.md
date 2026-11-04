@@ -7,7 +7,11 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 (release-note review) remain, then `/release 1.9.0` and the private data release. No branch open.
 
 ## Recent changes
-- 2026-11-04: Merged #161 (P0) and #162 (P2) on main, not pushed: Roll initiative is the ordinary dialog,
+- 2026-11-04: Merged #165 (feature from the test pass, Mike's mockup picks): the initiative strip keeps
+  the acting combatant in the middle, overflow goes into +N lists in order, and ◂ Prev steps back a turn
+  (across a round's top too); during a fight the header is three rows: title and round centred between
+  the round arrows, the strip, then a centred foot with Combatants ▾ and End combat. Pushed with #161/#162.
+- 2026-11-04: Merged #161 (P0) and #162 (P2): Roll initiative is the ordinary dialog,
   which grows and scrolls, so Start is always in reach (three monster rows clipped it on a phone); the
   "I rolled" box sits beside its words in Roll initiative, Spend a Hit Die and level-up HP. Filed from
   the same report: #163 (paw companions don't join initiative, P1, 1.9.1) and #164 (a phone's monster
@@ -28,8 +32,6 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   section per feature; Claude's pre-drive is a separate report in `.claude/qa/`.
 - 2026-10-30: `/pre-release 1.9.0` steps 1–2: specs and plans filed by version with links rewritten;
   25 issues filed (#128–#152), with Mike's decisions on each recorded in `src/docs/PRE-RELEASE.md`.
-- 2026-10-30: Merged #127, the pre-release process. 2026-10-29: #105, the end-of-combat window.
-  2026-10-28: #125, Homebrew to the private repo. 2026-10-27: #118, feat support.
 
 ## Pending decisions
 - **Priorities for the pre-drive's 10 probable bugs** (raised 2026-11-02). Proposed P2 for most; the one
@@ -40,15 +42,15 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   traits printed before it in the packet. Options: comment on #160 / a separate issue.
 
 ## Loose ends
-- main is 5 commits ahead of origin (#161/#162 and their artifact), not pushed: Mike merged without a
-  push; #161 and #162 stay open on GitHub until it is, which `/pre-release`'s open-P0 check will see.
-- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#164 are uncommitted; the next `/pre-release`
+- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#165 are uncommitted; the next `/pre-release`
   run commits them.
-- 35 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
+- 36 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
 - Data releases (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs (#118), and
   Homebrew in the private repo (#125); filed as #138.
 - #102: the official source is untested against a real release; 1.9.0 is its first real run (#139).
 - Mike's device pass (touch, print, Safari and Firefox, his own characters) for #105, #118, #102, #47,
   #91, #52, #101, #103, #97, #99 and #155, in the test pass's Device pass section. Items already filed
   from it: #146 (the long level card at phone width), #151 (the ↑ button over a delete button).
+- #165 is driven in Playwright at 320–1280px only; tapping +N, Prev and Next on a real phone is Mike's
+  pass (not in the test pass's Device pass section).
 - Deferred review minors are filed in the 1.9.1 groups #145–#152.
