@@ -8695,3 +8695,65 @@ attribute escaped. Its one should-fix: a loot line's `meta.with` ("Goblin 1, Bug
 chip in the ordinary Trade's With. Not changed: Mike decided on 2026-10-30 that loot trades stay in
 the With suggestions (the #105 spec, review M7); raised with him again now that Loot is its own
 window.
+
+## #167: an open journal page sits on a page, in a style the player picks (Mike, 2026-11-04)
+
+Mike, in the 1.9.0 test pass: everything on an open journal page blends together; it should seem
+like the content is on an actual page. Four mockups (a sheet of paper, a ruled notebook, a bound
+book page, cream parchment); Mike: "add all of these and make them different themes that are
+chooseable on creation/edit, with the default being A". Then the editor's row, approved as shown.
+
+**What changed.** `journalPageHTML()` keeps the bar (← All pages, Edit, Delete) on the card and puts
+the title, the meta line and the text in `.jnl-sheet.jnl-look-<style>`; Book puts the meta first, as
+a running head, and an ornament under its centred title. `JNL_LOOKS` lists the four (sheet,
+notebook, book, parchment); `jnlLook()` reads a page's `look`, anything else as Sheet. The editor
+gains a **Page style** row (`jnlLooksHTML()`: four buttons with a small picture each, `aria-pressed`,
+in a `role="group"` named by a `span.f`) under Insert timestamp / Insert checkbox; `[data-jnllook]`
+→ `jnlSetLook()` works as Show after combat does: a saved page takes it at once and keeps its
+`editedAt`, a draft holds it until its first keystroke (`jnlSavePage()` carries `draft.look`), the
+buttons are patched in place and the editor is never rebuilt. Sheet removes the key.
+
+**CSS.** New tokens in every palette (`00-tokens.css`): `--sheet`, `--sheet-edge`, `--sheet-lift`,
+`--sheet-gutter` (Book's spine) and `--parch`; `--parch-ink`, `--parch-soft`, `--parch-hair` and
+`--parch-accent` once per skin (`:root`, `html[data-skin="classic"]`). Parchment re-points `--ink`,
+`--ink-soft`, `--line`, `--hair` and `--accent-2` inside the sheet, so checkboxes, tags and rules
+follow. The title is in `--display` (Grenze Gotisch in Humblewood, Cinzel in classic). Notebook is
+ruled every 26px with a margin line in `--brick`: the title is two rules (its own sheet colour hides
+the rule through it, edge to edge), and the meta line, paragraphs, checkboxes, list items, headings
+and quotes are each one rule tall, so the writing stays on the rules after a heading; tables and
+pictures don't. `label.f` becomes `label.f,span.f` (a `<label>` can't name a group of buttons).
+
+Ruling: a `look` this list doesn't know is read as Sheet and **left on the page**, not deleted in
+`migrate()` (unlike `afterCombat`), so a style a newer Fieldbook adds survives a load in this one.
+Cost if wrong: a junk value persists, drawn as Sheet.
+
+Ruling: only the open page changes. The All pages list, the editor, and a page shown in the End of
+combat window draw as before (Mike approved this in the description).
+
+**Driven** (Playwright): all four styles in Humblewood dark at 1280 and light at 390, D&D light at
+1280 and dark at 390; no page overflow anywhere. Notebook measured: every line starts on a rule and
+is a whole number of rules tall, at 1280 and 390 in both skins, a three-line title too (two fixes on
+the way: the meta line was 28.6px from the tag's pill, now `line-height:1` inside it; the title's
+middle rule showed as stubs in the margins, now its background runs edge to edge). The editor:
+Edit → Notebook (the page took it, `editedAt` unchanged, the editor not rebuilt) → Done (Notebook);
+a reload kept it; Sheet removed the key; + Page → Parchment before typing (no page yet), then a
+title (the new page is Parchment); Space on a focused style picks it; the labels fit at 390.
+
+**Tests.** `sheet.js`: the four styles; `jnlLook()`; the sheet's markup and order per style; an empty
+page on its sheet; the editor's row (group, label, four buttons, the page's own pressed, its place);
+the dispatcher; `jnlSetLook()` on a saved page, an unknown style, Sheet, a draft, and refused while
+not editing; `jnlSavePage()` carrying it; typing keeps it; `migrate()` and a save → load round trip,
+an unknown style kept. `rules-data.js`: the tokens in every palette and skin; the sheet from the
+tokens; the display face; Notebook's 26px rhythm; Parchment's tokens; 44px buttons; `span.f`.
+
+Pages: [journal](../wiki/features/journal.md), [theming & icons](../wiki/ui/theming-and-icons.md),
+[character model](../wiki/architecture/character-model.md), [decisions](../wiki/decisions.md).
+
+**Review** (sonnet): nothing must-fix. Fixed: (1) Parchment re-pointed every colour token but
+`--accent`, which a `[Table: …]` link (`.tblref`) uses: gold or red on cream in dark, about 1.7:1
+and 2.7:1. It is `--parch-accent` inside the sheet now; measured 6.0:1 (Humblewood) and 5.9:1
+(classic) in dark. (2) `jnlStartEdit()` made the draft `{id, at}`, so a saved page cleared to nothing
+(and so removed) and typed again came back as Sheet and without Show after combat — the flag's gap
+since #105, which the style shared. The draft now starts with the page's `look` and `afterCombat`.
+The harness gains `jnlUI` in `MUTABLE`, so a test can read the draft. Left: the style labels are
+9.5px at phone width (they fit, checked at 390).

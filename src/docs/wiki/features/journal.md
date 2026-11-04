@@ -10,7 +10,8 @@ covered by [Story & notes](story-and-notes.md).
 **Code:** `jnlPages()`, `tagLabel()`, `tagKey()`, `groupByTag()`, `attrSel()`, `jnlSort()`,
 `jnlMatch()`, `jnlSnippet()`, `jnlSavePage()`, `jnlDeletePage()`, `jnlTagList()`,
 `jnlGroupOpen()`, `jnlStampText()`, `insertLine()`, `insertMarker()`, `insertCheckboxInto()`,
-`insertJournalCheckbox()`, `jnlTogglePage()`, `jnlToggleCheckbox()`, `jnlToggleAfterCombat()`, `renderJournal()`, `jnlOpen()`, `jnlBack()`,
+`insertJournalCheckbox()`, `jnlTogglePage()`, `jnlToggleCheckbox()`, `jnlToggleAfterCombat()`, `JNL_LOOKS`, `jnlLook()`,
+`jnlLooksHTML()`, `jnlSetLook()`, `renderJournal()`, `jnlOpen()`, `jnlBack()`,
 `jnlNewPage()`, `jnlEdit()`, `jnlDone()`, `jnlInput()`, `jnlDelete()`, `insertJournalStamp()`,
 `toggleJnlGroup()` in `87-journal.js` · `groupFieldHTML()` in `80-modal-forms.js` · `TRK_TYPES`, `trkProgress()`, `trkApply()`, `trkStep()`,
 `trkSetValue()`, `trkClose()`, `trkReopen()`, `trkSnapshot()`,
@@ -32,7 +33,10 @@ markup `src/html/60-journal.html` · `47-journal.css` ·
 ## How it works
 
 **Pages.** `character.journal` is a list of `{id, title, tag, text, at, editedAt}`, plus
-`afterCombat:true` on a page flagged "Show after combat" (#105; absent when off). A page exists
+`afterCombat:true` on a page flagged "Show after combat" (#105; absent when off) and `look` for its
+page style when it isn't Sheet (#167: `notebook`, `book` or `parchment`; absent for Sheet).
+`jnlLook()` reads anything else as Sheet and leaves it on the page, so a style a newer Fieldbook
+adds survives a load here. A page exists
 only while its title or its text has something in it, which is the section notes' rule.
 `jnlSavePage()` applies it. Given the draft being edited (`{id, at}`) and the three fields, it:
 
@@ -230,17 +234,30 @@ the same way. The three views:
 - **the list** (`journalListHTML()`): the search box (`#jnlSearch`), then the tag groups. Each
   page is a button (`data-jnlopen`). A group header is a `role="button"` toggle, stored in
   `journalCollapse`. While a search is typed, every group is open and its header is plain text;
-- **a page** (`journalPageHTML()`): ← All pages, the title as a focusable heading (`#jnlHead`,
-  focused on open), the tag, the dates (`noteWhen()`), Edit, Delete, and the text through
-  `noteHTML()`. The search row is hidden. A page with no text yet shows "Nothing written yet — tap
+- **a page** (`journalPageHTML()`): ← All pages, Edit and Delete on the card, then the page itself
+  on a sheet (`.jnl-sheet.jnl-look-<style>`, #167): the title as a focusable heading (`#jnlHead`,
+  focused on open) in the skin's display face, the tag, the dates (`noteWhen()`), and the text
+  through `noteHTML()`. The style is the page's (`jnlLook()`): **Sheet**, a lighter sheet lifted off
+  the card; **Notebook**, ruled every 26px with a margin line, the title two rules tall and every
+  line of writing, heading, checkbox and list item one (tables and pictures don't sit on the
+  rules); **Book**, the spine's shade, the tag and dates as a running head, a centred title with an
+  ornament, a folded corner; **Parchment**, as Sheet on cream with dark ink in both themes (it
+  re-points the colour tokens inside the sheet). Colours come from the `--sheet*` and `--parch*`
+  tokens ([Theming & icons](../ui/theming-and-icons.md)). The search row is hidden. A page with no text yet shows "Nothing written yet — tap
   Edit." in place of the body — or just "Nothing written yet." when the Journal card's edit buttons
   are hidden (`editHidden(character,"journal")`, #97), since naming a button that isn't there would
   confuse. Edit and Delete carry `ed`, so hiding the card hides them with everything else on it
   ([Sections & layout](../ui/sections-and-layout.md));
 - **the editor** (`journalEditorHTML()`): title, tag with the tags in use as suggestions (the group
   field, `groupFieldHTML()`, which the feature form's Source and the item form's Category share), the
-  text, **Insert timestamp**, **Insert checkbox**, a **Show after combat** switch (`[data-jnlac]`,
-  #105), the formatting key (`NOTE_FMT_HINT`) and Done. The switch (`jnlToggleAfterCombat()`) is
+  text, **Insert timestamp**, **Insert checkbox**, a **Page style** row (`jnlLooksHTML()`, #167:
+  four buttons with a small picture each, `[data-jnllook]`, `aria-pressed`, in a group named by a
+  `span.f`), a **Show after combat** switch (`[data-jnlac]`, #105), the formatting key
+  (`NOTE_FMT_HINT`) and Done. A style (`jnlSetLook()`) is saved as the switch is: a saved page takes
+  it at once and keeps its `editedAt`, a draft holds it until its first keystroke (`jnlSavePage()`
+  carries `draft.look`), the buttons are patched in place, and Sheet removes the key. Editing a
+  saved page starts its draft with the page's `look` and `afterCombat` (`jnlStartEdit()`), so a page
+  cleared to nothing (and so removed) and typed again comes back with both. The switch (`jnlToggleAfterCombat()`) is
   patched in place, never rebuilding the editor. A saved page takes it at once and keeps its
   `editedAt` (a flag is not content); a draft that is not a page yet holds it until its first
   keystroke makes the page (`jnlSavePage()` carries `draft.afterCombat` over). Every keystroke calls
@@ -306,6 +323,7 @@ entry in the list.
 | Where a blank page goes | Never saved: a page exists only while it has a title or text | Discard on leave: a tab switch, a character switch or a reload each need their own hook, and one would be missed |
 | Editing | Inline, built once | The section notes' modal: too small for a session's worth of writing |
 | Existing checklist and task trackers (#95) | Migrated into journal pages by `migrate()`: a checklist becomes a page, its items as `[ ]`/`[x]` lines; the tasks of one tag merge into one page. Trackers becomes counters only | Read-only in Completed: two homes for one idea until 2.0. Migrate and keep a copy: every list twice |
+| How an open page looks (#167) | On a sheet, in one of four styles the player picks per page in the editor (Sheet, Notebook, Book, Parchment); Sheet by default and for every existing page; only the open page changes | One look for every page: Mike wanted each of the four mockups. A per-character setting: a quest log and a letter want different paper |
 | A checkbox in a rendered page (#95) | Tickable in the read view: a tap flips it and rewrites that line to `[x]` | Read-only until Edit: three taps a tick. A second task syntax with a cross-page roll-up: a second grammar to learn |
 | Closed checklists and tasks (#95) | Migrated too: a closed checklist keeps each item's real tick and gains a "Closed `<date>`" line; a closed task is ticked with its date on its line | Every item of a closed checklist ticked (the first choice, changed at the final review): it loses the real ticks for good. Dropping them: deletes a record a player may be keeping. A "Completed" tag: hides them from the tag they were filed under |
 | Progress in the page list (#95) | A "3/5" count on the row of a page that has checkboxes; nothing on one that hasn't | No count: the tracker-at-a-glance feel is lost. A bar as well: row height on a phone |
@@ -343,3 +361,4 @@ entry in the list.
 - 2026-10-24 — The ☰ section flyout is retired; a hidden Trackers card is skipped by the combat view only. → ledger L6804, #103
 - 2026-10-29 — "Show after combat" on trackers and pages (`afterCombat`); the End of combat window shows the flagged tiles without the pen and the flagged pages, tickable through `jnlTogglePage()`; every copy of a tile is patched. → ledger L7921, #105
 - 2026-10-29 — A tick refused while its page is in the editor says so; a tracker closed in the End of combat window keeps focus there, and its list stays ("All done"). → ledger L8025, #105
+- 2026-11-04 — An open page sits on a sheet, in a style chosen in the editor: Sheet (the default), Notebook, Book or Parchment (`look`). → ledger L8699, #167

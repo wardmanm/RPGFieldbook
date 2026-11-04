@@ -23,6 +23,80 @@
 .jnl-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
 .jnl-tag{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--accent-2);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
 .jnl-tools{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 8px}
+/* ---- #167 an open page sits on a page, in its style ----
+   .jnl-sheet holds the title, the meta line and the text; the bar stays on the
+   card. Sheet is the base; the other three add to it. Colours are the skin's
+   --sheet* and --parch* tokens (00-tokens.css). */
+.jnl-sheet{position:relative;background:var(--sheet);border:1px solid var(--sheet-edge);border-radius:3px;box-shadow:var(--sheet-lift);padding:20px 24px 22px}
+.jnl-sheet .jnl-h{font-family:var(--display);font-weight:700;font-size:30px;line-height:1.1;letter-spacing:.01em}
+.jnl-sheet .jnl-meta{margin:8px 0 14px;padding-bottom:10px;border-bottom:1px solid var(--hair)}
+.jnl-sheet .jnl-h+.n-body,.jnl-sheet .jnl-h+.empty{margin-top:14px}
+.jnl-sheet .n-body{font-size:16px;margin-top:0}
+/* Notebook: ruled every 26px with a margin line; the title takes two rules, the
+   meta line and each line of writing one. Headings, tables and pictures are
+   not one line tall and don't sit on the rules: the price of the style. */
+.jnl-look-notebook{border:0;padding:10px 20px 14px 58px;background-position:0 10px;
+  background-image:repeating-linear-gradient(to bottom,transparent 0 25px,color-mix(in srgb,var(--accent-2) 20%,transparent) 25px 26px)}
+.jnl-look-notebook::before{content:"";position:absolute;top:0;bottom:0;left:42px;border-left:1.5px solid color-mix(in srgb,var(--brick) 55%,transparent);pointer-events:none}
+/* the title's own sheet, edge to edge (the margin line is drawn over it), hides
+   the rules through it and keeps the one it sits on */
+.jnl-look-notebook .jnl-h{line-height:52px;margin:0 -20px 0 -58px;padding:0 20px 0 58px;
+  background:linear-gradient(var(--sheet),var(--sheet)) no-repeat;background-size:100% calc(100% - 1px)}
+.jnl-look-notebook .jnl-meta{display:block;line-height:26px;margin:0;padding:0;border:0}
+/* line-height:1 keeps the tag's pill and the small type inside the 26px line */
+.jnl-look-notebook .jnl-meta>*{vertical-align:middle;margin-right:8px;line-height:1}
+.jnl-look-notebook .jnl-h+.n-body,.jnl-look-notebook .jnl-h+.empty{margin-top:0}
+.jnl-look-notebook .n-body,.jnl-look-notebook .empty{line-height:26px}
+.jnl-look-notebook .n-body p,.jnl-look-notebook .n-body .n-ck,.jnl-look-notebook .n-body .n-ul,.jnl-look-notebook .n-body .n-ol{margin:0}
+.jnl-look-notebook .n-ck li,.jnl-look-notebook .n-ul li,.jnl-look-notebook .n-ol li{margin:0}
+.jnl-look-notebook .ck{margin-top:4px}
+/* a heading, a quote and a rule are each one line tall, so what follows stays on the rules */
+.jnl-look-notebook .n-h{margin:0;line-height:26px}
+.jnl-look-notebook .n-q{margin:0;padding:0 0 0 10px}
+.jnl-look-notebook .n-hr{margin:12px 0 13px}
+/* Book: the spine's shade at the left, the meta as a running head, the title
+   centred with an ornament, and a folded corner cut from the card's colour */
+.jnl-look-book{border-radius:2px 6px 6px 2px;padding:12px 26px 30px 34px;overflow:hidden}
+.jnl-look-book::before{content:"";position:absolute;left:0;top:0;bottom:0;width:22px;background:linear-gradient(to right,var(--sheet-gutter),transparent);pointer-events:none}
+.jnl-look-book::after{content:"";position:absolute;right:0;bottom:0;width:22px;height:22px;pointer-events:none;
+  background:linear-gradient(225deg,var(--panel) 50%,color-mix(in srgb,var(--sheet) 82%,var(--ink)) 50%);box-shadow:-2px -2px 4px rgba(0,0,0,.18)}
+.jnl-look-book .jnl-meta{margin:0;padding-bottom:6px}
+.jnl-look-book .jnl-meta .n-when{margin-left:auto}
+.jnl-look-book .jnl-h{text-align:center;margin-top:16px}
+.jnl-orn{text-align:center;color:var(--ink-soft);font-size:13px;letter-spacing:.4em;margin:2px 0 12px}
+/* Parchment: as Sheet, on cream with dark ink in both themes; the tokens inside
+   are the parchment's, so everything drawn on it (boxes, tags, rules, a
+   [Table: …] link in --accent, which was gold on cream in dark) follows */
+.jnl-look-parchment{--ink:var(--parch-ink);--ink-soft:var(--parch-soft);--line:var(--parch-ink);--hair:var(--parch-hair);
+  --accent-2:var(--parch-accent);--accent:var(--parch-accent);--field:rgba(255,255,255,.35);background:var(--parch);color:var(--ink);border-color:rgba(24,20,16,.25);border-radius:4px}
+/* the editor's Page style row: four small pictures of the styles */
+.jnl-looks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.jnl-look{display:flex;flex-direction:column;gap:5px;min-height:44px;padding:6px 6px 5px;border:1.5px solid var(--hair);border-radius:9px;background:var(--field);
+  color:var(--ink-soft);font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+.jnl-look.on{border-color:var(--accent-2);box-shadow:inset 0 0 0 1px var(--accent-2);color:var(--ink)}
+.jnl-look:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px}
+.jnl-mini{display:block;position:relative;height:46px;padding:6px 7px;overflow:hidden;border-radius:3px;text-align:left;background:var(--sheet);box-shadow:var(--sheet-lift)}
+.jnl-mini>span{display:block;height:3px;width:85%;margin-bottom:4px;border-radius:2px;background:color-mix(in srgb,var(--ink) 30%,transparent)}
+.jnl-mini>span:first-child{height:5px;width:45%;background:color-mix(in srgb,var(--ink) 70%,transparent)}
+.jnl-mini>span:last-child{width:70%}
+.jnl-mini-notebook{background-image:repeating-linear-gradient(to bottom,transparent 0 7px,color-mix(in srgb,var(--accent-2) 28%,transparent) 7px 8px)}
+.jnl-mini-notebook::before{content:"";position:absolute;top:0;bottom:0;left:9px;border-left:1px solid color-mix(in srgb,var(--brick) 60%,transparent)}
+.jnl-mini-notebook>span{margin-left:6px}
+.jnl-mini-book::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(to right,var(--sheet-gutter),transparent)}
+.jnl-mini-book::after{content:"";position:absolute;right:0;bottom:0;width:9px;height:9px;background:linear-gradient(225deg,var(--panel) 50%,color-mix(in srgb,var(--sheet) 82%,var(--ink)) 50%)}
+.jnl-mini-book>span:first-child{margin:2px auto 4px}
+.jnl-mini-parchment{--ink:var(--parch-ink);background:var(--parch)}
+@media(max-width:480px){
+  .jnl-sheet{padding:14px 14px 16px}
+  .jnl-sheet .jnl-h{font-size:26px}
+  .jnl-look-notebook{padding:10px 12px 14px 40px}
+  .jnl-look-notebook::before{left:28px}
+  .jnl-look-notebook .jnl-h{margin:0 -12px 0 -40px;padding:0 12px 0 40px}
+  .jnl-look-book{padding:10px 14px 26px 22px}
+  .jnl-look-book::before{width:14px}
+  .jnl-look{padding:5px 4px 4px;font-size:9.5px;letter-spacing:0}
+  .jnl-mini{height:38px;padding:5px}
+}
 /* ---- trackers ---- rows share the resource rows' −/+ buttons (.res-btn) */
 .trk-total{font-family:var(--head);font-size:12px;font-weight:700;color:var(--accent-2);font-variant-numeric:tabular-nums;margin-left:4px}
 .trk-sum{margin-left:auto;font-family:var(--head);font-weight:700;font-size:14px;color:var(--ink-soft);width:28px;height:28px}

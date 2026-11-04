@@ -66,6 +66,7 @@ function wire(){
     if(t.closest("[data-jnlstamp]"))return insertJournalStamp();
     if(t.closest("[data-jnlck]"))return insertJournalCheckbox();
     if(t.closest("[data-jnlac]"))return jnlToggleAfterCombat();
+    if((m=t.closest("[data-jnllook]")))return jnlSetLook(m.dataset.jnllook);
     /* a checkbox in a rendered page, a Story field, a section note (#95), or a
        page in the End of combat window (#105): only those surfaces answer it —
        a box drawn in an item description does nothing */

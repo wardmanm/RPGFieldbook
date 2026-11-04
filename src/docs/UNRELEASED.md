@@ -112,6 +112,9 @@ Bullets below this line — leave the heading in place.
   the XP among your party and opens the level-up when it reaches a level, and Open loot to add the coins and
   items you took. Each section folds away and remembers how you left it. XP your sheet holds as words, like
   "6350 xp", is never overwritten: the window tells you to fix it on the sheet instead.
+- An open journal page now sits on a page of its own, so its title, tag and dates and what you wrote stand
+  apart from the buttons around it. Each page picks its style in the editor: Sheet, Notebook (ruled lines),
+  Book or Parchment. Every page starts on Sheet.
 - Trackers and journal pages have a "Show after combat" switch. Switched on, an open tracker's tile and a page's
   text, checkboxes and all, appear in the End of combat window, so you can count the kills and tick off the loot
   list there.

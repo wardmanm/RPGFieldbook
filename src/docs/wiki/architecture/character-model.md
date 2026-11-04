@@ -147,7 +147,9 @@ notes map, keyed by `NOTE_SECTIONS` id (not by heading, which gets reworded). Ea
 `{text, at, editedAt}`, saving an empty note deletes the key, and they are gathered on the Journal tab (`#tab-journal`).
 `journal` is a third thing: the Journal tab's own pages, `[{id, title, tag, text, at, editedAt}]`,
 with ids repaired by `repairIds()` in `migrate()` ([Journal](../features/journal.md)).
-A page or a tracker may also carry `afterCombat:true`, "Show after combat" (#105).
+A page or a tracker may also carry `afterCombat:true`, "Show after combat" (#105). A page may carry `look`,
+its page style when it isn't Sheet (#167); `migrate()` leaves it alone, and a value the app doesn't
+know reads as Sheet.
 
 **Not on the character.** The End of combat window's own state, `_endFight` (the fight's summary,
 typed XP, Undo recovery, the last trade), is a module variable tied to the character object and is
@@ -251,3 +253,4 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - 2026-10-27 — `featsAllowed` (`true`) and `levelLog` (`[]`) join `blankChar()`; `migrate()` keeps a boolean and the well-formed records. Undo level-up's copy is a module variable, never a field, so it is never saved. → ledger L7569, #118
 - 2026-10-27 — `migrate()` normalizes the inside of each kept `levelLog` record (features, grants, `hp`, `subclass`, `abilities`), keeping its other keys, so a malformed import can't make Level down throw. → ledger L7657, #118
 - 2026-10-29 — `xpSplit` (`false`) and `endCombatOpen` (`{}`) join `blankChar()`; `trackers[i]` and `journal[i]` gain an optional `afterCombat:true`; `migrate()` keeps `xpSplit` only when `true`, cleans `endCombatOpen` through `cleanEndCombatOpen()` and drops a non-`true` `afterCombat`. → ledger L7921, #105
+- 2026-11-04 — `journal[i]` gains an optional `look` (the page style, absent for Sheet), kept as it is by `migrate()`. → ledger L8699, #167

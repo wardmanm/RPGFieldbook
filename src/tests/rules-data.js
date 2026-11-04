@@ -3039,6 +3039,26 @@ function block(html, needle, tag) {
      /\.modal\.wide:has\(\.tr-loot\)\{width:min\(520px,100%\);height:auto;max-height:min\(680px,90dvh\)\}/.test(mc) && /\.modal\.wide:has\(\.tr-loot\) \.m-body\{min-height:0\}/.test(mc));
 }
 
+// ---------- #167 a journal page's style: tokens for every skin and theme, Notebook's 26px rhythm
+{
+  const tk = fs.readFileSync(path.join(__dirname, '..', 'css', '00-tokens.css'), 'utf8');
+  const jc = fs.readFileSync(path.join(__dirname, '..', 'css', '47-journal.css'), 'utf8');
+  const block = sel => { const i = tk.indexOf(sel + '{'); return i < 0 ? '' : tk.slice(i, tk.indexOf('}', i)); };
+  const themes = ['html[data-theme="light"]', 'html[data-theme="dark"]', 'html[data-skin="classic"][data-theme="light"]', 'html[data-skin="classic"][data-theme="dark"]'];
+  ck('#167 every skin and theme has a sheet, its edge, lift and spine, and parchment',
+     themes.every(t => ['--sheet:', '--sheet-edge:', '--sheet-lift:', '--sheet-gutter:', '--parch:'].every(k => block(t).includes(k))), themes.map(t => block(t).length));
+  ck('#167 ...and each skin its parchment ink', [':root', 'html[data-skin="classic"]'].every(t => ['--parch-ink:', '--parch-soft:', '--parch-hair:', '--parch-accent:'].every(k => block(t).includes(k))));
+  ck('#167 the sheet is drawn from the tokens', /\.jnl-sheet\{position:relative;background:var\(--sheet\);border:1px solid var\(--sheet-edge\);[^}]*box-shadow:var\(--sheet-lift\)/.test(jc));
+  ck('#167 the title is in the skin\'s display face', /\.jnl-sheet \.jnl-h\{font-family:var\(--display\)/.test(jc));
+  ck('#167 Notebook: ruled every 26px; the title two rules, the meta and the text one each',
+     /transparent 0 25px,[^)]*\)[^)]*\) 25px 26px\)/.test(jc) && /\.jnl-look-notebook \.jnl-h\{line-height:52px;margin:0 -20px 0 -58px/.test(jc) &&
+     /\.jnl-look-notebook \.jnl-meta\{display:block;line-height:26px/.test(jc) && /\.jnl-look-notebook \.n-body,\.jnl-look-notebook \.empty\{line-height:26px\}/.test(jc) &&
+     /\.jnl-look-notebook \.n-h\{margin:0;line-height:26px\}/.test(jc) && /\.jnl-look-notebook \.jnl-meta>\*\{[^}]*line-height:1\}/.test(jc));
+  ck('#167 Parchment re-points the tokens, so what is drawn on it follows', /\.jnl-look-parchment\{--ink:var\(--parch-ink\);--ink-soft:var\(--parch-soft\);--line:var\(--parch-ink\);--hair:var\(--parch-hair\);\s*--accent-2:var\(--parch-accent\);--accent:var\(--parch-accent\);/.test(jc));
+  ck('#167 each style button is a 44px target', /\.jnl-look\{[^}]*min-height:44px/.test(jc));
+  ck('#167 the Page style label is styled as the other labels', /label\.f,span\.f\{display:block;font-family:var\(--head\)/.test(fs.readFileSync(path.join(__dirname, '..', 'css', '20-cards.css'), 'utf8')));
+}
+
 // ---------- #91 the strip's band colours are tokens, and chips are tall enough
 {
   const cc = fs.readFileSync(path.join(__dirname, '..', 'css', '45-combat.css'), 'utf8');
