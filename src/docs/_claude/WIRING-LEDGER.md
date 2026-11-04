@@ -8502,3 +8502,11 @@ also list skills, tools, languages and equipment. Stonesinger's feature text als
 species traits printed before it in the packet.
 
 Pages: [character building](../wiki/features/character-building.md).
+
+**Review** (opus, approve with nits): no correctness findings; the 2024 `opts` carries the same values
+(key order only). One fix round: the #159 tests now run on a DOM where the window's own `bg*` ids it
+did not draw are `null`, as in the browser, so the `#bgMode` guard is pinned (removing it fails five
+tests); a tools-and-feat background with no ability scores is covered (no " · " lead, the feat
+granted); the release note says what the window and info card now do. Left for its own issue: typing
+a 2024 background's name in Or custom name adds it with no ability increase (mode falls back to
+"2-1" with no picks), a path older than this branch.

@@ -5881,8 +5881,13 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       {name: 'Stonecutter', description: 'An older background.', skills: ['Insight'],
        feature: {name: 'Stonewise', description: 'You know stone.'}},
       {name: 'Wanderer', description: 'Only a feature, as the Humblewood pack has these today.', feature: {name: 'Wayfinding', description: 'You find the way.'}},
+      {name: 'Tinker', description: 'Tools and a feat, no ability scores.', tools: "Tinker's tools", feat: 'Lucky'},
       {name: 'Mason', description: 'A 2024 background.', abilityScores: ['str', 'con', 'wis'], feat: 'Tough', skills: ['Athletics']}]};
     X.reindexRules();   /* it numbers the ids, so the tests find them by name */
+    /* As in the browser, the window's own ids that it did not draw are null —
+       the recorder would otherwise hand back an element for any id, and the
+       code's guards for a missing #bgMode or #bgFeat would never run. */
+    doc.getElementById = id => /^bg/.test(id) && !log.join('\n').includes('id="' + id + '"') ? null : el(id);
     const idOf = nm => X.rules.backgrounds.find(b => b.name === nm)._id;
     const fresh = () => { X.character = X.migrate(JSON.parse(JSON.stringify(Object.assign(X.blankChar(), {system: 'humblewood'})))); };
     const hadAlert = ctx.alert;
@@ -5899,6 +5904,15 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     res = capture(() => pick('Wanderer'));
     ck('#159 a background that grants nothing but its feature has no empty "Also grants:" line',
        !res.err && !/Also grants/.test(res.html) && /Only a feature/.test(res.html), why(res) || res.html);
+    res = capture(() => pick('Tinker'));
+    ck('#159 tools and a feat with no ability scores: no pickers, the feat named, "Also grants" starts with the tools',
+       !res.err && !/id="bgA2"|id="bgMode"/.test(res.html) && /Feat: <b>Lucky<\/b>/.test(res.html) && /Also grants: Tinker&#39;s tools</.test(res.html), why(res) || res.html);
+    fresh(); alerted = null;
+    res = capture(() => { pick('Tinker'); fire('bgAdd', 'click'); });
+    ck('#159 ...and Add takes it with its feat and no ability increase',
+       !res.err && alerted === null && X.character.bg && X.character.bg.feat === 'Lucky' && X.character.bg.abils === null,
+       why(res) || alerted || JSON.stringify(X.character.bg));
+    fresh();
     res = capture(() => { pick('Stonecutter'); fire('bgAdd', 'click'); });
     ck('#159 ...and Add takes it in one click: no alert, its feature granted, no ability feature',
        !res.err && alerted === null && X.character.bg && X.character.bg.name === 'Stonecutter' && X.character.bg.abils === null &&
@@ -5926,6 +5940,7 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#159 ...and a 2024 background still shows them', !res.err && /Ability Scores:<\/b> STR, CON, WIS/.test(res.html) && /<b>Feat:<\/b> Tough/.test(res.html), why(res) || res.html);
 
     ctx.alert = hadAlert;
+    doc.getElementById = el;
     X.character = X.blankChar();
   }
 
