@@ -32,28 +32,30 @@
 .jnl-sheet .jnl-meta{margin:8px 0 14px;padding-bottom:10px;border-bottom:1px solid var(--hair)}
 .jnl-sheet .jnl-h+.n-body,.jnl-sheet .jnl-h+.empty{margin-top:14px}
 .jnl-sheet .n-body{font-size:16px;margin-top:0}
-/* Notebook: ruled every 26px with a margin line; the title takes two rules, the
-   meta line and each line of writing one. Headings, tables and pictures are
-   not one line tall and don't sit on the rules: the price of the style. */
-.jnl-look-notebook{border:0;padding:10px 20px 14px 58px;background-position:0 10px;
-  background-image:repeating-linear-gradient(to bottom,transparent 0 25px,color-mix(in srgb,var(--accent-2) 20%,transparent) 25px 26px)}
-.jnl-look-notebook::before{content:"";position:absolute;top:0;bottom:0;left:42px;border-left:1.5px solid color-mix(in srgb,var(--brick) 55%,transparent);pointer-events:none}
+/* Notebook: ruled every --nb (30px) with a margin line; the title takes two
+   rules, the meta line and each line of writing one. Headings, tables and
+   pictures are not one line tall and don't sit on the rules: the price of the
+   style. A blank strip above the title, a ruled line or two below the last
+   line, and room either side of the margin line (Mike: the first cut was tight). */
+.jnl-look-notebook{--nb:30px;border:0;padding:18px 24px 40px 66px;background-position:0 18px;
+  background-image:repeating-linear-gradient(to bottom,transparent 0 calc(var(--nb) - 1px),color-mix(in srgb,var(--accent-2) 20%,transparent) calc(var(--nb) - 1px) var(--nb))}
+.jnl-look-notebook::before{content:"";position:absolute;top:0;bottom:0;left:46px;border-left:1.5px solid color-mix(in srgb,var(--brick) 55%,transparent);pointer-events:none}
 /* the title's own sheet, edge to edge (the margin line is drawn over it), hides
    the rules through it and keeps the one it sits on */
-.jnl-look-notebook .jnl-h{line-height:52px;margin:0 -20px 0 -58px;padding:0 20px 0 58px;
+.jnl-look-notebook .jnl-h{line-height:calc(var(--nb) * 2);margin:0 -24px 0 -66px;padding:0 24px 0 66px;
   background:linear-gradient(var(--sheet),var(--sheet)) no-repeat;background-size:100% calc(100% - 1px)}
-.jnl-look-notebook .jnl-meta{display:block;line-height:26px;margin:0;padding:0;border:0}
-/* line-height:1 keeps the tag's pill and the small type inside the 26px line */
+.jnl-look-notebook .jnl-meta{display:block;line-height:var(--nb);margin:0;padding:0;border:0}
+/* line-height:1 keeps the tag's pill and the small type inside the line */
 .jnl-look-notebook .jnl-meta>*{vertical-align:middle;margin-right:8px;line-height:1}
 .jnl-look-notebook .jnl-h+.n-body,.jnl-look-notebook .jnl-h+.empty{margin-top:0}
-.jnl-look-notebook .n-body,.jnl-look-notebook .empty{line-height:26px}
+.jnl-look-notebook .n-body,.jnl-look-notebook .empty{line-height:var(--nb)}
 .jnl-look-notebook .n-body p,.jnl-look-notebook .n-body .n-ck,.jnl-look-notebook .n-body .n-ul,.jnl-look-notebook .n-body .n-ol{margin:0}
 .jnl-look-notebook .n-ck li,.jnl-look-notebook .n-ul li,.jnl-look-notebook .n-ol li{margin:0}
-.jnl-look-notebook .ck{margin-top:4px}
+.jnl-look-notebook .ck{margin-top:calc((var(--nb) - 18px) / 2)}
 /* a heading, a quote and a rule are each one line tall, so what follows stays on the rules */
-.jnl-look-notebook .n-h{margin:0;line-height:26px}
+.jnl-look-notebook .n-h{margin:0;line-height:var(--nb)}
 .jnl-look-notebook .n-q{margin:0;padding:0 0 0 10px}
-.jnl-look-notebook .n-hr{margin:12px 0 13px}
+.jnl-look-notebook .n-hr{margin:calc(var(--nb) / 2 - 1px) 0 calc(var(--nb) / 2)}
 /* Book: the spine's shade at the left, the meta as a running head, the title
    centred with an ornament, and a folded corner cut from the card's colour */
 .jnl-look-book{border-radius:2px 6px 6px 2px;padding:12px 26px 30px 34px;overflow:hidden}
@@ -89,9 +91,9 @@
 @media(max-width:480px){
   .jnl-sheet{padding:14px 14px 16px}
   .jnl-sheet .jnl-h{font-size:26px}
-  .jnl-look-notebook{padding:10px 12px 14px 40px}
-  .jnl-look-notebook::before{left:28px}
-  .jnl-look-notebook .jnl-h{margin:0 -12px 0 -40px;padding:0 12px 0 40px}
+  .jnl-look-notebook{padding:16px 14px 36px 46px;background-position:0 16px}
+  .jnl-look-notebook::before{left:32px}
+  .jnl-look-notebook .jnl-h{margin:0 -14px 0 -46px;padding:0 14px 0 46px}
   .jnl-look-book{padding:10px 14px 26px 22px}
   .jnl-look-book::before{width:14px}
   .jnl-look{padding:5px 4px 4px;font-size:9.5px;letter-spacing:0}

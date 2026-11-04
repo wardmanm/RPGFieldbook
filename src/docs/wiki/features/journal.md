@@ -238,7 +238,7 @@ the same way. The three views:
   on a sheet (`.jnl-sheet.jnl-look-<style>`, #167): the title as a focusable heading (`#jnlHead`,
   focused on open) in the skin's display face, the tag, the dates (`noteWhen()`), and the text
   through `noteHTML()`. The style is the page's (`jnlLook()`): **Sheet**, a lighter sheet lifted off
-  the card; **Notebook**, ruled every 26px with a margin line, the title two rules tall and every
+  the card; **Notebook**, ruled every `--nb` (30px) with a margin line and room around the writing, the title two rules tall and every
   line of writing, heading, checkbox and list item one (tables and pictures don't sit on the
   rules); **Book**, the spine's shade, the tag and dates as a running head, a centred title with an
   ornament, a folded corner; **Parchment**, as Sheet on cream with dark ink in both themes (it
@@ -362,3 +362,4 @@ entry in the list.
 - 2026-10-29 — "Show after combat" on trackers and pages (`afterCombat`); the End of combat window shows the flagged tiles without the pen and the flagged pages, tickable through `jnlTogglePage()`; every copy of a tile is patched. → ledger L7921, #105
 - 2026-10-29 — A tick refused while its page is in the editor says so; a tracker closed in the End of combat window keeps focus there, and its list stays ("All done"). → ledger L8025, #105
 - 2026-11-04 — An open page sits on a sheet, in a style chosen in the editor: Sheet (the default), Notebook, Book or Parchment (`look`). → ledger L8699, #167
+- 2026-11-04 — Notebook gets room: one spacing value, `--nb` (30px), a blank strip above the title, a ruled line or two below, more space from the margin line. → ledger L8761, #167

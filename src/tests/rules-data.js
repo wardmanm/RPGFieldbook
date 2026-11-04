@@ -3050,10 +3050,23 @@ function block(html, needle, tag) {
   ck('#167 ...and each skin its parchment ink', [':root', 'html[data-skin="classic"]'].every(t => ['--parch-ink:', '--parch-soft:', '--parch-hair:', '--parch-accent:'].every(k => block(t).includes(k))));
   ck('#167 the sheet is drawn from the tokens', /\.jnl-sheet\{position:relative;background:var\(--sheet\);border:1px solid var\(--sheet-edge\);[^}]*box-shadow:var\(--sheet-lift\)/.test(jc));
   ck('#167 the title is in the skin\'s display face', /\.jnl-sheet \.jnl-h\{font-family:var\(--display\)/.test(jc));
-  ck('#167 Notebook: ruled every 26px; the title two rules, the meta and the text one each',
-     /transparent 0 25px,[^)]*\)[^)]*\) 25px 26px\)/.test(jc) && /\.jnl-look-notebook \.jnl-h\{line-height:52px;margin:0 -20px 0 -58px/.test(jc) &&
-     /\.jnl-look-notebook \.jnl-meta\{display:block;line-height:26px/.test(jc) && /\.jnl-look-notebook \.n-body,\.jnl-look-notebook \.empty\{line-height:26px\}/.test(jc) &&
-     /\.jnl-look-notebook \.n-h\{margin:0;line-height:26px\}/.test(jc) && /\.jnl-look-notebook \.jnl-meta>\*\{[^}]*line-height:1\}/.test(jc));
+  /* Notebook's spacing is one value, --nb; the title's edge-to-edge background
+     must reach exactly as far as the sheet's padding (desktop and phone), and
+     the ruling must start where the padding ends */
+  {
+    const nb = jc.match(/\.jnl-look-notebook\{--nb:(\d+)px;border:0;padding:(\d+)px (\d+)px \d+px (\d+)px;background-position:0 (\d+)px;/);
+    const ph = jc.match(/\.jnl-look-notebook\{padding:(\d+)px (\d+)px \d+px (\d+)px;background-position:0 (\d+)px\}/);
+    const tm = [...jc.matchAll(/\.jnl-look-notebook \.jnl-h\{(?:line-height:calc\(var\(--nb\) \* 2\);)?margin:0 -(\d+)px 0 -(\d+)px;padding:0 (\d+)px 0 (\d+)px/g)];
+    ck('#167 Notebook: ruled every --nb, 30px; the title two rules, the meta, text and headings one each',
+       nb && nb[1] === '30' && /transparent 0 calc\(var\(--nb\) - 1px\),[^)]*\)[^)]*\) calc\(var\(--nb\) - 1px\) var\(--nb\)\)/.test(jc) &&
+       /\.jnl-look-notebook \.jnl-h\{line-height:calc\(var\(--nb\) \* 2\)/.test(jc) && /\.jnl-look-notebook \.jnl-meta\{display:block;line-height:var\(--nb\)/.test(jc) &&
+       /\.jnl-look-notebook \.n-body,\.jnl-look-notebook \.empty\{line-height:var\(--nb\)\}/.test(jc) && /\.jnl-look-notebook \.n-h\{margin:0;line-height:var\(--nb\)\}/.test(jc) &&
+       /\.jnl-look-notebook \.jnl-meta>\*\{[^}]*line-height:1\}/.test(jc));
+    ck('#167 ...the ruling starts where the padding ends, on desktop and phone', nb && ph && nb[2] === nb[5] && ph[1] === ph[4], {nb, ph});
+    ck('#167 ...the title\'s background reaches the sheet\'s edges, on desktop and phone',
+       tm.length === 2 && nb && ph && tm[0][1] === nb[3] && tm[0][2] === nb[4] && tm[0][3] === nb[3] && tm[0][4] === nb[4] &&
+       tm[1][1] === ph[2] && tm[1][2] === ph[3] && tm[1][3] === ph[2] && tm[1][4] === ph[3], tm.map(m => m.slice(1)));
+  }
   ck('#167 Parchment re-points the tokens, so what is drawn on it follows', /\.jnl-look-parchment\{--ink:var\(--parch-ink\);--ink-soft:var\(--parch-soft\);--line:var\(--parch-ink\);--hair:var\(--parch-hair\);\s*--accent-2:var\(--parch-accent\);--accent:var\(--parch-accent\);/.test(jc));
   ck('#167 each style button is a 44px target', /\.jnl-look\{[^}]*min-height:44px/.test(jc));
   ck('#167 the Page style label is styled as the other labels', /label\.f,span\.f\{display:block;font-family:var\(--head\)/.test(fs.readFileSync(path.join(__dirname, '..', 'css', '20-cards.css'), 'utf8')));
