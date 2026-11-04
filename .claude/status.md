@@ -7,6 +7,11 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 (release-note review) remain, then `/release 1.9.0` and the private data release. No branch open.
 
 ## Recent changes
+- 2026-11-04: Merged #161 (P0) and #162 (P2) on main, not pushed: Roll initiative is the ordinary dialog,
+  which grows and scrolls, so Start is always in reach (three monster rows clipped it on a phone); the
+  "I rolled" box sits beside its words in Roll initiative, Spend a Hit Die and level-up HP. Filed from
+  the same report: #163 (paw companions don't join initiative, P1, 1.9.1) and #164 (a phone's monster
+  row wraps its Init box, P2, 1.9.1).
 - 2026-11-04: Merged #159 (P0 from the test pass): seven Humblewood backgrounds with no ability scores
   (Ambassador, Underscout, Courtier, Seaborn, Stonesinger, Warrenborn, Wonderstruck) can be added; the
   Add background window drew empty +2/+1 boxes and refused. Their missing skills, tools, languages and
@@ -35,8 +40,10 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
   traits printed before it in the packet. Options: comment on #160 / a separate issue.
 
 ## Loose ends
-- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158, #159 and #160 are uncommitted; the next
-  `/pre-release` run commits them.
+- main is 5 commits ahead of origin (#161/#162 and their artifact), not pushed: Mike merged without a
+  push; #161 and #162 stay open on GitHub until it is, which `/pre-release`'s open-P0 check will see.
+- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#164 are uncommitted; the next `/pre-release`
+  run commits them.
 - 35 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
 - Data releases (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs (#118), and
   Homebrew in the private repo (#125); filed as #138.
