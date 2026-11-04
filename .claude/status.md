@@ -45,6 +45,7 @@ reporting bugs; each becomes an issue, or a fix when it's a P0. Steps 1–3 are 
 ## Pending decisions
 - **Priorities for the pre-drive's 10 probable bugs** (raised 2026-11-02). Proposed P2 for most; the one
   open question is #1, Undo recovery re-recovering ammo in the next fight: P1 or P0. Blocks: step 4.
+
 ## Loose ends
 - `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#168 are uncommitted; the next `/pre-release`
   run commits them.
