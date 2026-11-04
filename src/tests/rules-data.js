@@ -3039,6 +3039,13 @@ function block(html, needle, tag) {
      /\.modal\.wide:has\(\.tr-loot\)\{width:min\(520px,100%\);height:auto;max-height:min\(680px,90dvh\)\}/.test(mc) && /\.modal\.wide:has\(\.tr-loot\) \.m-body\{min-height:0\}/.test(mc));
 }
 
+// ---------- #168 Balance trade's button and the splits note
+{
+  const mc = fs.readFileSync(path.join(__dirname, '..', 'css', '50-modal.css'), 'utf8');
+  ck('#168 on a phone Balance trade keeps its ⚖ only, as Complete its ✓', /@media\(max-width:700px\)\{[\s\S]*?\.tr-done-ic\{display:inline\}\s*\.tr-bal-lbl\{display:none\}\s*\.tr-bal-ic\{display:inline\}/.test(mc) && /\.tr-bal-ic\{display:none;/.test(mc));
+  ck('#168 the splits note takes no room when it has nothing to say', /\.tr-split:empty\{display:none\}/.test(mc));
+}
+
 // ---------- #167 a journal page's style: tokens for every skin and theme, Notebook's 26px rhythm
 {
   const tk = fs.readFileSync(path.join(__dirname, '..', 'css', '00-tokens.css'), 'utf8');

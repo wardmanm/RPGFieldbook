@@ -101,6 +101,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
   'INV_FILTERS', 'invDayLabel', 'invLogHTML', 'openInvLog',
   'newTradeDraft', 'tradeBalance', 'tradeHTML', 'completeTrade',
+  'TRADE_SPLIT', 'tradeSplitPlan', 'tradeSplitText', 'tradeGiveCap', 'tradeBalanceFill', 'tradeSplitNoteHTML',
   'featCategory', 'featPrereq', 'featUnmet', 'featAbilityChoices', 'featOfferable', 'featTaken', 'abilFinal',
   'commitChoices', 'asiFeatListHTML', 'asiPanelHTML', 'commitAsiPick', 'removeClass', 'asiPickWarnings',
   'featPendingIncreases', 'asiRowHidden',
@@ -7009,6 +7010,87 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   }
 }
 
+// ---------- #168 Balance trade: splitting coins, filling the side that is behind
+{
+  const keep = {ch: X.character, rs: ctx.scheduleSave, ri: ctx.renderInventory, ra: ctx.renderAttacks, rc: ctx.renderCoins, rq: ctx.recompute};
+  ['scheduleSave', 'renderInventory', 'renderAttacks', 'renderCoins', 'recompute'].forEach(n => ctx[n] = () => {});
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const HW = ['gp', 'sp', 'cp'], DND = ['pp', 'gp', 'ep', 'sp', 'cp'];
+  try {
+    // the split plan
+    ck('#168 nothing to split when the purse holds the coins', same(X.tradeSplitPlan({gp: 3, sp: 5}, {gp: 3, sp: 5}, HW), []));
+    ck('#168 a potion at 3 gp 5 sp from a purse of gold splits one gold into ten silver',
+       same(X.tradeSplitPlan({gp: 3, sp: 5}, {gp: 10}, HW), [{from: 'gp', into: 'sp', n: 1}]));
+    ck('#168 ...down the chain when it must: gold to silver, then silver to copper',
+       same(X.tradeSplitPlan({sp: 5, cp: 5}, {gp: 10}, HW), [{from: 'gp', into: 'sp', n: 1}, {from: 'sp', into: 'cp', n: 1}]));
+    ck('#168 ...from the smallest bigger coin to spare: electrum into silver before gold',
+       same(X.tradeSplitPlan({cp: 5}, {ep: 1, gp: 1}, DND), [{from: 'ep', into: 'sp', n: 1}, {from: 'sp', into: 'cp', n: 1}]));
+    ck('#168 ...never into electrum, and never upward', X.tradeSplitPlan({ep: 1}, {gp: 1}, DND) === null && X.tradeSplitPlan({gp: 1}, {cp: 100}, HW) === null);
+    ck('#168 ...nor beyond the purse', X.tradeSplitPlan({gp: 11}, {gp: 10}, HW) === null && X.tradeSplitPlan({sp: 101}, {gp: 10}, HW) === null);
+    ck('#168 ...only the character\'s own coins: Humblewood leaves platinum alone', X.tradeSplitPlan({gp: 5}, {pp: 1}, HW) === null && X.tradeSplitPlan({gp: 5}, {pp: 1}, DND) !== null);
+    ck('#168 ...splitting many at once, not one by one', (() => { const t = Date.now(), pl = X.tradeSplitPlan({cp: 99999}, {pp: 100}, DND); return pl && pl.length === 3 && Date.now() - t < 200; })());
+    ck('#168 the receipt\'s words', same(X.tradeSplitText([{from: 'gp', into: 'sp', n: 2}, {from: 'pp', into: 'gp', n: 1}]), ['2 GP into 20 SP', '1 PP into 10 GP']));
+    // Humblewood: gold, silver, copper
+    const c = X.blankChar(); c.system = 'humblewood'; X.character = c;
+    c.inventory = [{id: 'dg', name: 'Dagger', qty: 1, cost: 2}]; c.coins = {gp: 10, sp: 0, cp: 0};
+    const potion = () => ({key: 'k1', name: 'Potion', qty: 1, cost: 3.5, def: null, custom: true});
+    let d = X.newTradeDraft({with: 'Olvin'}); d.get.items = [potion()];
+    ck('#168 a box holds what the purse can pay, splitting', X.tradeGiveCap(d, c, 'gp') === 10 && X.tradeGiveCap(d, c, 'sp') === 100 && X.tradeGiveCap(d, c, 'cp') === 1000);
+    d.give.coins = {sp: 5};
+    ck('#168 ...with the other boxes as they are', X.tradeGiveCap(d, c, 'gp') === 9, X.tradeGiveCap(d, c, 'gp'));
+    d.give.coins = {};
+    ck('#168 Balance: you owe 3.5 gp from a purse of gold: 3 gp and 5 sp', same(X.tradeBalanceFill(d, c), {side: 'give', add: {gp: 3, sp: 5}}), X.tradeBalanceFill(d, c));
+    d.give.coins = {gp: 1};
+    ck('#168 ...coins already typed stay; it adds what is still owed', same(X.tradeBalanceFill(d, c), {side: 'give', add: {gp: 2, sp: 5}}));
+    c.coins = {gp: 2, sp: 2, cp: 0}; d.give.coins = {};
+    ck('#168 ...a purse that can\'t cover it says how short', same(X.tradeBalanceFill(d, c), {side: 'give', short: {need: 350, have: 220}}));
+    c.coins = {gp: 10, sp: 0, cp: 0};
+    d = X.newTradeDraft({}); d.give.items = [{id: 'dg', qty: 1}];
+    ck('#168 you give more: the other side pays in gold first', same(X.tradeBalanceFill(d, c), {side: 'get', add: {gp: 2}}));
+    c.inventory[0].cost = 2.75;
+    ck('#168 ...then silver and copper', same(X.tradeBalanceFill(d, c), {side: 'get', add: {gp: 2, sp: 7, cp: 5}}));
+    c.inventory[0].cost = 2;
+    d.get.coins = {gp: 2};
+    ck('#168 even: nothing to do', X.tradeBalanceFill(d, c) === null);
+    ck('#168 loot never balances', X.tradeBalanceFill(Object.assign(X.newTradeDraft({loot: true}), {}), c) === null);
+    // D&D: platinum splits down to pay below it
+    const dn = X.blankChar(); dn.system = 'dnd'; X.character = dn; dn.coins = {pp: 1};
+    d = X.newTradeDraft({}); d.get.items = [potion()];
+    ck('#168 D&D: a purse of one platinum pays 3.5 gp as 3 gp 5 sp', same(X.tradeBalanceFill(d, dn), {side: 'give', add: {gp: 3, sp: 5}}) &&
+       same(X.tradeSplitPlan({gp: 3, sp: 5}, dn.coins), [{from: 'pp', into: 'gp', n: 1}, {from: 'gp', into: 'sp', n: 1}]));
+    // Complete with a split, and Undo
+    X.character = c; c.coins = {gp: 10, sp: 0, cp: 0}; c.invLog = [];
+    d = X.newTradeDraft({with: 'Olvin'}); d.get.items = [potion()]; d.give.coins = {gp: 3, sp: 5};
+    const tr = X.completeTrade(d), rl = tr.lines.map(l => l.dir + l.text);
+    ck('#168 Complete splits first: 10 gp pays 3 gp 5 sp and leaves 6 gp 5 sp', c.coins.gp === 6 && c.coins.sp === 5, c.coins);
+    ck('#168 ...the split is its own receipt line, before the coins', rl.indexOf('Split 1 GP into 10 SP') === 0 && rl.indexOf('-3 GP') > 0 && rl.indexOf('-5 SP') > 0, rl);
+    ck('#168 ...one coins part holds it all', same(tr.undo.parts.find(p => p.kind === 'coins').u.delta, {gp: -4, sp: 5}), tr.undo.parts);
+    ck('#168 ...and Undo puts the purse back exactly', X.invUndo(tr.id) === '' && c.coins.gp === 10 && c.coins.sp === 0 && !c.inventory.some(i => i.name === 'Potion'), c.coins);
+    // the window
+    d = X.newTradeDraft({with: 'Olvin'});
+    let h = X.tradeHTML(d, c);
+    ck('#168 Balance trade sits beside Cancel, greyed when even', /<button type="button" class="tbtn" id="trBalance" aria-label="Balance trade" title="Balance trade" disabled><span class="tr-bal-ic" aria-hidden="true">⚖︎<\/span><span class="tr-bal-lbl">Balance trade<\/span><\/button><button type="button" class="tbtn" id="trCancel">/.test(h), h.slice(h.indexOf('tr-acts')));
+    d.get.items = [potion()];
+    ck('#168 ...ready when the trade isn\'t even', /id="trBalance"[^>]*title="Balance trade"><span/.test(X.tradeHTML(d, c)));
+    d.give.coins = {gp: 3, sp: 5};
+    h = X.tradeHTML(d, c);
+    ck('#168 ...and greyed again once Balance has made it even', /id="trBalance"[^>]*title="Balance trade" disabled>/.test(h));
+    ck('#168 the note says what the purse splits', /<p class="tr-split" id="trSplit" aria-live="polite">Splits 1 GP into 10 SP to make change\.<\/p>/.test(h), h);
+    ck('#168 ...a box\'s max is what the purse can pay with the others as they are', /data-trcoin="give:gp"[^>]*max="9"/.test(h) && /data-trcoin="give:sp"[^>]*max="70"/.test(h) && /data-trcoin="give:cp"[^>]*max="650"/.test(h), h.match(/data-trcoin="give:[a-z]+"[^>]*max="\d+"/g));
+    d.give.coins = {gp: 4};
+    ck('#168 ...and is empty when nothing splits', /<p class="tr-split" id="trSplit" aria-live="polite"><\/p>/.test(X.tradeHTML(d, c)));
+    ck('#168 loot has no Balance', !/trBalance/.test(X.tradeHTML(X.newTradeDraft({loot: true}), c)));
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '67-trade.js'), 'utf8');
+    ck('#168 the button adds the coins to the side that is behind, shows that side, and repaints; short, it says so',
+       /if\(t\.closest\("#trBalance"\)\)\{\s*const f=tradeBalanceFill\(d,character\);if\(!f\)return;\s*if\(f\.short\)\{toast\(`You're \$\{cpToGpText\(f\.short\.need-f\.short\.have\)\} short of covering it — you have \$\{cpToGpText\(f\.short\.have\)\}\.`\);return;\}\s*const side=d\[f\.side\];[^\n]*\n\s*d\.tab=f\.side;[^\n]*\n\s*return tradePaint\(\);/.test(src));
+    ck('#168 a typed coin is capped at what the purse can pay', /if\(side==="give"\)v=Math\.min\(v,tradeGiveCap\(d,character,k\)\);/.test(src));
+    ck('#168 typing refreshes the note and the button', /const bt=document\.getElementById\("trBalance"\);if\(bt\)bt\.disabled=!tradeBalance\(_trade,character\)\.diff;/.test(src) && /const sp=document\.getElementById\("trSplit"\);if\(sp\)sp\.innerHTML=tradeSplitNoteHTML\(_trade,character\);/.test(src));
+  } finally {
+    Object.assign(ctx, {scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, renderCoins: keep.rc, recompute: keep.rq});
+    X.character = keep.ch;
+  }
+}
+
 // ---------- #47 final review fixes (K1, I1, I2, C1, C4, C5, M1-M9)
 {
   const fs = require('fs'), path = require('path');
@@ -7291,7 +7373,8 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#47 ...buying for more than you give is still short, in red', b.short === true && /tr-bal short/.test(h) && /3 gp short/.test(h));
     d.applyGet = false;
     ck('#47 ...and the get switch off is never short', X.tradeBalance(d, X.character).short === false);
-    ck('#47 ...Complete asks only when short', /if\(b\.short&&!confirm\(/.test(fs.readFileSync(path.join(__dirname, '..', 'js', '67-trade.js'), 'utf8')));
+    ck('#47 ...Complete asks when short, and (#168) when giving more; never in your favour',
+       /const why=b\.short\?`You're \$\{n\} short\.`:b\.diff>0\?`You're giving \$\{n\} more than you get\.`:"";/.test(fs.readFileSync(path.join(__dirname, '..', 'js', '67-trade.js'), 'utf8')));
 
     /* ---- grant and "Removed with" lines that moved gold file under Coins ---- */
     fresh(); X.rules = Object.assign({}, X.rules, {items: [{name: 'Shield', cost: '10 gp'}]});
@@ -8958,4 +9041,40 @@ async function t105After() {
   }
 }
 
-t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+/* #168: Complete asks in the app's own warning window when short or giving
+   more, never when the trade is even or in your favour; Go back leaves the
+   trade open and changes nothing. */
+async function t168Ask() {
+  const keep = {ch: X.character, ask: ctx.askConfirm, toast: ctx.toast, rs: ctx.scheduleSave, ri: ctx.renderInventory, ra: ctx.renderAttacks, rc: ctx.renderCoins, rq: ctx.recompute};
+  ['scheduleSave', 'renderInventory', 'renderAttacks', 'renderCoins', 'recompute'].forEach(n => ctx[n] = () => {});
+  ctx.toast = () => null;
+  const asked = []; let answer = false;
+  ctx.askConfirm = o => { asked.push(o); return Promise.resolve(answer); };
+  try {
+    const c = X.blankChar(); c.system = 'humblewood'; X.character = c;
+    c.inventory = [{id: 'dg', name: 'Dagger', qty: 1, cost: 2}]; c.coins = {gp: 10, sp: 0, cp: 0}; c.invLog = [];
+    const open = setup => { ctx.openTrade({with: 'Olvin'}); setup(X._trade); return X._trade; };
+    let d = open(t => { t.give.items = [{id: 'dg', qty: 1}]; });
+    await ctx.tradeAskComplete(d);
+    ck('#168 giving more asks, in the warning window', asked.length === 1 && asked[0].title === 'Complete the trade anyway?' && asked[0].message === "You're giving 2 gp more than you get." && asked[0].ok === 'Complete trade' && asked[0].cancel === 'Go back', asked);
+    ck('#168 ...Go back changes nothing and leaves the trade open', X._trade === d && c.invLog.length === 0 && c.inventory.length === 1);
+    answer = true; await ctx.tradeAskComplete(d);
+    ck('#168 ...Complete trade completes it', c.invLog.length === 1 && !c.inventory.some(i => i.id === 'dg') && X._trade === null);
+    asked.length = 0; answer = false;
+    d = open(t => { t.get.items = [{key: 'k', name: 'Potion', qty: 1, cost: 3.5, def: null, custom: true}]; });
+    await ctx.tradeAskComplete(d);
+    ck('#168 short asks as before, now in the warning window', asked.length === 1 && asked[0].message === "You're 3.5 gp short.", asked);
+    ctx.tradeClosed(null);
+    asked.length = 0;
+    d = open(t => { t.give.items = [{id: 'missing', qty: 1}]; t.give.coins = {gp: 2}; t.get.coins = {gp: 5}; });
+    await ctx.tradeAskComplete(d);
+    ck('#168 in your favour, it doesn\'t ask', asked.length === 0 && c.invLog.length === 2, asked);
+  } catch (err) {
+    ck('#168 t168Ask ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    Object.assign(ctx, {askConfirm: keep.ask, toast: keep.toast, scheduleSave: keep.rs, renderInventory: keep.ri, renderAttacks: keep.ra, renderCoins: keep.rc, recompute: keep.rq});
+    X.character = keep.ch;
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(t168Ask).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

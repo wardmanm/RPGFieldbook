@@ -73,7 +73,9 @@ Bullets below this line — leave the heading in place.
 - A Party card on the Bio tab: your companions join every fight you start.
 - Trade from the Inventory tab: give items and coins, get items and coins, see whether it
   balances, and complete it in one step. Selling for more than something is worth reads as in
-  your favour, not short.
+  your favour, not short. Balance trade fills in the coins that even it up: yours when you owe,
+  splitting a gold piece into silver if you need change, or the other side's when you're giving
+  more. Completing a trade where you give more than you get asks first.
 - An inventory log records every change to your items and coins, and lets you undo any change
   that can still be reversed. It notes what leaves when you remove a class, background or
   ancestry, and each fight's ammunition, counting arrows you recovered mid-fight. Making the log

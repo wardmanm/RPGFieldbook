@@ -317,6 +317,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **Lowering the log size (#47)** — Trims at once, asking first when lines would go
 - **A trade's balance (#47)** — Coins, plus item worth or cost on each side whose Apply item value switch is on
 - **A shortfall (#47)** — Shown and confirmed, never blocked; only the items you get can cause it, never coins received
+- **Giving more than you get (#168)** — Confirmed in the warning window, as a shortfall is (which moves there too); never blocked
+- **Balance trade (#168)** — Adds to the side that is behind, typed coins kept: you owe, from your purse biggest first, splitting; you give more, the other side pays in gp, sp, cp
+- **Splitting coins (#168)** — The purse splits bigger coins down the chain (pp→gp, gp→sp, ep→sp, sp→cp) to pay what is in the boxes, typed or balanced; a receipt line each, undone exactly
 - **How an edit line is stored (#47)** — Only the changed fields, before and after, plus a fingerprint of the row as edited
 - **The trade's layout (#47)** — Side by side above 700px; tabs and a ✓ button at 700px and under
 - **Other parties (#47)** — Free text with chips from the Party card and earlier trades

@@ -8776,3 +8776,66 @@ everything named above reads it; the ruling starts where the padding ends, and t
 background reaches the sheet's edges, both checked against the padding on desktop and phone.
 
 Pages: [journal](../wiki/features/journal.md).
+
+## #168: Balance trade, coins split to pay, and a warning before giving more (Mike, 2026-11-04)
+
+Mike, in the 1.9.0 test pass: a "balance trade" button that pays the difference from the player's
+currency when they owe, and has the other side add currency when the player offers more; and a
+popup warning when giving more than getting. Agreed, guesses and all: biggest coins first; "it
+should properly split my gold into silver"; the split a receipt line and Undo exact; a purse that
+can't cover it changes nothing and says how short; the other side pays in gp, sp and cp; typed coins
+stay and Balance adds to the side that is behind; greyed when even; the warning (and the existing
+short question) in Fieldbook's own window.
+
+**Splitting** (`67-trade.js`). `tradeSplitPlan(give, held, keys)` is the coins the purse splits to
+pay the You give boxes: each shortfall, smallest coin first, met from the smallest bigger coin with
+one to spare, split into the coin below it (`TRADE_SPLIT`: pp→gp, gp→sp, ep→sp, sp→cp; never into
+electrum, never upward), many at a time; `[]` when none, `null` when the purse can't pay (a value
+check first, then the walk). Only the character's coins (`coinKeys()`: a Humblewood purse's stray
+platinum is left alone). `completeTrade()` applies the plan first, a receipt line per split ("Split
+1 GP into 10 SP") ahead of the coins, and folds it into the one `coins` undo part, so Undo restores
+the purse exactly. `tradeClamp()` keeps give coins the purse can pay with splitting, falling back to
+each coin's own count when it can't pay them at all (a seeded draft past the purse).
+
+**Typed coins split too.** Ruling: a You give box is capped by what the purse can pay with
+splitting (`tradeGiveCap()`, a binary search over `tradeSplitPlan()` with the other boxes as they
+are), not by that coin's own count: typing 5 sp with only gold splits a gold piece, as Balance
+does. One rule for both, and no hidden state to go stale when a box is edited after Balance. Cost if
+wrong: typed coins used to stop at the coin's own count; restoring that is the input handler's one
+line and the box's `max`. The box's `max` is the cap; a note under the coins, `#trSplit`
+(`tradeSplitNoteHTML()`, `aria-live`), says "Splits 1 GP into 10 SP to make change." while a split
+is needed, and `tradeRefresh()` keeps it and the button current as the player types.
+
+**Balance trade** (`#trBalance`, beside Cancel; ⚖ alone at 700px and under, as Complete's ✓; absent
+in Loot; disabled while `tradeBalance().diff` is 0). `tradeBalanceFill()`: giving more, the
+difference goes in You get as gp, sp, cp biggest first; owing, it comes from the purse past the
+coins already typed, biggest first, the rest in gp, sp, cp for the split to cover, or
+`{short:{need,have}}` → the toast "You're 1.3 gp short of covering it — you have 2.2 gp." The click
+adds to the side, shows that side (the phone's tab) and repaints. Balance uses the same difference
+the line shows, so a sale above an item's worth ("in your favour") balances by paying the extra back;
+coins typed are never taken away.
+
+**The warning.** Complete goes through `tradeAskComplete()`: `askConfirm()` titled "Complete the
+trade anyway?", "You're N short." (as before, which was the browser's `confirm()`) or "You're giving
+N more than you get.", Go back / Complete trade; never when even or in your favour. The trade stays
+open under the question; Go back changes nothing; the answer acts only on the same open trade.
+
+**Driven** (Playwright): Humblewood dark at 1280, 10 gp for a 3.5 gp potion: Balance → 3 gp 5 sp,
+the note, Even, the button greyed; Complete didn't ask; the purse 6 gp 5 sp; the receipt "Split 1
+GP into 10 SP", −3 GP, −5 SP. The Dagger for nothing: Complete asked "You're giving 2 gp more than
+you get." with focus on Go back; Escape kept the trade; Balance put 2 gp in You get; Complete didn't
+ask. A 2 gp 2 sp purse: the toast, nothing changed. D&D light at 390, one platinum: the ⚖ a 44px
+button, Balance switched to You give, 3 gp 5 sp, "Splits 1 PP into 10 GP, 1 GP into 10 SP"; the
+purse 0 pp 6 gp 5 sp. No page overflow.
+
+**Tests.** `sheet.js`: the plan (none, gold to silver, down the chain, electrum first, never into
+electrum or upward, beyond the purse, a Humblewood purse's platinum, many at once, the words); the
+cap with the other boxes; the fill (owe from gold, typed coins kept, short, the other side's gp then
+sp and cp, even, loot, D&D platinum); Complete's split, receipt order, one coins part, exact Undo;
+the window (the button, greyed and ready, the note, the boxes' max, no Balance in Loot); the
+handlers; and `t168Ask()`: giving more asks and Go back changes nothing, Complete trade completes,
+short asks in the window, in your favour doesn't. The #47 check on "asks only when short" now reads
+the new rule. The harness gains `_trade` in `MUTABLE`. `rules-data.js`: the phone's ⚖ and the empty
+note.
+
+Pages: [inventory](../wiki/features/inventory.md), [decisions](../wiki/decisions.md).
