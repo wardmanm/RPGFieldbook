@@ -1222,30 +1222,51 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
   padding:8px clamp(10px,2vw,18px);background:var(--paper-2);border:2px solid var(--line);border-top:0;
   border-radius:0 0 10px 10px;max-width:780px;width:100%;margin:calc(-1*clamp(12px,2.4vw,22px)) auto 0;box-sizing:border-box}
 .cv-head .grow{flex:1}
-/* Up to 640px in combat (.fighting): two rows. Row 1 is the title; the spacer
-   becomes a full-width row break; row 2 is the tracker with End pushed to the far
-   right, well clear of ◀ ▶. Out of combat the header is one row, title and Start.
-   640, not a phone width: the one-row header needs ~500px in combat, and between
-   the two it wrapped wherever it ran out of room. No ✕ of its own (#80). */
+/* In a fight (.fighting) the header is three rows (#165, Mike's layout D with
+   a centred foot): .cv-top centres the title-and-round line between two equal
+   zones (✦ in the left one), so the round sits over the strip's centred actor;
+   the strip; and .cv-foot, the list button and End combat centred behind a
+   dotted rule. Out of combat it stays one row, title and Start. No ✕ (#80). */
+.cv-head.fighting{flex-direction:column;align-items:stretch;flex-wrap:nowrap}
+.cv-top{display:flex;align-items:center;gap:8px}
+.cv-top .cv-z{flex:1 1 0;min-width:44px;display:flex;align-items:center}   /* both keep ✦'s room, so ◀ never covers it */
+.cv-foot{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;border-top:1px dotted var(--hair);padding-top:8px}
+/* A narrow phone: the line keeps its swords and drops the word, or "Combat ·
+   Round 4" breaks over three lines between the arrows at 320px. */
+@media(max-width:400px){.cv-round .cv-tw,.cv-round .cv-tsep{display:none}}
+@media(max-width:360px){.cv-round .cv-title{display:none}}   /* about 100px between the arrows: "Round 4" alone */
 @media(max-width:640px){
-  .cv-head{row-gap:0}
-  .cv-head.fighting .grow{order:2;flex:0 0 100%;height:0;margin-top:8px}
-  .cv-head.fighting .cv-track{order:3}
-  .cv-head.fighting #cvEnd{order:4;margin-left:auto}
-  /* The strip is already last in the markup and full-width (flex:0 0 100%
-     below), but the reorder above gives .grow/.cv-track/#cvEnd an explicit
-     order while the strip keeps its default 0 — which would sort it ahead of
-     them, between the title and the tracker. Order it past #cvEnd instead. */
-  .cv-head.fighting .cv-init{order:5}
+  /* #165: Prev and Next keep their arrows only, to leave the strip room */
+  .cv-init .ini-w{display:none}
+  #cvTurnPrev,#cvTurn{min-width:44px;padding-left:0;padding-right:0;justify-content:center}
 }
 /* ---- the initiative strip and table (#91) ---- */
-.cv-init{flex:0 0 100%;display:flex;align-items:center;gap:6px;margin-top:6px;min-width:0}
-.ini-chips{flex:1;min-width:0;display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.cv-init{display:flex;align-items:center;gap:6px;min-width:0}
+/* #165: no sideways scroll. The actor sits between two sides that share the
+   width equally, so it stays centred; initFitStrip() hides the chips that don't
+   fit and shows that side's +N. overflow:hidden only guards a mis-measure. */
+.ini-line{flex:1;min-width:0;display:flex;align-items:center;gap:5px}
+/* Each side keeps room for its +N, and the actor gives way first, down to a
+   chip's 64px with its name ellipsized: a long name on a phone squeezed the
+   sides to slivers and hid both +N (#165 review). */
+.ini-side{flex:1 1 0;min-width:48px;display:flex;align-items:center;gap:5px;overflow:hidden}
+.ini-line>.ini-chip{flex:0 1 auto}
+.ini-side.l{justify-content:flex-end}
+.ini-more{flex:0 0 auto;min-height:44px;min-width:44px;padding:0 6px;border:1.5px dashed var(--line);border-radius:8px;background:var(--panel);
+  color:var(--ink);font-family:var(--head);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.ini-more[aria-expanded="true"]{border-style:solid;background:var(--field)}
+.ini-chip[hidden],.ini-more[hidden]{display:none}
+.ini-fly{position:fixed;z-index:60;min-width:240px;max-width:min(320px,calc(100vw - 12px));max-height:60vh;overflow-y:auto;padding:6px 8px;
+  background:var(--panel);border:1.5px solid var(--line);border-radius:9px;box-shadow:var(--shadow);box-sizing:border-box}
+.ini-fly[hidden]{display:none}
+.ini-fly-h{font:700 10px var(--head);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin:2px 2px 4px}
+.ini-fly .ini-row{width:100%}
 .ini-chip{flex:0 0 auto;min-height:44px;min-width:64px;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:4px 8px;
   border:1.5px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font-family:var(--head);font-size:12px;font-weight:700;cursor:pointer}
 .ini-chip.now{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .ini-chip.dead{opacity:.5}.ini-chip.dead .ini-nm{text-decoration:line-through}
-.ini-top{display:flex;gap:5px;align-items:baseline;white-space:nowrap}
+.ini-top{display:flex;gap:5px;align-items:baseline;white-space:nowrap;min-width:0}
+.ini-chip{max-width:170px}.ini-nm{overflow:hidden;text-overflow:ellipsis;min-width:0}   /* a long name can't take the strip */
 .ini-n{font-size:11px;color:var(--ink-soft)}.ini-chip.now .ini-n{color:inherit;opacity:.8}
 .hb{display:flex;gap:2px;height:5px}
 .hb i{flex:1;border-radius:2px;background:var(--hb-empty)}
@@ -1257,7 +1278,7 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .hb-share{display:block;height:5px;border-radius:2px;background:var(--hb-empty);overflow:hidden}
 .hb-share b{display:block;height:100%}
 .hb-share .hb-0{background:var(--hb-healthy)}.hb-share .hb-1{background:var(--hb-injured)}.hb-share .hb-2{background:var(--hb-bloodied)}.hb-share .hb-3{background:var(--hb-near)}
-.cv-init-table{max-width:780px;margin:0 auto 8px;background:var(--panel);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;box-sizing:border-box}
+.cv-init-table{max-width:780px;width:100%;margin:0 auto 8px;background:var(--panel);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;box-sizing:border-box}
 .ini-table{display:flex;flex-direction:column}
 .ini-row{display:flex;align-items:center;gap:8px;min-height:44px;padding:4px 2px;border:0;border-bottom:1px dotted var(--hair);background:none;color:var(--ink);text-align:left;font:inherit;cursor:pointer}
 .ini-row .ini-nm{flex:1;min-width:0;font-weight:700}
@@ -1317,10 +1338,13 @@ html[data-rough="on"] .slot::before{filter:url(#rough)}
 .cv-track{display:inline-flex;align-items:center;gap:6px}
 .cv-round{font-family:var(--head);font-size:14px;min-width:9.5em;text-align:center;color:var(--ink)}
 .cv-round b{font-size:18px}
-/* Phone width: the time stacks under the round, so the tracker and End share
-   row 2 even at 360px. After the rule above, which it overrides. */
-@media(max-width:480px){
-  .cv-round{min-width:6em;line-height:1.15}
+.cv-round .cv-title{vertical-align:-4px}   /* in the round line (#165): the swords and "Combat" first */
+/* Up to 560px the time stacks under the title and round, so the line fits
+   between ◀ and ▶ down to 320px; at 500 a long fight ("1 min 18 sec") broke
+   mid-time. The time never splits. After the rule above, which it overrides. */
+.cv-time{white-space:nowrap}
+@media(max-width:560px){
+  .cv-round{min-width:6em;line-height:1.15;white-space:nowrap}
   .cv-round .cv-sep{display:none}
   .cv-round .cv-time{display:block;font-size:12px;color:var(--ink-soft)}
 }
@@ -2246,6 +2270,8 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
            replaced is never announced. setCombatLive() writes the round here. -->
       <p class="cv-live" id="cvLive" aria-live="polite"></p>
       <div class="cv-init-table" id="cvInitTable" hidden></div>
+      <!-- the strip's +N list (#165): outside #cvHead too, which a repaint replaces -->
+      <div class="ini-fly" id="iniFly" role="dialog" aria-label="More combatants" hidden></div>
       <div class="cv-body" id="cvBody">
         <p class="hint cv-empty" id="cvEmpty" hidden></p>
         <div class="cv-list" id="cvList"></div>
@@ -12723,15 +12749,19 @@ function combatHeaderHTML(c){
      view does not carry, so the view has its own star: class-based (no id — the
      sheet's #starBtn is the one id), the same toggle, painted by recompute(). */
   const on=!!(c&&c.inspiration);
-  const title=`<span class="cv-title">${iconSVG("ui","Combat")}Combat</span>`+
-    `<button type="button" class="starbtn cv-star${on?" on":""}" data-inspire title="Inspiration" aria-label="Toggle inspiration" aria-pressed="${on?"true":"false"}">&#10022;</button>`;
-  if(!inCombat(c))return title+`<span class="grow"></span><button class="tbtn primary" id="cvStart">Start combat</button>`;
+  const ttl=`<span class="cv-title">${iconSVG("ui","Combat")}<span class="cv-tw">Combat</span></span>`,
+    star=`<button type="button" class="starbtn cv-star${on?" on":""}" data-inspire title="Inspiration" aria-label="Toggle inspiration" aria-pressed="${on?"true":"false"}">&#10022;</button>`;
+  if(!inCombat(c))return ttl+star+`<span class="grow"></span><button class="tbtn primary" id="cvStart">Start combat</button>`;
   const r=num(c.combatRound);
-  return title+
+  /* In a fight, three rows (#165, Mike's layout D with a centred foot): the
+     title and round as one line centred between the round arrows, ✦ at the
+     left; the initiative strip, its actor under the round; then the list
+     button and End combat, centred, as the last things in the header. */
+  return `<div class="cv-top"><span class="cv-z">${star}</span>`+
     `<span class="cv-track"><button class="tbtn" id="cvPrev" aria-label="Previous round"${r<=1?" disabled":""}>◀</button>`+
-    `<span class="cv-round">Round <b>${r}</b><span class="cv-sep"> · </span><span class="cv-time">${fmtCombatTime(combatElapsedSec(c))}</span></span>`+
-    `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span>`+
-    `<span class="grow"></span><button class="tbtn danger" id="cvEnd">End combat</button>`+initStripHTML(c);
+    `<span class="cv-round">${ttl}<span class="cv-tsep"> · </span>Round <b>${r}</b><span class="cv-sep"> · </span><span class="cv-time">${fmtCombatTime(combatElapsedSec(c))}</span></span>`+
+    `<button class="tbtn" id="cvNext" aria-label="Next round">▶</button></span><span class="cv-z"></span></div>`+
+    initStripHTML(c)+`<div class="cv-foot">${initTableBtnHTML(c)}<button class="tbtn danger" id="cvEnd">End combat</button></div>`;
 }
 /* Repainting replaces every button, so focus is carried across by id. When that
    button is gone or disabled — ◀ at round 1, Start once combat starts, End once
@@ -12739,13 +12769,12 @@ function combatHeaderHTML(c){
 function renderCombatHeader(){
   const h=document.getElementById("cvHead");if(!h)return;
   const a=document.activeElement,had=a&&a.id&&h.contains(a)?a.id:"";
-  const oc=h.querySelector(".ini-chips"),sl=oc?oc.scrollLeft:0;   /* the strip's sideways scroll, kept (#91 I2) */
   h.innerHTML=combatHeaderHTML(character);
   h.classList.toggle("fighting",inCombat(character));   // the two-row phone layout is for combat only
   if(!inCombat(character))cvLiveRound=0;
   else if(num(character.combatRound)!==cvLiveRound){cvLiveRound=num(character.combatRound);setCombatLive("Round "+cvLiveRound);}
-  initKeepActorInView(sl);
-  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart",cvTurn:"cvNext"};
+  initFitStrip();   /* the strip's chips that don't fit go into its +N (#165) */
+  const instead={cvPrev:"cvNext",cvStart:"cvNext",cvEnd:"cvStart",cvNext:"cvStart",cvTurn:"cvNext",cvTurnPrev:"cvTurn"};
   for(let id=had,i=0;id&&i<4;id=instead[id],i++){
     const b=document.getElementById(id);
     if(b&&!b.disabled){b.focus();break;}
@@ -13025,6 +13054,23 @@ function initNextTurn(list,turnId){
   for(let j=0;j<=i;j++)if(!combatantDead(list[j]))return {turnId:list[j].id,wrapped:true};
   return {turnId:list[i].id,wrapped:true};
 }
+/* Next's mirror (#165): the living row before turnId. Passing the top is a
+   wrap: the caller steps the round back once. An unknown actor starts at the
+   top, no wrap. */
+function initPrevTurn(list,turnId){
+  const n=list.length;if(!n)return {turnId:"",wrapped:false};
+  const i=list.findIndex(r=>r.id===turnId);
+  if(i<0)return {turnId:initFirstAlive(list),wrapped:false};
+  for(let j=i-1;j>=0;j--)if(!combatantDead(list[j]))return {turnId:list[j].id,wrapped:false};
+  for(let j=n-1;j>=i;j--)if(!combatantDead(list[j]))return {turnId:list[j].id,wrapped:true};
+  return {turnId:list[i].id,wrapped:true};
+}
+/* Round 1's first turn has nothing before it: advanceRound() will not go
+   below round 1, so a wrap there would move the marker without the round. */
+function initCanPrev(ch){
+  if(ch.initMode==="rounds"||!ch.combatTurn)return false;
+  return !initPrevTurn(ch.combatants||[],ch.combatTurn).wrapped||num(ch.combatRound)>1;
+}
 function bandOfShare(hp,max){
   const m=num(max),h=num(hp);if(!(m>0))return null;
   if(h>=m)return 0;if(h>m/2)return 1;if(h>m/4)return 2;return 3;
@@ -13198,12 +13244,28 @@ function combatantHealthText(r){
   if(r.kind==="party"&&r.track==="exact"&&r.hp!=="")return `HP ${num(r.hp)}`;   /* no max known: just the number */
   return bar.band===null?"Health not set":HB_NAMES[bar.band];
 }
+/* The strip (#165): the actor in the middle, who has acted this round on its
+   left and who is still to come on its right; nothing wraps into the next
+   round. The two sides share the width equally, so the actor stays centred
+   whatever the names. Every chip is drawn; initFitStrip() then hides those
+   farthest from the actor that don't fit and shows that side's +N. Rounds
+   mode (or no actor) is one side from the top of the order. */
 function initStripHTML(ch){
   const list=ch.combatants||[];
   if(!list.length)return `<div class="cv-init"><span class="hint">No initiative yet.</span><span class="grow"></span><button type="button" class="tbtn primary" id="iniRollNow">Roll initiative</button></div>`;
-  const turns=ch.initMode==="turns";
-  return `<div class="cv-init"><div class="ini-chips">`+list.map(r=>initChipHTML(r,ch)).join("")+`</div>`+(turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn">Next ▸</button>`:"")+
-    `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">${_iniTableOpen?"▴":"▾"}</button></div>`;
+  const turns=ch.initMode==="turns",a=turns?list.findIndex(r=>r.id===ch.combatTurn):-1;
+  const chips=rs=>rs.map(r=>initChipHTML(r,ch)).join("");
+  const more=k=>`<button type="button" class="ini-more" data-inimore="${esc(k)}" aria-haspopup="dialog" aria-controls="iniFly" aria-expanded="false" hidden></button>`;
+  const line=a<0?`<div class="ini-line"><div class="ini-side r">${chips(list)}${more("r")}</div></div>`
+    :`<div class="ini-line"><div class="ini-side l">${more("l")}${chips(list.slice(0,a))}</div>${initChipHTML(list[a],ch)}<div class="ini-side r">${chips(list.slice(a+1))}${more("r")}</div></div>`;
+  return `<div class="cv-init">`+(turns?`<button type="button" class="tbtn" id="cvTurnPrev" aria-label="Previous turn"${initCanPrev(ch)?"":" disabled"}>◂<span class="ini-w"> Prev</span></button>`:"")+line+
+    (turns?`<button type="button" class="tbtn primary" id="cvTurn" aria-label="Next turn"><span class="ini-w">Next </span>▸</button>`:"")+`</div>`;
+}
+/* The full table's button, in the header's foot beside End combat (#165).
+   Nothing to list, no button: the table closes itself with no rows. */
+function initTableBtnHTML(ch){
+  if(!(ch.combatants||[]).length)return "";
+  return `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">Combatants ${_iniTableOpen?"▴":"▾"}</button>`;
 }
 function initChipHTML(r,ch){
   const turns=ch.initMode==="turns",show=ch.initShowRolls!==false;
@@ -13224,27 +13286,63 @@ function initTableHTML(ch){
     `<span class="seg">${[["turns","Turns"],["rounds","Rounds"]].map(([v,l])=>`<button type="button" data-inimode="${esc(v)}" class="${mode===v?"on":""}" aria-pressed="${mode===v?"true":"false"}">${esc(l)}</button>`).join("")}</span>`+
     `<button type="button" class="switch ${ch.initShowRolls!==false?"on":""}" id="iniRolls" role="switch" aria-checked="${ch.initShowRolls!==false?"true":"false"}" aria-label="Show rolls"></button><span class="ini-kind">Show rolls</span></div>`;
 }
-/* Where the chip row should be scrolled so the acting chip shows (final
-   review I2): `sl` is its scrollLeft now, `box` and `chip` client rects
-   ({left,right}). A chip already in view, or no actor, keeps `sl` — the
-   player's own sideways scroll survives a repaint. Pure, for the tests. */
-function initChipScroll(sl,box,chip){
-  if(!chip||!box)return sl;
-  const pad=8;
-  if(chip.left<box.left)return Math.max(0,Math.round(sl-(box.left-chip.left)-pad));
-  if(chip.right>box.right)return Math.round(sl+Math.min(chip.right-box.right+pad,chip.left-box.left));
-  return sl;
+/* How many chips fit on one side (#165), nearest the actor first: all of them
+   when they fit, else as many as fit beside the side's +N. Pure, for the tests. */
+function initFitCount(widths,avail,gap,moreW){
+  const total=widths.reduce((t,w)=>t+w,0)+gap*Math.max(0,widths.length-1);
+  if(total<=avail)return widths.length;
+  let used=0,n=0;
+  for(const w of widths){const need=used+(n?gap:0)+w;if(need>avail-moreW-gap)break;used=need;n++;}
+  return n;
 }
-/* After every repaint of the strip, which builds a fresh .ini-chips at
-   scrollLeft 0: put back where it was (`sl`), then bring the actor in. Sets
-   scrollLeft directly rather than scrollIntoView(), which may also scroll the
-   page. */
-function initKeepActorInView(sl){
-  const row=document.querySelector("#cvHead .ini-chips");if(!row)return;
-  row.scrollLeft=num(sl);
-  const n=row.querySelector(".ini-chip.now");if(!n)return;
-  const to=initChipScroll(row.scrollLeft,row.getBoundingClientRect(),n.getBoundingClientRect());
-  if(to!==row.scrollLeft)row.scrollLeft=to;
+/* One side: show every chip, measure, hide the farthest that don't fit, and
+   give the +N their ids in initiative order (the list it opens reads them). */
+function initFitSide(side){
+  const chips=[...side.querySelectorAll("[data-inichip]")],more=side.querySelector("[data-inimore]");if(!more)return;
+  chips.forEach(c=>{c.hidden=false;});
+  more.hidden=false;more.textContent="+"+chips.length+" ▾";   /* the widest it can read, measured */
+  const cs=typeof getComputedStyle==="function"?getComputedStyle(side):null,gap=cs?parseFloat(cs.columnGap)||0:0;
+  const near=side.classList.contains("l")?chips.slice().reverse():chips;
+  near.slice(initFitCount(near.map(c=>c.offsetWidth),side.clientWidth,gap,more.offsetWidth)).forEach(c=>{c.hidden=true;});
+  const off=chips.filter(c=>c.hidden);
+  more.hidden=!off.length;more.dataset.iniids=off.map(c=>c.dataset.inichip).join(",");
+  more.textContent=off.length?"+"+off.length+" ▾":"";
+  more.setAttribute("aria-label",off.length?`${off.length} more ${side.classList.contains("l")?"earlier this round":"still to come"}`:"");
+}
+/* After every repaint of the strip, on resize and once the fonts are in:
+   names change width with the font, so the fit is measured, never guessed. */
+function initFitStrip(){
+  closeIniFly();
+  document.querySelectorAll("#cvHead .ini-side").forEach(initFitSide);
+}
+/* The +N list: the table's own rows (initRowHTML), so a tap opens that
+   combatant's dialog through the same [data-inirow] route a table row uses. */
+function iniMoreHTML(ch,ids,k){
+  const set=new Set(ids),rows=(ch.combatants||[]).filter(r=>set.has(r.id));
+  const head=k==="l"?"Earlier this round":ch.initMode==="turns"?"Still to come":"Further down the order";
+  return `<div class="ini-fly-h">${esc(head)}</div>`+rows.map(r=>initRowHTML(r,ch)).join("");
+}
+let _iniFly=null;
+function openIniFly(btn){
+  const fly=document.getElementById("iniFly");if(!fly||!btn)return;
+  const was=_iniFly&&_iniFly.btn===btn;closeIniFly();if(was)return;   /* a second tap closes it */
+  const ids=String(btn.dataset.iniids||"").split(",").filter(Boolean);if(!ids.length)return;
+  fly.innerHTML=iniMoreHTML(character,ids,btn.dataset.inimore);
+  fly.hidden=false;_iniFly={btn};btn.setAttribute("aria-expanded","true");
+  /* fixed, under its +N: the strip sits in the sticky combat header */
+  const r=btn.getBoundingClientRect(),w=fly.offsetWidth||0,vw=document.documentElement.clientWidth||w;
+  fly.style.top=Math.round(r.bottom+4)+"px";
+  fly.style.left=Math.round(Math.max(6,Math.min(btn.dataset.inimore==="l"?r.left:r.right-w,vw-w-6)))+"px";
+  const first=fly.querySelector("button");if(first&&first.focus)first.focus({preventScroll:true});
+}
+/* Focus inside the list goes back to its +N before the list empties, so a
+   row's tap opens the combatant's dialog with the +N as its opener. */
+function closeIniFly(){
+  const fly=document.getElementById("iniFly");
+  if(fly&&_iniFly&&_iniFly.btn&&fly.contains&&fly.contains(document.activeElement)&&_iniFly.btn.focus)_iniFly.btn.focus({preventScroll:true});
+  if(fly){fly.hidden=true;fly.innerHTML="";}
+  if(_iniFly&&_iniFly.btn&&_iniFly.btn.setAttribute)_iniFly.btn.setAttribute("aria-expanded","false");
+  _iniFly=null;
 }
 /* Your chip and table row read your HP live (spec §4), so renderHP() calls
    this (final review I1). It patches YOUR chip and row in place, never the
@@ -13253,7 +13351,8 @@ function initKeepActorInView(sl){
    fires on the mousedown of the next tap, and a Next ▸ replaced between that
    mousedown and its mouseup never gets the click — driven: a tap on Next
    right after typing an HP did nothing. Patched in place, every other button
-   stays the same element, and the scroll and focus stay put. Cheap when
+   stays the same element, and focus stays put; the chip keeps its width and
+   whether the fit pass hid it. Cheap when
    there is no fight or the view is closed; a node that would come out the
    same is not touched. */
 function renderInitStrip(){
@@ -13290,6 +13389,21 @@ function initNext(){
   /* AFTER the repaint, which may have written "Round N" into the same live
      region. A screen reader speaks only the last write of a task, so a wrap
      says both in one message (final review m2). */
+  const a=(character.combatants||[]).find(x=>x.id===r.turnId);
+  if(!a)return;
+  const who=`${a.kind==="you"?(character.name||"You"):a.name}'s turn`;
+  if(r.wrapped){cvLiveRound=num(character.combatRound);setCombatLive(`Round ${cvLiveRound} — ${who}`);}
+  else setCombatLive(who);
+}
+/* Next's mirror (#165). Passing the top of a round steps the round back
+   through advanceRound(-1), the header's ◀, so spell and condition timers
+   rewind with it; round 1's first turn has nothing before it. */
+function initPrev(){
+  if(!initCanPrev(character))return;
+  const r=initPrevTurn(character.combatants||[],character.combatTurn);
+  character.combatTurn=r.turnId;
+  if(r.wrapped)advanceRound(-1);
+  renderCombatChrome();renderInitTable();scheduleSave();
   const a=(character.combatants||[]).find(x=>x.id===r.turnId);
   if(!a)return;
   const who=`${a.kind==="you"?(character.name||"You"):a.name}'s turn`;
@@ -17020,6 +17134,8 @@ function wire(){
        then runs its own hook, here or further down (subclass, Remove, + Add). */
     if(t.closest("#shBack"))return closeShFly();
     if(_shFly&&t.closest("#shFly button"))closeShFly();
+    /* the strip's +N list (#165): any tap closes it, a row's own tap then opens its dialog */
+    if(_iniFly&&!t.closest("[data-inimore]"))closeIniFly();
     if((m=t.closest("[data-shcls]")))return openShFly("class",num(m.dataset.shcls),m);
     if(t.closest("[data-shaddcls]"))return openAddClass();
     if((m=t.closest("[data-shrace]")))return openRaceInfo(m.dataset.shrace);
@@ -17151,6 +17267,8 @@ function wire(){
     if(t.closest("#cvEnd"))return endCombatAsk();
     // the initiative strip and table (#91)
     if(t.closest("#cvTurn"))return initNext();
+    if(t.closest("#cvTurnPrev"))return initPrev();
+    if((m=t.closest("[data-inimore]")))return openIniFly(m);
     if(t.closest("#iniRollNow"))return openInitRoll();
     if(t.closest("#cvInitMore"))return toggleInitTable();
     if((m=t.closest("[data-inimode]")))return setInitMode(m.dataset.inimode);
@@ -17222,6 +17340,11 @@ function wire(){
     if(e.key!=="Escape"||!_shFly)return;
     const a=_shFly.anchor;closeShFly();if(a&&a.isConnected&&a.focus)a.focus();
   });
+  /* ...and the initiative strip's +N list (#165) the same way */
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape"||!_iniFly)return;
+    const b=_iniFly.btn;closeIniFly();if(b&&b.isConnected&&b.focus)b.focus();
+  });
   document.addEventListener("keydown",e=>{
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
     if(e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);return;}
@@ -17237,7 +17360,11 @@ function wire(){
   /* The combat tab's header sticks under the tab bar, whose height changes with
      the width (labels become icons at 860px). No Esc handler: the view is a tab
      now, not a layer over the page, and Esc is not how you leave a tab. */
-  window.addEventListener("resize",()=>{if(combatViewOpen())cvStickyTop();});
+  window.addEventListener("resize",()=>{if(combatViewOpen()){cvStickyTop();initFitStrip();}});
+  /* names change width when the fonts arrive: fit the strip again (#165) */
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(combatViewOpen())initFitStrip();});
+  /* the +N list is fixed under its button; a page scroll would leave it behind */
+  window.addEventListener("scroll",()=>{if(_iniFly)closeIniFly();},{passive:true});
   /* Arranging the combat view: the grip is the only drag handle. */
   document.addEventListener("pointerdown",e=>{
     const g=e.target.closest&&e.target.closest("[data-cvgrip]");
