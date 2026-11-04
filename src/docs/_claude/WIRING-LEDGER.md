@@ -8687,3 +8687,11 @@ both discard questions; #105's loot checks now read Open loot, `loot:true` and t
 
 Pages: [inventory](../wiki/features/inventory.md), [combat view](../wiki/features/combat-view.md),
 [decisions](../wiki/decisions.md).
+
+**Review** (sonnet): nothing must-fix. It traced no way for a loot draft to give or show give-side UI
+(the handlers' elements are absent; the finder rebuilds from the draft), the ordinary trade's markup
+unchanged, the log line safe on reload (`meta` kept whole, the undo parts unchanged), every new
+attribute escaped. Its one should-fix: a loot line's `meta.with` ("Goblin 1, Bugbear") shows as a
+chip in the ordinary Trade's With. Not changed: Mike decided on 2026-10-30 that loot trades stay in
+the With suggestions (the #105 spec, review M7); raised with him again now that Loot is its own
+window.
