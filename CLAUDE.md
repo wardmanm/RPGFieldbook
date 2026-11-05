@@ -56,7 +56,7 @@ data/<system>/*.json     rules data: srd52/ only; data/packs.json registers each
                          bundled into dist/*_full.json
 tools/data-kit/          fbdata.py — bundling, pack versions, digests, the data archive, and the
                          data kit's convert and build (Python 3.8+, stdlib) → wiki data/data-kit.md
-docs/                    PLAYER-FACING, ships — an allowlist of exactly three files
+docs/                    PLAYER-FACING, ships — an allowlist of exactly four files
 ```
 
 - JS → the `src/js/` fragment whose area matches (they are positional slices of the original file,

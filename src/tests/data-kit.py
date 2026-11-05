@@ -875,7 +875,7 @@ else:
     kz = os.path.join(ROOT, "dist", kits[-1])
     names = sorted(n for n in zipfile.ZipFile(kz).namelist() if not n.endswith("/"))
     want = sorted(["fbdata.py", "convert.py", "overlay.json", "class-resources.json", "srd-corrections.json",
-                   "README.md", "README-converter.md", "rules-schema.md", "LICENSE", "example-pack/example-pack.json",
+                   "README.md", "README-converter.md", "rules-schema.md", "private-sources.md", "LICENSE", "example-pack/example-pack.json",
                    "fieldbook-version.txt"])
     ck("the kit zip holds exactly the kit", names == want, names)
     appv = re.search(r'APP_VERSION="([^"]+)"', open(os.path.join(ROOT, "src", "js", "30-version.js"), encoding="utf-8").read()).group(1)
