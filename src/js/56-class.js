@@ -199,6 +199,11 @@ function addClass(name,lvl){
   const d=findClassDef(name);
   const first=!character.classes.length,sid="class:"+name;
   const before=first?null:levelSnapshot();   /* #101: a second class is a level up */
+  /* #181: the copy the card's Undo restores, taken before anything changes, as
+     doLevelUp() takes it; without it the card restored the copy the previous
+     level-up left. Not marked in progress: an added class writes no level-log
+     record, as it never has (one record for levels 1..N would mislead Level down). */
+  if(!first)_undo={copy:JSON.stringify(character),at:Date.now(),sig:null,cls:name,level:lvl};
   const entry={name,level:0,subclass:null};
   character.classes.push(entry);
   if(d){

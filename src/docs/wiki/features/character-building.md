@@ -155,7 +155,8 @@ added above level 1 still gets its `{type:"hp"}` block inside the choice window 
 
 **Undo level-up (#118).**
 - **The copy.** `doLevelUp()` stores `_undo`, a JSON copy of the character, before it changes
-  anything, and marks a level-up as in progress. `_undo` is a variable in `57-levelup.js`, never a
+  anything, and marks a level-up as in progress. `addClass()` takes the same copy for a second class (#181), whose card
+  has Undo too, but does not mark it in progress: an added class writes no level-log record. `_undo` is a variable in `57-levelup.js`, never a
   field of `character`, so it is never saved.
 - **The card.** The card carries **Undo level-up** beside Done or Continue. `luUndoCard()` drops the
   level-up first, so closing the card neither commits its HP nor opens its choices, then restores
@@ -606,3 +607,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-10-27 — Fix round 1: an "or" prerequisite is named whole ("Strength 13 or Dexterity 13"), not just its closest alternative. → ledger L7710, #118
 - 2026-10-30 — Corrected: `NO_RULES_HINT` points to Settings → Extensions, not Settings → Rules (pre-release 1.9.0, step 1).
 - 2026-11-04 — A background with no ability scores or feat (seven Humblewood ones) previews and adds without empty pickers, and Add no longer refuses it; its info card drops the empty lines. → ledger L8474, #159
+- 2026-11-04 — Undo on a second class's level-up card restores the sheet from before Add class: `addClass()` takes the Undo copy, as `doLevelUp()` does. → ledger L8893, #181

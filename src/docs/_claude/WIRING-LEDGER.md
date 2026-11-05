@@ -8889,3 +8889,31 @@ gate's expected refusal text in `pre-release.js` and `data-kit.py` reads `/relea
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [testing](../wiki/process/testing.md),
 [overview](../wiki/overview.md), [decisions](../wiki/decisions.md).
+
+## #181: Undo on a second class's level-up card restores the sheet from before Add class (P0, Mike, 2026-11-04)
+
+Found by the 1.9.0 pre-drive re-run (step 3, rebuilt for the work since the test pass): Fighter 1 → 2
+finished, Add class Wizard, Undo level-up on the Wizard's card gave Fighter 1, Max HP 16 → 10, and
+everything done since the level-up went with it (in the app: a Rope added after it vanished). P0 by
+Mike: it blocks 1.9.0. Undo level-up is new in 1.9.0 (#118), so no released version has it.
+
+**Cause.** `addClass()` opens the level-up card for a second class (#101) but never took the copy
+`_undo` that the card's Undo restores (`luUndoCard()` → `undoLevelUp({force:true})`, which skips the
+signature check). `doLevelUp()` takes it before it changes anything; `addClass()` didn't, so the card
+restored the copy the previous level-up had left.
+
+**Fix.** `addClass()`, for a second class, takes `_undo = {copy, at, sig:null, cls, level}` before
+anything changes, as `doLevelUp()` does. Ruling: not marked in progress (`_luActive` untouched), so
+an added class still writes no level-log record and no settle toast, as before: one record for
+levels 1..N of a class added at N would mislead Level down. Cost if wrong: Level down of a freshly
+added class has no record, as it never has.
+
+**Tests.** `sheet.js` `t181AddClassUndo()` (Node's timer, a tracked modal, as `t118EndToEnd()`):
+Fighter 1 → 2 settled, the sheet changed after it, Add class Wizard: the card has Undo and the copy is
+the sheet before Add class; the card's Undo leaves Fighter 2 (Max HP 16), the later change still
+there, the sheet exactly as before, the level log unchanged. It failed on the old code (Fighter 1, HP
+10). **Driven** (Playwright, 1280, SRD): main's build reproduced it (Fighter 1, HP 10, the Rope gone,
+the log emptied); the fixed build left Fighter 2, HP 16, the Rope, one log record; a plain Level up
+then the card's Undo still works.
+
+Pages: [character building](../wiki/features/character-building.md).

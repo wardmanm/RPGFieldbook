@@ -9099,4 +9099,58 @@ async function t168Ask() {
   }
 }
 
-t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(t168Ask).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+/* ---------- #181 Undo on a second class's level-up card puts back the sheet
+   from before Add class, not the copy a previous level-up left. Set up as
+   t118EndToEnd: Node's timer, a tracked modal, reduced motion (no scene). */
+async function t181AddClassUndo() {
+  const keep = {ch: X.character, rules: X.rules, st: ctx.setTimeout, ct: ctx.clearTimeout, om: ctx.openModal, cm: ctx.closeModal,
+    gid: ctx.document.getElementById, toast: ctx.toast, mm: ctx.window.matchMedia, id: X.activeId};
+  const tick = ms => new Promise(r => setTimeout(r, ms || 0));
+  let open = false, opened = [], toasts = [], handlers = {};
+  const fakeModal = {classList: {contains: c => c === 'open' && open}};
+  ctx.setTimeout = setTimeout; ctx.clearTimeout = clearTimeout;
+  ctx.openModal = function (t, h) { opened.push({t: String(t), h: String(h)}); keep.om.apply(null, arguments); open = true; };
+  ctx.closeModal = function () { open = false; return keep.cm.apply(null, arguments); };
+  ctx.document.getElementById = id => id === 'modal' ? fakeModal
+    : id === 'luUndo' ? {addEventListener: (e, fn) => { handlers[id] = fn; }} : keep.gid(id);
+  ctx.toast = (msg, action) => { toasts.push({msg: String(msg), action}); };
+  ctx.window.matchMedia = () => ({matches: true, addEventListener() {}});
+  try {
+    X.resetRules();
+    X.mergeRules({system: 'T181', classes: [{name: 'Fighter', hitDie: 'd10', levels: {}}, {name: 'Wizard', hitDie: 'd6', levels: {}}]}, 'test-181');
+    X.character = X.blankChar(); X.character.name = 'Tess'; X.character.classes = [{name: 'Fighter', level: 1}]; X.character.level = 1;
+    X.character.hp.max = 10; X.character.hp.cur = 10; X.character.abilities.con = 10;
+    ctx.renderAll(); ctx.recompute();
+    X.activeId = 'T181'; X._undo = null;
+    // a level-up, finished and settled
+    ctx.doLevelUp(0); ctx.luSetHP('6'); ctx.luFinish(); await tick();
+    if (open) { ctx.closeModal(); await tick(); }
+    ck('#181 setup: Fighter 2, settled, Max HP 16', X.character.classes[0].level === 2 && X.character.hp.max === 16 && X.character.levelLog.length === 1, [X.character.classes, X.character.hp.max]);
+    // play goes on: the sheet changes after the level-up
+    X.character.inventory.push({id: 'rope', name: 'Rope', qty: 1}); X.character.hp.cur = 9;
+    ctx.renderAll(); ctx.recompute();   /* the sheet as it stands on screen, as at a real Add class */
+    const beforeAdd = JSON.stringify(X.character);
+    // Add class Wizard opens the level-up card
+    opened = []; handlers = {};
+    ctx.addClass('Wizard', 1);
+    ck('#181 Add class opens the level-up card, with Undo level-up', opened.length === 1 && /id="luUndo"[^>]*>Undo level-up</.test(opened[0].h), opened.map(o => o.t));
+    ck('#181 ...and takes the copy Undo restores before it changes anything', X._undo && X._undo.copy === beforeAdd && X._undo.cls === 'Wizard' && X._undo.level === 1, X._undo && JSON.parse(X._undo.copy).classes);
+    // the card's Undo
+    ck('#181 the card wires Undo level-up', typeof handlers.luUndo === 'function');
+    handlers.luUndo();
+    await tick();
+    ck('#181 Undo on the card puts back the sheet from before Add class: Fighter 2, not Fighter 1', X.character.classes.length === 1 && X.character.classes[0].name === 'Fighter' && X.character.classes[0].level === 2 && X.character.hp.max === 16, [X.character.classes, X.character.hp.max]);
+    const after = JSON.parse(JSON.stringify(X.character)), was = JSON.parse(beforeAdd);
+    const diff = Object.keys(Object.assign({}, after, was)).filter(k => JSON.stringify(after[k]) !== JSON.stringify(was[k]));
+    ck('#181 ...with what changed since the level-up still there', X.character.inventory.some(i => i.id === 'rope') && X.character.hp.cur === 9 && diff.length === 0, diff.map(k => [k, was[k], after[k]]));
+    ck('#181 ...and the level log as it was', X.character.levelLog.length === 1);
+  } catch (err) {
+    ck('#181 t181AddClassUndo ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.setTimeout = keep.st; ctx.clearTimeout = keep.ct; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+    ctx.document.getElementById = keep.gid; ctx.toast = keep.toast; ctx.window.matchMedia = keep.mm; X.activeId = keep.id;
+    X.character = keep.ch; X.rules = keep.rules; X._undo = null; X.resetRules();
+  }
+}
+
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(t168Ask).then(t181AddClassUndo).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
