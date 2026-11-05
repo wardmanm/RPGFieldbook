@@ -26,6 +26,7 @@ const {X, ctx, state, bootError} = loadApp([
   'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
   'extPlanHTML', 'renderExtPill', 'showUpdatePill', 'openInstallPlan', 'manualInstallFiles', 'readDropped',
   'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap', 'extText', 'extSourceName', 'extSourceHost',
+  'extGithubLink', 'extGhApi', 'extGhHeaders', 'extGhPickTag',
   'rulesStatusText', 'extWireDrop', 'extManualPlan', 'extPillFocusBack', 'EXT_DROP_MAX', 'dismissModal',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -1897,6 +1898,50 @@ section('#102 Ruling 20: a URL shown as text carries no bidi override either', a
     ck('#102 R20: a plain source converted from old settings displays without U+202E',
       old.sources.some(x => x.kind === 'plain' && x.url.includes(RLO)) && !s3.includes(RLO) && /plain\.example\//.test(s3), s3);
   } finally { ctx.fetch = realFetch; X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {}; }
+});
+
+section('#182 building blocks', async () => {
+  const T = 'github_pat_ABCDEFGHIJKLMNOPQRST1234';
+  const L = X.extGithubLink;
+  const j = v => JSON.stringify(v);
+  ck('#182 extGithubLink: a source link with a token', j(L('https://github.com/Ann/homebrew#token=' + T)) === j({repo: 'Ann/homebrew', token: T}), L('https://github.com/Ann/homebrew#token=' + T));
+  ck('#182 extGithubLink: trims whitespace and a newline', j(L('  https://github.com/Ann/homebrew#token=' + T + '\n')) === j({repo: 'Ann/homebrew', token: T}));
+  ck('#182 extGithubLink: .git and a trailing slash', j(L('https://github.com/ann/homebrew.git/')) === j({repo: 'ann/homebrew', token: ''}), L('https://github.com/ann/homebrew.git/'));
+  ck('#182 extGithubLink: bare owner/name', j(L('ann/homebrew')) === j({repo: 'ann/homebrew', token: ''}));
+  ['https://gitlab.com/ann/homebrew', 'https://github.com/ann', 'ann/home brew', 'https://github.com/ann/homebrew#token=short', 'https://example.com/m.json']
+    .forEach(b => ck('#182 extGithubLink rejects ' + b, L(b) === null, L(b)));
+  const names = ['v1.9.0', 'data-v1.8.1-1', 'data-v1.9.0-2', 'data-v1.9.0-10', 'data-v1.9.1-1', 'junk'];
+  ck('#182 extGhPickTag: newest data tag at or below the app', X.extGhPickTag(names, '1.9.0') === 'data-v1.9.0-10', X.extGhPickTag(names, '1.9.0'));
+  ck('#182 extGhPickTag: an older app', X.extGhPickTag(names, '1.8.5') === 'data-v1.8.1-1');
+  ck('#182 extGhPickTag: none', X.extGhPickTag([], '1.9.0') === '');
+  ck('#182 extGhApi builds a URL and refuses a bad path',
+    X.extGhApi('ann/homebrew', 'contents/data/x.json', 'ref=t') === 'https://api.github.com/repos/ann/homebrew/contents/data/x.json?ref=t'
+    && X.extGhApi('ann/homebrew', 'contents/../x') === '' && X.extGhApi('ann/homebrew', 'releases') === 'https://api.github.com/repos/ann/homebrew/releases');
+  const tok = 't'.repeat(30);
+  ck('#182 extGhHeaders: a token adds Authorization', X.extGhHeaders({token: tok}, true).Authorization === 'Bearer ' + tok);
+  ck('#182 extGhHeaders: no token, no Authorization', !('Authorization' in X.extGhHeaders({token: ''}, true)));
+  ck('#182 extGhHeaders: raw vs json Accept', /raw/.test(X.extGhHeaders({}, true).Accept) && X.extGhHeaders({}, false).Accept === 'application/vnd.github+json' && !!X.extGhHeaders({}, false)['X-GitHub-Api-Version']);
+  const savedFetch = ctx.fetch, calls = [];
+  try {
+    ctx.fetch = (u, o) => { calls.push([u, o]); return Promise.resolve({ok: true, headers: {get: () => '0'}, arrayBuffer: () => Promise.resolve(new ArrayBuffer(0))}); };
+    let err = null;
+    try { await X.extFetchBytes('https://raw.githubusercontent.com/x/y/z', 1000, 10, {Authorization: 'Bearer x'}); } catch (e) { err = e; }
+    ck('#182 extFetchBytes refuses a token to another host, before fetch', !!err && /refused to send a token/.test(err.message) && calls.length === 0, [err && err.message, calls.length]);
+    err = null;
+    try { await X.extFetchBytes('https://api.github.com.evil.example/x', 1000, 10, {Authorization: 'Bearer x'}); } catch (e) { err = e; }
+    ck('#182 extFetchBytes: a lookalike host is refused too', !!err && calls.length === 0);
+    await X.extFetchBytes('https://api.github.com/repos/a/b/releases', 1000, 10, {Authorization: 'Bearer x'});
+    ck('#182 extFetchBytes passes headers to fetch on the API host', calls.length === 1 && calls[0][1].headers && calls[0][1].headers.Authorization === 'Bearer x', calls);
+  } finally { ctx.fetch = savedFetch; }
+  const s = {sources: [{kind: 'github', repo: 'ann/homebrew'}, {kind: 'github', repo: 'bad repo'}]};
+  X.convertSources(s);
+  const gh = s.sources.filter(x => x.kind === 'github');
+  ck('#182 convertSources keeps a good github source with defaults and drops a bad one',
+    gh.length === 1 && gh[0].token === '' && gh[0].tag === '' && gh[0].checked === 0 && gh[0].error === '' && gh[0].manifest === null && gh[0].base === '' && gh[0].on === true, gh);
+  const s2 = {sources: [{kind: 'github', repo: 'ann/homebrew', needsToken: true, note: 'x', tag: 'data-v1.9.0-1', token: tok, on: false}]};
+  X.convertSources(s2);
+  const g2 = s2.sources.find(x => x.kind === 'github');
+  ck('#182 R1: convertSources keeps needsToken, note, tag, token and on', !!g2 && g2.needsToken === true && g2.note === 'x' && g2.tag === 'data-v1.9.0-1' && g2.token === tok && g2.on === false, g2);
 });
 
 // ---- add new sections above this line ----

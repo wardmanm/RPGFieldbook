@@ -75,6 +75,34 @@ function extRelPath(p){
   const segs=s.split("/");
   return segs.every(x=>/^[A-Za-z0-9._-]+$/.test(x)&&x!=="."&&x!=="..")?s:"";
 }
+/* ---- the github source (#182): a repo read through api.github.com ---- */
+/* "https://github.com/<o>/<r>[.git][/][#token=<t>]" or "<o>/<r>" -> {repo,token},
+   or null. The repo keeps the case it was given; a token is optional. */
+function extGithubLink(text){
+  const t=typeof text==="string"?text.trim():"";
+  const m=/^(?:https:\/\/github\.com\/)?([A-Za-z0-9-]{1,39})\/([A-Za-z0-9._-]{1,100}?)(?:\.git)?\/?(?:#token=([A-Za-z0-9_]{20,255}))?$/.exec(t);
+  if(!m||m[2]==="."||m[2]==="..")return null;
+  return {repo:m[1]+"/"+m[2],token:m[3]||""};
+}
+function extGhApi(repo,path,query){
+  if(!extGithubLink(repo)||!path||!String(path).split("/").every(x=>extRelPath(x)))return "";
+  return "https://api.github.com/repos/"+repo+"/"+path+(query?"?"+query:"");
+}
+function extGhHeaders(src,raw){
+  const h={"X-GitHub-Api-Version":"2022-11-28","Accept":raw?"application/vnd.github.raw+json":"application/vnd.github+json"};
+  if(src&&src.token)h.Authorization="Bearer "+src.token;
+  return h;
+}
+/* the newest data-vX.Y.Z-N tag whose base is no newer than the app, or "" */
+function extGhPickTag(names,appVer){
+  let best="",bestVer="";
+  (Array.isArray(names)?names:[]).forEach(n=>{
+    const m=/^data-v(\d+\.\d+\.\d+-\d+)$/.exec(typeof n==="string"?n:"");
+    if(!m||!parseDataVer(m[1])||cmpDataVer(dataVerBase(m[1]),appVer)>0)return;
+    if(!bestVer||cmpDataVer(m[1],bestVer)>0){best=n;bestVer=m[1];}
+  });
+  return best;
+}
 function extKey(system,file){return String(system)+"|"+String(file);}
 /* one pack of a manifest, normalised, or null when it can't be installed from */
 function extEntry(p,builtFor){
@@ -114,7 +142,8 @@ function convertSources(s){
   const before=JSON.stringify([s.sources,s.packOrigin,s.dismissedUpdates,s.rulesSources,s.rulesUrl]);
   const isObj=o=>!!o&&typeof o==="object"&&!Array.isArray(o);
   let list=(Array.isArray(s.sources)?s.sources:[]).filter(x=>isObj(x)&&(
-    x.kind==="official"||(x.kind==="manifest"&&extUrl(x.url))||(x.kind==="plain"&&typeof x.url==="string"&&x.url.trim())));
+    x.kind==="official"||(x.kind==="manifest"&&extUrl(x.url))||(x.kind==="plain"&&typeof x.url==="string"&&x.url.trim())||(x.kind==="github"&&extGithubLink(x.repo)))).map(x=>x.kind==="github"
+    ?Object.assign({token:"",tag:"",checked:0,error:"",manifest:null,base:"",on:true},x):x);
   let off=list.find(x=>x.kind==="official");
   list=list.filter(x=>x.kind!=="official");
   off=Object.assign(extOfficial(),off||{},{id:"official",kind:"official",url:""});
@@ -202,7 +231,11 @@ function dismissUpdates(){
    review I3, Ruling 17: an 80 MB chunked answer to a manifest check used to
    be buffered whole). arrayBuffer() is the fallback only where a response
    has no body stream, and the cap is still checked on what it returns. */
-function extFetchBytes(url,ms,cap){
+function extFetchBytes(url,ms,cap,headers){
+  /* the token goes only to the GitHub API: refused before any fetch, and the
+     message never carries it */
+  if(headers&&headers.Authorization&&!String(url).startsWith("https://api.github.com/"))
+    return Promise.reject(new Error("refused to send a token to another host"));
   const ac=typeof AbortController==="function"?new AbortController():null;
   const tooBig=()=>{const e=new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");e.tooBig=true;return e;};
   let timer,reader=null;
@@ -211,6 +244,7 @@ function extFetchBytes(url,ms,cap){
   const stop=()=>{if(ac)ac.abort();if(reader){try{const p=reader.cancel();if(p&&typeof p.catch==="function")p.catch(()=>{});}catch(e){/* already closed or errored: nothing left to stop */}}};
   const timeout=new Promise((_,rej)=>{timer=setTimeout(()=>{stop();rej(new Error("it took too long to answer"));},ms);});
   const opts=ac?{cache:"no-store",signal:ac.signal}:{cache:"no-store"};
+  if(headers)opts.headers=headers;
   const run=fetch(url,opts).then(r=>{
     if(!r||!r.ok){const e=new Error("HTTP "+(r?r.status:"error"));e.status=r?r.status:0;throw e;}
     if(cap){
