@@ -91,10 +91,11 @@ data/
   class-resources.json      archive, because they are not loadable packs
 _private-data             gitignored link to the private repo, RPGFieldbookPrivate: the other five
                           packs, their tests and the leak scan (Mike's checkouts only)
-docs/                     PLAYER-FACING — ships. An allowlist of exactly three files:
+docs/                     PLAYER-FACING — ships. An allowlist of exactly four files:
   rules-schema.md           the schema of every data file
   README-converter.md       how convert.py works
   CHANGELOG.md              generated from the in-app CHANGELOG array
+  private-sources.md        an owner's guide to private sources (#182)
 scripts/
   convert.py              5e-tools JSON → rules data (ships in the data kit zip)
   srd-corrections.json    hand-authored: the SRD pack's text matched to the SRD PDF; ships
@@ -243,3 +244,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-10-29 — The layout gains the pre-release docs (`specs/<ver>/` and `plans/<ver>/`, `archive/<ver>/`, `qa/smoke.md`, the record and the checklist), `pre-release-record.js` and `move-docs.js`, and names every project skill; the glossary gains pre-release. → ledger L8070, #127
 - 2026-11-02 — The code map's `00-sheet.html` line: the grid's stacks are Skills/Statuses and Defences/Resources (Mike's decision). → ledger L8339, #155
 - 2026-11-04 — The pre-release is part of `/release`, not a command of its own. → ledger L8860, #180
+- 2026-11-05 — `docs/` ships four files: `private-sources.md`, the owner's guide to private sources, joins the three. → ledger L8943, #182

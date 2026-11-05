@@ -8939,3 +8939,121 @@ the scan says so.
 suites pass (8442 checks).
 
 Pages: [private data](../wiki/data/private-data.md).
+
+## #182: private sources — Extensions installs and updates packs from a private GitHub repo (Mike, 2026-11-05)
+
+A table's owner keeps homebrew packs in a private GitHub repo, cuts numbered releases with the data kit,
+and sends each player a **source link** (`https://github.com/<owner>/<repo>#token=<token>`) holding a
+read-only, per-player token. The player pastes it into Settings → Extensions → Sources and the repo is a
+source like the built-in one: checked at boot and on Check now, announced by the Extensions pill,
+installed and updated through the same plan. Mike's RPGFieldbookPrivate is the first such source.
+Design: `specs/2026-11-05-private-sources-design.md`; plan: `plans/2026-11-05-private-sources.md`.
+
+**App** (`89-extensions.js`, `88-settings.js`). A new source kind `github`: `{id, kind, repo, token,
+on, checked, error, manifest, tag, note, needsToken}`. `extGithubLink()` reads a source link or a bare
+repo; `extGhApi()` builds `https://api.github.com/repos/…` and takes only a bare `owner/name`;
+`extGhHeaders()` adds `X-GitHub-Api-Version` and, with a token, `Authorization: Bearer`;
+`extGhPickTag()` picks the newest `data-vX.Y.Z-N` whose base is no newer than the app. `extFetchBytes()`
+sends a token only to `https://api.github.com/` (a manifest cannot redirect it elsewhere). Tag pages
+(`extGhTags()`) have their own 1 MiB cap (`EXT_GH_TAGS_MAX`), not the 64 KB manifest cap, and are
+followed up to `EXT_GH_PAGES` pages. `checkSource()` reads `releases/data/fieldbook-data.json` at the
+tag and keeps the last good manifest on any failure; `extGhWhy()` words each failure (§5.6 table);
+`offerCandidate()` reads each pack file through the contents API at the source's tag. `addSource()`
+takes a source link or repo, checks it once before adding, and a re-pasted link replaces the token. The
+row reads "private · token ending …abcd" and offers Change token (`openChangeToken()`).
+`extSettingsForExport()` exports a github source with `token:""` and `needsToken:true`;
+`extKeepTokens()` makes an import keep the device's own token. Installed private packs stay in the
+export (decision 13).
+
+**Kit** (`tools/data-kit/fbdata.py`, `build.sh`). `kit_version()` and a `fieldbook-version.txt` stamp
+in the kit zip, so a kit unzipped outside the repo knows its Fieldbook version. `release-files
+--any-licence`. A `release` command for an owner's repo: numbers `X.Y.Z-N` from the kit's version and the
+registry's `release`, bumps changed packs, bundles, writes `releases/data/`, validates, prints the git
+lines and runs none of them; `--allow-unchanged`, `--dry-run`; defaults are relative to the current
+directory (an unzipped kit has no Fieldbook repo around it); restores the registry on any failure.
+
+**Release tooling.** `data-release.js` for a private registry also writes `releases/data/` into the
+private repo (`--any-licence`), so the next private tag is installable. `--allow-unchanged` (public and
+private) releases with no pack changed and moves only the registry's `release`; `/release private`
+offers it when the newest private tag has no `releases/data/` (the first one: `1.9.0-2`). RELEASING.md
+and the release skill say so.
+
+**Guide.** `docs/private-sources.md` ships in the app zip (`docs/` goes from three files to four) and in
+the data kit zip. The kit zip itself is a separate release attachment, not inside the app zip.
+
+**Rulings made while building** (each with its cost if wrong):
+- R1. `convertSources()` keeps every field of a kept github entry and fills only absent defaults, so
+  `needsToken`, `note` and `tag` survive a reload. Wrong: a reload drops `needsToken`, an imported
+  private source fetches without a token and shows the 404 wording instead of "Needs its token".
+- R2. `addSource()` replacing a token, and Change token, clear `needsToken` and the error, then
+  re-check (§5.6: pasting the link again is how an imported source gets its token). Wrong: the row
+  keeps saying "Needs its token" after the player supplied one.
+- R3. A 403 without `x-ratelimit-remaining: 0` uses the "404 with a token" wording ("This token can't
+  see the repo…"); the spec's table names no other 403. Wrong: a slightly less specific message for a
+  token made without Contents: Read-only; the guide gives the right settings.
+- R4. `X-GitHub-Api-Version` on every call binds the github source's calls only; the official
+  source's existing unauthenticated calls are unchanged (§6). Wrong: one header missing on calls that
+  work today.
+- R5. Task 4's screenshots live in the main checkout's git-ignored `.claude/qa/in-progress/182-private-sources/`.
+  Wrong: screenshots in a different folder.
+- R6. `fbdata.py release` defaults `--registry data/packs.json`, `--data-root data`, `-o releases/data`
+  relative to the current directory, not the kit's repo root. Wrong: an owner who runs it from a
+  subfolder must pass `--registry`.
+- R7. `--allow-unchanged` also works for the public registry (spec §5.8 said private and the kit).
+  Wrong: none functional; one more flag path to keep.
+
+**Tests.** `data-archive.js` (link parsing, tag
+picking, the host guard, the check outcomes and wordings, add/replace token, export without the token
+and import keeping it), `data-kit.py` (`release`, the version stamp, `--any-licence`, restore on
+failure, `data-release.js --allow-unchanged`) and the release scripts in a scratch repo. **Not verified:** the real-token probe (plan Task 1)
+against GitHub's live API, and the install on Mike's devices, are his pass.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md), [storage](../wiki/architecture/storage.md),
+[data kit](../wiki/data/data-kit.md), [data archive](../wiki/architecture/data-archive.md),
+[private data](../wiki/data/private-data.md), [building & CI](../wiki/process/building-and-ci.md),
+[decisions](../wiki/decisions.md).
+
+## #182: the real-token probe, and the final review's fix wave (Mike, 2026-11-05)
+
+**The probe (plan Task 1).** With Mike's yes, a throwaway private repo `wardmanm/fieldbook-token-probe`
+(one empty format-2 manifest, tag `data-v1.9.0-1`) and a fine-grained token Mike made (resource owner
+wardmanm, only that repo, Contents read-only, one-day expiry). From the branch's built
+`fieldbook.html` over `file://` in Playwright: the tag list and the raw manifest at the tag answered
+200 with the token, `X-GitHub-Api-Version` and `redirect:"error"`; the token with its last character
+changed answered 401, readable; the real token on a private repo it wasn't given answered 404, which
+is the answer the "can't see the repo" wording assumes. Then the real flow: the source link pasted
+into Settings → Extensions → Sources was added ("Source added."), the row read
+"wardmanm/fieldbook-token-probe · private · token ending …pjtJ · checked today", `data-v1.9.0-1` was
+picked, and the token was nowhere in the page, the URL box or the console. The source was removed and
+the test browser's storage cleared afterwards; Mike deletes the token, and the repo goes with his yes.
+
+**The fix wave.** The final whole-branch review found two player-visible bugs and three small holes,
+fixed in one commit (6e25803) and re-reviewed clean: an imported private source without its token now
+says so at once and offers nothing to install (`extGhSane()` in `convertSources()`); the details
+dialog names the repo and tag, not "undefined"; a malformed token is blanked and asked for again, and
+a fetch error never echoes it (`extTokenOk()`, a TypeError reads "GitHub couldn't be reached."); a 429
+reads as the rate limit; a double Add makes one source; a link with trailing punctuation or `#token=`
+that doesn't parse is refused without a fetch and cleared from the box; a repo whose tag list answers
+is added even when its pack list then fails (spec §5.2); token-bearing fetches refuse redirects; the
+kit's `release` refuses Fieldbook's own registry. Set aside for later, with rulings: a renamed repo's
+redirect now reads "GitHub couldn't be reached."; the registry guard can refuse a kit unzipped two
+folders inside an owner's repo; a hand-typed `?token=` link is fetched as a manifest URL; a source
+whose token was refused keeps offering Install from its last good pack list.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md),
+[known issues](../wiki/roadmap/known-issues.md).
+
+## #182: three fixes before merge (Mike, 2026-11-05)
+
+The three items the final review set aside, closed. The kit's `release` guard refuses Fieldbook's own
+registry only when the kit's root really is a Fieldbook checkout (`app_version()` finds
+`src/js/30-version.js`), so a kit unzipped two folders inside an owner's repo is no longer refused.
+`addSource()` refuses, unfetched and with the box cleared, any text that holds `?token=`, `&token=`,
+`#token=`, `github_pat_` or `ghp_` and isn't a valid source link, so a hand-typed token can't reach a
+URL. A github source whose last check failed on the token (401, "can't see the repo", or needs its
+token; `extGhTokenBad()`) offers nothing from `extOffers()` (no Install, Update or pill count); its
+manifest is kept, so a fixed token offers again at once, and installed packs keep working. A network or
+rate-limit failure still offers. Tests: `data-kit.py` (a kit two levels deep releases) and
+`data-archive.js` (P2 and P3 cases).
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md), [data kit](../wiki/data/data-kit.md).

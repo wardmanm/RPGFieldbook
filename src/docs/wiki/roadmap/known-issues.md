@@ -198,9 +198,10 @@ Wanted, not yet done. Each needs work, not a source.
 - **#102's release-tooling minors** (#150): `release-files` deletes before it writes;
   `./build.sh --release --no-zip` skips `releases/data/`; `data-kit.py`'s leak test reads the shared
   temp folder. → ledger L7428, and [Data kit](../data/data-kit.md)
-- **Private packs through a manifest (#102's token option): not built.** (#149) raw.githubusercontent.com
-  can't serve a private repo and no token is stored, so they stay a Manual install (file import).
-  → [Private data](../data/private-data.md)
+- **The private-source install is untested on Mike's devices.** (#182) A real token read a private
+  repo from `file://` and the app added it (ledger L9016); installing real packs that way waits on the
+  first private release with a pack list (`1.9.0-2`). Pasting a source link is how a private repo's packs reach a player;
+  Manual install remains for a file. → [Settings & updates](../features/settings-and-updates.md)
 - **Humblewood species have no size.** (#149) They all resolve to Medium (`charSize()`), but Jerbeen, Luma
   and Hedge are Small in the book. The fix belongs in the private repo's Humblewood extractor, which
   has a verbatim suite, so the data must not be hand-edited. A player can set size from the rail
@@ -515,3 +516,5 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-30 — Corrected: the intro's stamp and the triage intro; multiclass prerequisites are stated, not checked; the old releases' assets are still attached, their deletion pending; the Deferred intro back under its heading, and private packs through a manifest added; the inventory log's size, existing Bards and pre-#66 multiclass sheets moved to Limitations; the Rules-tab keyboard sentence, three fixed stale comments and the now-tested functions dropped. Removed: the phone-width crowding (fixed by #57). The two "for Mike to confirm" decision sections archived to `src/docs/archive/1.9.0/` (pre-release 1.9.0, step 1).
 - 2026-10-30 — Issue numbers and Mike's decisions written back (pre-release 1.9.0, step 2).
 - 2026-11-02 — The phone layout's keyboard order (Skills before Defences and Statuses) recorded as a limitation, from #155's review.
+- 2026-11-05 — Replaced "private packs through a manifest: not built" with the live-token verification still owed: #182 builds the private GitHub source. → ledger L8943, #182
+- 2026-11-05 — The live-token probe passed; what is left is an install on Mike's devices. → ledger L9016, #182

@@ -29,6 +29,7 @@ release. "Skip the checks" never skips preflight or a gate: say so in one line a
 | bullets under `## Pending` in `src/docs/UNRELEASED.md` | **app** (`./build.sh --release`), which carries changed public data too; its pre-release comes first (§1a) |
 | no bullets; `node scripts/data-release.js --dry-run` lists changed packs | **data** |
 | `_private-data` has changed packs (`node scripts/data-release.js --registry _private-data/data/packs.json --data-root _private-data/data --dry-run`) | **private**, after any public release above |
+| the newest private tag has no `releases/data/` (`git -C _private-data ls-tree <tag> releases/data` prints nothing), even with no pack changed | **private**, run with `--allow-unchanged` (§4) |
 
 If the argument names a kind that isn't due, say so and recommend the one that is.
 
@@ -102,7 +103,8 @@ app version the record doesn't name, stop: that number needs its own pre-release
   written, but the pre-release record could not be filed", the cut stands: show Mike the line, and
   run the `mkdir -p … && git mv …` it prints before Gate 2's commit.
 - **data / private:** run `data-release.js` (with `--registry … --data-root …` for private) without
-  `--dry-run`; show which packs moved.
+  `--dry-run`; show which packs moved. A private release due only for the missing `releases/data/`
+  adds `--allow-unchanged`: no pack moves, only the registry's `release`.
 
 ## 5. Gate 2 — publish
 

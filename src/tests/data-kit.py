@@ -769,16 +769,40 @@ d, pd = private_checkout()
 write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 2}]})
 git(pd, "commit", "-qam", "change")
 args = ["scripts/data-release.js", "--registry", os.path.join(pd, "data/packs.json"), "--data-root", os.path.join(pd, "data")]
-r = node(d, *args)
+r = r0 = node(d, *args)
 reg = read_json(pd, "data/packs.json")
 ck("a private data release after app 1.8.0 is 1.8.0-1, though its last release was 1.7.2",
    r.returncode == 0 and reg["release"] == "1.8.0-1" and reg["packs"][0]["version"] == "1.8.0-1", (r.stdout, r.stderr))
 ck("...its printed commands run in the private repo", "git -C " in r.stdout and "data-v1.8.0-1" in r.stdout, r.stdout)
 ck("...and the public registry is untouched", read_json(d, "data/packs.json")["release"] == "1.8.0")
+ck("a private data release writes releases/data in the private repo, with the manifest",
+   os.path.isfile(os.path.join(pd, "releases/data/fieldbook-data.json")) and not os.path.exists(os.path.join(d, "releases")),
+   os.listdir(pd))
+ck("...and its printed add line names the registry and releases/data",
+   "add data/packs.json releases/data" in r0.stdout, r0.stdout)
+
 write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 3}]})
 r = node(d, *args)
 ck("a private release refuses uncommitted private data", r.returncode == 1 and "uncommitted" in r.stderr, r.stderr)
 shutil.rmtree(d)
+
+# #182: a private release with nothing changed, only with --allow-unchanged
+d, pd = private_checkout()
+args = ["scripts/data-release.js", "--registry", os.path.join(pd, "data/packs.json"), "--data-root", os.path.join(pd, "data")]
+r = node(d, *args)
+ck("a private release with nothing changed refuses: nothing to release", r.returncode == 1 and "nothing to release" in r.stderr, r.stderr)
+r = node(d, *args, "--allow-unchanged", "--dry-run")
+ck("--allow-unchanged --dry-run says no pack changed and writes nothing",
+   r.returncode == 0 and "no pack changed" in r.stdout and read_json(pd, "data/packs.json")["release"] == "1.7.2", (r.stdout, r.stderr))
+r = node(d, *args, "--allow-unchanged")
+reg = read_json(pd, "data/packs.json")
+ck("--allow-unchanged moves only the registry's release", r.returncode == 0 and reg["release"] == "1.8.0-1"
+   and reg["packs"][0]["version"] == "1.7.2", (r.stdout, r.stderr, reg))
+ck("...writes releases/data with the manifest", os.path.isfile(os.path.join(pd, "releases/data/fieldbook-data.json")),
+   os.listdir(pd))
+ck("...and prints releases/data in its add line", "releases/data" in r.stdout and "data-v1.8.0-1" in r.stdout, r.stdout)
+shutil.rmtree(d)
+
 d = checkout(release="1.7.2")
 write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 5}]})
 git(d, "commit", "-qam", "change")
@@ -851,8 +875,12 @@ else:
     kz = os.path.join(ROOT, "dist", kits[-1])
     names = sorted(n for n in zipfile.ZipFile(kz).namelist() if not n.endswith("/"))
     want = sorted(["fbdata.py", "convert.py", "overlay.json", "class-resources.json", "srd-corrections.json",
-                   "README.md", "README-converter.md", "rules-schema.md", "LICENSE", "example-pack/example-pack.json"])
+                   "README.md", "README-converter.md", "rules-schema.md", "private-sources.md", "LICENSE", "example-pack/example-pack.json",
+                   "fieldbook-version.txt"])
     ck("the kit zip holds exactly the kit", names == want, names)
+    appv = re.search(r'APP_VERSION="([^"]+)"', open(os.path.join(ROOT, "src", "js", "30-version.js"), encoding="utf-8").read()).group(1)
+    ck("#182 the kit zip's fieldbook-version.txt holds APP_VERSION",
+       zipfile.ZipFile(kz).read("fieldbook-version.txt").decode().strip() == appv, appv)
     t = tempfile.mkdtemp(prefix="kit-")
     zipfile.ZipFile(kz).extractall(t)
     r = subprocess.run([sys.executable, os.path.join(t, "fbdata.py"), "build", os.path.join(t, "example-pack"),
@@ -1167,7 +1195,7 @@ ck("#102 build.sh writes releases/data on a release build only",
    re.search(r'if \[ -n "\$RELEASE" \][^\n]*\n[^\n]*release-files dist -o releases/data', build_sh) is not None)
 dr = open(os.path.join(ROOT, "scripts", "data-release.js"), encoding="utf-8").read()
 ck("#102 data-release.js bundles and writes releases/data for the public registry",
-   '"release-files"' in dr and "releases/data" in dr and "if (!PRIVATE)" in dr)
+   '"release-files"' in dr and "releases/data" in dr)
 ck("#102 data-release.js tells you to commit releases/data", "git add data/packs.json releases/data" in dr)
 ck("#102 data-release.js registers scratch-folder cleanup on exit, not just a finally "
    "that process.exit() would skip (fix round 2)",
@@ -1176,6 +1204,127 @@ for wf in ("release.yml", "data-release.yml"):
     t = open(os.path.join(ROOT, ".github", "workflows", wf), encoding="utf-8").read()
     ck("#102 %s checks releases/data against the build" % wf,
        "fbdata.py validate --public releases/data" in t and 'cmp "releases/data/' in t)
+
+# ---------- #182: the kit's version stamp and `release`
+def rel_setup(stamp="1.9.0", lic=None, release="1.8.0"):
+    """A folder with no .git: the kit copied in beside a stamp, and an owner's repo (data/packs.json, one pack)."""
+    d = tempfile.mkdtemp(prefix="fbrel-")
+    os.makedirs(os.path.join(d, "kit"))
+    shutil.copy(FBDATA, os.path.join(d, "kit", "fbdata.py"))
+    if stamp is not None:
+        write(d, "kit/fieldbook-version.txt", raw=stamp + "\n")
+    write(d, "repo/data/mine/spells.json", {"system": "Mine", "spells": [{"name": "Zap", "level": 1}]})
+    pk = {"system": "Mine", "dir": "mine", "file": "mine_full.json", "title": "Mine", "version": "1.8.0"}
+    if lic:
+        pk["license"] = lic
+    write(d, "repo/data/packs.json", {"release": release, "packs": [pk]})
+    return d
+
+
+def rel(d, *args):
+    return subprocess.run([sys.executable, os.path.join(d, "kit", "fbdata.py"), "release"] + list(args),
+                          capture_output=True, text=True, cwd=os.path.join(d, "repo"))
+
+
+d = rel_setup()
+ck("#182 kit_version reads the stamp beside fbdata.py", subprocess.run(
+    [sys.executable, "-c", "import runpy,sys; print(runpy.run_path(sys.argv[1])['kit_version']())", os.path.join(d, "kit", "fbdata.py")],
+    capture_output=True, text=True).stdout.strip() == "1.9.0")
+r = rel(d, "--dry-run")
+ck("#182 release --dry-run prints the plan and writes nothing",
+   r.returncode == 0 and "1.9.0-1" in r.stdout and read_json(d, "repo/data/packs.json")["release"] == "1.8.0"
+   and not os.path.exists(os.path.join(d, "repo", "releases")), r.stdout + r.stderr)
+r = rel(d)
+reg = read_json(d, "repo/data/packs.json")
+ck("#182 release: first run is X-1, bumps the changed pack and records its digest",
+   r.returncode == 0 and reg["release"] == "1.9.0-1" and reg["packs"][0]["version"] == "1.9.0-1"
+   and (reg["packs"][0].get("digest") or "").startswith("sha256:"), r.stdout + r.stderr)
+man = read_json(d, "repo/releases/data/fieldbook-data.json")
+ck("#182 release writes releases/data/fieldbook-data.json listing the pack",
+   man["version"] == "1.9.0-1" and any(x.get("system") == "Mine" for x in man["packs"]), man)
+for line in ("git add data/packs.json releases/data", 'git commit -m "Data release 1.9.0-1"',
+             'git tag -a data-v1.9.0-1 -m "Data 1.9.0-1"', "git push && git push origin data-v1.9.0-1"):
+    ck("#182 release prints: " + line, line in r.stdout, r.stdout)
+ck("#182 release prints no scratch folder path", "fbdata-release-" not in r.stdout and "mine_full.json" in r.stdout, r.stdout)
+ck("#182 release never creates a .git", not os.path.exists(os.path.join(d, ".git")) and not os.path.exists(os.path.join(d, "repo", ".git")))
+r = rel(d)
+ck("#182 release with nothing changed exits 1 'nothing to release'",
+   r.returncode == 1 and "nothing to release" in r.stderr and read_json(d, "repo/data/packs.json")["release"] == "1.9.0-1", r.stdout + r.stderr)
+r = rel(d, "--allow-unchanged")
+reg = read_json(d, "repo/data/packs.json")
+ck("#182 release --allow-unchanged moves only release (X-2)",
+   r.returncode == 0 and reg["release"] == "1.9.0-2" and reg["packs"][0]["version"] == "1.9.0-1", r.stdout + r.stderr)
+write(d, "repo/data/mine/spells.json", {"system": "Mine", "spells": [{"name": "Zap", "level": 2}]})
+write(d, "kit/fieldbook-version.txt", raw="1.9.1\n")
+r = rel(d)
+reg = read_json(d, "repo/data/packs.json")
+ck("#182 release after an edit and a newer stamp starts at X-1",
+   r.returncode == 0 and reg["release"] == "1.9.1-1" and reg["packs"][0]["version"] == "1.9.1-1", r.stdout + r.stderr)
+write(d, "kit/fieldbook-version.txt", raw="1.9.0\n")
+r = rel(d, "--allow-unchanged")
+ck("#182 release refuses a registry release newer than the kit",
+   r.returncode != 0 and read_json(d, "repo/data/packs.json")["release"] == "1.9.1-1", r.stdout + r.stderr)
+shutil.rmtree(d)
+d = rel_setup(stamp=None)
+r = rel(d)
+ck("#182 release with no stamp exits 2 'doesn't know its Fieldbook version'",
+   r.returncode == 2 and "this kit doesn't know its Fieldbook version" in r.stderr, r.stderr)
+shutil.rmtree(d)
+d = rel_setup(lic="All rights reserved")
+r = rel(d)
+ck("#182 release carries a pack licensed All rights reserved (no licence error)",
+   r.returncode == 0 and os.path.isfile(os.path.join(d, "repo", "releases", "data", "mine_full.json")), r.stdout + r.stderr)
+shutil.rmtree(d)
+
+d = rel_setup()
+write(d, "repo/data/mine/bad.json", raw="{not json")
+before = read_json(d, "repo/data/packs.json")
+r = rel(d)
+after = read_json(d, "repo/data/packs.json")
+ck("#182 release: invalid JSON is rejected before anything is written (nonzero, registry untouched)",
+   r.returncode != 0 and after == before and after["release"] == "1.8.0" and after["packs"][0]["version"] == "1.8.0"
+   and "digest" not in after["packs"][0], r.stdout + r.stderr)
+shutil.rmtree(d)
+
+d = rel_setup()
+write(d, "repo/releases/data", raw="a file where the output folder should be")
+before = read_json(d, "repo/data/packs.json")
+r = rel(d)
+ck("#182 release: an OSError (not a KitError) mid-release also restores the registry",
+   r.returncode != 0 and read_json(d, "repo/data/packs.json") == before, r.stdout + r.stderr)
+shutil.rmtree(d)
+
+# C6: the kit run from Fieldbook's own checkout never releases the public registry
+d = tempfile.mkdtemp(prefix="fbrel-own-")
+os.makedirs(os.path.join(d, "tools", "data-kit")); os.makedirs(os.path.join(d, "data", "mine"))
+shutil.copy(FBDATA, os.path.join(d, "tools", "data-kit", "fbdata.py"))
+write(d, "tools/data-kit/fieldbook-version.txt", raw="1.9.0\n")
+write(d, "src/js/30-version.js", raw='const APP_VERSION="1.9.0";\n')
+write(d, "data/mine/spells.json", {"system": "Mine", "spells": [{"name": "Zap", "level": 1}]})
+write(d, "data/packs.json", {"release": "1.8.0", "packs": [{"system": "Mine", "dir": "mine", "file": "mine_full.json", "title": "Mine", "version": "1.8.0"}]})
+own_before = read_json(d, "data/packs.json")
+r = subprocess.run([sys.executable, os.path.join(d, "tools", "data-kit", "fbdata.py"), "release"], capture_output=True, text=True, cwd=d)
+ck("#182 release refuses Fieldbook's own registry", r.returncode != 0 and "Fieldbook's own registry" in r.stderr and "scripts/data-release.js" in r.stderr
+   and read_json(d, "data/packs.json") == own_before and not os.path.exists(os.path.join(d, "releases")), r.stdout + r.stderr)
+shutil.rmtree(d)
+
+# P1 (#182 pre-merge): an owner who unzips the kit two folders deep inside their own repo is not refused
+d = tempfile.mkdtemp(prefix="fbrel-deep-")
+os.makedirs(os.path.join(d, "tools", "fieldbook-data-kit-1.9.0"))
+shutil.copy(FBDATA, os.path.join(d, "tools", "fieldbook-data-kit-1.9.0", "fbdata.py"))
+write(d, "tools/fieldbook-data-kit-1.9.0/fieldbook-version.txt", raw="1.9.0\n")
+write(d, "data/mine/spells.json", {"system": "Mine", "spells": [{"name": "Zap", "level": 1}]})
+write(d, "data/packs.json", {"release": "1.8.0", "packs": [{"system": "Mine", "dir": "mine", "file": "mine_full.json", "title": "Mine", "version": "1.8.0"}]})
+r = subprocess.run([sys.executable, os.path.join(d, "tools", "fieldbook-data-kit-1.9.0", "fbdata.py"), "release"], capture_output=True, text=True, cwd=d)
+ck("#182 release works for a kit two folders inside an owner's repo (no src/js/30-version.js)",
+   r.returncode == 0 and "own registry" not in r.stderr and read_json(d, "data/packs.json")["release"] == "1.9.0-1", r.stdout + r.stderr)
+shutil.rmtree(d)
+
+# C8: the public data-release.js path never passes --any-licence
+dr = open(os.path.join(os.path.dirname(os.path.abspath(FBDATA)), "..", "..", "scripts", "data-release.js"), encoding="utf-8").read()
+code_lines = [l for l in dr.splitlines() if "--any-licence" in l and not l.lstrip().startswith("//")]
+ck("#182 data-release.js passes --any-licence only on the private path",
+   len(code_lines) == 1 and re.search(r'PRIVATE\s*\?\s*\[[^\]]*--any-licence', code_lines[0]) is not None, code_lines)
 
 # ---- add new cases above this line ----
 print("")

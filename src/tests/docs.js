@@ -114,10 +114,22 @@ fs.readdirSync(path.join(ROOT, 'src/tests'))
 
 // ---------- the flat data filenames are gone; no doc may still name them
 const OLD = /\b(humblewood-(races|spells|feats|classes|subclasses|backgrounds)|(spells|feats|items|classes|races|backgrounds|conditions|glossary)-2024)\.json\b/;
-['README.md', 'CLAUDE.md', 'docs/rules-schema.md', 'docs/README-converter.md'].forEach(f => {
+['README.md', 'CLAUDE.md', 'docs/rules-schema.md', 'docs/README-converter.md', 'docs/private-sources.md'].forEach(f => {
   const m = OLD.exec(read(f));
   ck(f + ' does not name a pre-reorganisation data file', !m, m && m[0]);
 });
+
+// ---------- the owner's guide for private sources ships (#182)
+{
+  const g = fs.existsSync(path.join(ROOT, 'docs/private-sources.md')) ? read('docs/private-sources.md') : '';
+  ck('docs/private-sources.md exists', g.length > 0);
+  ['#token=', 'Contents', 'Read-only', 'Only select repositories', 'release', 'data-v'].forEach(w =>
+    ck('the private sources guide names ' + w, g.includes(w)));
+  ck('the private sources guide names no real private pack', !/XPHB|Xanathar|Tasha|Humblewood/i.test(g));
+  ck("build.sh's app-zip allowlist names the guide", read('build.sh').includes('README-converter|private-sources|rules-schema'));
+  ck("build.sh's kit zip carries the guide", read('build.sh').includes('docs/private-sources.md') && read('build.sh').includes('private-sources.md rules-schema.md'));
+  ck('README section 9 lists the guide', /private sources/i.test(readme));
+}
 
 // ---------- the rules data players actually get: one archive (#83)
 ck('README names the rules-data archive', readme.includes('fieldbook-data-standalone'));

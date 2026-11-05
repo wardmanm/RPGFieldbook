@@ -250,6 +250,20 @@ def app_version():
         return ""
 
 
+def kit_version():
+    """The Fieldbook version this kit belongs to: APP_VERSION when the kit runs in the repo, else the
+    first line of fieldbook-version.txt beside this file (build.sh stamps it into the kit zip), else ""."""
+    v = app_version()
+    if v:
+        return v
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fieldbook-version.txt"),
+                  encoding="utf-8") as f:
+            return f.readline().strip()
+    except OSError:
+        return ""
+
+
 def notice_md(reg, mpacks, version, built_for):
     """The archive's NOTICE.md: what is in it, and every pack's licence and credit."""
     by_file = {p["file"]: p for p in reg["packs"]}
@@ -379,7 +393,7 @@ def cmd_release_files(a):
             f.write(raw)
     with open(os.path.join(a.output, MANIFEST), "w", encoding="utf-8", newline="\n") as f:
         f.write(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
-    errs = validate_archive(a.output, public=True)
+    errs = validate_archive(a.output, public=not a.any_licence)
     for e in errs:
         print("%s: %s" % (a.output, e), file=sys.stderr)
     if errs:
@@ -696,13 +710,80 @@ def cmd_bundle(a):
             fh.write(text)
         os.replace(tmp, dest)
         counts = ["%d %s" % (len(r["obj"][c]), c) for c in CATS if c in r["obj"]]
-        print("    %s  (%d files, %d KB)" % (os.path.relpath(dest), r["files"], round(len(text.encode("utf-8")) / 1024)))
+        print("    %s  (%d files, %d KB)" % (p["file"] if getattr(a, "quiet", False) else os.path.relpath(dest), r["files"], round(len(text.encode("utf-8")) / 1024)))
         print("      " + " · ".join(counts))
         if r["dupes"]:
             print("      deduped %d: %s" % (len(r["dupes"]), ", ".join(r["dupes"])))
         if r["nameless"]:
             print("      %d with no name, which the app will skip: %s" % (len(r["nameless"]), ", ".join(r["nameless"])))
     return 1 if failed else 0
+
+
+def next_release(cur, v):
+    """The next numbered release after `cur` for Fieldbook version `v` (the rule scripts/data-release.js
+    uses): v-1 when `cur` is empty, older than v, or v itself; v-(N+1) after v-N; a newer one is refused."""
+    base = re.match(r"^(\d+\.\d+\.\d+)", cur or "")
+    vt, bt = parse_data_ver(v), parse_data_ver(base.group(1)) if base else None
+    if not vt:
+        raise KitError("the kit's Fieldbook version %r is not X.Y.Z" % v)
+    if not cur or bt is None or bt < vt or cur == v:
+        return v + "-1"
+    m = re.match(r"^(\d+\.\d+\.\d+)-([1-9]\d*)$", cur)
+    if bt == vt and m:
+        return "%s-%d" % (v, int(m.group(2)) + 1)
+    raise KitError("the registry's release %s is newer than this kit (Fieldbook %s) — "
+                   "get the newer data kit" % (cur, v))
+
+
+def cmd_release(a):
+    """Cut a numbered data release for an owner's own repo: bump, bundle, write the release folder, print
+    the git lines. Never runs git (design §5.8)."""
+    v = kit_version()
+    if not v:
+        raise KitError("this kit doesn't know its Fieldbook version")
+    # Refuse only when ROOT really is a Fieldbook checkout (it has src/js/30-version.js): an owner who
+    # unzips the kit two folders deep in their own repo has ROOT = their repo and must not be refused.
+    if app_version() and os.path.realpath(a.registry) == os.path.realpath(os.path.join(ROOT, "data", "packs.json")):
+        raise KitError("this is Fieldbook's own registry: use scripts/data-release.js")
+    reg = load_registry(a.registry)
+    nxt = next_release(reg.get("release"), v)
+    ch = changed_packs(reg, a.data_root)
+    names = [p["system"] for p, _ in ch]
+    if not ch and not a.allow_unchanged:
+        print("fbdata: nothing to release — no pack's content differs from its last release "
+              "(--allow-unchanged to release anyway)", file=sys.stderr)
+        return 1
+    print("data release %s: %s" % (nxt, (", ".join(names) + " changed") if names else "no pack changed"))
+    if a.dry_run:
+        print("(dry run — nothing written)")
+        return 0
+    with open(a.registry, "rb") as f:
+        before = f.read()
+    for p, dg in ch:
+        p["version"] = nxt
+        p["digest"] = dg
+    reg["release"] = nxt
+    write_registry(reg, a.registry)
+    tmp = tempfile.mkdtemp(prefix="fbdata-release-")
+    try:
+        if cmd_bundle(argparse.Namespace(registry=a.registry, data_root=a.data_root, output=tmp, quiet=True)) != 0:
+            raise KitError("a pack failed to bundle")
+        if cmd_release_files(argparse.Namespace(bundles=tmp, output=a.output, registry=a.registry,
+                                                built_for=v, any_licence=True)) != 0:
+            raise KitError("the release folder did not validate")
+    except BaseException:  # KitError, OSError, Ctrl-C: the registry is never left bumped
+        with open(a.registry, "wb") as f:  # leave the registry as it was
+            f.write(before)
+        raise
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print("")
+    print("Release %s is ready. Run these yourself (this command never runs git):" % nxt)
+    print("  git add %s %s" % (os.path.relpath(a.registry), os.path.relpath(a.output)))
+    print('  git commit -m "Data release %s"' % nxt)
+    print('  git tag -a data-v%s -m "Data %s"' % (nxt, nxt))
+    print("  git push && git push origin data-v%s" % nxt)
+    return 0
 
 
 # ---------- convert / build: the kit's user-facing commands (#85, R12)
@@ -880,7 +961,16 @@ def main(argv=None):
     p.add_argument("-o", "--output", required=True, help="the folder to write (releases/data)")
     p.add_argument("--registry", default=DEFAULT_REGISTRY, help="default: data/packs.json")
     p.add_argument("--built-for", default=None, help="the app version it is for (default: APP_VERSION)")
+    p.add_argument("--any-licence", action="store_true",
+                   help="skip the public-licence check (a private release); the folder is still validated")
     p.set_defaults(fn=cmd_release_files)
+    p = sub.add_parser("release", help="cut a numbered data release for your own repo; prints the git lines (#182)")
+    p.add_argument("--registry", default=os.path.join("data", "packs.json"), help="default: data/packs.json")
+    p.add_argument("--data-root", default="data", help="default: data/")
+    p.add_argument("-o", "--output", default=os.path.join("releases", "data"), help="default: releases/data")
+    p.add_argument("--allow-unchanged", action="store_true", help="release although no pack changed (moves only release)")
+    p.add_argument("--dry-run", action="store_true", help="print the plan; write nothing")
+    p.set_defaults(fn=cmd_release)
     p = sub.add_parser("validate", help="check an archive or a releases/data folder; exit 1 with one line per problem")
     p.add_argument("zip")
     p.add_argument("--public", action="store_true",

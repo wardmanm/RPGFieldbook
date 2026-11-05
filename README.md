@@ -481,6 +481,7 @@ docs/               ← reference material (you can ignore these to just play)
    • CHANGELOG — what changed in each release
    • rules schema — the format, if you want to write your own rules data
    • converter notes — how the data-generation tool works
+   • private sources — sharing your own private packs with your table
 ```
 
 **To play, you only ever need `fieldbook.html`.** The rules data makes the pickers and

@@ -20,4 +20,11 @@ or `--book` hold text from books you bought; keep them to yourself.
 
 - `fbdata.py convert …` runs `convert.py` with this kit's helper files (see README-converter.md).
 - `fbdata.py validate <zip>` checks an archive.
+- `fbdata.py release` cuts a numbered data release (`X.Y.Z-N`) of your own pack repo, so Fieldbook can
+  install it. Run it from your repo's root, where `data/packs.json` lives. It bumps the packs that
+  changed, bundles them into `releases/data/` and prints the git lines to run yourself (it never runs
+  git): `git add data/packs.json releases/data`, `git commit -m "Data release <next>"`,
+  `git tag -a data-v<next> -m "Data <next>"`, `git push && git push origin data-v<next>`. With no pack
+  changed it stops; `--allow-unchanged` releases anyway, moving only the release number. `--dry-run`
+  prints the plan and writes nothing. `fieldbook-version.txt` is the Fieldbook version this kit is for.
 - `rules-schema.md` describes the format; `example-pack/` is a small pack showing every category.

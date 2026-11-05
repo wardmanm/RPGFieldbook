@@ -6,6 +6,8 @@
  *
  *   node scripts/data-release.js                               bump data/packs.json (public)
  *   node scripts/data-release.js --dry-run                     say what it would do; write nothing
+ *   node scripts/data-release.js --allow-unchanged             release although no pack changed (to
+ *                                                               publish a pack list); moves only `release`
  *   node scripts/data-release.js --registry F --data-root D    bump another registry (e.g. the
  *                                                               private repo's), in its own git
  *                                                               checkout — pass both or neither
@@ -29,6 +31,7 @@ const ROOT = path.resolve(__dirname, "..");
 const FBDATA = path.join(ROOT, "tools/data-kit/fbdata.py");
 const argv = process.argv.slice(2);
 const DRY = argv.includes("--dry-run");
+const ALLOW_UNCHANGED = argv.includes("--allow-unchanged");
 
 function die(msg) {
   console.error("data-release: " + msg);
@@ -113,40 +116,42 @@ if (spawnSync("git", ["-C", REPO, "rev-parse", "-q", "--verify", "refs/tags/" + 
 
 const fbArgs = PRIVATE ? ["--registry", REG, "--data-root", DATA] : [];
 const changed = fbdata(["versions", "--changed", ...fbArgs]).split("\n").map((s) => s.trim()).filter(Boolean);
-if (!changed.length) die("nothing to release — no pack's content differs from its last release");
+if (!changed.length && !ALLOW_UNCHANGED) die("nothing to release — no pack's content differs from its last release");
 
-console.log(`data release ${next}: ${changed.join(", ")} change${changed.length === 1 ? "s" : ""}`);
+console.log(changed.length
+  ? `data release ${next}: ${changed.join(", ")} change${changed.length === 1 ? "s" : ""}`
+  : `data release ${next}: no pack changed (--allow-unchanged) — only the registry's release moves`);
 if (DRY) {
   console.log("(dry run — nothing written)");
   process.exit(0);
 }
 fbdata(["versions", "--bump", next, ...fbArgs]);
 
-// #102: the official source's files at this tag. Bundled from the bumped
-// registry into a scratch folder, then written flat to releases/data/ — what
-// raw.githubusercontent.com serves the app. A private registry has no public
-// raw URL, so it gets none.
-if (!PRIVATE) {
-  const tmp = fs.mkdtempSync(path.join(require("os").tmpdir(), "fb-data-release-"));
-  // fbdata() calls die() on a failure (e.g. release-files refusing a pack with
-  // no public licence, R13), and die() calls process.exit(1), which skips a
-  // surrounding `finally`. Register the cleanup on "exit" instead — it runs on
-  // every exit path, and fs.rmSync is synchronous, so it's safe inside the
-  // handler (#102 fix round 2). A cleanup that fails only warns: an exception
-  // thrown in an "exit" handler would replace the exit code, turning a release
-  // that succeeded into a failure (#102 final review, Ruling 18).
-  process.on("exit", () => {
-    try { fs.rmSync(tmp, { recursive: true, force: true }); }
-    catch (e) { console.error(`data-release: couldn't remove the scratch folder ${tmp}: ${e.message}`); }
-  });
-  fbdata(["bundle", "-o", tmp]);
-  fbdata(["release-files", tmp, "-o", path.join(ROOT, "releases", "data")]);
-}
+// #102: the source's files at this tag. Bundled from the bumped registry into a
+// scratch folder, then written flat to releases/data/ — what raw.githubusercontent.com
+// serves the app. A private registry writes them too, into its own repo (#182), so the
+// app's private sources can install from the tag; it is released without the public
+// licence check (--any-licence), since those packs carry no open licence.
+const tmp = fs.mkdtempSync(path.join(require("os").tmpdir(), "fb-data-release-"));
+// fbdata() calls die() on a failure (e.g. release-files refusing a pack with
+// no public licence, R13), and die() calls process.exit(1), which skips a
+// surrounding `finally`. Register the cleanup on "exit" instead — it runs on
+// every exit path, and fs.rmSync is synchronous, so it's safe inside the
+// handler (#102 fix round 2). A cleanup that fails only warns: an exception
+// thrown in an "exit" handler would replace the exit code, turning a release
+// that succeeded into a failure (#102 final review, Ruling 18).
+process.on("exit", () => {
+  try { fs.rmSync(tmp, { recursive: true, force: true }); }
+  catch (e) { console.error(`data-release: couldn't remove the scratch folder ${tmp}: ${e.message}`); }
+});
+fbdata(["bundle", "-o", tmp, ...fbArgs]);
+fbdata(["release-files", tmp, "-o", path.join(REPO, "releases", "data"),
+  ...(PRIVATE ? ["--registry", REG, "--any-licence"] : [])]);
 
 if (PRIVATE) {
   const regRel = path.relative(REPO, REG_FS);
-  console.log(`\nwrote ${regRel}. PUBLISH data ${next} — nothing is public until you do this:\n`);
-  console.log(`    git -C ${REPO} add ${regRel}`);
+  console.log(`\nwrote ${regRel} and releases/data. PUBLISH data ${next} — nothing is public until you do this:\n`);
+  console.log(`    git -C ${REPO} add ${regRel} releases/data`);
   console.log(`    git -C ${REPO} commit -m "Data release ${next}"`);
   console.log(`    git -C ${REPO} tag -a ${tag} -m "Fieldbook data ${next}"`);
   console.log(`    git -C ${REPO} push && git -C ${REPO} push origin ${tag}`);

@@ -14,7 +14,7 @@ versions, opening a zip, re-importing, pack credits, the notice, and both releas
 `readDataArchive()` in `89-zip.js`; `importRulesPayloads()`, `importPack()`, `dropOwnedPackMeta()`,
 `importSummary()`, `importRulesFiles()`, `creditOf()`, `dataUpdateHint()` in `89-rules-merge.js`;
 `parseDataVer()`, `cmpDataVer()`, `dataVerOfTag()`, `dataVerBase()`, `pickDataRelease()`,
-`dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js`; `dataStatus()`, `dataUpdateFor()`,
+`dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js`; `extGhPickTag()` in `89-extensions.js`; `dataStatus()`, `dataUpdateFor()`,
 `prunePackMeta()`, `rulesCreditsHTML()`, `rulesBadge()` in `88-settings.js`; `pack_digest()`,
 `changed_packs()`, `build_manifest()`, `cmd_pack()`, `cmd_release_files()`, `validate_archive()`, `bundle()`,
 `load_registry()` in `tools/data-kit/fbdata.py`; `readManifest()`, `extEntry()` in `89-extensions.js` ·
@@ -51,12 +51,15 @@ which gives every changed pack the new app version and sets `release`, then snap
 older than it is **stale**.
 
 **Data releases** (`node scripts/data-release.js`, dev.sh `d`): bump only the changed packs to
-`<APP_VERSION>-N`; refuse when nothing changed, when `data/` is dirty, or when the tag exists; print
+`<APP_VERSION>-N`; refuse when nothing changed (unless `--allow-unchanged`, which moves only `release`; #182), when `data/` is dirty, or when the tag exists; print
 the commit, tag and push commands. Pushing `data-vX.Y.Z-N` runs `data-release.yml`, which publishes
 the archive alone with `--latest=false`. With `--registry` and `--data-root` it bumps another
 registry in its own checkout instead: that is how the private repo's packs are released, as
-`fieldbook-data-private-<ver>.zip` on the private repo only (see
-[Private data](../data/private-data.md)).
+`fieldbook-data-private-<ver>.zip` on the private repo only, and writing `releases/data/` into that
+repo too (`--any-licence`), so a private source in the app can install from the tag (see
+[Private data](../data/private-data.md)). A private GitHub repo laid out this way is a source: the
+app reads `releases/data/fieldbook-data.json` at the newest `data-vX.Y.Z-N` tag made for its version or
+older, through the REST API ([Settings & updates](../features/settings-and-updates.md)).
 
 **The manifest (format 2, #102).** `build_manifest()` writes it for both `pack` and
 `release-files`:
@@ -227,3 +230,4 @@ list.
 - 2026-10-12 — The import toast drops the counts; a failure is an error toast that stays until tapped. → ledger L5648, #87
 - 2026-10-26 — The manifest is format 2 and doubles as the extension manifest; `release-files` writes `releases/data/` for each public release, and CI checks it. → ledger L7428, #102
 - 2026-10-28 — The archive holds SRD 5.2 alone; Homebrew and its credit move to the private archive. → ledger L7858, #125
+- 2026-11-05 — The manifest and `releases/data/` are also what a private GitHub source reads; private data releases write them too; `--allow-unchanged`. → ledger L8943, #182

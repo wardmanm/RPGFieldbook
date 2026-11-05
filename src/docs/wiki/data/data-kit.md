@@ -10,12 +10,12 @@ one command. It is Python 3.8+ with the standard library only, so the same file 
 
 **Code:** `main()`, `bundle()`, `bundle_text()`, `cmd_bundle()`, `cmd_digest()`, `cmd_versions()`,
 `pack_digest()`, `changed_packs()`, `load_registry()`, `check_registry()`, `build_manifest()`, `cmd_pack()`,
-`cmd_release_files()`, `notice_md()`, `validate_archive()`, `cmd_validate()`, `kit_file()`, `cmd_convert()`, `cmd_build()`,
+`cmd_release_files()`, `cmd_release()`, `next_release()`, `kit_version()`, `notice_md()`, `validate_archive()`, `cmd_validate()`, `kit_file()`, `cmd_convert()`, `cmd_build()`,
 `app_version()` in `tools/data-kit/fbdata.py`; `build.sh` (`pack_kit`) · **Data:**
 `data/packs.json`, `tools/data-kit/README.md`, `tools/data-kit/example-pack/example-pack.json` ·
 **Tests:** `data-kit.py` (golden bundle checks, versions, digests, `pack` and `validate`, the
 format-2 manifest fields, `validate`'s length, `minApp`, `size` and path checks, `release-files`,
-`validate --public`, `build` from a folder of packs, a registry and one pack file, `kit_file()`,
+`validate --public`, `release` (numbering, `--allow-unchanged`, `--dry-run`, restoring the registry on failure, the version stamp), `build` from a folder of packs, a registry and one pack file, `kit_file()`,
 the example pack, the kit zip unzipped with no repo around it, the release scripts in a scratch repo),
 `converter.py` (`build` on a mini dump) · **See also:** [Data archive](../architecture/data-archive.md),
 [Rules packs](../architecture/rules-packs.md), [Converter](converter.md), [Private data](private-data.md),
@@ -36,6 +36,7 @@ own.
 | `versions` | `--changed` lists packs whose digest moved since their release; `--check` exits 1 if any did; `--bump V` gives those packs version V and sets `release`; `--seed` records every digest as released (never again: see [Data archive](../architecture/data-archive.md)) | `python3 tools/data-kit/fbdata.py versions --changed --registry _private-data/data/packs.json --data-root _private-data/data` |
 | `pack` | Writes the archive from the bundles: `fieldbook-data.json` (format 2 since #102: per pack `category`, `title`, `summary`, `description`, `minApp`, `size`, `sha256` and `requires`; the registry's `name` and `homepage` on top), `NOTICE.md` and each pack, sorted and dated 1980-01-01, so the same input gives the same bytes. `--dev` names its version `<release>+dev`; `--built-for` records the app version | `python3 tools/data-kit/fbdata.py pack dist -o dist/fieldbook-data-standalone-1.8.0.zip` |
 | `release-files` | Writes `releases/data/` (#102): the same manifest and every bundle, flat, after deleting the folder's old `.json` files (regular, non-dot files only), then validates it `--public`. Run by `./build.sh --release` and `data-release.js`, never by hand | `python3 tools/data-kit/fbdata.py release-files dist -o releases/data` |
+| `release` | For an owner's own repo (#182): from the repo's root, numbers the release `X.Y.Z-N` (`X.Y.Z` the kit's own Fieldbook version, `kit_version()`; `N` follows the registry's `release`, `next_release()`), gives every changed pack that version, bundles, writes `releases/data/` (as `release-files --any-licence`: an owner's licence is their business), validates it, and prints the `git add`, commit, tag `data-vX.Y.Z-N` and push lines without running any. `--registry`, `--data-root` and `-o` default to `data/packs.json`, `data` and `releases/data` **relative to the current directory**, since an unzipped kit has no repo around it. Run against Fieldbook's own `data/packs.json` inside a real Fieldbook checkout (`app_version()` finds `src/js/30-version.js`) it refuses (use `scripts/data-release.js`); a kit unzipped inside an owner's own repo is not refused. Nothing changed is refused unless `--allow-unchanged` (moves only `release`); `--dry-run` writes nothing; any failure puts the registry back as it was | `python3 fbdata.py release` |
 | `validate` | Checks an archive, or a `releases/data` folder: one line per problem, exit 1. In a folder, dotfiles such as `.DS_Store` are ignored. It takes format 1 or 2; for format 2 it also refuses a `summary` over 140 characters, a `description` over 4,000, a `minApp` that isn't `X.Y.Z` and a `size` that isn't the file's. Paths must be relative with no `..`. `--public` also refuses a pack whose licence is not `CC-BY-4.0`, `CC-BY-SA-3.0` or `MIT` (`PUBLIC_LICENCES`) | `python3 tools/data-kit/fbdata.py validate --public dist/fieldbook-data-standalone-1.8.0.zip` |
 | `convert` | Runs `convert.py` with the kit's `overlay.json`, `class-resources.json` and (for `srd`) `srd-corrections.json` filled in, unless the caller names their own (`--overlay PATH` or `--overlay=PATH`; `_given()`) | `python3 tools/data-kit/fbdata.py convert srd _conversion-data/5etools-v2.36.1 -o /tmp/srd` |
 | `build` | One command from a source to a validated archive (below) | `python fbdata.py build ~/5etools/data -o srd.zip` |
@@ -83,10 +84,11 @@ no baseline for shows its version quietly (the `known` state of `dataStatus()`; 
 ### The kit zip
 
 `build.sh`'s `pack_kit` writes `dist/fieldbook-data-kit-<APP_VERSION>[+dev].zip`, and `release.yml`
-attaches it to every app release. It is a flat allowlist of exactly ten files:
+attaches it to every app release. It is a flat allowlist of exactly twelve files:
 
 ```
 fbdata.py                the kit
+fieldbook-version.txt    the Fieldbook version the kit was released with (stamped by pack_kit; read by kit_version())
 README.md                the kit's own guide (tools/data-kit/README.md): the three recipes, what you may share
 convert.py               the converter
 overlay.json             hand-authored effects       (data/overlay.json)
@@ -94,6 +96,7 @@ class-resources.json     hand-authored trackers      (data/class-resources.json)
 srd-corrections.json     the SRD pack's corrections  (scripts/srd-corrections.json)
 README-converter.md      how the converter works     (docs/)
 rules-schema.md          the pack format             (docs/)
+private-sources.md       the owner's guide to private sources (docs/)
 LICENSE
 example-pack/example-pack.json   one invented pack with every category, MIT
 ```
@@ -130,6 +133,7 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
   `CATS` stays in step with `RULE_CATS` in `88-settings.js`.
 - **Only `release.js` and `data-release.js` write versions, digests and `release`**, through
   `versions --bump`. A build or `build` never does.
+- **The kit stamps its Fieldbook version.** In the repo `kit_version()` is `APP_VERSION`; unzipped, it is the first line of `fieldbook-version.txt`, which `pack_kit` writes. `release` refuses a kit that knows neither. It never runs git.
 - **The kit never publishes.** `build` writes a local zip; publishing is the release workflows'.
 - **The kit zip is an allowlist**, flat, guarded after zipping; a new file means editing `pack_kit`'s
   copy and its list together, and `docs.js` checks the kit still carries `srd-corrections.json`.
@@ -163,6 +167,7 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
 | The bundler (R11) | `fbdata.py bundle`, switched only after a byte-for-byte parity test over every pack; `bundle-rules.js` removed | Keeping both: two bundlers that must agree byte for byte |
 | How the kit ships (R12) | One flat zip per app release, `fieldbook-data-kit-<ver>.zip`, with its own allowlist; the app zip drops `scripts/` | Inside the app zip's `scripts/`: every player downloaded it, and `convert.py` missed its helper files in that layout |
 | How `convert.py` finds its inputs from the kit (R12) | `fbdata.py` passes `--overlay`, `--resources` and `--corrections` explicitly | Teaching `convert.py` to look beside itself: changes the converter the byte gates guard |
+| Where `release` takes its defaults (#182, R6) | The current directory, so a kit unzipped anywhere works | The kit's repo root: it points nowhere useful outside Fieldbook |
 | What app releases attach (#82) | `fieldbook.html`, the app zip (with the archive inside), the archive and the kit | — |
 
 ## Open
@@ -186,3 +191,5 @@ the test replaced by golden checks. `convert`, `build`, `validate --public` and 
 - 2026-10-12 — `BUNDLE_FORMAT` joins every digest; a fingerprint test pins the bundler's output per format. → ledger L5627, #86
 - 2026-10-26 — `pack` writes the format-2 manifest; `validate` takes folders and checks the new fields; `release-files` writes `releases/data/`. → ledger L7428, #102
 - 2026-10-26 — `validate <folder>` and `release-files` ignore dotfiles; `data-release.js`'s exit cleanup can't change its exit code. → ledger L7477, #102
+- 2026-11-05 — `release` for an owner's repo, `kit_version()` and the `fieldbook-version.txt` stamp in the kit zip, `release-files --any-licence`; the guide `private-sources.md` joins the kit. → ledger L8943, #182
+- 2026-11-05 — The kit's `release` refuses the public registry only inside a real Fieldbook checkout. → ledger L9046, #182
