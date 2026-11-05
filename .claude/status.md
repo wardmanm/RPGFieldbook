@@ -3,10 +3,12 @@ Updated: 2026-11-05 · Branch: main
 
 ## Current focus
 #182 (private sources) is merged and pushed; CI green. Next: Mike cuts the first private release with
-a pack list (`/release private`, `1.9.0-2`, nothing changed) and installs on his devices with a token
-each; then 1.9.1. No branch open.
+a pack list (`/release private`, `1.9.0-2`, carrying Homebrew's fix) and installs on his devices with
+a token each; then 1.9.1. No branch open.
 
 ## Recent changes
+- 2026-11-05: Homebrew names Xanathar's by its system, `XGE`, so the Extensions page matches its
+  requirement (private c9f53c5, ledger L9061; Mike's yes). Pushed, both repos.
 - 2026-11-05: Merged and pushed #182 (closed): Settings → Extensions installs and updates packs from a private
   GitHub repo with a read-only token the owner sends (one source link); the token stays on the device.
   The data kit gains `release` and a version stamp; `/release private` writes `releases/data/` and can
@@ -35,9 +37,8 @@ each; then 1.9.1. No branch open.
 - None open.
 
 ## Loose ends
-- Mike deletes the #182 test token on GitHub, if not done (the scratch repo is deleted).
-- The first private release with a pack list (`1.9.0-2`, `--allow-unchanged`) and the install on
-  Mike's devices are his to do.
+- The first private release with a pack list (`1.9.0-2`: Homebrew changed, so no `--allow-unchanged`)
+  and the install on Mike's devices are his to do.
 - #182 follow-ups set aside with rulings (ledger L9016): a renamed repo reads "GitHub couldn't be
   reached"; after an import whose file lacked the token, a stale "Needs its token" shows until the next
   check; a public repo's 404 keeps offering its last pack list; a double space in
