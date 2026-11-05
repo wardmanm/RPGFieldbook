@@ -767,7 +767,7 @@ def cmd_release(a):
         if cmd_release_files(argparse.Namespace(bundles=tmp, output=a.output, registry=a.registry,
                                                 built_for=v, any_licence=True)) != 0:
             raise KitError("the release folder did not validate")
-    except KitError:
+    except BaseException:  # KitError, OSError, Ctrl-C: the registry is never left bumped
         with open(a.registry, "wb") as f:  # leave the registry as it was
             f.write(before)
         raise

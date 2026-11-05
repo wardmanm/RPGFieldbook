@@ -1251,6 +1251,24 @@ ck("#182 release carries a pack licensed All rights reserved (no licence error)"
    r.returncode == 0 and os.path.isfile(os.path.join(d, "repo", "releases", "data", "mine_full.json")), r.stdout + r.stderr)
 shutil.rmtree(d)
 
+d = rel_setup()
+write(d, "repo/data/mine/bad.json", raw="{not json")
+before = read_json(d, "repo/data/packs.json")
+r = rel(d)
+after = read_json(d, "repo/data/packs.json")
+ck("#182 release: a pack that fails to bundle exits nonzero and leaves the registry untouched",
+   r.returncode != 0 and after == before and after["release"] == "1.8.0" and after["packs"][0]["version"] == "1.8.0"
+   and "digest" not in after["packs"][0], r.stdout + r.stderr)
+shutil.rmtree(d)
+
+d = rel_setup()
+write(d, "repo/releases/data", raw="a file where the output folder should be")
+before = read_json(d, "repo/data/packs.json")
+r = rel(d)
+ck("#182 release: an OSError (not a KitError) mid-release also restores the registry",
+   r.returncode != 0 and read_json(d, "repo/data/packs.json") == before, r.stdout + r.stderr)
+shutil.rmtree(d)
+
 # ---- add new cases above this line ----
 print("")
 print(("FAILURES: " + ", ".join(FAILED)) if FAILED else "ALL PASSED (%d)" % TOTAL[0])
