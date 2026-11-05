@@ -10,6 +10,8 @@ against the real release (#139), then 1.9.1. No branch open.
   1.8.1-1 → 1.9.0-1, Homebrew 1.8.0 → 1.9.0-1, Humblewood unchanged; one private zip, nothing public.
   Its preflight's leak scan failed on v1.9.0's `releases/data/srd52_full.json`: the SRD run already
   allowed in `data/srd52/tables.json`, now allowed there too (Mike's yes; #138, ledger L8921).
+  #138 closed. Mike: every 1.9.x issue stays on the v1.9.0 milestone, which closes only when all of
+  it is fixed or delivered.
 - 2026-11-05: Released v1.9.0 (Mike: `/release 1.9.0`, "publish", approved in Actions). 36 player
   notes; the SRD 5.2 pack moves to 1.9.0 (#118's feats); the first release carrying `releases/data/`,
   served at the tag. Assets: fieldbook.html, fieldbook-v1.9.0.zip, the standalone data zip and the
@@ -33,12 +35,12 @@ against the real release (#139), then 1.9.1. No branch open.
   You get side alone; looted rules items read Found (Mike).
 
 ## Pending decisions
-- None open.
+- **Make RPGFieldbookPrivate public so the app can install its packs from it?** (raised 2026-11-05,
+  Mike considering it). Options: make it public / keep it private and add a token-authenticated
+  manifest source (the token option #102 left out of 1.9.0) / keep file import as the private
+  packs' path. Blocks: nothing in #139, which checks the public source only.
 
 ## Loose ends
-- #138 (cut the data releases for #118 and #125) is still open on GitHub; both halves have shipped
-  (SRD 5.2 in v1.9.0, the private packs in 1.9.0-1).
 - #139: verify the official extension source against v1.9.0. `releases/data/fieldbook-data.json`
   answers at the tag's raw URL; installing from it in the app is not yet checked.
-- The v1.9.0 milestone is still open on GitHub with 55 open issues, all labelled 1.9.1.
 - Deferred review minors are filed in the 1.9.1 groups #145–#152.
