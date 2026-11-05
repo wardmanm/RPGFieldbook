@@ -9086,3 +9086,14 @@ session, unasked. Everything worth keeping is committed or recorded first (ledge
 ledger, `.claude/status.md`). The handoff is one fenced block for a session that knows nothing:
 Goal, State, Decisions, Read first, Watch out for, First step. No wiki page describes sessions, so
 the rule lives in CLAUDE.md alone.
+
+## 1.9.1 scoped: waves 1–3 and #140; the rest to 1.9.2 (Mike, 2026-11-05)
+
+The 1.9.1 roadmap ([1.9.1](../wiki/roadmap/1.9.1.md)) was drafted from three read-only passes
+over the 54 open `1.9.1` issues: each mapped to the fragments and functions it touches, its size,
+any new saved state, and the design call it needs; then grouped into worktrees by shared functions
+and into waves by dependency. Mike's decisions on it: **1.9.1 is cut after wave 3**, and **#140**
+(deleting the v1.3.0–v1.7.2 releases' copyrighted assets) goes into it; **everything after wave 3
+moves to 1.9.2**, not yet scoped. The 22 issues of waves 4–5 were relabelled `1.9.1` → `1.9.2`
+(a new label); all stay on the v1.9.0 milestone, which holds every 1.9.x issue. 1.9.1 is now 32
+issues: the 24 P1s and 8 P2s that ride along in the same functions.
