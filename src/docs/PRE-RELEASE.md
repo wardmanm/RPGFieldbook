@@ -6,8 +6,8 @@ Started: 2026-10-30 · App was 1.8.1
 | 1. Docs | done | 2026-10-30 | 22 specs and 21 plans filed by version, roadmap 1.9.0 archived; 3 sections archived, 16 corrections; 426 references rewritten in 75 files |
 | 2. Outstanding issues | done | 2026-10-30 | 121 rows: 25 filed (#128 to #152; 17 P1, 8 grouped P2), 2 noted on #100, 7 decided by Mike and skipped; numbers written back |
 | 3. QA checklist | done | 2026-11-04 | Test pass: 12 feature sections, across the app and a device pass, 84 lines for Mike; rebuilt 2026-11-04 for the work since: 9 new lines and 2 reworded (11 for Mike), 84 marks carried forward; pre-drive re-run for the touched areas and the new work (99 lines: 97 passed, 2 failed) |
-| 4. QA bugs | done | 2026-11-04 | Test pass finished (95 lines ticked, no FAIL); 26 rows: 4 P0 (all fixed and closed), 5 P1 and 14 P2 filed for 1.9.1, 3 features from the pass; 9 closed; no P0 open |
-| 5. Release notes | open | | |
+| 4. QA bugs | done | 2026-11-04 | Test pass finished (95 lines ticked, no FAIL); 26 rows (4 P0, 5 P1, 14 P2, 3 features from the pass): 9 fixed in 1.9.0 and closed, 17 open for 1.9.1; no P0 open |
+| 5. Release notes | done | 2026-11-05 | 37 notes read: 3 rewritten (checklists, Trade, End combat), 1 folded into another (combat header into initiative tracker), 33 kept; 36 notes in What's new; final yes from Mike |
 
 ## Step 2: outstanding issues
 | Item | Source | Title | Priority | Decision | Issue |

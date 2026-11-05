@@ -29,11 +29,11 @@ Bullets below this line — leave the heading in place.
 ## Pending
 
 - Hide the tabs a character doesn't use (Settings → Sheet display → Tabs).
-- Journal pages can hold checklists: a line starting `[ ]` or `[x]` is a checkbox you can tick in
-  the page itself, and the page list shows how many are done. Section notes and the text fields on
-  the Bio tab tick the same way, and the journal and section-note editors have an Insert checkbox
-  button. Checklist and task trackers you already had have moved
-  into journal pages, ticks and dates included; Trackers now holds counters only.
+- Journal pages can hold checklists: start a line with [ ] or [x] and it becomes a box you can tick
+  on the page, and the page list shows how many are done. Section notes and the Bio tab's text
+  fields tick the same way, and the journal and section-note editors have an Insert checkbox button.
+  Checklist and task trackers you already had are now journal pages, ticks and dates included;
+  Trackers holds counters only.
 - A tracker group can show the total of its counters: tap the Σ on the group's heading.
 - Trackers lay out as tiles across the card instead of one long list.
 - Choose how ammunition comes back after a fight in Settings → Sheet display: half (the rules as
@@ -69,13 +69,13 @@ Bullets below this line — leave the heading in place.
 - An initiative tracker in the combat view: roll initiative when combat starts, follow the order turn by
   turn or round by round, and track everyone's health at a glance. Whoever is acting stays in the middle
   of the strip, with who has gone on the left and who is still to come on the right; anyone who doesn't
-  fit is a tap away under +N, and Prev steps back a turn.
+  fit is a tap away under +N, and Prev steps back a turn. The title and round sit in the middle of the
+  combat header, and End combat moves to the bottom, beside a Combatants button that opens the full list.
 - A Party card on the Bio tab: your companions join every fight you start.
-- Trade from the Inventory tab: give items and coins, get items and coins, see whether it
-  balances, and complete it in one step. Selling for more than something is worth reads as in
-  your favour, not short. Balance trade fills in the coins that even it up: yours when you owe,
-  splitting a gold piece into silver if you need change, or the other side's when you're giving
-  more. Completing a trade where you give more than you get asks first.
+- Trade from the Inventory tab: give and get items and coins, see whether it balances, and complete
+  it in one step. Balance trade fills in the coins that even it up, yours or the other side's,
+  splitting a gold piece into silver when you need change. A trade where you give more than you get
+  asks before it completes.
 - An inventory log records every change to your items and coins, and lets you undo any change
   that can still be reversed. It notes what leaves when you remove a class, background or
   ancestry, and each fight's ammunition, counting arrows you recovered mid-fight. Making the log
@@ -110,7 +110,7 @@ Bullets below this line — leave the heading in place.
   more: it needs spells from Xanathar's Guide, which Fieldbook no longer hands out. If you've
   installed it, it keeps working, but it won't get updates from there.
 - End combat now asks in Fieldbook's own window, then opens an End of combat window that wraps the fight up:
-  the rounds and time, who fell, the ammunition that came back (with Undo recovery), an XP box that can split
+  the rounds and time, who fell, the ammunition that came back (with Undo), an XP box that can split
   the XP among your party and opens the level-up when it reaches a level, and Open loot to add the coins and
   items you took. Each section folds away and remembers how you left it. XP your sheet holds as words, like
   "6350 xp", is never overwritten: the window tells you to fix it on the sheet instead.
@@ -124,5 +124,3 @@ Bullets below this line — leave the heading in place.
   backgrounds can now be picked from the list. The Add background window no longer shows them empty
   ability-score boxes, and adds them in one click; their info cards no longer show empty Ability
   Scores and Feat lines.
-- The combat header is rearranged: the title and round sit together in the middle between the round
-  arrows, and End combat moves to the bottom, beside a Combatants button that opens the full list.
