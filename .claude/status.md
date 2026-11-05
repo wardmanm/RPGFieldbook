@@ -2,12 +2,12 @@
 Updated: 2026-11-05 · Branch: main
 
 ## Current focus
-#182 (private sources) is merged on main, not pushed. Next: push; then Mike cuts the first private
-release with a pack list (`/release private`, `1.9.0-2`, nothing changed) and installs on his devices
-with a token each; then 1.9.1. No branch open.
+#182 (private sources) is merged and pushed; CI green. Next: Mike cuts the first private release with
+a pack list (`/release private`, `1.9.0-2`, nothing changed) and installs on his devices with a token
+each; then 1.9.1. No branch open.
 
 ## Recent changes
-- 2026-11-05: Merged #182, not pushed: Settings → Extensions installs and updates packs from a private
+- 2026-11-05: Merged and pushed #182 (closed): Settings → Extensions installs and updates packs from a private
   GitHub repo with a read-only token the owner sends (one source link); the token stays on the device.
   The data kit gains `release` and a version stamp; `/release private` writes `releases/data/` and can
   release with nothing changed (`--allow-unchanged`); an owner's guide ships in `docs/` (four files
@@ -35,12 +35,9 @@ with a token each; then 1.9.1. No branch open.
 - None open.
 
 ## Loose ends
-- main is 22 commits ahead of origin (#182 and its artifact rebuild): waiting on Mike's yes to push.
-- The scratch repo `wardmanm/fieldbook-token-probe` (an empty pack list) still exists: `gh` lacks the
-  `delete_repo` scope, so Mike deletes it on github.com or runs
-  `gh auth refresh -h github.com -s delete_repo`. Mike deletes the test token too.
+- Mike deletes the #182 test token on GitHub, if not done (the scratch repo is deleted).
 - The first private release with a pack list (`1.9.0-2`, `--allow-unchanged`) and the install on
-  Mike's devices are his to do after the push.
+  Mike's devices are his to do.
 - #182 follow-ups set aside with rulings (ledger L9016): a renamed repo reads "GitHub couldn't be
   reached"; after an import whose file lacked the token, a stale "Needs its token" shows until the next
   check; a public repo's 404 keeps offering its last pack list; a double space in
