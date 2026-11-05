@@ -2,11 +2,14 @@
 Updated: 2026-11-05 · Branch: main
 
 ## Current focus
-#182 (private sources) is merged and pushed, and private data 1.9.0-2 carries the first pack list the
-app can install from. Installing needs the next app release (1.9.1, #182 is its one note so far) or
-`dist/fieldbook.html` from main. Then 1.9.1. No branch open.
+1.9.1 is scoped (Mike, 2026-11-05): waves 1–3 of `src/docs/wiki/roadmap/1.9.1.md` plus #140, 32 issues
+labelled `1.9.1`; cut after wave 3. Waves 4–5 (22 issues) moved to `1.9.2`, not scoped yet. Next: wave
+1's six design calls with Mike, then its seven worktrees. No branch open.
 
 ## Recent changes
+- 2026-11-05: Scoped 1.9.1 (Mike): the roadmap's waves 1–3 and #140; waves 4–5 relabelled `1.9.2`
+  (22 issues, new label); everything stays on the v1.9.0 milestone (ledger L9090). Filed #183 (P2,
+  1.9.2): #182's four set-aside follow-ups. Added CLAUDE.md's "Context handoffs" rule (Mike).
 - 2026-11-05: Released private data 1.9.0-2 (Mike: `/release private`, "publish"): Homebrew
   1.9.0-1 → 1.9.0-2 (the XGE name), the others unchanged; the tag carries `releases/data/` (the pack
   list and five packs), so private sources can install from it. One private zip; nothing public.
@@ -32,9 +35,6 @@ app can install from. Installing needs the next app release (1.9.1, #182 is its 
   1.9.0, 17 open for 1.9.1, no P0 open.
 - 2026-11-04: Merged and pushed #181 (P0): Undo on a second class's level-up card restores the sheet
   from before Add class.
-- 2026-11-04: Merged and pushed #180 (Mike): one command for a release; `/pre-release` is gone.
-- 2026-11-04: Filed #169–#179 with Mike's priorities, all for 1.9.1.
-- 2026-11-04: Merged and pushed #168 (Balance trade), #167 (journal page styles), #166 (loot-only trade).
 
 ## Pending decisions
 - None open.
@@ -42,9 +42,5 @@ app can install from. Installing needs the next app release (1.9.1, #182 is its 
 ## Loose ends
 - Installing RPGFieldbookPrivate through Extensions on Mike's devices (a read-only token each) is his
   to do, with an app that has #182 (main's build now, or the next app release).
-- #182 follow-ups set aside with rulings (ledger L9016): a renamed repo reads "GitHub couldn't be
-  reached"; after an import whose file lacked the token, a stale "Needs its token" shows until the next
-  check; a public repo's 404 keeps offering its last pack list; a double space in
-  `settings-and-updates.md`. Not filed as issues yet.
 - 1 player-visible note in `UNRELEASED.md` (#182), not released.
-- Deferred review minors are filed in the 1.9.1 groups #145–#152.
+- Deferred review minors are filed in the groups #145–#152, now labelled 1.9.2.
