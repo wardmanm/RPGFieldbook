@@ -291,3 +291,33 @@ The ledger; [Settings & updates](../wiki/features/settings-and-updates.md),
 [Building & CI](../wiki/process/building-and-ci.md) (the zip allowlist), and
 [Decisions](../wiki/decisions.md); CLAUDE.md's "an allowlist of exactly three files" becomes four;
 the kit's README; `RELEASING.md` for `/release private`; an `UNRELEASED.md` bullet for players.
+
+## 10. As built (2026-11-05)
+
+Built as designed, in nine tasks (plan `plans/2026-11-05-private-sources.md`). Where it differs or
+adds:
+
+- **`--allow-unchanged` works for the public registry too** (§5.8 named private and the kit): one
+  flag path, the same rule, in `data-release.js`.
+- **`release` defaults are cwd-relative** (R6): `--registry data/packs.json`, `--data-root data`,
+  `-o releases/data` from the current directory, since an unzipped kit has no repo around it.
+- **The kit's version stamp** is `fieldbook-version.txt`, written by `pack_kit` and read by
+  `kit_version()`.
+- **The guide, `docs/private-sources.md`,** ships in the app zip and the kit zip. The kit zip is a
+  separate release attachment, not inside the app zip.
+- **Tag pages have a 1 MiB cap of their own** (`EXT_GH_TAGS_MAX`, up to ten pages of 100): a repo
+  with many tags exceeded the 64 KB manifest cap.
+- **A source's entry carries `note` and `needsToken`** as well as §5.2's fields; `convertSources()`
+  keeps them (R1). Re-pasting a link and Change token clear `needsToken` and the error and re-check
+  (R2). A 403 that is not a rate limit uses the "can't see the repo" wording (R3). The API-version
+  header is sent on the github source's calls only (R4).
+
+**Verified:** the check outcomes and wordings, the host guard, link parsing, tag picking, add and
+replace token, export without the token and import keeping it (`data-archive.js`); `release`, the
+stamp, `--any-licence`, restoring the registry (`data-kit.py`); the release scripts in a scratch
+repo; the row and Change token driven in the browser (screenshots in the main checkout's
+`.claude/qa/in-progress/182-private-sources/`).
+
+**Not verified:** the real-token probe (plan Task 1) against GitHub's live API, and the install on
+Mike's devices, each with its own token, after he cuts the first private release with
+`releases/data/` (`1.9.0-2`, `--allow-unchanged`). Both are his pass.

@@ -93,7 +93,7 @@ The name is `dist/fieldbook-v<APP_VERSION>.zip`, or `…+dev.zip` when this is n
 extra", which is what such a build is.
 
 Contents are an **allowlist**, assembled in `.buildtmp/`: `fieldbook.html` at the zip root, `README.md`,
-`LICENSE`, `data/` holding only the rules-data archive, and `docs/*.md`. That is README §9. Fieldbook
+`LICENSE`, `data/` holding only the rules-data archive, and `docs/*.md` (four files: `CHANGELOG.md`, `README-converter.md`, `rules-schema.md`, and `private-sources.md`, the owner's guide to private sources, #182). That is README §9. Fieldbook
 opens this zip as it is: it finds the archive inside it. There is deliberately **no `scripts/`
 here** (#85) — `convert.py` and its hand-authored inputs travel in the data kit zip instead (below),
 so an advanced player gets the converter from the same place on every release, not by digging into
@@ -119,9 +119,9 @@ right after the player zip and its guard. Unlike the player zip it is a **flat**
 a scratch `.buildkit/` (gitignored beside `.buildtmp/`) and copied with no subfolders except
 `example-pack/`, so `python fbdata.py build …` finds everything it needs beside itself the moment the
 zip is unpacked, anywhere, with no repo around it — that is what `kit_file()` looks for first. Its
-ten files: `fbdata.py`, the kit's own `README.md`, `convert.py`, its three hand-authored inputs
-(`overlay.json`, `class-resources.json`, `srd-corrections.json`), the two player-facing docs
-(`README-converter.md`, `rules-schema.md`), `LICENSE`, and `example-pack/example-pack.json` — one
+twelve files: `fbdata.py`, `fieldbook-version.txt` (the version `pack_kit` stamps, #182), the kit's own `README.md`, `convert.py`, its three hand-authored inputs
+(`overlay.json`, `class-resources.json`, `srd-corrections.json`), the three player-facing docs
+(`README-converter.md`, `rules-schema.md`, `private-sources.md`), `LICENSE`, and `example-pack/example-pack.json` — one
 invented pack covering every category in `rules-schema.md`, licensed MIT, so a kit user (and
 `data-kit.py`) has something to build without a 5e-tools dump. `pack_kit` checks its own output
 with `unzip -Z1` against that exact file list and deletes the zip on a mismatch, the same discipline
@@ -442,3 +442,4 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 - 2026-11-02 — `/issue` files a bug, feature or task; both filing blocks find the item project #3 auto-adds. → ledger L8230
 - 2026-11-02 — `/pre-release` step 3: the test pass is Mike's high-level manual pass by feature; Claude's pre-drive is a separate report. → ledger L8249
 - 2026-11-04 — The pre-release becomes part of `/release` (`.claude/skills/release/pre-release.md`): one command runs the open steps, stops when one waits on Mike, and goes on to the cut. → ledger L8860, #180
+- 2026-11-05 — `docs/private-sources.md` joins the app zip's allowlist and the kit zip, which also carries a `fieldbook-version.txt` stamp; `/release private` writes `releases/data/` and offers `--allow-unchanged`. → ledger L8943, #182

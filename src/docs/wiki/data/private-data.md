@@ -199,8 +199,10 @@ A private release is a data-only release in the public scheme (spec R4): changed
 node scripts/data-release.js --registry _private-data/data/packs.json --data-root _private-data/data
 ```
 
-It bumps the changed packs in the private registry, refuses what a public data release refuses
-(nothing changed, uncommitted data, an existing tag, an `APP_VERSION` before 1.8.0), and prints the
+It bumps the changed packs in the private registry, also writes `releases/data/` into the private repo
+(built without the public licence check, `--any-licence`, and committed with the "Data release" commit
+before the tag) so the app's private sources can install from the tag (#182), refuses what a public data
+release refuses (nothing changed, unless `--allow-unchanged`, which moves only the registry's `release`; uncommitted data, an existing tag, an `APP_VERSION` before 1.8.0), and prints the
 commit and tag commands to run in the private repo. Pushing the tag runs the private
 `data-release.yml`: it checks that the public app has a `vX.Y.Z` tag, that the tag matches the
 registry's `release` and no pack changed after the bump; builds the public app at `vX.Y.Z`; runs the
@@ -320,6 +322,7 @@ imports the public archive and then the private one resolves a shared table name
 | The private repo's layout (R2) | Mirror the public paths | Its own layout: the kit and `convert.py` would need a second mode |
 | The public registry (R3) | Drops the four packs in the removal commit | Keeping them: installed apps would announce updates that never resolve |
 | How private packs are released (R4) | Data-only releases, `X.Y.Z-N`, `fieldbook-data-private-<ver>.zip`, through `data-release.js --registry` | A second version scheme: no app release ever bumps a private pack, so the existing one fits |
+| How the app installs private packs (#182) | Through Extensions: a GitHub source on a token per device, reading the private repo's `releases/data/` at its newest tag. The repo stays private | Making the repo public (copyrighted text; clones and forks survive going private again; a takedown lands on public Fieldbook's account) |
 | A pack the build has no baseline for (R5) | A quiet `vX` chip, the `known` state | Nothing: a v1.7.2 player's old packs would lose their version |
 | Shipped book quotes (R7) | Invented examples in the templates Get templates downloaded (removed in #102), README-converter and rules-schema | Allowlisting them: they ship to every player |
 | `srd-corrections.json`'s `find` strings (R8) | Kept, allowlisted; for Mike to confirm | Rewording them: they must match the dump's text to correct it |
@@ -344,6 +347,7 @@ imports the public archive and then the private one resolves a shared table name
 
 ## Open
 
+- **The first installable private release is Mike's to cut**: no tag before `data-v1.9.0-1` has `releases/data/`, so `/release private` offers `--allow-unchanged` (`1.9.0-2`); his devices then install through Extensions, a token each. The live-token probe (plan Task 1) is still to run.
 - **Private packs get no newer-data notice**: `checkForDataUpdate()` reads the public registry
   (spec §8). Mike knows when he has cut one.
 - **The old releases' data stays reachable until 2.0**, through GitHub's Source code archives of
@@ -366,3 +370,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-28 — Homebrew moves here with its licence and credit; the leak scan keeps reading the public `data/homebrew/` as free text where an older ref has it; the push order when both repos change. → ledger L7858, #125
 - 2026-10-29 — `move-docs.js` rewrites the leak allowlist's paths when `/pre-release` moves an allowlisted doc; committed here, pushed after public main. → ledger L8167, #127
 - 2026-11-05 — The leak scan reads `releases/data/` since 1.9.0 commits it; the bundled SRD pack's run is allowed as the SRD's own text, as in `data/srd52/`. → ledger L8921, #138
+- 2026-11-05 — Private data releases write `releases/data/`; `--allow-unchanged`; the app can install from the private repo through a GitHub source. → ledger L8943, #182

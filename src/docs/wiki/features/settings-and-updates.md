@@ -17,7 +17,7 @@ backup of settings and rules, and the credits that the icons and the loaded pack
 `applyFetchedSource()`, `importRulesFiles()`, `poolFromExport()`,
 `requiresStatusHTML()` in `89-rules-merge.js` · `extPageHTML()`, `extSecHTML()`, `extRowHTML()`, `extChipsHTML()`,
 `extReqChip()`, `extReqTap()`, `extSourcesHTML()`, `extDetailsHTML()`, `openExtDetails()`, `renderExtUI()`,
-`extFocusTargets()`, `wireExtPage()`, `extUpdateFromRows()`, `extPlanHTML()`, `extPlanRow()`, `openInstallPlan()`,
+`extFocusTargets()`, `wireExtPage()`, `extGithubLink()`, `extGhApi()`, `extGhHeaders()`, `extGhPickTag()`, `extGhTags()`, `extGhWhy()`, `addSource()`, `openChangeToken()`, `extSettingsForExport()`, `extKeepTokens()`, `extUpdateFromRows()`, `extPlanHTML()`, `extPlanRow()`, `openInstallPlan()`,
 `extInstalledText()`, `openManualInstall()`, `extManualPlan()`, `extSkippedNote()`, `extWireDrop()`, `extDropZone()`,
 `renderExtPill()`, `extPillCount()`, `dismissUpdates()`, `extPillFocusBack()`, `extTooNewWhy()` in
 `89-extensions.js` · `rulesUpdatePending()` in `88-settings.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
@@ -115,9 +115,29 @@ binds one delegated click listener to each fresh `#extPage`. From the top:
 - **Sources**, with a count: Fieldbook public data, "built in · checked *time*", with its switch
   (switching it on checks it); each manifest source as "*name* (*host*)", "*host/path* ·
   checked *time*" or, in red, "couldn't check: *reason*", with **Remove**; each plain source with
-  **Fetch** and **Remove**. Below: the URL box and **+ Add a source URL**, then **Check now** and
+  **Fetch** and **Remove**; each private GitHub source (below) as `owner/repo`, "private · token ending
+  …abcd" (or "public repo") and its check line, with **Change token** and **Remove**. Below: the URL box and **+ Add a source URL**, then **Check now** and
   **Manual install…**. The header's **Remove all** removes every added source and switches the
   official one off, after a confirm; installed packs stay.
+
+**A GitHub source** (#182). The URL box also takes a **source link**, `https://github.com/<owner>/<repo>#token=<token>`
+(`extGithubLink()`), or a bare `owner/repo` for a public repo. `addSource()` checks the repo once first
+and adds it only if it answers; otherwise it says why in words and adds nothing. The token leaves the box
+as soon as it is read and shows afterwards only as its last four characters; pasting the link again, or
+**Change token** (`openChangeToken()`), replaces it. The source is `{kind:"github", repo, token, tag, ...}`
+in `settings.sources`. Its check (`checkSource()`) lists the repo's tags through GitHub's REST API
+(`extGhApi()`, `extGhTags()`: pages of 100, ten at most, a 1 MiB cap of their own), takes the newest
+`data-vX.Y.Z-N` made for this app or an older one (`extGhPickTag()`), and reads
+`releases/data/fieldbook-data.json` at that tag as any manifest; packs are read through the same contents
+call at the same tag (`offerCandidate()`), then #102's pipeline. The token goes only as
+`Authorization: Bearer` to `https://api.github.com/` (`extFetchBytes()` refuses any other host) and never
+into a URL, message, toast or the DOM. A failure keeps the last good manifest and the row says it
+(`extGhWhy()`): 401 "The repo refused this token. It may have expired or been deleted: ask the repo's
+owner for a new one."; 404 or 403 with a token "This token can't see the repo…"; 404 without one "No
+public repo at this address. If it's private, add its token."; a rate limit "GitHub's limit for this hour
+is used up…"; a newest release with no pack list names the tag and says the owner needs to cut one; an
+imported source with no token "Needs its token: paste the source link again." Installed packs keep
+working through all of them.
 
 **How a source is named.** A manifest names itself, so anyone can publish one called "Fieldbook
 public data". `extSourceName()` gives every manifest source as "*name* (*host*)", the host taken from
@@ -378,9 +398,20 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 | The plan while it installs (#102, Ruling 14) | Can't be dismissed; × and Escape say to wait | Dismissed but still running, toasting later: more confusing than a wait bounded by the file timeout (L7428) |
 | Where a player hides a tab (#52) | Settings → Sheet display gets a Tabs group, one switch per word tab | A long-press on the tab itself to unhide it: invisible, and clashes with the phone's own long-press gesture |
 | Feats allowed's default (#118, decision 4) | On for every character: feats are core in 2024 and SRD 5.2, and Humblewood's own text offers them | Off for Humblewood: its text says otherwise. Asked once per character: one more dialog |
+| Who makes a player's token (#182) | The owner, one read-only fine-grained token per player (their account as resource owner, one repo, Contents read-only, an expiry); players need no GitHub account | Players as collaborators making their own: a fine-grained token has one resource owner, and the only way round is a classic token that reads and writes every repo the player reaches |
+| How an owner publishes (#182) | Numbered releases tagged `data-vX.Y.Z-N` in the repo, made with the kit's `release`; pushing `main` publishes nothing | "Push and the table sees it": no versions to match against the app |
+| Which release a player gets (#182) | The newest made for their Fieldbook or an older one (`minApp` rule of #102) | The newest regardless: it may need app code the player lacks |
+| How the app reads a private repo (#182) | Only GitHub's REST API (`api.github.com`) with the token in an `Authorization` header; the pack list and files committed at the tag in `releases/data/` | `raw.githubusercontent.com` (the browser refuses a token-bearing request) and release attachments (the download redirect is refused), both found in the spike |
+| What the owner sends (#182) | One source link, `https://github.com/<owner>/<repo>#token=<token>` | Two fields: twice the chance to get one wrong |
+| Where the token lives (#182) | On the device only, in `settings`; never in a character, never in the Settings export, shown only as its last four characters | In the export: that file gets passed around |
+| A token that stops working (#182) | The row says so and what to do and offers Change token; installed packs keep working | Removing the source or its packs: deletion behind the player's back |
+| Hosts, and a public repo (#182) | GitHub only; the token is optional, so a public repo laid out the same way works by address alone | Other hosts: no one asked, each has its own token and CORS rules. Forbidding a tokenless repo: code to prevent something that works |
+| Installed private packs in the Settings export (#182) | They stay, like every installed pack: it is the player's own backup, and the guide tells owners a player who installs a pack holds a full copy | Filtering by origin: an import that has to explain the gaps, to guard text the player already has |
+| The owner's guide (#182) | `docs/private-sources.md`, shipped in the app zip (`docs/` is four files) and the kit zip | Only the kit's README: an owner sets up the repo and tokens before opening the kit |
 
 ## Open
 
+- **The private source is verified against a recorded GitHub API, not a live token** (#182). The real-token probe (plan Task 1) and an install on Mike's devices are still to do. A source works only for GitHub, and a token made without Contents: Read-only reads as "can't see the repo".
 - **Private packs get no newer-data notice.** The data check reads the public registry, which lists
   only SRD 5.2 since #125 (and SRD 5.2 and Homebrew from #85), so a private pack's row shows its
   version quietly (`known`) and never "out", and so does a public player's old Homebrew once the
@@ -393,7 +424,11 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - **Import settings offers keep or replace, not merge.** Adding the file's packs to what is loaded
   was not built; the player can import the files themselves instead.
 - **Import settings replaces `settings.sources` with the file's list** when the file has one, like
-  every other setting in it. Sources added since the export are dropped; what they installed stays
+  every other setting in it, except that a GitHub source's **token never travels in the file**
+  (`extSettingsForExport()` writes `token:""`; `extKeepTokens()` makes an import keep this device's own
+  token for the same repo, and a source new to the device arrives asking for its token). The packs it
+  installed stay in the export like any installed pack (#182: the file is the player's own backup).
+  Sources added since the export are dropped; what they installed stays
   loaded unless the player chooses Replace my rules. An older file's `rulesSources` join the list
   instead.
 - More in [Known issues](../roadmap/known-issues.md).
@@ -433,3 +468,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-26 — URLs shown as text (the Sources sub-line, the details' Manifest and Homepage) are stripped of invisible characters too. → ledger L7546, #102
 - 2026-10-27 — Sheet display gains "Feats allowed" in Levels and companions, writing `character.featsAllowed` (on by default). → ledger L7569, #118
 - 2026-10-28 — The public registry lists SRD 5.2 alone; an installed Homebrew shows its version quietly, with no updates. → ledger L7858, #125
+- 2026-11-05 — A `github` source kind: a source link or `owner/repo` in the URL box, tags and packs read through `api.github.com` with a per-device token, the row, Change token, the wordings for each failure, and a Settings export that never carries the token. → ledger L8943, #182

@@ -282,7 +282,7 @@ the notebook. A private registry writes `releases/data/` too, into the private r
 app's private sources can install from the tag. It
 refuses when `APP_VERSION` is older than 1.8.0 (the first release that can open the data zip at
 all), when `data/` has uncommitted changes (the digests must describe what gets tagged), when no
-pack changed, when the registry's `release` belongs to another app version, and when the tag
+pack changed (unless `--allow-unchanged`, which releases anyway and moves only `release`; it works for public and private registries), when the registry's `release` belongs to another app version, and when the tag
 already exists. Then it prints, and never runs:
 
 ```bash
@@ -359,7 +359,7 @@ It bumps the changed packs in the **private** registry and writes `releases/data
 repo (the files an app private source installs from the tag; built without the public licence
 check). `--allow-unchanged` releases although no pack changed, to publish a pack list: it moves only
 the registry's `release`. It refuses what a public data release refuses
-(nothing changed, uncommitted data in the private checkout, an existing tag), and prints the
+(nothing changed, unless `--allow-unchanged`, uncommitted data in the private checkout, an existing tag), and prints the
 commands, which run against the private repo (`git -C <private repo> …`), never this one:
 
 ```bash

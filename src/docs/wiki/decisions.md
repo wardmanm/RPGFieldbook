@@ -473,6 +473,16 @@ When a page gains a Decisions row, add its line here under that page.
 - **Feats allowed's default (#118, decision 4)** — On for every character
 
 ## UI
+- **Who makes a player's token (#182)** — The owner, one read-only fine-grained token per player (their account as resource owner, one repo, Contents read-only, an expiry)
+- **How an owner publishes (#182)** — Numbered releases tagged `data-vX.Y.Z-N` in the repo, made with the kit's `release`
+- **Which release a player gets (#182)** — The newest made for their Fieldbook or an older one (`minApp` rule of #102)
+- **How the app reads a private repo (#182)** — Only GitHub's REST API (`api.github.com`) with the token in an `Authorization` header
+- **What the owner sends (#182)** — One source link, `https://github.com/<owner>/<repo>#token=<token>`
+- **Where the token lives (#182)** — On the device only, in `settings`
+- **A token that stops working (#182)** — The row says so and what to do and offers Change token
+- **Hosts, and a public repo (#182)** — GitHub only; the token is optional, so a public repo works by address alone
+- **Installed private packs in the Settings export (#182)** — They stay, like every installed pack: it is the player's own backup, and the guide tells owners a player who installs a pack holds a full copy
+- **The owner's guide (#182)** — `docs/private-sources.md`, shipped in the app zip (`docs/` is four files) and the kit zip
 
 ### [Shell](ui/shell.md)
 
