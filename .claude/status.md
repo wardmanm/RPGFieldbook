@@ -1,62 +1,43 @@
 # Status: Fieldbook
-Updated: 2026-11-04 · Branch: main
+Updated: 2026-11-05 · Branch: main
 
 ## Current focus
-Releasing 1.9.0. Mike's test pass is finished (all 86 lines ticked, no FAIL lines) and every bug it
-found is fixed or filed for 1.9.1. Next: `/release 1.9.0`, which (since #180) closes the pre-release's
-step 4, runs step 5 (release notes), then the version gate and the cut; then the private data
-release. No branch open.
+v1.9.0 is out. Next: the private data release (`/release private`: 1.9.0-1 for the 2024, Xanathar's,
+Tasha's and Homebrew packs, #138), then checking the official extension source against the real
+release (#139), then 1.9.1. No branch open.
 
 ## Recent changes
+- 2026-11-05: Released v1.9.0 (Mike: `/release 1.9.0`, "publish", approved in Actions). 36 player
+  notes; the SRD 5.2 pack moves to 1.9.0 (#118's feats); the first release carrying `releases/data/`,
+  served at the tag. Assets: fieldbook.html, fieldbook-v1.9.0.zip, the standalone data zip and the
+  data kit; marked latest; nothing private.
+- 2026-11-05: Pre-release 1.9.0 step 5: Mike approved the release notes, with 3 rewritten
+  (checklists, Trade, End combat) and the combat header note folded into the initiative tracker's.
+- 2026-11-04: Pre-release step 4: Mike's test pass finished (95 lines ticked, no FAIL); 26 bugs and
+  features from it: 9 fixed in 1.9.0, 17 open for 1.9.1, no P0 open.
+- 2026-11-04: Merged and pushed #181 (P0 from the test pass): Undo on a second class's level-up card
+  restores the sheet from before Add class; it had restored the previous level-up's copy.
 - 2026-11-04: Merged and pushed #180 (Mike): one command for a release. `/release X.Y.Z` runs the open
   pre-release steps first, stops when one waits on Mike, and goes on to the cut; `/pre-release` is gone.
-- 2026-11-04: Filed the pre-drive's probable bugs with Mike's priorities: #170 (Undo recovery gives ammo
-  back again, P1), #171 (high-level start's ASIs past the cap, P1), #172–#179 (P2), all for 1.9.1. #179 was
-  filed through the REST API while GitHub's project API was rate-limited; its Priority and Status are
-  set after the hourly reset.
-- 2026-11-04: Filed #169 (P2, 1.9.1: a 2024 background typed into Or custom name gets no ability
-  increase) and noted Stonesinger's run-on Stonewise text on #160 (Mike's yes to both).
-- 2026-11-04: Merged and pushed #168 (feature from the test pass): Balance trade fills the coins that even
-  a trade (yours biggest first, splitting a bigger coin for change; or the other side's in gp/sp/cp);
-  typed coins split too; Complete warns in the app's window when short or giving more. Mike approved
-  both rulings (typed coins split; Balance pays a sale's extra back). Pushed with #166 and #167.
-- 2026-11-04: Merged #167 (feature from the test pass, Mike's mockup picks), not pushed: an open journal
-  page sits on a page, in a style picked per page in the editor (Sheet, the default; Notebook; Book;
-  Parchment), in both skins and themes.
-  Follow-up merged the same day (Mike: "really tight margins"): Notebook's rules 30px apart, room above,
-  below and beside the writing.
-- 2026-11-04: Merged #166 (P2 from the test pass), not pushed: End of combat's Open loot opens the trade
-  window as Loot, its You get side alone (From, Worth, Take loot; no You give, tabs or switches), logged
-  "Looted from …" under Trades; the Equipment card's Trade is unchanged. Mike: looted rules items read
-  Found, as built, and loot sources stay as name chips in the ordinary Trade's With box.
-- 2026-11-04: Merged #165 (feature from the test pass, Mike's mockup picks): the initiative strip keeps
-  the acting combatant in the middle, overflow goes into +N lists in order, and ◂ Prev steps back a turn
-  (across a round's top too); during a fight the header is three rows: title and round centred between
-  the round arrows, the strip, then a centred foot with Combatants ▾ and End combat. Pushed with #161/#162.
-- 2026-11-04: Merged #161 (P0) and #162 (P2): Roll initiative is the ordinary dialog,
-  which grows and scrolls, so Start is always in reach (three monster rows clipped it on a phone); the
-  "I rolled" box sits beside its words in Roll initiative, Spend a Hit Die and level-up HP. Filed from
-  the same report: #163 (paw companions don't join initiative, P1, 1.9.1) and #164 (a phone's monster
-  row wraps its Init box, P2, 1.9.1).
-- 2026-11-04: Merged #159 (P0 from the test pass): seven Humblewood backgrounds with no ability scores
-  (Ambassador, Underscout, Courtier, Seaborn, Stonesinger, Warrenborn, Wonderstruck) can be added; the
-  Add background window drew empty +2/+1 boxes and refused. Their missing skills, tools, languages and
-  equipment are #160 (P1, 1.9.1). Mike: keep the accidental test issues #156 and #157 (closed, not
-  planned), don't delete them.
+- 2026-11-04: Filed the pre-drive's probable bugs with Mike's priorities: #170 (P1), #171 (P1),
+  #172–#179 (P2), all for 1.9.1; #179's Priority and Status set after GitHub's rate limit reset.
+  Filed #169 (P2) and noted Stonesinger's run-on text on #160.
+- 2026-11-04: Merged and pushed #168: Balance trade fills the coins that even a trade, splitting a
+  bigger coin for change; Complete warns when short or giving more.
+- 2026-11-04: Merged and pushed #167: an open journal page sits on a page in a style picked per page
+  (Sheet, the default; Notebook; Book; Parchment); a follow-up gave Notebook room (Mike).
+- 2026-11-04: Merged and pushed #166: End of combat's Open loot opens the trade window as Loot, its
+  You get side alone; looted rules items read Found (Mike).
+- 2026-11-04: Merged and pushed #165: the initiative strip keeps the acting combatant in the middle,
+  with +N overflow and ◂ Prev; the fight header is three rows.
 
 ## Pending decisions
 - None open.
 
 ## Loose ends
-- `src/docs/PRE-RELEASE.md`: the step 4 rows for #158–#179 are uncommitted; the next `/release`
-  run commits them.
-- 37 player-visible notes in `src/docs/UNRELEASED.md`, not released (APP_VERSION 1.8.1).
-- Data releases (Mike's to cut): SRD 5.2 and the private 2024, Xanathar's and Tasha's packs (#118), and
-  Homebrew in the private repo (#125); filed as #138.
-- #102: the official source is untested against a real release; 1.9.0 is its first real run (#139).
-- Mike's device pass (touch, print, Safari and Firefox, his own characters) for #105, #118, #102, #47,
-  #91, #52, #101, #103, #97, #99 and #155, in the test pass's Device pass section. Items already filed
-  from it: #146 (the long level card at phone width), #151 (the ↑ button over a delete button).
-- #165 is driven in Playwright at 320–1280px only; tapping +N, Prev and Next on a real phone is Mike's
-  pass (not in the test pass's Device pass section).
+- The private data release 1.9.0-1 (XPHB, XGE, TCE, Homebrew), Mike's to cut with `/release private`
+  (#138; the SRD 5.2 half shipped in v1.9.0).
+- #139: verify the official extension source against v1.9.0. `releases/data/fieldbook-data.json`
+  answers at the tag's raw URL; installing from it in the app is not yet checked.
+- The v1.9.0 milestone is still open on GitHub with 55 open issues, all labelled 1.9.1.
 - Deferred review minors are filed in the 1.9.1 groups #145–#152.
