@@ -185,7 +185,7 @@ reasons, word for word:
 | (a) | "R8: a span the SRD correction must find" | the `find` strings in `scripts/srd-corrections.json`, the shortest spans of 5e-tools wording that identify what to correct into the SRD's |
 | (b) | "decision 3" | the 10-word footnote in the shipped `CHANGELOG` (`30-version.js`, `docs/CHANGELOG.md`, `dist/fieldbook.html`). Below 14 words it is only reported and needs no entry; the reason exists in case it ever grows |
 | (c) | "Fieldbook's own text, in the packs because convert.py writes it there" | `FIGHTING_STYLES`, `CLASS_BLURB`, the edition notes and `SUPPLEMENTS` profiles, `overlay.json` prose, wherever they appear |
-| (d) | "the SRD's own text" | `data/srd52/` runs the SRD splits across two strings where a private pack keeps one |
+| (d) | "the SRD's own text" | `data/srd52/` runs the SRD splits across two strings where a private pack keeps one, and the same runs in `releases/data/srd52_full.json`, the bundle of that folder each public release commits since 1.9.0 (#102): one entry per file |
 
 Anything else is a leak: paraphrase it, or replace it with invented text, in the public repo.
 
@@ -365,3 +365,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-19 — The private release has no approval gate (plan limit); the public ones do. → ledger L6226, #109
 - 2026-10-28 — Homebrew moves here with its licence and credit; the leak scan keeps reading the public `data/homebrew/` as free text where an older ref has it; the push order when both repos change. → ledger L7858, #125
 - 2026-10-29 — `move-docs.js` rewrites the leak allowlist's paths when `/pre-release` moves an allowlisted doc; committed here, pushed after public main. → ledger L8167, #127
+- 2026-11-05 — The leak scan reads `releases/data/` since 1.9.0 commits it; the bundled SRD pack's run is allowed as the SRD's own text, as in `data/srd52/`. → ledger L8921, #138

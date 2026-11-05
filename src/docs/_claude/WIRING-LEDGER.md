@@ -8917,3 +8917,25 @@ the log emptied); the fixed build left Fighter 2, HP 16, the Rope, one log recor
 then the card's Undo still works.
 
 Pages: [character building](../wiki/features/character-building.md).
+
+## #138: the leak scan allows the SRD run in `releases/data/` (Mike, 2026-11-05)
+
+Found by `/release private`'s preflight, after v1.9.0: the `private-data` suite failed its leak scan
+on `releases/data/srd52_full.json`, one 14-word run (hash `4e9e80ba4031ead6`). v1.9.0 is the first
+release to commit `releases/data/` (#102), so the scan read the bundled SRD pack for the first time.
+
+**Cause.** The run is the SRD's own text: a row of the Apparatus table whose two cells the SRD keeps
+apart and a private pack keeps in one string. The same run in `data/srd52/tables.json` has been
+allowed since #85 under "the SRD's own text"; the bundle is that folder, so it carries the run too.
+The private release workflow scans the public tag it builds on, so it would have refused 1.9.0-1.
+
+**Fix (Mike's yes).** One allowlist entry in the private repo, `releases/data/srd52_full.json`,
+same hash and reason; the private README's reason 4 says the bundle's runs are allowed the same way.
+Not taken: skipping `releases/data/` in the scan, since it ships publicly and one entry per run stays
+narrow. Cost if wrong: an SRD text change that moves the run makes both entries stale together, and
+the scan says so.
+
+**Tests.** The leak scan passes (62 allowlisted, 0 failing, 0 stale); its self-test passes; all 11
+suites pass (8442 checks).
+
+Pages: [private data](../wiki/data/private-data.md).
