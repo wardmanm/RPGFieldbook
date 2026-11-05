@@ -769,16 +769,40 @@ d, pd = private_checkout()
 write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 2}]})
 git(pd, "commit", "-qam", "change")
 args = ["scripts/data-release.js", "--registry", os.path.join(pd, "data/packs.json"), "--data-root", os.path.join(pd, "data")]
-r = node(d, *args)
+r = r0 = node(d, *args)
 reg = read_json(pd, "data/packs.json")
 ck("a private data release after app 1.8.0 is 1.8.0-1, though its last release was 1.7.2",
    r.returncode == 0 and reg["release"] == "1.8.0-1" and reg["packs"][0]["version"] == "1.8.0-1", (r.stdout, r.stderr))
 ck("...its printed commands run in the private repo", "git -C " in r.stdout and "data-v1.8.0-1" in r.stdout, r.stdout)
 ck("...and the public registry is untouched", read_json(d, "data/packs.json")["release"] == "1.8.0")
+ck("a private data release writes releases/data in the private repo, with the manifest",
+   os.path.isfile(os.path.join(pd, "releases/data/fieldbook-data.json")) and not os.path.exists(os.path.join(d, "releases")),
+   os.listdir(pd))
+ck("...and its printed add line names the registry and releases/data",
+   "add data/packs.json releases/data" in r0.stdout, r0.stdout)
+
 write(pd, "data/gamma/spells.json", {"system": "Gamma", "spells": [{"name": "Hex", "level": 3}]})
 r = node(d, *args)
 ck("a private release refuses uncommitted private data", r.returncode == 1 and "uncommitted" in r.stderr, r.stderr)
 shutil.rmtree(d)
+
+# #182: a private release with nothing changed, only with --allow-unchanged
+d, pd = private_checkout()
+args = ["scripts/data-release.js", "--registry", os.path.join(pd, "data/packs.json"), "--data-root", os.path.join(pd, "data")]
+r = node(d, *args)
+ck("a private release with nothing changed refuses: nothing to release", r.returncode == 1 and "nothing to release" in r.stderr, r.stderr)
+r = node(d, *args, "--allow-unchanged", "--dry-run")
+ck("--allow-unchanged --dry-run says no pack changed and writes nothing",
+   r.returncode == 0 and "no pack changed" in r.stdout and read_json(pd, "data/packs.json")["release"] == "1.7.2", (r.stdout, r.stderr))
+r = node(d, *args, "--allow-unchanged")
+reg = read_json(pd, "data/packs.json")
+ck("--allow-unchanged moves only the registry's release", r.returncode == 0 and reg["release"] == "1.8.0-1"
+   and reg["packs"][0]["version"] == "1.7.2", (r.stdout, r.stderr, reg))
+ck("...writes releases/data with the manifest", os.path.isfile(os.path.join(pd, "releases/data/fieldbook-data.json")),
+   os.listdir(pd))
+ck("...and prints releases/data in its add line", "releases/data" in r.stdout and "data-v1.8.0-1" in r.stdout, r.stdout)
+shutil.rmtree(d)
+
 d = checkout(release="1.7.2")
 write(d, "data/alpha/spells.json", {"system": "Alpha", "spells": [{"name": "Zap", "level": 5}]})
 git(d, "commit", "-qam", "change")
@@ -1171,7 +1195,7 @@ ck("#102 build.sh writes releases/data on a release build only",
    re.search(r'if \[ -n "\$RELEASE" \][^\n]*\n[^\n]*release-files dist -o releases/data', build_sh) is not None)
 dr = open(os.path.join(ROOT, "scripts", "data-release.js"), encoding="utf-8").read()
 ck("#102 data-release.js bundles and writes releases/data for the public registry",
-   '"release-files"' in dr and "releases/data" in dr and "if (!PRIVATE)" in dr)
+   '"release-files"' in dr and "releases/data" in dr)
 ck("#102 data-release.js tells you to commit releases/data", "git add data/packs.json releases/data" in dr)
 ck("#102 data-release.js registers scratch-folder cleanup on exit, not just a finally "
    "that process.exit() would skip (fix round 2)",

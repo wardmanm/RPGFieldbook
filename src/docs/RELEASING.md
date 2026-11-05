@@ -278,7 +278,8 @@ node scripts/data-release.js             # bump data/packs.json
 It gives every pack whose content changed since its last release the next `<APP_VERSION>-N`, and
 sets the registry's `release` to it. For the public registry it also bundles and writes
 `releases/data/` (#102) — never `fieldbook.html`, `APP_VERSION`, `DATA_VERSIONS`, the changelog or
-the notebook, and never `releases/data/` for a private registry, which has no public raw URL. It
+the notebook. A private registry writes `releases/data/` too, into the private repo (#182), so the
+app's private sources can install from the tag. It
 refuses when `APP_VERSION` is older than 1.8.0 (the first release that can open the data zip at
 all), when `data/` has uncommitted changes (the digests must describe what gets tagged), when no
 pack changed, when the registry's `release` belongs to another app version, and when the tag
@@ -354,12 +355,15 @@ node scripts/data-release.js --registry _private-data/data/packs.json --data-roo
 node scripts/data-release.js --registry _private-data/data/packs.json --data-root _private-data/data
 ```
 
-It bumps the changed packs in the **private** registry, refuses what a public data release refuses
+It bumps the changed packs in the **private** registry and writes `releases/data/` in the private
+repo (the files an app private source installs from the tag; built without the public licence
+check). `--allow-unchanged` releases although no pack changed, to publish a pack list: it moves only
+the registry's `release`. It refuses what a public data release refuses
 (nothing changed, uncommitted data in the private checkout, an existing tag), and prints the
 commands, which run against the private repo (`git -C <private repo> …`), never this one:
 
 ```bash
-git -C ../RPGFieldbookPrivate add data/packs.json
+git -C ../RPGFieldbookPrivate add data/packs.json releases/data
 git -C ../RPGFieldbookPrivate commit -m "Data release 1.8.0-1"
 git -C ../RPGFieldbookPrivate tag -a data-v1.8.0-1 -m "Fieldbook data 1.8.0-1"
 git -C ../RPGFieldbookPrivate push && git -C ../RPGFieldbookPrivate push origin data-v1.8.0-1
