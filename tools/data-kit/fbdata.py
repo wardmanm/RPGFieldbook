@@ -710,7 +710,7 @@ def cmd_bundle(a):
             fh.write(text)
         os.replace(tmp, dest)
         counts = ["%d %s" % (len(r["obj"][c]), c) for c in CATS if c in r["obj"]]
-        print("    %s  (%d files, %d KB)" % (os.path.relpath(dest), r["files"], round(len(text.encode("utf-8")) / 1024)))
+        print("    %s  (%d files, %d KB)" % (p["file"] if getattr(a, "quiet", False) else os.path.relpath(dest), r["files"], round(len(text.encode("utf-8")) / 1024)))
         print("      " + " · ".join(counts))
         if r["dupes"]:
             print("      deduped %d: %s" % (len(r["dupes"]), ", ".join(r["dupes"])))
@@ -741,6 +741,8 @@ def cmd_release(a):
     v = kit_version()
     if not v:
         raise KitError("this kit doesn't know its Fieldbook version")
+    if os.path.realpath(a.registry) == os.path.realpath(os.path.join(ROOT, "data", "packs.json")):
+        raise KitError("this is Fieldbook's own registry: use scripts/data-release.js")
     reg = load_registry(a.registry)
     nxt = next_release(reg.get("release"), v)
     ch = changed_packs(reg, a.data_root)
@@ -762,7 +764,7 @@ def cmd_release(a):
     write_registry(reg, a.registry)
     tmp = tempfile.mkdtemp(prefix="fbdata-release-")
     try:
-        if cmd_bundle(argparse.Namespace(registry=a.registry, data_root=a.data_root, output=tmp)) != 0:
+        if cmd_bundle(argparse.Namespace(registry=a.registry, data_root=a.data_root, output=tmp, quiet=True)) != 0:
             raise KitError("a pack failed to bundle")
         if cmd_release_files(argparse.Namespace(bundles=tmp, output=a.output, registry=a.registry,
                                                 built_for=v, any_licence=True)) != 0:

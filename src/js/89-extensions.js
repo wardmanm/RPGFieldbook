@@ -104,6 +104,16 @@ function extGhPickTag(names,appVer){
   });
   return best;
 }
+/* a token's shape: GitHub's own characters only, so it can't carry a header-breaking one */
+function extTokenOk(t){return typeof t==="string"&&/^[A-Za-z0-9_]{20,255}$/.test(t);}
+const EXT_GH_NEEDS="Needs its token: paste the source link again.";
+/* a github source as stored: a token of the wrong shape is dropped (and asked
+   for again); one that needs its token says so at once, without a check */
+function extGhSane(g){
+  if(g.token&&!extTokenOk(g.token)){g.token="";g.needsToken=true;}
+  if(g.needsToken&&!g.token)g.error=EXT_GH_NEEDS;
+  return g;
+}
 function extKey(system,file){return String(system)+"|"+String(file);}
 /* one pack of a manifest, normalised, or null when it can't be installed from */
 function extEntry(p,builtFor){
@@ -144,7 +154,7 @@ function convertSources(s){
   const isObj=o=>!!o&&typeof o==="object"&&!Array.isArray(o);
   let list=(Array.isArray(s.sources)?s.sources:[]).filter(x=>isObj(x)&&(
     x.kind==="official"||(x.kind==="manifest"&&extUrl(x.url))||(x.kind==="plain"&&typeof x.url==="string"&&x.url.trim())||(x.kind==="github"&&(l=>!!l&&!l.token)(extGithubLink(x.repo))))).map(x=>x.kind==="github"
-    ?Object.assign({token:"",tag:"",note:"",checked:0,error:"",manifest:null,base:"",on:true},x,{repo:extGithubLink(x.repo).repo}):x);
+    ?extGhSane(Object.assign({token:"",tag:"",note:"",checked:0,error:"",manifest:null,base:"",on:true},x,{repo:extGithubLink(x.repo).repo})):x);
   let off=list.find(x=>x.kind==="official");
   list=list.filter(x=>x.kind!=="official");
   off=Object.assign(extOfficial(),off||{},{id:"official",kind:"official",url:""});
@@ -162,6 +172,7 @@ function extOffers(){
   const out=[];
   (settings.sources||[]).forEach(src=>{
     if(!src.on||!src.manifest||!Array.isArray(src.manifest.packs))return;
+    if(src.kind==="github"&&src.needsToken&&!src.token)return;   /* nothing from a source that needs its token */
     src.manifest.packs.forEach(entry=>out.push({entry,source:src}));
   });
   return out;
@@ -235,7 +246,8 @@ function dismissUpdates(){
 function extFetchBytes(url,ms,cap,headers){
   /* the token goes only to the GitHub API: refused before any fetch, and the
      message never carries it */
-  if(headers&&headers.Authorization&&!String(url).startsWith("https://api.github.com/"))
+  const authed=!!headers&&Object.keys(headers).some(k=>k.toLowerCase()==="authorization");
+  if(authed&&!String(url).startsWith("https://api.github.com/"))
     return Promise.reject(new Error("refused to send a token to another host"));
   const ac=typeof AbortController==="function"?new AbortController():null;
   const tooBig=()=>{const e=new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":cap===EXT_GH_TAGS_MAX?"the tag list is larger than 1 MB":"it's larger than 32 MB");e.tooBig=true;return e;};
@@ -246,6 +258,7 @@ function extFetchBytes(url,ms,cap,headers){
   const timeout=new Promise((_,rej)=>{timer=setTimeout(()=>{stop();rej(new Error("it took too long to answer"));},ms);});
   const opts=ac?{cache:"no-store",signal:ac.signal}:{cache:"no-store"};
   if(headers)opts.headers=headers;
+  if(authed)opts.redirect="error";   /* a redirect would carry the token elsewhere */
   const run=fetch(url,opts).then(r=>{
     if(!r||!r.ok){const e=new Error("HTTP "+(r?r.status:"error"));e.status=r?r.status:0;
       if(r&&r.headers&&typeof r.headers.get==="function"&&r.headers.get("x-ratelimit-remaining")==="0")e.rateLimited=true;
@@ -292,16 +305,14 @@ function extOfficialUrl(){
     return pick?`https://raw.githubusercontent.com/${UPDATE_REPO}/${encodeURIComponent(pick.tag)}/releases/data/fieldbook-data.json`:"";
   });
 }
-/* One source's manifest. A failure keeps the last good manifest and says why
-   on the source's row; the official source on a release from before #102 (no
-   releases/data/, a 404) is simply nothing to offer, not an error. */
 /* a github source: the newest usable data tag, then its manifest. Every
    failure is said in words that never carry the token (#182). */
 const EXT_GH_PAGE=100,EXT_GH_PAGES=10;
 function extGhWhy(src,e){
   const st=e&&e.status;
   if(st===401)return "The repo refused this token. It may have expired or been deleted: ask the repo's owner for a new one.";
-  if(st===403&&e.rateLimited)return "GitHub's limit for this hour is used up. It will check again later.";
+  if(e&&e.name==="TypeError")return "GitHub couldn't be reached.";
+  if(st===429||(st===403&&e.rateLimited))return "GitHub's limit for this hour is used up. It will check again later.";
   if(st===404||st===403)return src.token?"This token can't see the repo. Check the address, or ask the owner for a new token.":"No public repo at this address. If it's private, add its token.";
   return String((e&&e.message)||e||"it couldn't be reached");
 }
@@ -321,9 +332,11 @@ function extGhTags(src){
 }
 function checkGithub(src){
   const at=Date.now();
-  if(src.needsToken&&!src.token){src.checked=at;src.error="Needs its token: paste the source link again.";return Promise.resolve();}
+  if(src.needsToken&&!src.token){src.checked=at;src.error=EXT_GH_NEEDS;return Promise.resolve(false);}
   const nothing=(tag,note)=>{src.tag=tag;src.manifest=null;src.base="";src.error="";src.note=note;};
+  let tagsOk=false;   /* resolves to this: did the repo's tag list answer? */
   return extGhTags(src).then(names=>{
+    tagsOk=true;
     const tag=extGhPickTag(names,APP_VERSION);
     if(!tag){nothing("","no release for this Fieldbook yet");return;}
     const url=extGhApi(src.repo,"contents/releases/data/fieldbook-data.json","ref="+encodeURIComponent(tag));
@@ -334,10 +347,13 @@ function checkGithub(src){
       if(e&&e.status===404){nothing(tag,"The newest release here ("+tag+") has no pack list for Fieldbook. The owner needs to cut a release with the data kit.");return;}
       throw e;
     });
-  }).then(()=>{src.checked=at;},e=>{
-    src.checked=at;src.note="";src.error=extGhWhy(src,e);
+  }).then(()=>{src.checked=at;return tagsOk;},e=>{
+    src.checked=at;src.note="";src.error=extGhWhy(src,e);return tagsOk;
   });
 }
+/* One source's manifest. A failure keeps the last good manifest and says why
+   on the source's row; the official source on a release from before #102 (no
+   releases/data/, a 404) is simply nothing to offer, not an error. */
 function checkSource(src){
   if(src.kind==="github")return checkGithub(src);
   const at=Date.now();
@@ -402,7 +418,7 @@ function extKeepTokens(incoming,current){
   ((incoming&&incoming.sources)||[]).forEach(x=>{
     if(!x||x.kind!=="github"||x.token)return;
     const lc=String(x.repo).toLowerCase();
-    const have=cs.find(c=>c&&c.kind==="github"&&c.token&&String(c.repo).toLowerCase()===lc);
+    const have=cs.find(c=>c&&c.kind==="github"&&extTokenOk(c.token)&&String(c.repo).toLowerCase()===lc);
     if(have){x.token=have.token;delete x.needsToken;}
   });
 }
@@ -420,15 +436,20 @@ function extSetToken(src,token){
    leaves the URL box at once: only the repo's address stays on screen. */
 function addGithubSource(gl){
   if(gl.token){const box=document.getElementById("extAddUrl");if(box)box.value="https://github.com/"+gl.repo;}
-  const have=extGhFind(gl.repo);
-  if(have){
+  const upd=have=>{
     if(!gl.token)return Promise.resolve({ok:false,why:"That source is already in the list."});
     return extSetToken(have,gl.token).then(err=>({ok:true,why:err?"Token updated, but your settings couldn't be saved: "+err:"Token updated."}));
-  }
+  };
+  const first=extGhFind(gl.repo);
+  if(first)return upd(first);
   const src={id:uid(),kind:"github",repo:gl.repo,token:gl.token,tag:"",note:"",on:true,checked:0,error:"",manifest:null,base:"",needsToken:false};
-  return checkSource(src).then(()=>{
-    /* added once the tag list answered; a refusal or an unreachable GitHub is said and nothing is kept */
-    if(src.error)return {ok:false,why:src.error};
+  return checkSource(src).then(tagsOk=>{
+    /* added once the repo's tag list answered (the row shows a manifest
+       problem); a refusal or an unreachable GitHub is said and nothing is kept */
+    if(!tagsOk)return {ok:false,why:src.error};
+    /* a second Add for the same repo may have landed while this one waited */
+    const now=extGhFind(gl.repo);
+    if(now)return upd(now);
     if(!Array.isArray(settings.sources))settings.sources=[];
     settings.sources.push(src);
     const err=extSaveOk(saveSettings());
@@ -437,9 +458,14 @@ function addGithubSource(gl){
 }
 /* + Add a source URL: fetched once and sorted (spec §4) */
 function addSource(url){
-  const u=String(url||"").trim();
+  /* a pasted link often arrives in <angle brackets> or with a full stop after it */
+  const u=String(url||"").trim().replace(/^[<(]+/,"").replace(/[>.,;)]+$/,"").trim();
   const gl=extGithubLink(u);
   if(gl)return addGithubSource(gl);
+  if(/#token=/i.test(u)){
+    const box=document.getElementById("extAddUrl");if(box)box.value="";
+    return Promise.resolve({ok:false,why:"That isn't a valid source link."});
+  }
   if(!extUrl(u))return Promise.resolve({ok:false,why:"That isn't a web address (it must start with http:// or https://)."});
   /* de-duplicate on the NORMALISED url: "HTTPS://Host/m.json" and
      "https://host/m.json" are the same source, differing only in case or a
@@ -807,7 +833,7 @@ function extSourcesHTML(){
   const rows=(settings.sources||[]).map(s=>{
     const name=extSourceName(s),note=s.kind==="plain"?"plain file":(s.error?"couldn't check: "+s.error:extAgo(s.checked));
     const gh=s.kind==="github";
-    const ghSub=(s.token?"private · token ending …"+String(s.token).slice(-4):"public repo")+" · "+(s.error?"couldn't check: "+s.error:extAgo(s.checked)+(s.note?" · "+s.note:""));
+    const ghSub=(s.token?"private · token ending …"+String(s.token).slice(-4):s.needsToken?"private":"public repo")+" · "+(s.error?"couldn't check: "+s.error:extAgo(s.checked)+(s.note?" · "+s.note:""));
     const sub=gh?ghSub:s.kind==="official"?"built in · "+note:(s.kind==="manifest"?extPlain(String(s.url)).replace(/^https?:\/\//i,"")+" · "+note:note);
     const ctl=s.kind==="official"
       ?`<button type="button" class="switch ${s.on?"on":""}" data-ext-src-on="${esc(s.id)}" role="switch" aria-checked="${s.on?"true":"false"}" aria-label="Use Fieldbook public data"></button>`
@@ -850,7 +876,7 @@ function extDetailsHTML(key){
   const home=(u=>{if(!u)return "";try{return new URL(u).href;}catch(e){return extPlain(u);}})(src&&src.manifest&&extUrl(src.manifest.homepage));
   const box=src?`<div class="ext-box"><b>Source</b>`+
     kv("Name",esc(extSourceName(src)))+
-    kv("Manifest",esc(src.kind==="official"?"the Fieldbook release":extPlain(String(src.base||src.url)).replace(/^https?:\/\//i,"")))+
+    kv("Manifest",esc(src.kind==="official"?"the Fieldbook release":src.kind==="github"?extPlain(String(src.repo))+(src.tag?" at "+extPlain(String(src.tag)):""):extPlain(String(src.base||src.url)).replace(/^https?:\/\//i,"")))+
     kv("Homepage",home?`<a href="${esc(home)}" target="_blank" rel="noopener">${esc(extPlain(home).replace(/^https?:\/\//i,""))}</a>`:"")+
     kv("Checked",esc(extAgo(src.checked,true)))+
     kv("Licence",esc([e&&e.license,e&&e.attribution].filter(Boolean).join(" · ")))+`</div>`:
@@ -891,7 +917,7 @@ function openChangeToken(id){
     const v=String(inp.value||"").trim();
     const l=extGithubLink(v)||(/^[A-Za-z0-9_]{20,255}$/.test(v)?{repo:"",token:v}:null);
     if(!l)return void(err.textContent="That isn't a token or a source link.");
-    if(l.repo&&l.repo.toLowerCase()!==String(src.repo).toLowerCase())return void(err.textContent="That link is for another repo.");
+    if(l.repo&&l.repo.toLowerCase()!==String(src.repo).toLowerCase()){inp.value="";return void(err.textContent="That link is for another repo.");}
     if(!l.token)return void(err.textContent="That link has no token in it.");
     inp.value="";save.disabled=true;err.textContent="";
     extSetToken(src,l.token).then(e=>{

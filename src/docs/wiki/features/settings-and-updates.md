@@ -122,7 +122,7 @@ binds one delegated click listener to each fresh `#extPage`. From the top:
 
 **A GitHub source** (#182). The URL box also takes a **source link**, `https://github.com/<owner>/<repo>#token=<token>`
 (`extGithubLink()`), or a bare `owner/repo` for a public repo. `addSource()` checks the repo once first
-and adds it only if it answers; otherwise it says why in words and adds nothing. The token leaves the box
+and adds it once its tag list answers (a manifest that then fails is added, and its row shows the error); otherwise it says why in words and adds nothing. A link wrapped in `<>` or ending in punctuation is cleaned first; a `#token=` link that still isn't valid is refused, unfetched, with the box cleared. The token leaves the box
 as soon as it is read and shows afterwards only as its last four characters; pasting the link again, or
 **Change token** (`openChangeToken()`), replaces it. The source is `{kind:"github", repo, token, tag, ...}`
 in `settings.sources`. Its check (`checkSource()`) lists the repo's tags through GitHub's REST API
@@ -134,8 +134,8 @@ call at the same tag (`offerCandidate()`), then #102's pipeline. The token goes 
 into a URL, message, toast or the DOM. A failure keeps the last good manifest and the row says it
 (`extGhWhy()`): 401 "The repo refused this token. It may have expired or been deleted: ask the repo's
 owner for a new one."; 404 or 403 with a token "This token can't see the repo…"; 404 without one "No
-public repo at this address. If it's private, add its token."; a rate limit "GitHub's limit for this hour
-is used up…"; a newest release with no pack list names the tag and says the owner needs to cut one; an
+public repo at this address. If it's private, add its token."; a rate limit (a 429, or a 403 with none left) "GitHub's limit for this hour
+is used up…"; a fetch that fails in the browser "GitHub couldn't be reached.";  a newest release with no pack list names the tag and says the owner needs to cut one; an
 imported source with no token "Needs its token: paste the source link again." Installed packs keep
 working through all of them.
 

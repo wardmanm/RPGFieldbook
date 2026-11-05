@@ -142,7 +142,7 @@ never shown again. The packs appear in the Extensions list, and the player insta
 If it doesn't work, Fieldbook says why and adds nothing. "This token can't see the repo" means the
 address or the token is wrong. "The repo refused this token" means it expired or was deleted.
 
-The token stays on that device. It is not saved in character files or in the Settings file export.
+The token stays on that device. It is not saved in character files or in the Settings file export. On a new device, after clearing site data, or after importing a Settings file, paste the source link again.
 
 ## 6. Cut a new release
 

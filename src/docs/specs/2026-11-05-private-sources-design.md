@@ -309,7 +309,7 @@ adds:
   with many tags exceeded the 64 KB manifest cap.
 - **A source's entry carries `note` and `needsToken`** as well as §5.2's fields; `convertSources()`
   keeps them (R1). Re-pasting a link and Change token clear `needsToken` and the error and re-check
-  (R2). A 403 that is not a rate limit uses the "can't see the repo" wording (R3). The API-version
+  (R2). A 403 that is not a rate limit uses the "can't see the repo" wording (R3). A 429 uses the rate-limit wording; a browser fetch error is "GitHub couldn't be reached.", never its own message. A source is added when its tag list answers, even if the manifest then fails (the row shows the error). The API-version
   header is sent on the github source's calls only (R4).
 
 **Verified:** the check outcomes and wordings, the host guard, link parsing, tag picking, add and

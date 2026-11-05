@@ -26,7 +26,7 @@ const {X, ctx, state, bootError} = loadApp([
   'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
   'extPlanHTML', 'renderExtPill', 'showUpdatePill', 'openInstallPlan', 'manualInstallFiles', 'readDropped',
   'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap', 'extText', 'extSourceName', 'extSourceHost',
-  'extSettingsForExport', 'extKeepTokens', 'extGithubLink', 'extGhApi', 'extGhHeaders', 'extGhPickTag', 'openChangeToken',
+  'extSettingsForExport', 'extKeepTokens', 'extGhWhy', 'extGhFind', 'extGithubLink', 'extGhApi', 'extGhHeaders', 'extGhPickTag', 'openChangeToken',
   'rulesStatusText', 'extWireDrop', 'extManualPlan', 'extPillFocusBack', 'EXT_DROP_MAX', 'dismissModal',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -2180,6 +2180,104 @@ section('#182 export and import', async () => {
     await X.checkSource(s);
     ck('#182 import: needsToken source makes no fetch and says so', n === 0 && s.error === 'Needs its token: paste the source link again.', [n, s.error]);
   } finally { ctx.fetch = realFetch; }
+});
+
+section('#182 final review fixes', async () => {
+  const realFetch = ctx.fetch, realGet = ctx.document.getElementById;
+  const T = 'github_pat_' + 'Q'.repeat(26) + 'ABCD';
+  const V = X.APP_VERSION, t2 = 'data-v' + V + '-2';
+  const API = 'https://api.github.com/repos/ann/hb/';
+  const R = {}, log = [];
+  const reset = () => { log.length = 0; Object.keys(R).forEach(k => delete R[k]); };
+  ctx.fetch = (url, opts) => {
+    log.push({url, opts: opts || {}, headers: (opts && opts.headers) || {}});
+    if (!(url in R)) return Promise.reject(new TypeError('Failed to fetch'));
+    const r = R[url];
+    if (r && r.reject) return Promise.reject(r.reject);
+    const isR = r && typeof r === 'object' && !Array.isArray(r) && 'status' in r && 'body' in r;
+    const status = isR ? r.status : 200, hdr = isR ? (r.headers || {}) : {}, raw = isR ? r.body : r;
+    const bytes = new TextEncoder().encode(typeof raw === 'string' ? raw : JSON.stringify(raw));
+    return Promise.resolve({ok: status < 400, status, headers: {get: n => hdr[String(n).toLowerCase()] === undefined ? null : hdr[String(n).toLowerCase()]},
+      arrayBuffer: () => Promise.resolve(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))});
+  };
+  const tagsURL = API + 'tags?per_page=100&page=1';
+  const manURL = API + 'contents/releases/data/fieldbook-data.json?ref=' + encodeURIComponent(t2);
+  const man = {_type: 'fieldbook-data', format: 2, builtFor: V, packs: [{file: 'hb_full.json', system: 'Hb', version: V + '-2', sha256: 'a'.repeat(64)}]};
+  const ghs = () => X.settings.sources.filter(s => s.kind === 'github');
+  try {
+    // I1: an imported source that needs its token says so, offers nothing
+    const parsed = X.readManifest(man, 100);
+    X.settings.sources = [{id: 'o', kind: 'official', on: true}, {id: 'g1', kind: 'github', repo: 'ann/hb', token: '', needsToken: true, on: true, checked: 0, error: '', manifest: parsed, base: '', tag: t2, note: ''}];
+    X.convertSources(X.settings);
+    const html = X.extSourcesHTML();
+    ck('#182 I1: a needsToken source reads "Needs its token", not "public repo"', /Needs its token/.test(html) && !/public repo/.test(html) && /private · couldn/.test(html), html);
+    ck('#182 I1: extOffers and extPackRows offer nothing from it', X.extOffers().length === 0 && X.extPackRows().every(r => !r.offer), X.extOffers());
+
+    // I2: the details dialog names the repo and tag, never "undefined"
+    X.settings.sources = [{id: 'o', kind: 'official', on: true}, {id: 'g1', kind: 'github', repo: 'ann/hb', token: T, on: true, checked: Date.now(), error: '', manifest: parsed, base: '', tag: t2, note: ''}];
+    const det = X.extDetailsHTML(X.extKey('Hb', 'hb_full.json'));
+    ck('#182 I2: details for a github pack names the repo and tag, no "undefined"', det.includes('ann/hb at ' + t2) && !/undefined/.test(det) && !det.includes(T), det);
+
+    // M1: a malformed stored token is blanked; the fixed message for a TypeError
+    const bad = {sources: [{kind: 'github', repo: 'ann/hb', token: 'bad\ntoken' + 'x'.repeat(20), on: true}]};
+    X.convertSources(bad);
+    const bg = bad.sources.find(x => x.kind === 'github');
+    ck('#182 M1: a malformed stored token is blanked and needsToken set', bg.token === '' && bg.needsToken === true && /Needs its token/.test(bg.error), bg);
+    const cur = {sources: [{kind: 'github', repo: 'ann/hb', token: 'bad token ' + 'x'.repeat(20)}]}, inc = {sources: [{kind: 'github', repo: 'ann/hb', token: '', needsToken: true}]};
+    X.extKeepTokens(inc, cur);
+    ck('#182 M1: extKeepTokens copies only a well-formed token', inc.sources[0].token === '' && inc.sources[0].needsToken === true, inc);
+    reset(); R[tagsURL] = {reject: new TypeError('Failed to execute fetch: invalid header value Bearer ' + T)};
+    const sm = {id: 'g1', kind: 'github', repo: 'ann/hb', token: T, tag: '', note: '', on: true, checked: 0, error: '', manifest: null, base: ''};
+    await X.checkSource(sm);
+    ck('#182 M1: a TypeError gives the fixed message, no token', sm.error === "GitHub couldn't be reached." && !sm.error.includes(T), sm.error);
+
+    // M2: 429 takes the rate-limit wording
+    reset(); R[tagsURL] = {status: 429, body: {}};
+    const s429 = Object.assign({}, sm, {error: ''}); await X.checkSource(s429);
+    ck('#182 M2: a 429 is the rate-limit wording', s429.error === "GitHub's limit for this hour is used up. It will check again later.", s429.error);
+
+    // C3: Authorization is guarded by name, any case, and refuses redirects
+    reset();
+    let err = null; try { await X.extFetchBytes('https://evil.example/x', 1000, 0, {authorization: 'Bearer x'}); } catch (e) { err = e; }
+    ck('#182 C3: a lower-case authorization header to another host is refused', !!err && /refused to send a token/.test(err.message) && log.length === 0, [err && err.message, log.length]);
+    R[tagsURL] = [{name: t2}]; R[manURL] = man;
+    await X.checkSource(Object.assign({}, sm, {error: ''}));
+    ck('#182 C3: a token-bearing fetch passes redirect:"error"', log.length >= 1 && log.every(c => c.opts.redirect === 'error'), log.map(c => c.opts.redirect));
+    reset(); R[API.replace('ann/hb/', 'ann/pub/') + 'tags?per_page=100&page=1'] = [];
+    await X.checkSource({id: 'p', kind: 'github', repo: 'ann/pub', token: '', tag: '', note: '', on: true, checked: 0, error: '', manifest: null, base: ''});
+    ck('#182 C3: a public fetch has no redirect option', log.length === 1 && log[0].opts.redirect === undefined, log[0] && log[0].opts);
+
+    // C2: tags answer, manifest fails (500): added, row shows the error
+    reset(); X.settings.sources = []; R[tagsURL] = [{name: t2}]; R[manURL] = {status: 500, body: {}};
+    let r = await X.addSource('https://github.com/ann/hb#token=' + T);
+    ck('#182 C2: tags 200 + manifest 500 is added, and the row shows the error', r.ok === true && ghs().length === 1 && /500/.test(ghs()[0].error) && /HTTP 500/.test(X.extSourcesHTML()), [r, ghs()]);
+    // but a tag list that fails is still refused
+    X.settings.sources = []; reset(); R[tagsURL] = {status: 401, body: {}};
+    r = await X.addSource('https://github.com/ann/hb#token=' + T);
+    ck('#182 C2: a refused tag list is not added', r.ok === false && ghs().length === 0, r);
+
+    // M3: two Adds started together make one source
+    X.settings.sources = []; reset(); R[tagsURL] = [{name: t2}]; R[manURL] = man;
+    const T2 = 'github_pat_' + 'W'.repeat(26) + 'WXYZ';
+    const [a, b] = await Promise.all([X.addSource('https://github.com/ann/hb#token=' + T), X.addSource('https://github.com/ann/hb#token=' + T2)]);
+    ck('#182 M3: a double Add makes one source (the second updates the token)', ghs().length === 1 && a.ok && b.ok && ghs()[0].token === T2, [a, b, ghs().length]);
+    X.settings.sources = []; reset(); R[tagsURL] = [{name: t2}]; R[manURL] = man;
+    const [c, d2] = await Promise.all([X.addSource('ann/hb'), X.addSource('ann/hb')]);
+    ck('#182 M3: a double public Add makes one source, the second says already there', ghs().length === 1 && c.ok && !d2.ok && /already in the list/.test(d2.why), [c, d2]);
+
+    // C1 + C10: punctuation and brackets; the box rewrite; a bad link clears the token
+    const box = {value: ''};
+    ctx.document.getElementById = id => id === 'extAddUrl' ? box : realGet(id);
+    X.settings.sources = []; reset(); R[tagsURL] = [{name: t2}]; R[manURL] = man;
+    box.value = '<https://github.com/ann/hb#token=' + T + '>.';
+    r = await X.addSource(box.value);
+    ck('#182 C1: <link>. with a token is added', r.ok === true && ghs().length === 1 && ghs()[0].token === T, [r, ghs().length]);
+    ck('#182 C10: the box is rewritten to the bare repo address after an add with a token', box.value === 'https://github.com/ann/hb' && !box.value.includes(T), box.value);
+    X.settings.sources = []; reset();
+    box.value = 'https://github.com/ann/hb/tree/main#token=' + T;
+    r = await X.addSource(box.value);
+    ck('#182 C1: a #token= link that isn\'t valid is refused, not fetched, and the box is cleared', r.ok === false && r.why === "That isn't a valid source link." && log.length === 0 && box.value === '' && ghs().length === 0, [r, log.length, box.value]);
+  } finally { ctx.fetch = realFetch; ctx.document.getElementById = realGet; X.settings.sources = []; }
 });
 
 // ---- add new sections above this line ----
