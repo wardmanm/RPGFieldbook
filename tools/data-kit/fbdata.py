@@ -741,7 +741,9 @@ def cmd_release(a):
     v = kit_version()
     if not v:
         raise KitError("this kit doesn't know its Fieldbook version")
-    if os.path.realpath(a.registry) == os.path.realpath(os.path.join(ROOT, "data", "packs.json")):
+    # Refuse only when ROOT really is a Fieldbook checkout (it has src/js/30-version.js): an owner who
+    # unzips the kit two folders deep in their own repo has ROOT = their repo and must not be refused.
+    if app_version() and os.path.realpath(a.registry) == os.path.realpath(os.path.join(ROOT, "data", "packs.json")):
         raise KitError("this is Fieldbook's own registry: use scripts/data-release.js")
     reg = load_registry(a.registry)
     nxt = next_release(reg.get("release"), v)

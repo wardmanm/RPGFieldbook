@@ -1299,12 +1299,25 @@ d = tempfile.mkdtemp(prefix="fbrel-own-")
 os.makedirs(os.path.join(d, "tools", "data-kit")); os.makedirs(os.path.join(d, "data", "mine"))
 shutil.copy(FBDATA, os.path.join(d, "tools", "data-kit", "fbdata.py"))
 write(d, "tools/data-kit/fieldbook-version.txt", raw="1.9.0\n")
+write(d, "src/js/30-version.js", raw='const APP_VERSION="1.9.0";\n')
 write(d, "data/mine/spells.json", {"system": "Mine", "spells": [{"name": "Zap", "level": 1}]})
 write(d, "data/packs.json", {"release": "1.8.0", "packs": [{"system": "Mine", "dir": "mine", "file": "mine_full.json", "title": "Mine", "version": "1.8.0"}]})
 own_before = read_json(d, "data/packs.json")
 r = subprocess.run([sys.executable, os.path.join(d, "tools", "data-kit", "fbdata.py"), "release"], capture_output=True, text=True, cwd=d)
 ck("#182 release refuses Fieldbook's own registry", r.returncode != 0 and "Fieldbook's own registry" in r.stderr and "scripts/data-release.js" in r.stderr
    and read_json(d, "data/packs.json") == own_before and not os.path.exists(os.path.join(d, "releases")), r.stdout + r.stderr)
+shutil.rmtree(d)
+
+# P1 (#182 pre-merge): an owner who unzips the kit two folders deep inside their own repo is not refused
+d = tempfile.mkdtemp(prefix="fbrel-deep-")
+os.makedirs(os.path.join(d, "tools", "fieldbook-data-kit-1.9.0"))
+shutil.copy(FBDATA, os.path.join(d, "tools", "fieldbook-data-kit-1.9.0", "fbdata.py"))
+write(d, "tools/fieldbook-data-kit-1.9.0/fieldbook-version.txt", raw="1.9.0\n")
+write(d, "data/mine/spells.json", {"system": "Mine", "spells": [{"name": "Zap", "level": 1}]})
+write(d, "data/packs.json", {"release": "1.8.0", "packs": [{"system": "Mine", "dir": "mine", "file": "mine_full.json", "title": "Mine", "version": "1.8.0"}]})
+r = subprocess.run([sys.executable, os.path.join(d, "tools", "fieldbook-data-kit-1.9.0", "fbdata.py"), "release"], capture_output=True, text=True, cwd=d)
+ck("#182 release works for a kit two folders inside an owner's repo (no src/js/30-version.js)",
+   r.returncode == 0 and "own registry" not in r.stderr and read_json(d, "data/packs.json")["release"] == "1.9.0-1", r.stdout + r.stderr)
 shutil.rmtree(d)
 
 # C8: the public data-release.js path never passes --any-licence
