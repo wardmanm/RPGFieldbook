@@ -16507,6 +16507,9 @@ function extOffers(){
   (settings.sources||[]).forEach(src=>{
     if(!src.on||!src.manifest||!Array.isArray(src.manifest.packs))return;
     if(src.kind==="github"&&src.needsToken&&!src.token)return;   /* nothing from a source that needs its token */
+    /* a refused token offers nothing (Install could only fail); the manifest is kept so a fixed token offers
+       again at once, and installed packs keep working. A network or rate-limit failure still offers. */
+    if(extGhTokenBad(src))return;
     src.manifest.packs.forEach(entry=>out.push({entry,source:src}));
   });
   return out;
@@ -16642,12 +16645,16 @@ function extOfficialUrl(){
 /* a github source: the newest usable data tag, then its manifest. Every
    failure is said in words that never carry the token (#182). */
 const EXT_GH_PAGE=100,EXT_GH_PAGES=10;
+const EXT_GH_REFUSED="The repo refused this token. It may have expired or been deleted: ask the repo's owner for a new one.";
+const EXT_GH_BLIND="This token can't see the repo. Check the address, or ask the owner for a new token.";
+/* the last check failed because of the token (or its absence), not the network (#182 pre-merge P3) */
+function extGhTokenBad(src){return !!src&&src.kind==="github"&&(src.error===EXT_GH_REFUSED||src.error===EXT_GH_BLIND||src.error===EXT_GH_NEEDS);}
 function extGhWhy(src,e){
   const st=e&&e.status;
-  if(st===401)return "The repo refused this token. It may have expired or been deleted: ask the repo's owner for a new one.";
+  if(st===401)return EXT_GH_REFUSED;
   if(e&&e.name==="TypeError")return "GitHub couldn't be reached.";
   if(st===429||(st===403&&e.rateLimited))return "GitHub's limit for this hour is used up. It will check again later.";
-  if(st===404||st===403)return src.token?"This token can't see the repo. Check the address, or ask the owner for a new token.":"No public repo at this address. If it's private, add its token.";
+  if(st===404||st===403)return src.token?EXT_GH_BLIND:"No public repo at this address. If it's private, add its token.";
   return String((e&&e.message)||e||"it couldn't be reached");
 }
 function extGhTags(src){
@@ -16796,7 +16803,8 @@ function addSource(url){
   const u=String(url||"").trim().replace(/^[<(]+/,"").replace(/[>.,;)]+$/,"").trim();
   const gl=extGithubLink(u);
   if(gl)return addGithubSource(gl);
-  if(/#token=/i.test(u)){
+  /* a token never travels in a URL: anything that holds one and isn't a source link is refused unfetched */
+  if(/[#?&]token=|github_pat_|ghp_/i.test(u)){
     const box=document.getElementById("extAddUrl");if(box)box.value="";
     return Promise.resolve({ok:false,why:"That isn't a valid source link."});
   }
