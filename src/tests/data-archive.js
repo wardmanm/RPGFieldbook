@@ -1951,6 +1951,122 @@ section('#182 building blocks', async () => {
     j(s3.sources.filter(x => x.kind === 'github').map(x => x.repo)) === j(['a/b', 'c/d']), s3.sources);
 });
 
+section('#182 checking and installing', async () => {
+  const realFetch = ctx.fetch, realOnline = ctx.navigator.onLine, realSave = ctx.saveRulesCache;
+  const T = 'github_pat_' + 'Q'.repeat(30);
+  const V = X.APP_VERSION;
+  const t1 = 'data-v' + V + '-1', t2 = 'data-v' + V + '-2';
+  const API = 'https://api.github.com/repos/ann/hb/';
+  const log = [], R = {};
+  const gh = (url, opts) => {
+    log.push({url, headers: (opts && opts.headers) || {}});
+    if (!(url in R)) return Promise.reject(new TypeError('Failed to fetch'));
+    const r = R[url], isR = r && typeof r === 'object' && !Array.isArray(r) && 'status' in r && 'body' in r;
+    const status = isR ? r.status : 200, hdr = isR ? (r.headers || {}) : {};
+    const raw = isR ? r.body : r;
+    const body = typeof raw === 'string' ? raw : JSON.stringify(raw);
+    const bytes = new TextEncoder().encode(body);
+    return Promise.resolve({ok: status < 400, status, headers: {get: n => hdr[String(n).toLowerCase()] === undefined ? null : hdr[String(n).toLowerCase()]},
+      arrayBuffer: () => Promise.resolve(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))});
+  };
+  const reset = () => { log.length = 0; Object.keys(R).forEach(k => delete R[k]); };
+  const tagsURL = n => API + 'tags?per_page=100&page=' + n;
+  const manURL = t => API + 'contents/releases/data/fieldbook-data.json?ref=' + encodeURIComponent(t);
+  const pack = packJSON('Hb', V + '-2', 'Hb Spell');
+  const man = {_type: 'fieldbook-data', format: 2, builtFor: V, packs: [{file: 'hb_full.json', system: 'Hb', version: V + '-2', sha256: shaOf(pack)}]};
+  const mk = tok => ({id: 'g1', kind: 'github', repo: 'ann/hb', token: tok, tag: '', note: '', on: true, checked: 0, error: '', manifest: null, base: ''});
+  const texts = [];
+  const note = s => { texts.push(s.error, s.note); };
+  ctx.fetch = gh;
+  try {
+    reset();
+    R[tagsURL(1)] = [{name: t1}, {name: t2}]; R[manURL(t2)] = man;
+    const src = mk(T);
+    await X.checkSource(src); note(src);
+    ck('#182 check: tag picked, one pack, no error', src.tag === t2 && src.manifest && src.manifest.packs.length === 1 && src.error === '' && src.base === '', src);
+    ck('#182 check: every call is on the API with the bearer token and no token in a URL',
+      log.length === 2 && log.every(c => c.url.startsWith('https://api.github.com/') && c.headers.Authorization === 'Bearer ' + T && !c.url.includes(T)), log);
+    ck('#182 check: the version header rides along', log.every(c => !!c.headers['X-GitHub-Api-Version']));
+
+    // table rows (last good manifest is kept where one existed)
+    const good = src.manifest;
+    const rows = [
+      [{status: 401, body: {}}, "The repo refused this token. It may have expired or been deleted: ask the repo's owner for a new one.", T],
+      [{status: 404, body: {}}, "This token can't see the repo. Check the address, or ask the owner for a new token.", T],
+      [{status: 404, body: {}}, "No public repo at this address. If it's private, add its token.", ''],
+      [{status: 403, body: {}, headers: {'x-ratelimit-remaining': '0'}}, "GitHub's limit for this hour is used up. It will check again later.", T],
+      [{status: 403, body: {}, headers: {'x-ratelimit-remaining': '12'}}, "This token can't see the repo. Check the address, or ask the owner for a new token.", T],
+    ];
+    for (const [resp, msg, tok] of rows) {
+      reset(); R[tagsURL(1)] = resp;
+      const s = mk(tok); s.manifest = good; s.tag = t2;
+      await X.checkSource(s); note(s);
+      ck('#182 check: ' + msg.slice(0, 30) + ' (' + resp.status + (tok ? ', token' : ', no token') + ')', s.error === msg && s.manifest === good, s.error);
+    }
+    reset(); R[tagsURL(1)] = [{name: 'v1.0.0'}, {name: 'data-v99.0.0-1'}];
+    const s5 = mk(T); s5.manifest = good; await X.checkSource(s5); note(s5);
+    ck('#182 check: no usable tag is a note, not an error', s5.manifest === null && s5.error === '' && s5.note === 'no release for this Fieldbook yet', s5);
+    reset(); R[tagsURL(1)] = [{name: t2}]; R[manURL(t2)] = {status: 404, body: {}};
+    const s6 = mk(T); s6.manifest = good; await X.checkSource(s6); note(s6);
+    ck('#182 check: a 404 manifest is a note naming the tag', s6.manifest === null && s6.error === '' && s6.tag === t2 &&
+      s6.note === 'The newest release here (' + t2 + ') has no pack list for Fieldbook. The owner needs to cut a release with the data kit.', s6);
+    reset();
+    const s7 = mk(''); s7.needsToken = true; s7.manifest = good; await X.checkSource(s7); note(s7);
+    ck('#182 check: needsToken with no token fetches nothing', log.length === 0 && s7.error === 'Needs its token: paste the source link again.' && s7.manifest === good, s7);
+    reset(); R[tagsURL(1)] = [{name: t2}]; R[manURL(t2)] = 'garbage{';
+    const s8 = mk(T); s8.manifest = good; await X.checkSource(s8); note(s8);
+    ck('#182 check: a bad manifest keeps the last good one', s8.manifest === good && /JSON/.test(s8.error), s8.error);
+    reset(); R[tagsURL(1)] = {status: 500, body: {}};
+    const s9 = mk(T); s9.manifest = good; await X.checkSource(s9); note(s9);
+    ck('#182 check: a 500 keeps the last good manifest', s9.manifest === good && /500/.test(s9.error), s9.error);
+
+    // paging
+    reset();
+    const p1 = []; for (let i = 0; i < 100; i++) p1.push({name: 'junk-' + i});
+    const p2 = []; for (let i = 0; i < 50; i++) p2.push({name: i === 49 ? t2 : 'junk2-' + i});
+    R[tagsURL(1)] = p1; R[tagsURL(2)] = p2; R[manURL(t2)] = man;
+    const sp = mk(T); await X.checkSource(sp); note(sp);
+    ck('#182 check: 150 tags over two pages, newest on page 2 is picked, no page 3',
+      sp.tag === t2 && log.filter(c => c.url.includes('/tags?')).length === 2 && !log.some(c => c.url.includes('page=3')), log.map(c => c.url));
+    reset();
+    for (let n = 1; n <= 12; n++) R[tagsURL(n)] = p1;
+    const sq = mk(T); await X.checkSource(sq); note(sq);
+    ck('#182 check: at most 10 pages', log.length === 10, log.length);
+
+    // offline
+    reset(); ctx.navigator.onLine = false;
+    const so = mk(T); X.settings.sources = [so];
+    const rr = await X.checkSources({boot: true});
+    ck('#182 offline at boot: nothing fetched for a github source', rr === false && log.length === 0 && so.error === '');
+    ctx.navigator.onLine = true;
+    reset(); R[tagsURL(1)] = [{name: t2}]; R[manURL(t2)] = man;
+    const sn = mk(T); X.settings.sources = [sn];
+    await X.checkSources({boot: true});
+    ck('#182 checkSources includes an enabled github source', sn.tag === t2 && !!sn.manifest, sn);
+    sn.on = false; log.length = 0; await X.checkSources({boot: true});
+    ck('#182 checkSources skips a disabled github source', log.length === 0);
+
+    // install
+    reset(); R[tagsURL(1)] = [{name: t2}]; R[manURL(t2)] = man;
+    R[API + 'contents/releases/data/hb_full.json?ref=' + t2] = pack;
+    const si = mk(T); si.on = true; X.settings.sources = [si];
+    await X.checkSource(si); log.length = 0;
+    X.resetRules(); X.settings.packOrigin = {};
+    ctx.saveRulesCache = () => Promise.resolve('');
+    const cand = si.manifest.packs.map(entry => X.offerCandidate({entry, source: si}));
+    const res = await X.runInstall(X.planInstall(cand));
+    ck('#182 install: the pack comes from the contents API at the tag, with the token and the raw Accept',
+      res.ok === true && log.length === 1 && log[0].url === API + 'contents/releases/data/hb_full.json?ref=' + t2 &&
+      log[0].headers.Authorization === 'Bearer ' + T && /raw/.test(log[0].headers.Accept), [res, log]);
+    ck('#182 install: packOrigin is the source id', X.settings.packOrigin['Hb|hb_full.json'] === 'g1', X.settings.packOrigin);
+
+    ck('#182 the token is in no error or note', texts.every(t => typeof t === 'string' && !t.includes(T)), texts);
+  } finally {
+    ctx.fetch = realFetch; ctx.navigator.onLine = realOnline; ctx.saveRulesCache = realSave;
+    X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {};
+  }
+});
+
 // ---- add new sections above this line ----
 (async () => {
   for (const [name, fn] of SECTIONS) {

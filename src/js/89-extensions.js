@@ -144,7 +144,7 @@ function convertSources(s){
   const isObj=o=>!!o&&typeof o==="object"&&!Array.isArray(o);
   let list=(Array.isArray(s.sources)?s.sources:[]).filter(x=>isObj(x)&&(
     x.kind==="official"||(x.kind==="manifest"&&extUrl(x.url))||(x.kind==="plain"&&typeof x.url==="string"&&x.url.trim())||(x.kind==="github"&&(l=>!!l&&!l.token)(extGithubLink(x.repo))))).map(x=>x.kind==="github"
-    ?Object.assign({token:"",tag:"",checked:0,error:"",manifest:null,base:"",on:true},x,{repo:extGithubLink(x.repo).repo}):x);
+    ?Object.assign({token:"",tag:"",note:"",checked:0,error:"",manifest:null,base:"",on:true},x,{repo:extGithubLink(x.repo).repo}):x);
   let off=list.find(x=>x.kind==="official");
   list=list.filter(x=>x.kind!=="official");
   off=Object.assign(extOfficial(),off||{},{id:"official",kind:"official",url:""});
@@ -247,7 +247,9 @@ function extFetchBytes(url,ms,cap,headers){
   const opts=ac?{cache:"no-store",signal:ac.signal}:{cache:"no-store"};
   if(headers)opts.headers=headers;
   const run=fetch(url,opts).then(r=>{
-    if(!r||!r.ok){const e=new Error("HTTP "+(r?r.status:"error"));e.status=r?r.status:0;throw e;}
+    if(!r||!r.ok){const e=new Error("HTTP "+(r?r.status:"error"));e.status=r?r.status:0;
+      if(r&&r.headers&&typeof r.headers.get==="function"&&r.headers.get("x-ratelimit-remaining")==="0")e.rateLimited=true;
+      throw e;}
     if(cap){
       const len=r.headers&&typeof r.headers.get==="function"?num(r.headers.get("content-length")):0;
       /* abort first, so the refusal really stops the download rather than
@@ -293,7 +295,51 @@ function extOfficialUrl(){
 /* One source's manifest. A failure keeps the last good manifest and says why
    on the source's row; the official source on a release from before #102 (no
    releases/data/, a 404) is simply nothing to offer, not an error. */
+/* a github source: the newest usable data tag, then its manifest. Every
+   failure is said in words that never carry the token (#182). */
+const EXT_GH_PAGE=100,EXT_GH_PAGES=10;
+function extGhWhy(src,e){
+  const st=e&&e.status;
+  if(st===401)return "The repo refused this token. It may have expired or been deleted: ask the repo's owner for a new one.";
+  if(st===403&&e.rateLimited)return "GitHub's limit for this hour is used up. It will check again later.";
+  if(st===404||st===403)return src.token?"This token can't see the repo. Check the address, or ask the owner for a new token.":"No public repo at this address. If it's private, add its token.";
+  return String((e&&e.message)||e||"it couldn't be reached");
+}
+function extGhTags(src){
+  const names=[];
+  const page=n=>{
+    const url=extGhApi(src.repo,"tags","per_page="+EXT_GH_PAGE+"&page="+n);
+    if(!url)return Promise.reject(new Error("that isn't a repo address"));
+    return extFetchBytes(url,EXT_CHECK_MS,EXT_MAN_MAX,extGhHeaders(src,false)).then(b=>{
+      let list;try{list=JSON.parse(utf8Text(b));}catch(e){list=null;}
+      if(!Array.isArray(list))throw new Error("GitHub's tag list couldn't be read");
+      list.forEach(t=>{if(t&&typeof t.name==="string")names.push(t.name);});
+      return list.length<EXT_GH_PAGE||n>=EXT_GH_PAGES?names:page(n+1);
+    });
+  };
+  return page(1);
+}
+function checkGithub(src){
+  const at=Date.now();
+  if(src.needsToken&&!src.token){src.checked=at;src.error="Needs its token: paste the source link again.";return Promise.resolve();}
+  const nothing=(tag,note)=>{src.tag=tag;src.manifest=null;src.base="";src.error="";src.note=note;};
+  return extGhTags(src).then(names=>{
+    const tag=extGhPickTag(names,APP_VERSION);
+    if(!tag){nothing("","no release for this Fieldbook yet");return;}
+    const url=extGhApi(src.repo,"contents/releases/data/fieldbook-data.json","ref="+encodeURIComponent(tag));
+    return extFetchBytes(url,EXT_CHECK_MS,EXT_MAN_MAX,extGhHeaders(src,true)).then(bytes=>{
+      let obj;try{obj=JSON.parse(utf8Text(bytes));}catch(e){throw new Error("it isn't valid JSON");}
+      src.manifest=readManifest(obj,bytes.length);src.base="";src.tag=tag;src.error="";src.note="";
+    },e=>{
+      if(e&&e.status===404){nothing(tag,"The newest release here ("+tag+") has no pack list for Fieldbook. The owner needs to cut a release with the data kit.");return;}
+      throw e;
+    });
+  }).then(()=>{src.checked=at;},e=>{
+    src.checked=at;src.note="";src.error=extGhWhy(src,e);
+  });
+}
 function checkSource(src){
+  if(src.kind==="github")return checkGithub(src);
   const at=Date.now();
   return (src.kind==="official"?extOfficialUrl():Promise.resolve(src.url)).then(url=>{
     if(!url){src.manifest=null;src.base="";return;}
@@ -330,7 +376,7 @@ function extSaveOk(err){if(!err)extSaveError="";return err;}
 function checkSources(opts){
   const o=opts||{};
   if(navigator.onLine===false)return Promise.resolve(false);
-  const list=(settings.sources||[]).filter(s=>s.on&&(s.kind==="official"||s.kind==="manifest"));
+  const list=(settings.sources||[]).filter(s=>s.on&&(s.kind==="official"||s.kind==="manifest"||s.kind==="github"));
   return Promise.all(list.map(checkSource)).then(()=>{
     const err=saveSettings();
     extSaveError=err||"";
@@ -390,7 +436,10 @@ function addSource(url){
 }
 /* ---- candidates (spec §5 step 1) ---- */
 function offerCandidate(o){
-  const e=o.entry,url=new URL(e.path,o.source.base||o.source.url).href;
+  const e=o.entry,gh=o.source.kind==="github";
+  /* a github entry's path is read through the contents API at the checked tag,
+     never resolved against a base URL */
+  const url=gh?extGhApi(o.source.repo,"contents/releases/data/"+e.path,"ref="+encodeURIComponent(o.source.tag||"")):new URL(e.path,o.source.base||o.source.url).href;
   /* a declared size scales the file timeout — EXT_FILE_MS plus a second per
      100 KB claimed — and an entry over the hard cap is refused outright, no
      fetch at all, since it could never pass extVerify's own size check
@@ -398,7 +447,7 @@ function offerCandidate(o){
   const ms=EXT_FILE_MS+Math.ceil((e.size||0)/102400)*1000;
   return {key:extKey(e.system,e.file),category:e.category,system:e.system,file:e.file,title:e.title,version:e.version,
     minApp:e.minApp,sha256:e.sha256,size:e.size,requires:e.requires,origin:o.source.id,manual:false,
-    get:()=>e.size>EXT_FILE_MAX?Promise.reject(new Error("it's larger than 32 MB")):extFetchBytes(url,ms,EXT_FILE_MAX)};
+    get:()=>e.size>EXT_FILE_MAX?Promise.reject(new Error("it's larger than 32 MB")):!url?Promise.reject(new Error("that file's address isn't valid")):extFetchBytes(url,ms,EXT_FILE_MAX,gh?extGhHeaders(o.source,true):undefined)};
 }
 /* Files, a folder or a dropped set, as {name, bytes, path?}. A zip goes
    through readDataArchive() and keeps its manifest's entries; a loose pack is
