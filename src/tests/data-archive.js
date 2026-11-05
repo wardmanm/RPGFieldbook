@@ -26,7 +26,7 @@ const {X, ctx, state, bootError} = loadApp([
   'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
   'extPlanHTML', 'renderExtPill', 'showUpdatePill', 'openInstallPlan', 'manualInstallFiles', 'readDropped',
   'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap', 'extText', 'extSourceName', 'extSourceHost',
-  'extGithubLink', 'extGhApi', 'extGhHeaders', 'extGhPickTag',
+  'extGithubLink', 'extGhApi', 'extGhHeaders', 'extGhPickTag', 'openChangeToken',
   'rulesStatusText', 'extWireDrop', 'extManualPlan', 'extPillFocusBack', 'EXT_DROP_MAX', 'dismissModal',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -2074,6 +2074,72 @@ section('#182 checking and installing', async () => {
   } finally {
     ctx.fetch = realFetch; ctx.navigator.onLine = realOnline; ctx.saveRulesCache = realSave;
     X.resetRules(); X.settings.sources = []; X.settings.packOrigin = {};
+  }
+});
+
+section('#182 adding and the row', async () => {
+  const realFetch = ctx.fetch;
+  const T = 'github_pat_' + 'Q'.repeat(26) + 'ABCD', T2 = 'github_pat_' + 'W'.repeat(26) + 'WXYZ';
+  const V = X.APP_VERSION, t2 = 'data-v' + V + '-2';
+  const API = 'https://api.github.com/repos/ann/hb/';
+  const R = {}, log = [];
+  ctx.fetch = (url, opts) => {
+    log.push({url, headers: (opts && opts.headers) || {}});
+    if (!(url in R)) return Promise.reject(new TypeError('Failed to fetch'));
+    const r = R[url], isR = r && typeof r === 'object' && !Array.isArray(r) && 'status' in r && 'body' in r;
+    const status = isR ? r.status : 200, raw = isR ? r.body : r;
+    const bytes = new TextEncoder().encode(typeof raw === 'string' ? raw : JSON.stringify(raw));
+    return Promise.resolve({ok: status < 400, status, headers: {get: () => null},
+      arrayBuffer: () => Promise.resolve(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength))});
+  };
+  const tagsURL = API + 'tags?per_page=100&page=1';
+  const manURL = API + 'contents/releases/data/fieldbook-data.json?ref=' + encodeURIComponent(t2);
+  const man = {_type: 'fieldbook-data', format: 2, builtFor: V, packs: [{file: 'hb_full.json', system: 'Hb', version: V + '-2', sha256: 'a'.repeat(64)}]};
+  const ghs = () => X.settings.sources.filter(s => s.kind === 'github');
+  try {
+    X.settings.sources = [];
+    R[tagsURL] = [{name: t2}]; R[manURL] = man;
+    let r = await X.addSource('https://github.com/ann/hb#token=' + T);
+    ck('#182 add: a source link adds one github source with its token', r.ok === true && !r.why && ghs().length === 1 && ghs()[0].token === T && ghs()[0].repo === 'ann/hb' && ghs()[0].tag === t2, [r, X.settings.sources]);
+    const saved = JSON.parse(ctx.localStorage.getItem('hw-fb-settings') || '{}');
+    ck('#182 add: it is in the saved settings', (saved.sources || []).some(x => x.kind === 'github' && x.token === T), saved.sources);
+
+    r = await X.addSource('https://github.com/ANN/HB#token=' + T2);
+    ck('#182 add: a second token for the same repo (other case) updates the first', r.ok === true && r.why === 'Token updated.' && ghs().length === 1 && ghs()[0].token === T2, [r, ghs().length]);
+    r = await X.addSource('ann/hb');
+    ck('#182 add: the same repo with no token is already there', r.ok === false && r.why === 'That source is already in the list.', r);
+
+    // R2: a source that needs its token gets it back by pasting the link
+    ghs()[0].needsToken = true; ghs()[0].token = ''; ghs()[0].error = 'Needs its token: paste the source link again.';
+    r = await X.addSource('https://github.com/ann/hb#token=' + T);
+    ck('#182 R2: pasting the link restores the token and clears needsToken and error', r.ok === true && r.why === 'Token updated.' && ghs()[0].token === T && !ghs()[0].needsToken && ghs()[0].error === '', ghs()[0]);
+
+    // 401 is refused, not added
+    X.settings.sources = []; delete R[tagsURL]; R[tagsURL] = {status: 401, body: {}};
+    r = await X.addSource('https://github.com/ann/hb#token=' + T);
+    ck('#182 add: a 401 is not added and says why', r.ok === false && /refused this token/.test(r.why) && ghs().length === 0 && !r.why.includes(T), r);
+    // a public repo with no token
+    R[tagsURL] = [{name: t2}];
+    r = await X.addSource('ann/hb');
+    ck('#182 add: a bare owner/name adds a public source', r.ok === true && ghs().length === 1 && ghs()[0].token === '', r);
+
+    // a save failure is shown in the answer
+    X.settings.sources = [];
+    state.quotaFull = true;
+    r = await X.addSource('ann/hb');
+    state.quotaFull = false;
+    ck('#182 add: a failed save is in the answer', r.ok === true && /couldn't be saved/.test(r.why), r);
+
+    // the row
+    X.settings.sources = [{id: 'g1', kind: 'github', repo: 'ann/hb', token: T, tag: t2, note: '', on: true, checked: Date.now(), error: '', manifest: null, base: ''},
+      {id: 'g2', kind: 'github', repo: 'ann/pub', token: '', tag: '', note: 'no release for this Fieldbook yet', on: true, checked: Date.now(), error: '', manifest: null, base: ''}];
+    const html = X.extSourcesHTML();
+    ck('#182 row: name, last four, a Change token button; never the token', html.includes('ann/hb') && html.includes('…' + T.slice(-4)) && !html.includes(T) && html.includes('data-ext-src-token="g1"'), html);
+    ck('#182 row: private vs public, and the note', /private · token ending …ABCD/.test(html) && /public repo · /.test(html) && html.includes('no release for this Fieldbook yet'));
+    ck('#182 extSourceName for github is the repo', X.extSourceName(X.settings.sources[0]) === 'ann/hb');
+    ck('#182 openChangeToken exists', typeof X.openChangeToken === 'function');
+  } finally {
+    ctx.fetch = realFetch; state.quotaFull = false; X.settings.sources = [];
   }
 });
 

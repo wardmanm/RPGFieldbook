@@ -385,9 +385,40 @@ function checkSources(opts){
     return true;
   });
 }
+/* the repo of a github source, compared without case: GitHub's names are case-insensitive */
+function extGhFind(repo){const lc=String(repo).toLowerCase();return (settings.sources||[]).find(s=>s.kind==="github"&&String(s.repo).toLowerCase()===lc)||null;}
+/* a new token for a github source (pasting the link again, or Change token):
+   it clears needsToken and the old error, is saved, then the source is checked
+   again and saved once more. Resolves to a save error ("" when it landed). */
+function extSetToken(src,token){
+  src.token=token;src.needsToken=false;src.error="";
+  const e1=extSaveOk(saveSettings());
+  return checkSource(src).then(()=>{const e2=extSaveOk(saveSettings());return e1||e2;});
+}
+/* "+ Add a source URL" given a GitHub source link (or owner/name). The token
+   leaves the URL box at once: only the repo's address stays on screen. */
+function addGithubSource(gl){
+  if(gl.token){const box=document.getElementById("extAddUrl");if(box)box.value="https://github.com/"+gl.repo;}
+  const have=extGhFind(gl.repo);
+  if(have){
+    if(!gl.token)return Promise.resolve({ok:false,why:"That source is already in the list."});
+    return extSetToken(have,gl.token).then(err=>({ok:true,why:err?"Token updated, but your settings couldn't be saved: "+err:"Token updated."}));
+  }
+  const src={id:uid(),kind:"github",repo:gl.repo,token:gl.token,tag:"",note:"",on:true,checked:0,error:"",manifest:null,base:"",needsToken:false};
+  return checkSource(src).then(()=>{
+    /* added once the tag list answered; a refusal or an unreachable GitHub is said and nothing is kept */
+    if(src.error)return {ok:false,why:src.error};
+    if(!Array.isArray(settings.sources))settings.sources=[];
+    settings.sources.push(src);
+    const err=extSaveOk(saveSettings());
+    return {ok:true,why:err?"Added, but your settings couldn't be saved: "+err:""};
+  });
+}
 /* + Add a source URL: fetched once and sorted (spec §4) */
 function addSource(url){
   const u=String(url||"").trim();
+  const gl=extGithubLink(u);
+  if(gl)return addGithubSource(gl);
   if(!extUrl(u))return Promise.resolve({ok:false,why:"That isn't a web address (it must start with http:// or https://)."});
   /* de-duplicate on the NORMALISED url: "HTTPS://Host/m.json" and
      "https://host/m.json" are the same source, differing only in case or a
@@ -680,6 +711,7 @@ function extAgo(t,bare){
 function extSourceHost(src){try{return extPlain(new URL(String(src&&src.url||"")).host);}catch(e){return "";}}
 function extSourceName(src){
   if(src.kind==="official")return "Fieldbook public data";
+  if(src.kind==="github")return extPlain(String(src.repo||""));
   const name=extPlain(src.manifest&&src.manifest.name).trim(),host=extSourceHost(src);
   if(name&&host)return name===host?host:name+" ("+host+")";
   return name||extPlain(String(src.url||"")).replace(/^https?:\/\//i,"");
@@ -753,14 +785,17 @@ function extRowHTML(r){
 function extSourcesHTML(){
   const rows=(settings.sources||[]).map(s=>{
     const name=extSourceName(s),note=s.kind==="plain"?"plain file":(s.error?"couldn't check: "+s.error:extAgo(s.checked));
-    const sub=s.kind==="official"?"built in · "+note:(s.kind==="manifest"?extPlain(String(s.url)).replace(/^https?:\/\//i,"")+" · "+note:note);
+    const gh=s.kind==="github";
+    const ghSub=(s.token?"private · token ending …"+String(s.token).slice(-4):"public repo")+" · "+(s.error?"couldn't check: "+s.error:extAgo(s.checked)+(s.note?" · "+s.note:""));
+    const sub=gh?ghSub:s.kind==="official"?"built in · "+note:(s.kind==="manifest"?extPlain(String(s.url)).replace(/^https?:\/\//i,"")+" · "+note:note);
     const ctl=s.kind==="official"
       ?`<button type="button" class="switch ${s.on?"on":""}" data-ext-src-on="${esc(s.id)}" role="switch" aria-checked="${s.on?"true":"false"}" aria-label="Use Fieldbook public data"></button>`
-      :(s.kind==="plain"?`<button type="button" class="tbtn ext-act" data-ext-src-fetch="${esc(s.id)}">Fetch</button>`:"")+`<button type="button" class="tbtn ext-act" data-ext-src-del="${esc(s.id)}">Remove</button>`;
+      :(s.kind==="plain"?`<button type="button" class="tbtn ext-act" data-ext-src-fetch="${esc(s.id)}">Fetch</button>`:"")+
+        (gh?`<button type="button" class="tbtn ext-act" data-ext-src-token="${esc(s.id)}">Change token</button>`:"")+`<button type="button" class="tbtn ext-act" data-ext-src-del="${esc(s.id)}">Remove</button>`;
     return `<div class="ext-src"><div class="ext-main"><b>${esc(name)}</b><div class="ext-from${s.error?" ext-err":""}">${esc(sub)}</div></div>${ctl}</div>`;
   }).join("");
   return (rows?`<div class="ext-list">${rows}</div>`:"")+
-    `<div class="ext-add"><input id="extAddUrl" type="url" inputmode="url" placeholder="https://…/fieldbook-data.json" aria-label="Source URL"><button type="button" class="tbtn ext-act" id="extAddGo">+ Add a source URL</button></div>`+
+    `<div class="ext-add"><input id="extAddUrl" type="url" inputmode="url" placeholder="https://…/fieldbook-data.json, or a GitHub source link" aria-label="Source URL"><button type="button" class="tbtn ext-act" id="extAddGo">+ Add a source URL</button></div>`+
     `<div class="ext-acts"><button type="button" class="tbtn ext-act" id="extCheckNow">Check now</button><button type="button" class="tbtn ext-act" id="extManual">Manual install…</button></div>`;
 }
 function extPageHTML(){
@@ -817,6 +852,32 @@ function openExtDetails(key){
   body.querySelectorAll("[data-ext-open]").forEach(b=>b.addEventListener("click",()=>openExtDetails(b.dataset.extOpen)));
   body.querySelectorAll("[data-ext-update],[data-ext-install]").forEach(b=>b.addEventListener("click",()=>extUpdateFromRows([extRowFor(b.dataset.extUpdate||b.dataset.extInstall)])));
   body.querySelectorAll("button[data-ext-req]").forEach(b=>b.addEventListener("click",()=>extReqTap(b)));
+}
+/* ---- Change token (#182): one password box, for a token or the source link ---- */
+function openChangeToken(id){
+  const src=(settings.sources||[]).find(x=>x.id===id&&x.kind==="github");
+  if(!src)return;
+  const back=()=>{closeModal();settings.setPage="extensions";openSettings();};
+  openModal("Change token",`<div class="ext-dlg"><p class="hint">${esc(extSourceName(src))}. Paste the new token, or the source link you were sent.</p>`+
+    `<input id="extTokenIn" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="New token or source link">`+
+    `<p class="status err" id="extTokenErr" role="alert"></p>`+
+    `<div class="m-actions"><button type="button" class="tbtn" id="extDlgClose">Cancel</button><button type="button" class="tbtn primary" id="extTokenSave">Save</button></div></div>`,"",{});
+  const inp=document.getElementById("extTokenIn"),err=document.getElementById("extTokenErr");
+  const close=document.getElementById("extDlgClose"),save=document.getElementById("extTokenSave");
+  if(close)close.addEventListener("click",back);
+  if(!save)return;
+  save.addEventListener("click",()=>{
+    const v=String(inp.value||"").trim();
+    const l=extGithubLink(v)||(/^[A-Za-z0-9_]{20,255}$/.test(v)?{repo:"",token:v}:null);
+    if(!l)return void(err.textContent="That isn't a token or a source link.");
+    if(l.repo&&l.repo.toLowerCase()!==String(src.repo).toLowerCase())return void(err.textContent="That link is for another repo.");
+    if(!l.token)return void(err.textContent="That link has no token in it.");
+    inp.value="";save.disabled=true;err.textContent="";
+    extSetToken(src,l.token).then(e=>{
+      back();
+      if(e)updateRulesStatus("Couldn't save the new token: "+e,"err");else updateRulesStatus("Token updated.","ok");
+    });
+  });
 }
 /* a requirement button: only drawn when a source offers the pack */
 function extReqTap(b){
@@ -902,6 +963,7 @@ function wireExtPage(root){
     if((b=t.closest("[data-ext-src-del]"))){
       settings.sources=(settings.sources||[]).filter(x=>x.id!==b.dataset.extSrcDel);
       const err=extSaveSources();renderExtUI();if(!err)updateRulesStatus("Source removed. Its packs stay installed.","ok");return;}
+    if((b=t.closest("[data-ext-src-token]")))return openChangeToken(b.dataset.extSrcToken);
     if((b=t.closest("[data-ext-src-fetch]"))){const s=(settings.sources||[]).find(x=>x.id===b.dataset.extSrcFetch);if(s)fetchAllRules([s.url]);return;}
     if(t.closest("#extCheckNow")){
       if(navigator.onLine===false)return updateRulesStatus("You're offline, so nothing was checked.","err");
@@ -920,7 +982,7 @@ function wireExtPage(root){
         const okMsg=s&&s.kind==="plain"?"Source added. Press Fetch on its row to load its rules.":"Source added.";
         const inp=document.getElementById("extAddUrl");if(inp)inp.value="";
         renderExtUI();
-        updateRulesStatus(r.why||okMsg,r.why?"err":"ok");
+        updateRulesStatus(r.why||okMsg,r.why&&r.why!=="Token updated."?"err":"ok");
       });}
     /* Task 6 (#102) defines the Manual install dialog */
     if(t.closest("#extManual")&&typeof openManualInstall==="function")return openManualInstall();
