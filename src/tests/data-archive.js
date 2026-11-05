@@ -26,7 +26,7 @@ const {X, ctx, state, bootError} = loadApp([
   'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
   'extPlanHTML', 'renderExtPill', 'showUpdatePill', 'openInstallPlan', 'manualInstallFiles', 'readDropped',
   'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap', 'extText', 'extSourceName', 'extSourceHost',
-  'extSettingsForExport', 'extKeepTokens', 'extGhWhy', 'extGhFind', 'extGithubLink', 'extGhApi', 'extGhHeaders', 'extGhPickTag', 'openChangeToken',
+  'extSettingsForExport', 'extKeepTokens', 'extGhWhy', 'extSetToken', 'extGhFind', 'extGithubLink', 'extGhApi', 'extGhHeaders', 'extGhPickTag', 'openChangeToken',
   'rulesStatusText', 'extWireDrop', 'extManualPlan', 'extPillFocusBack', 'EXT_DROP_MAX', 'dismissModal',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -2020,6 +2020,31 @@ section('#182 checking and installing', async () => {
     const s9 = mk(T); s9.manifest = good; await X.checkSource(s9); note(s9);
     ck('#182 check: a 500 keeps the last good manifest', s9.manifest === good && /500/.test(s9.error), s9.error);
 
+    // P3 (pre-merge): a source whose token is refused offers nothing; a flaky network still does
+    {
+      const keep = X.settings.sources;
+      const ok1 = mk(T); ok1.manifest = good; ok1.tag = t2;
+      X.settings.sources = [ok1];
+      ck('#182 P3: a good source offers its pack', X.extOffers().length === 1, X.extOffers().length);
+      reset(); R[tagsURL(1)] = {status: 401, body: {}};
+      await X.checkSource(ok1);
+      ck('#182 P3: after a 401 the manifest is kept but nothing is offered, pill count 0',
+        ok1.manifest === good && /refused this token/.test(ok1.error) && X.extOffers().length === 0 && X.extPillCount() === 0, [ok1.error, X.extOffers().length]);
+      reset(); R[tagsURL(1)] = {status: 404, body: {}};
+      await X.checkSource(ok1);
+      ck('#182 P3: "can\'t see the repo" offers nothing either', /can't see the repo/.test(ok1.error) && X.extOffers().length === 0);
+      reset(); R[tagsURL(1)] = [{name: t2}]; R[manURL(t2)] = man;
+      const err = await X.extSetToken(ok1, T);
+      ck('#182 P3: a good token offers again after the re-check', err === '' && ok1.error === '' && X.extOffers().length === 1, [err, ok1.error]);
+      reset();   // no responses: every fetch is a TypeError
+      await X.checkSource(ok1);
+      ck('#182 P3: a network failure still offers the kept manifest', /couldn't be reached/.test(ok1.error) && X.extOffers().length === 1, [ok1.error, X.extOffers().length]);
+      reset(); R[tagsURL(1)] = {status: 403, body: {}, headers: {'x-ratelimit-remaining': '0'}};
+      await X.checkSource(ok1);
+      ck('#182 P3: a rate-limit failure still offers', /limit for this hour/.test(ok1.error) && X.extOffers().length === 1);
+      X.settings.sources = keep;
+    }
+
     // paging
     reset();
     const p1 = []; for (let i = 0; i < 100; i++) p1.push({name: 'junk-' + i});
@@ -2118,6 +2143,15 @@ section('#182 adding and the row', async () => {
     X.settings.sources = []; delete R[tagsURL]; R[tagsURL] = {status: 401, body: {}};
     r = await X.addSource('https://github.com/ann/hb#token=' + T);
     ck('#182 add: a 401 is not added and says why', r.ok === false && /refused this token/.test(r.why) && ghs().length === 0 && !r.why.includes(T), r);
+    // P2 (pre-merge): a token in a query string or inside any text is refused before any fetch
+    for (const bad of ['https://github.com/ann/hb?token=' + T, 'https://github.com/ann/hb?x=1&token=' + T,
+                       'https://example.com/m.json?k=ghp_' + 'A'.repeat(36), 'see ' + T + ' here', 'https://example.com/m.json#token=' + T]) {
+      log.length = 0;
+      const box = ctx.document.getElementById('extAddUrl'); if (box) box.value = bad;
+      r = await X.addSource(bad);
+      ck('#182 P2: refused with no fetch and the box cleared: ' + bad.slice(0, 40),
+        r.ok === false && r.why === "That isn't a valid source link." && log.length === 0 && (!box || box.value === '') && ghs().length === 0, [r, log.length, box && box.value]);
+    }
     // a public repo with no token
     R[tagsURL] = [{name: t2}];
     r = await X.addSource('ann/hb');
