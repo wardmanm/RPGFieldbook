@@ -385,6 +385,27 @@ function checkSources(opts){
     return true;
   });
 }
+/* A settings file never carries a source's token (#182): a deep copy of
+   `s` where each github source that had one is blanked and marked
+   needsToken. A public source (no token) goes out as it is. */
+function extSettingsForExport(s){
+  const out=JSON.parse(JSON.stringify(s));
+  (out.sources||[]).forEach(x=>{if(x&&x.kind==="github"&&x.token){x.token="";x.needsToken=true;}});
+  return out;
+}
+/* On import: an incoming github source with no token takes the token of the
+   source this device already has for the same repo (case-insensitive), and
+   stops needing one. Never adds a token to a repo the device lacks. Mutates
+   `incoming`. */
+function extKeepTokens(incoming,current){
+  const cs=(current&&current.sources)||[];
+  ((incoming&&incoming.sources)||[]).forEach(x=>{
+    if(!x||x.kind!=="github"||x.token)return;
+    const lc=String(x.repo).toLowerCase();
+    const have=cs.find(c=>c&&c.kind==="github"&&c.token&&String(c.repo).toLowerCase()===lc);
+    if(have){x.token=have.token;delete x.needsToken;}
+  });
+}
 /* the repo of a github source, compared without case: GitHub's names are case-insensitive */
 function extGhFind(repo){const lc=String(repo).toLowerCase();return (settings.sources||[]).find(s=>s.kind==="github"&&String(s.repo).toLowerCase()===lc)||null;}
 /* a new token for a github source (pasting the link again, or Change token):

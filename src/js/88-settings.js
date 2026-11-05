@@ -240,7 +240,7 @@ function openSettings(){
   {const s=document.getElementById("setAmmoRec");if(s)s.addEventListener("change",()=>{character.ammoRecovery=ammoRecoveryOf({ammoRecovery:s.value});scheduleSave();renderAttacks();});}
   {const s=document.getElementById("setInvLogSize");if(s)s.addEventListener("change",()=>{if(!setInvLogSize(num(s.value)))s.value=String(character.invLogSize);});}
   {const b=document.getElementById("btnCharUpdate");if(b)b.addEventListener("click",()=>{closeModal();openUpdateReview();});}
-  document.getElementById("btnExportSettings").addEventListener("click",()=>dl(new Blob([JSON.stringify({_type:"fieldbook-settings",settings,rules},null,2)],{type:"application/json"}),"fieldbook-settings.json"));
+  document.getElementById("btnExportSettings").addEventListener("click",()=>dl(new Blob([JSON.stringify({_type:"fieldbook-settings",settings:extSettingsForExport(settings),rules},null,2)],{type:"application/json"}),"fieldbook-settings.json"));
   document.getElementById("btnImportSettings").addEventListener("click",()=>document.getElementById("fileSettings").click());
   document.getElementById("fileSettings").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{let p=null;try{p=JSON.parse(r.result);}catch(err){}importSettings(p);};r.readAsText(f);e.target.value="";});
 }
@@ -341,7 +341,7 @@ function finishSettingsImport(imp,replace){
   const had=rulesEntryCount();
   const swap=!!(replace&&imp.pool);
   const what=imp.pool?rulesPackSummary(loadedRulesGroups(imp.pool)):"";
-  if(imp.settings){Object.assign(settings,imp.settings);foldLegacySettings();}
+  if(imp.settings){extKeepTokens(imp.settings,settings);Object.assign(settings,imp.settings);foldLegacySettings();}
   const setErr=imp.settings?saveSettings():"";
   let saving=Promise.resolve("");
   if(swap){rules=imp.pool;reindexRules();recomputeDups();saving=saveRulesCache();}

@@ -26,7 +26,7 @@ const {X, ctx, state, bootError} = loadApp([
   'rulesNavBadgeHTML', 'renderExtUI', 'renderRulesData',
   'extPlanHTML', 'renderExtPill', 'showUpdatePill', 'openInstallPlan', 'manualInstallFiles', 'readDropped',
   'extInstalledText', 'extFocusTargets', 'extReqChip', 'extReqTap', 'extText', 'extSourceName', 'extSourceHost',
-  'extGithubLink', 'extGhApi', 'extGhHeaders', 'extGhPickTag', 'openChangeToken',
+  'extSettingsForExport', 'extKeepTokens', 'extGithubLink', 'extGhApi', 'extGhHeaders', 'extGhPickTag', 'openChangeToken',
   'rulesStatusText', 'extWireDrop', 'extManualPlan', 'extPillFocusBack', 'EXT_DROP_MAX', 'dismissModal',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
@@ -2141,6 +2141,45 @@ section('#182 adding and the row', async () => {
   } finally {
     ctx.fetch = realFetch; state.quotaFull = false; X.settings.sources = [];
   }
+});
+
+section('#182 export and import', async () => {
+  const T = 'github_pat_EXPORTTOKEN1234';
+  const gh = (repo, token, more) => Object.assign({id: 'g-' + repo, kind: 'github', repo, token, on: true, checked: 0, error: '', manifest: null, base: '', tag: '', note: ''}, more || {});
+  const cur = {sources: [{id: 'o', kind: 'official', on: true}, gh('ann/hb', T), gh('ann/pub', '')], other: 1};
+  const snap = JSON.stringify(cur);
+  const out = X.extSettingsForExport(cur);
+  ck('#182 export: no token anywhere in the JSON, needsToken on the private one', !JSON.stringify(out).includes(T) && out.sources[1].token === '' && out.sources[1].needsToken === true, out);
+  ck('#182 export: a public source is as-is, no needsToken', out.sources[2].token === '' && !('needsToken' in out.sources[2]), out.sources[2]);
+  ck('#182 export: the live settings are not mutated', JSON.stringify(cur) === snap && cur.sources[1].token === T);
+  ck('#182 export: other settings kept', out.other === 1 && out.sources[0].kind === 'official');
+  const src = fs.readFileSync(path.join(ROOT, 'src/js/88-settings.js'), 'utf8');
+  ck('#182 export: the handler writes extSettingsForExport(settings) and keeps rules', /settings:extSettingsForExport\(settings\),rules/.test(src));
+  ck('#182 import: finishSettingsImport calls extKeepTokens', /extKeepTokens\(imp\.settings,settings\)/.test(src));
+  // import on a device with the same repo (other case): token kept
+  const file = JSON.parse(JSON.stringify({settings: out}));
+  X.extKeepTokens(file.settings, {sources: [gh('ANN/HB', T)]});
+  ck('#182 import: same repo (any case) keeps the device token, loses needsToken', file.settings.sources[1].token === T && !file.settings.sources[1].needsToken, file.settings.sources[1]);
+  // never moves a token between different repos, never invents one
+  const f2 = JSON.parse(JSON.stringify({settings: out}));
+  X.extKeepTokens(f2.settings, {sources: [gh('bob/other', 'x'.repeat(30))]});
+  ck('#182 import: another repo gives it nothing', f2.settings.sources[1].token === '' && f2.settings.sources[1].needsToken === true, f2.settings.sources[1]);
+  const f3 = JSON.parse(JSON.stringify({settings: out}));
+  X.extKeepTokens(f3.settings, {});
+  ck('#182 import: a device with no sources gives it nothing', f3.settings.sources[1].needsToken === true);
+  // old file: no github entries
+  const old = {sources: [{id: 'o', kind: 'official', on: true}], theme: 'x'};
+  const oldSnap = JSON.stringify(old);
+  X.extKeepTokens(old, {sources: [gh('ann/hb', T)]});
+  ck('#182 import: a file with no github entries is untouched', JSON.stringify(old) === oldSnap);
+  X.extKeepTokens({theme: 'x'}, {sources: []});
+  // no fetch for a needsToken source
+  const realFetch = ctx.fetch; let n = 0; ctx.fetch = () => { n++; return Promise.reject(new Error('no')); };
+  try {
+    const s = f3.settings.sources[1];
+    await X.checkSource(s);
+    ck('#182 import: needsToken source makes no fetch and says so', n === 0 && s.error === 'Needs its token: paste the source link again.', [n, s.error]);
+  } finally { ctx.fetch = realFetch; }
 });
 
 // ---- add new sections above this line ----
