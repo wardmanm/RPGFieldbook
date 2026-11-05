@@ -9075,3 +9075,14 @@ digest moves, so the next private release (`1.9.0-2`) carries a Homebrew change 
 chip read "XGE" where they read the title.
 
 Pages: [homebrew](../wiki/data/homebrew.md).
+
+## Context handoffs: a CLAUDE.md rule (Mike, 2026-11-05)
+
+Mike's rule, added to CLAUDE.md as "Context handoffs": at a natural stopping point where the next
+task would go better in a fresh context (a merge, an approved and committed design or plan, a
+release, or a long session whose next task needs little of it; never mid-task or while waiting on
+Mike), Claude says it's a good time to clear context and gives a handoff to paste into the new
+session, unasked. Everything worth keeping is committed or recorded first (ledger, wiki, SDD
+ledger, `.claude/status.md`). The handoff is one fenced block for a session that knows nothing:
+Goal, State, Decisions, Read first, Watch out for, First step. No wiki page describes sessions, so
+the rule lives in CLAUDE.md alone.
