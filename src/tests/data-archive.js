@@ -2033,6 +2033,16 @@ section('#182 checking and installing', async () => {
     const sq = mk(T); await X.checkSource(sq); note(sq);
     ck('#182 check: at most 10 pages', log.length === 10, log.length);
 
+    // realistic tag objects (~600 bytes each): a page is over 64 KB
+    reset();
+    const fat = name => ({name, zipball_url: API + 'zipball/refs/tags/' + name, tarball_url: API + 'tarball/refs/tags/' + name,
+      commit: {sha: 'a'.repeat(40), url: API + 'commits/' + 'a'.repeat(40) + '/' + 'x'.repeat(200)}, node_id: 'MDM6UmVmx'.padEnd(120, 'y')});
+    const f1 = []; for (let i = 0; i < 100; i++) f1.push(fat('junk-tag-name-' + i));
+    R[tagsURL(1)] = f1; R[tagsURL(2)] = [fat(t2)]; R[manURL(t2)] = man;
+    ck('#182 fat page is over 64 KB', JSON.stringify(f1).length > 65536, JSON.stringify(f1).length);
+    const sf = mk(T); await X.checkSource(sf); note(sf);
+    ck('#182 check: 100 realistic tag objects on page 1 still pick the newest on page 2', sf.tag === t2 && sf.error === '' && !!sf.manifest, sf.error);
+
     // offline
     reset(); ctx.navigator.onLine = false;
     const so = mk(T); X.settings.sources = [so];

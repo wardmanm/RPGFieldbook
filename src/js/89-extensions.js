@@ -7,7 +7,7 @@
    installing builds candidates, then one plan, one confirm, one all-or-nothing
    install. Spec: src/docs/specs/1.9.0/2026-10-26-extensions-manifest-design.md */
 const EXT_CATS=["rules"];
-const EXT_SUMMARY_MAX=140,EXT_DESC_MAX=4000,EXT_MAN_MAX=65536,EXT_PACKS_MAX=1000,EXT_FILE_MAX=33554432;
+const EXT_SUMMARY_MAX=140,EXT_DESC_MAX=4000,EXT_MAN_MAX=65536,EXT_PACKS_MAX=1000,EXT_FILE_MAX=33554432,EXT_GH_TAGS_MAX=1048576;
 const EXT_CHECK_MS=10000,EXT_FILE_MS=30000;
 /* ---- SHA-256, in JavaScript: whether a file:// page may use crypto.subtle
    differs by browser, and the suites check this against Node's crypto ---- */
@@ -238,7 +238,7 @@ function extFetchBytes(url,ms,cap,headers){
   if(headers&&headers.Authorization&&!String(url).startsWith("https://api.github.com/"))
     return Promise.reject(new Error("refused to send a token to another host"));
   const ac=typeof AbortController==="function"?new AbortController():null;
-  const tooBig=()=>{const e=new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":"it's larger than 32 MB");e.tooBig=true;return e;};
+  const tooBig=()=>{const e=new Error(cap===EXT_MAN_MAX?"the manifest is larger than 64 KB":cap===EXT_GH_TAGS_MAX?"the tag list is larger than 1 MB":"it's larger than 32 MB");e.tooBig=true;return e;};
   let timer,reader=null;
   /* stop everything: the request where AbortController exists, the stream's
      reader always (it may be all there is to stop) */
@@ -310,7 +310,7 @@ function extGhTags(src){
   const page=n=>{
     const url=extGhApi(src.repo,"tags","per_page="+EXT_GH_PAGE+"&page="+n);
     if(!url)return Promise.reject(new Error("that isn't a repo address"));
-    return extFetchBytes(url,EXT_CHECK_MS,EXT_MAN_MAX,extGhHeaders(src,false)).then(b=>{
+    return extFetchBytes(url,EXT_CHECK_MS,EXT_GH_TAGS_MAX,extGhHeaders(src,false)).then(b=>{
       let list;try{list=JSON.parse(utf8Text(b));}catch(e){list=null;}
       if(!Array.isArray(list))throw new Error("GitHub's tag list couldn't be read");
       list.forEach(t=>{if(t&&typeof t.name==="string")names.push(t.name);});
