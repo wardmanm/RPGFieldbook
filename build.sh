@@ -141,11 +141,12 @@ pack_kit() {
      data/overlay.json data/class-resources.json \
      docs/README-converter.md docs/rules-schema.md LICENSE .buildkit/
   cp tools/data-kit/example-pack/*.json .buildkit/example-pack/
+  printf '%s\n' "$VER" > .buildkit/fieldbook-version.txt
   ( cd .buildkit && zip -rqD "../$KIT" . -x '*.DS_Store' )
   rm -rf .buildkit
   local got
   got=$(unzip -Z1 "$KIT" | grep -v '/$' | LC_ALL=C sort | tr '\n' ' ')
-  local want="LICENSE README-converter.md README.md class-resources.json convert.py example-pack/example-pack.json fbdata.py overlay.json rules-schema.md srd-corrections.json "
+  local want="LICENSE README-converter.md README.md class-resources.json convert.py example-pack/example-pack.json fbdata.py fieldbook-version.txt overlay.json rules-schema.md srd-corrections.json "
   if [ "$got" != "$want" ]; then
     rm -f "$KIT"; echo "    the kit zip holds the wrong files: $got"; exit 1
   fi

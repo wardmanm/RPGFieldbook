@@ -851,8 +851,12 @@ else:
     kz = os.path.join(ROOT, "dist", kits[-1])
     names = sorted(n for n in zipfile.ZipFile(kz).namelist() if not n.endswith("/"))
     want = sorted(["fbdata.py", "convert.py", "overlay.json", "class-resources.json", "srd-corrections.json",
-                   "README.md", "README-converter.md", "rules-schema.md", "LICENSE", "example-pack/example-pack.json"])
+                   "README.md", "README-converter.md", "rules-schema.md", "LICENSE", "example-pack/example-pack.json",
+                   "fieldbook-version.txt"])
     ck("the kit zip holds exactly the kit", names == want, names)
+    appv = re.search(r'APP_VERSION="([^"]+)"', open(os.path.join(ROOT, "src", "js", "30-version.js"), encoding="utf-8").read()).group(1)
+    ck("#182 the kit zip's fieldbook-version.txt holds APP_VERSION",
+       zipfile.ZipFile(kz).read("fieldbook-version.txt").decode().strip() == appv, appv)
     t = tempfile.mkdtemp(prefix="kit-")
     zipfile.ZipFile(kz).extractall(t)
     r = subprocess.run([sys.executable, os.path.join(t, "fbdata.py"), "build", os.path.join(t, "example-pack"),
@@ -1176,6 +1180,76 @@ for wf in ("release.yml", "data-release.yml"):
     t = open(os.path.join(ROOT, ".github", "workflows", wf), encoding="utf-8").read()
     ck("#102 %s checks releases/data against the build" % wf,
        "fbdata.py validate --public releases/data" in t and 'cmp "releases/data/' in t)
+
+# ---------- #182: the kit's version stamp and `release`
+def rel_setup(stamp="1.9.0", lic=None, release="1.8.0"):
+    """A folder with no .git: the kit copied in beside a stamp, and an owner's repo (data/packs.json, one pack)."""
+    d = tempfile.mkdtemp(prefix="fbrel-")
+    os.makedirs(os.path.join(d, "kit"))
+    shutil.copy(FBDATA, os.path.join(d, "kit", "fbdata.py"))
+    if stamp is not None:
+        write(d, "kit/fieldbook-version.txt", raw=stamp + "\n")
+    write(d, "repo/data/mine/spells.json", {"system": "Mine", "spells": [{"name": "Zap", "level": 1}]})
+    pk = {"system": "Mine", "dir": "mine", "file": "mine_full.json", "title": "Mine", "version": "1.8.0"}
+    if lic:
+        pk["license"] = lic
+    write(d, "repo/data/packs.json", {"release": release, "packs": [pk]})
+    return d
+
+
+def rel(d, *args):
+    return subprocess.run([sys.executable, os.path.join(d, "kit", "fbdata.py"), "release"] + list(args),
+                          capture_output=True, text=True, cwd=os.path.join(d, "repo"))
+
+
+d = rel_setup()
+ck("#182 kit_version reads the stamp beside fbdata.py", subprocess.run(
+    [sys.executable, "-c", "import runpy,sys; print(runpy.run_path(sys.argv[1])['kit_version']())", os.path.join(d, "kit", "fbdata.py")],
+    capture_output=True, text=True).stdout.strip() == "1.9.0")
+r = rel(d, "--dry-run")
+ck("#182 release --dry-run prints the plan and writes nothing",
+   r.returncode == 0 and "1.9.0-1" in r.stdout and read_json(d, "repo/data/packs.json")["release"] == "1.8.0"
+   and not os.path.exists(os.path.join(d, "repo", "releases")), r.stdout + r.stderr)
+r = rel(d)
+reg = read_json(d, "repo/data/packs.json")
+ck("#182 release: first run is X-1, bumps the changed pack and records its digest",
+   r.returncode == 0 and reg["release"] == "1.9.0-1" and reg["packs"][0]["version"] == "1.9.0-1"
+   and (reg["packs"][0].get("digest") or "").startswith("sha256:"), r.stdout + r.stderr)
+man = read_json(d, "repo/releases/data/fieldbook-data.json")
+ck("#182 release writes releases/data/fieldbook-data.json listing the pack",
+   man["version"] == "1.9.0-1" and any(x.get("system") == "Mine" for x in man["packs"]), man)
+for line in ("git add data/packs.json releases/data", 'git commit -m "Data release 1.9.0-1"',
+             'git tag -a data-v1.9.0-1 -m "Data 1.9.0-1"', "git push && git push origin data-v1.9.0-1"):
+    ck("#182 release prints: " + line, line in r.stdout, r.stdout)
+ck("#182 release never creates a .git", not os.path.exists(os.path.join(d, ".git")) and not os.path.exists(os.path.join(d, "repo", ".git")))
+r = rel(d)
+ck("#182 release with nothing changed exits 1 'nothing to release'",
+   r.returncode == 1 and "nothing to release" in r.stderr and read_json(d, "repo/data/packs.json")["release"] == "1.9.0-1", r.stdout + r.stderr)
+r = rel(d, "--allow-unchanged")
+reg = read_json(d, "repo/data/packs.json")
+ck("#182 release --allow-unchanged moves only release (X-2)",
+   r.returncode == 0 and reg["release"] == "1.9.0-2" and reg["packs"][0]["version"] == "1.9.0-1", r.stdout + r.stderr)
+write(d, "repo/data/mine/spells.json", {"system": "Mine", "spells": [{"name": "Zap", "level": 2}]})
+write(d, "kit/fieldbook-version.txt", raw="1.9.1\n")
+r = rel(d)
+reg = read_json(d, "repo/data/packs.json")
+ck("#182 release after an edit and a newer stamp starts at X-1",
+   r.returncode == 0 and reg["release"] == "1.9.1-1" and reg["packs"][0]["version"] == "1.9.1-1", r.stdout + r.stderr)
+write(d, "kit/fieldbook-version.txt", raw="1.9.0\n")
+r = rel(d, "--allow-unchanged")
+ck("#182 release refuses a registry release newer than the kit",
+   r.returncode != 0 and read_json(d, "repo/data/packs.json")["release"] == "1.9.1-1", r.stdout + r.stderr)
+shutil.rmtree(d)
+d = rel_setup(stamp=None)
+r = rel(d)
+ck("#182 release with no stamp exits 2 'doesn't know its Fieldbook version'",
+   r.returncode == 2 and "this kit doesn't know its Fieldbook version" in r.stderr, r.stderr)
+shutil.rmtree(d)
+d = rel_setup(lic="All rights reserved")
+r = rel(d)
+ck("#182 release carries a pack licensed All rights reserved (no licence error)",
+   r.returncode == 0 and os.path.isfile(os.path.join(d, "repo", "releases", "data", "mine_full.json")), r.stdout + r.stderr)
+shutil.rmtree(d)
 
 # ---- add new cases above this line ----
 print("")
