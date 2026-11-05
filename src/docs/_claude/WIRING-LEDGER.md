@@ -9057,3 +9057,21 @@ rate-limit failure still offers. Tests: `data-kit.py` (a kit two levels deep rel
 `data-archive.js` (P2 and P3 cases).
 
 Pages: [settings & updates](../wiki/features/settings-and-updates.md), [data kit](../wiki/data/data-kit.md).
+
+## #182 follow-up: Homebrew names Xanathar's by its system, XGE (Mike, 2026-11-05)
+
+Checking RPGFieldbookPrivate for private sources before its first release with a pack list:
+Homebrew's three files named the Xanathar's group `"pack": "Xanathar's Guide to Everything"`, the
+pack's title, but a `requires` group's `pack` is the system it needs (#102 decision 14) and
+Xanathar's system is `XGE`. The Extensions page matches requirements by system
+(`extMissingReqs()`, `planInstall()`), so Homebrew's row would show a false "requires Xanathar's
+Guide to Everything" chip with XGE installed, and ticking Homebrew alone couldn't pull XGE into the
+plan. Loaded packs only display the name (`missingRequirements()`), so nothing else moved.
+
+**Fix (Mike's yes).** The three files now say `"pack": "XGE"`, their `requires` blocks still
+identical; the private repo's `private-data.js` checks follow (private commit c9f53c5). Homebrew's
+digest moves, so the next private release (`1.9.0-2`) carries a Homebrew change and needs no
+`--allow-unchanged`. The one visible difference: with XGE missing, Homebrew's loaded-data line and
+chip read "XGE" where they read the title.
+
+Pages: [homebrew](../wiki/data/homebrew.md).

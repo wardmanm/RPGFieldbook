@@ -48,8 +48,9 @@ library a player picks from by hand), not level-up choices. A throwaway generato
 files once, only so their `requires` blocks are byte-identical; it is not kept.
 
 **`requires`.** Declared per file, two groups: `{"pack": "SRD 5.2", "file": "srd52_full.json", …}`
-for the Warlock class and 11 spells, and `{"pack": "Xanathar's Guide to Everything", "file":
-"xanathars_full.json", …}` for Cause Fear and Primal Savagery. The expanded spell list is prose and
+for the Warlock class and 11 spells, and `{"pack": "XGE", "file": "xanathars_full.json", …}` for
+Cause Fear and Primal Savagery. A group's `pack` is the system it needs, `XGE` and not the title:
+the Extensions page matches requirements by system. The expanded spell list is prose and
 a table, so those 13 spells are invisible to any structural check; declaring them is the only way
 the app can say what is missing. The schema is in [rules-schema](../../../../docs/rules-schema.md) §1.
 
@@ -151,3 +152,4 @@ announces it (Mike, 2026-10-27).
 - 2026-10-09 — One of the two public packs; the Xanathar's names are checked in the private suite. → ledger L5426, #85
 - 2026-10-26 — The official manifest's "requires Xanathar's" chip stays; Homebrew is to move into the private repo as separate work. → ledger L7513, #102
 - 2026-10-28 — Moves to the private repo with its licence and credit; its Xanathar's group names `xanathars_full.json`; its tests move to the private suite; players who installed it get release notes only. → ledger L7858, #125
+- 2026-11-05 — The Xanathar's group names its system, `XGE`, not its title, so the Extensions page matches it. → ledger L9061, #182
