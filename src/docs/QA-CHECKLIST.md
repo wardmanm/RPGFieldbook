@@ -57,7 +57,7 @@ A feature that needs rules data wants SRD 5.2 installed (`dist/srd52_full.json` 
 - [x] Press End combat: Fieldbook asks in its own window, Keep fighting changes nothing, and End combat opens the End of combat window with the rounds, the time and who fought, the fallen struck through
 - [x] Open the folded sections: Ammunition shows what was fired and what came back, with Undo recovery, and the sections you opened are open again at the next fight
 - [x] With a Party member, type XP and turn on Split among N: the line shows each share, and when it reaches a level the level-up opens after Done
-- [ ] Press Open loot under Loot: the Loot window opens with the fallen foes named in From, and closing it brings back the window with your XP still typed (#166)
+- [x] Press Open loot under Loot: the Loot window opens with the fallen foes named in From, and closing it brings back the window with your XP still typed (#166)
 - [x] Switch on Show after combat for a counter and a journal page, then end a fight: both appear in the window, + / − and the page's boxes work there, and the Journal tab follows
 - [x] Close the window with × while XP is typed, then try a character whose XP reads "6350 xp": × asks whether to add the XP, and the words are never overwritten (the window says to fix them on the sheet)
 
@@ -109,15 +109,15 @@ A feature that needs rules data wants SRD 5.2 installed (`dist/srd52_full.json` 
 
 ## Since the test pass (#159, #161, #162, #165, #166, #167, #168)
 
-- [ ] Start a fight with more combatants than fit across the strip: the one acting stays in the middle, who has acted this round is on its left and who is still to come on its right, and the rest sit under +N buttons that list them in order (#165)
-- [ ] Press Next through a round, then ◂ Prev back across the top of it: the round steps back and the right combatant is acting; Prev is greyed on round 1's first turn (#165)
-- [ ] During a fight, the header's title and round sit centred between the round arrows, with Combatants ▾ and End combat centred at the foot (#165)
-- [ ] Add four or more monsters in Roll initiative on a phone: the window scrolls, Start stays in reach, nothing touches the right edge, and the "I rolled" box sits beside its words (#161, #162)
-- [ ] With Humblewood loaded, add Stonesinger (or another playtest background) from the list: it adds in one click, with no empty +2/+1 pickers (#159)
-- [ ] End a fight with fallen foes and press Open loot: only You get, with From naming the foes; take an item and some coins: the inventory log reads "Looted from …" (#166)
-- [ ] In a trade, get an item worth more than the coins you've typed and press Balance trade: your coins fill in, a gold piece splits into silver when you need change, and the purse comes out right after Complete (#168)
-- [ ] Give more than you get and press Complete Trade: Fieldbook warns first, and Go back changes nothing (#168)
-- [ ] Open a journal page's editor and try each Page style (Sheet, Notebook, Book, Parchment): the page reads as a page in each, in both skins, light and dark (#167)
+- [x] Start a fight with more combatants than fit across the strip: the one acting stays in the middle, who has acted this round is on its left and who is still to come on its right, and the rest sit under +N buttons that list them in order (#165)
+- [x] Press Next through a round, then ◂ Prev back across the top of it: the round steps back and the right combatant is acting; Prev is greyed on round 1's first turn (#165)
+- [x] During a fight, the header's title and round sit centred between the round arrows, with Combatants ▾ and End combat centred at the foot (#165)
+- [x] Add four or more monsters in Roll initiative on a phone: the window scrolls, Start stays in reach, nothing touches the right edge, and the "I rolled" box sits beside its words (#161, #162)
+- [x] With Humblewood loaded, add Stonesinger (or another playtest background) from the list: it adds in one click, with no empty +2/+1 pickers (#159)
+- [x] End a fight with fallen foes and press Open loot: only You get, with From naming the foes; take an item and some coins: the inventory log reads "Looted from …" (#166)
+- [x] In a trade, get an item worth more than the coins you've typed and press Balance trade: your coins fill in, a gold piece splits into silver when you need change, and the purse comes out right after Complete (#168)
+- [x] Give more than you get and press Complete Trade: Fieldbook warns first, and Go back changes nothing (#168)
+- [x] Open a journal page's editor and try each Page style (Sheet, Notebook, Book, Parchment): the page reads as a page in each, in both skins, light and dark (#167)
 
 ## Across the app
 
@@ -138,7 +138,7 @@ A feature that needs rules data wants SRD 5.2 installed (`dist/srd52_full.json` 
 - [x] Real phone: the level-up card's class line and LEVEL banner, now in the body font, read well (#101)
 - [x] Real phone: the rail's AC shield over the portrait: the AC reads clearly and doesn't hide the portrait's subject (#103)
 - [x] Real phone, mid-scroll on Inventory or Journal: where the ↑ button sits over a row's delete, that delete can still be reached (#103, #151)
-- [ ] Real phone: the initiative strip: tap a +N, ◂ Prev and Next: the acting chip stays in the middle, a +N's list opens under it, and nothing scrolls sideways (#91, #165)
+- [x] Real phone: the initiative strip: tap a +N, ◂ Prev and Next: the acting chip stays in the middle, a +N's list opens under it, and nothing scrolls sideways (#91, #165)
 - [x] Real phone: a trade, switching between You give and You get and completing it with ✓ (#47)
 - [x] Real phone: with an update notice showing, the top bar's notices sit on a row of their own and their × can be tapped (#102)
 - [x] Desktop: drag rules files from the desktop onto Manual install, and a zip through Manual install: the plan opens with them (#102)

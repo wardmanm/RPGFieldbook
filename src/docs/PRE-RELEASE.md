@@ -6,7 +6,7 @@ Started: 2026-10-30 · App was 1.8.1
 | 1. Docs | done | 2026-10-30 | 22 specs and 21 plans filed by version, roadmap 1.9.0 archived; 3 sections archived, 16 corrections; 426 references rewritten in 75 files |
 | 2. Outstanding issues | done | 2026-10-30 | 121 rows: 25 filed (#128 to #152; 17 P1, 8 grouped P2), 2 noted on #100, 7 decided by Mike and skipped; numbers written back |
 | 3. QA checklist | done | 2026-11-04 | Test pass: 12 feature sections, across the app and a device pass, 84 lines for Mike; rebuilt 2026-11-04 for the work since: 9 new lines and 2 reworded (11 for Mike), 84 marks carried forward; pre-drive re-run for the touched areas and the new work (99 lines: 97 passed, 2 failed) |
-| 4. QA bugs | open | | |
+| 4. QA bugs | done | 2026-11-04 | Test pass finished (95 lines ticked, no FAIL); 26 rows: 4 P0 (all fixed and closed), 5 P1 and 14 P2 filed for 1.9.1, 3 features from the pass; 9 closed; no P0 open |
 | 5. Release notes | open | | |
 
 ## Step 2: outstanding issues
@@ -162,4 +162,5 @@ Started: 2026-10-30 · App was 1.8.1
 | Claude's pre-drive | Add Background defaults both its +2 and its +1 to the same ability | P2 | #177 | open |
 | Claude's pre-drive | The combat view's Attacks heading pokes past its card at phone width | P2 | #178 | open |
 | Claude's pre-drive | At phone width the third tracker tile in a group is wider than the two above it | P2 | #179 | open |
+| Claude's pre-drive re-run | Undo level-up after adding a second class restores the sheet from before the previous level-up | P0 | #181 | merged on main; closed 2026-11-04 |
 | The Sheet makeover (#103), Mike | Sheet: Features & Traits as a full-width row, and the three columns ending on one line | P0 | #155 | merged on main; closed 2026-11-02 |
