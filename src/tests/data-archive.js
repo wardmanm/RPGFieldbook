@@ -1942,6 +1942,13 @@ section('#182 building blocks', async () => {
   X.convertSources(s2);
   const g2 = s2.sources.find(x => x.kind === 'github');
   ck('#182 R1: convertSources keeps needsToken, note, tag, token and on', !!g2 && g2.needsToken === true && g2.note === 'x' && g2.tag === 'data-v1.9.0-1' && g2.token === tok && g2.on === false, g2);
+  const tk = 'github_pat_ABCDEFGHIJKLMNOPQRST1234';
+  ck('#182 fix1: extGhApi refuses a URL-form, .git or token-bearing repo',
+    ['https://github.com/a/b', 'a/b.git', 'https://github.com/a/b#token=' + tk].every(r => X.extGhApi(r, 'releases') === '') && X.extGhApi('a/b', 'releases') !== '');
+  const s3 = {sources: [{kind: 'github', repo: 'a/b.git'}, {kind: 'github', repo: 'https://github.com/c/d'}, {kind: 'github', repo: 'https://github.com/e/f#token=' + tk}]};
+  X.convertSources(s3);
+  ck('#182 fix1: convertSources normalises repo and drops a token-bearing one',
+    j(s3.sources.filter(x => x.kind === 'github').map(x => x.repo)) === j(['a/b', 'c/d']), s3.sources);
 });
 
 // ---- add new sections above this line ----

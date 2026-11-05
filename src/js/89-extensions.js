@@ -85,7 +85,8 @@ function extGithubLink(text){
   return {repo:m[1]+"/"+m[2],token:m[3]||""};
 }
 function extGhApi(repo,path,query){
-  if(!extGithubLink(repo)||!path||!String(path).split("/").every(x=>extRelPath(x)))return "";
+  const l=extGithubLink(repo);
+  if(!l||l.repo!==repo||l.token||!path||!String(path).split("/").every(x=>extRelPath(x)))return "";
   return "https://api.github.com/repos/"+repo+"/"+path+(query?"?"+query:"");
 }
 function extGhHeaders(src,raw){
@@ -142,8 +143,8 @@ function convertSources(s){
   const before=JSON.stringify([s.sources,s.packOrigin,s.dismissedUpdates,s.rulesSources,s.rulesUrl]);
   const isObj=o=>!!o&&typeof o==="object"&&!Array.isArray(o);
   let list=(Array.isArray(s.sources)?s.sources:[]).filter(x=>isObj(x)&&(
-    x.kind==="official"||(x.kind==="manifest"&&extUrl(x.url))||(x.kind==="plain"&&typeof x.url==="string"&&x.url.trim())||(x.kind==="github"&&extGithubLink(x.repo)))).map(x=>x.kind==="github"
-    ?Object.assign({token:"",tag:"",checked:0,error:"",manifest:null,base:"",on:true},x):x);
+    x.kind==="official"||(x.kind==="manifest"&&extUrl(x.url))||(x.kind==="plain"&&typeof x.url==="string"&&x.url.trim())||(x.kind==="github"&&(l=>!!l&&!l.token)(extGithubLink(x.repo))))).map(x=>x.kind==="github"
+    ?Object.assign({token:"",tag:"",checked:0,error:"",manifest:null,base:"",on:true},x,{repo:extGithubLink(x.repo).repo}):x);
   let off=list.find(x=>x.kind==="official");
   list=list.filter(x=>x.kind!=="official");
   off=Object.assign(extOfficial(),off||{},{id:"official",kind:"official",url:""});
