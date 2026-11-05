@@ -411,7 +411,7 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 
 ## Open
 
-- **The private source is verified against a recorded GitHub API, not a live token** (#182). The real-token probe (plan Task 1) and an install on Mike's devices are still to do. A source works only for GitHub, and a token made without Contents: Read-only reads as "can't see the repo".
+- **The private source is verified with a real token on a scratch repo, not yet on Mike's packs** (#182, ledger L9016). An install on Mike's devices waits on the first private release with a pack list. A source works only for GitHub, and a token made without Contents: Read-only reads as "can't see the repo".
 - **Private packs get no newer-data notice.** The data check reads the public registry, which lists
   only SRD 5.2 since #125 (and SRD 5.2 and Homebrew from #85), so a private pack's row shows its
   version quietly (`known`) and never "out", and so does a public player's old Homebrew once the
@@ -469,3 +469,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-27 — Sheet display gains "Feats allowed" in Levels and companions, writing `character.featsAllowed` (on by default). → ledger L7569, #118
 - 2026-10-28 — The public registry lists SRD 5.2 alone; an installed Homebrew shows its version quietly, with no updates. → ledger L7858, #125
 - 2026-11-05 — A `github` source kind: a source link or `owner/repo` in the URL box, tags and packs read through `api.github.com` with a per-device token, the row, Change token, the wordings for each failure, and a Settings export that never carries the token. → ledger L8943, #182
+- 2026-11-05 — A real token read a private repo from `file://` and the app added it; the final review's fixes: an imported source without its token asks for it at once, a malformed token is never echoed, 429 reads as the rate limit, one source per repo. → ledger L9016, #182

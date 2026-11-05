@@ -277,6 +277,10 @@ token (`github_pat_FAKE…`):
 | `raw.githubusercontent.com/…/RPGFieldbookPrivate/main/data/packs.json`, `Authorization: token <fake>` | blocked by the browser (`Failed to fetch`) |
 | `raw.githubusercontent.com/…/RPGFieldbook/v1.9.0/releases/data/fieldbook-data.json`, same header | blocked |
 | a public release asset through the API, `Accept: application/octet-stream` | blocked (the redirect) |
+| **Real token (plan Task 1, 2026-11-05):** a fine-grained token, only `wardmanm/fieldbook-token-probe`, Contents read-only; tags and the raw manifest at `data-v1.9.0-1`, with `X-GitHub-Api-Version` and `redirect:"error"` | 200 and 200, from `file://` |
+| the same token with its last character changed | 401, readable |
+| the real token on a private repo it wasn't given | 404 (GitHub's "no access" answer) |
+| the source link pasted into the built app's Sources box | added; row "private · token ending …pjtJ"; tag picked; the token nowhere in the page, the box or the console |
 
 Sources on tokens: GitHub's "Managing your personal access tokens": "Each token is limited to access
 resources owned by a single user or organization", and among fine-grained tokens' gaps, "Using
@@ -318,6 +322,7 @@ stamp, `--any-licence`, restoring the registry (`data-kit.py`); the release scri
 repo; the row and Change token driven in the browser (screenshots in the main checkout's
 `.claude/qa/in-progress/182-private-sources/`).
 
-**Not verified:** the real-token probe (plan Task 1) against GitHub's live API, and the install on
+**Verified 2026-11-05:** the real-token probe (plan Task 1), against GitHub's live API from `file://`
+(§8, ledger L9016). **Not verified:** the install on
 Mike's devices, each with its own token, after he cuts the first private release with
 `releases/data/` (`1.9.0-2`, `--allow-unchanged`). Both are his pass.

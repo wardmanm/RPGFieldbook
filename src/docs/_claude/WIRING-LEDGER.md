@@ -9012,3 +9012,33 @@ Pages: [settings & updates](../wiki/features/settings-and-updates.md), [storage]
 [data kit](../wiki/data/data-kit.md), [data archive](../wiki/architecture/data-archive.md),
 [private data](../wiki/data/private-data.md), [building & CI](../wiki/process/building-and-ci.md),
 [decisions](../wiki/decisions.md).
+
+## #182: the real-token probe, and the final review's fix wave (Mike, 2026-11-05)
+
+**The probe (plan Task 1).** With Mike's yes, a throwaway private repo `wardmanm/fieldbook-token-probe`
+(one empty format-2 manifest, tag `data-v1.9.0-1`) and a fine-grained token Mike made (resource owner
+wardmanm, only that repo, Contents read-only, one-day expiry). From the branch's built
+`fieldbook.html` over `file://` in Playwright: the tag list and the raw manifest at the tag answered
+200 with the token, `X-GitHub-Api-Version` and `redirect:"error"`; the token with its last character
+changed answered 401, readable; the real token on a private repo it wasn't given answered 404, which
+is the answer the "can't see the repo" wording assumes. Then the real flow: the source link pasted
+into Settings → Extensions → Sources was added ("Source added."), the row read
+"wardmanm/fieldbook-token-probe · private · token ending …pjtJ · checked today", `data-v1.9.0-1` was
+picked, and the token was nowhere in the page, the URL box or the console. The source was removed and
+the test browser's storage cleared afterwards; Mike deletes the token, and the repo goes with his yes.
+
+**The fix wave.** The final whole-branch review found two player-visible bugs and three small holes,
+fixed in one commit (6e25803) and re-reviewed clean: an imported private source without its token now
+says so at once and offers nothing to install (`extGhSane()` in `convertSources()`); the details
+dialog names the repo and tag, not "undefined"; a malformed token is blanked and asked for again, and
+a fetch error never echoes it (`extTokenOk()`, a TypeError reads "GitHub couldn't be reached."); a 429
+reads as the rate limit; a double Add makes one source; a link with trailing punctuation or `#token=`
+that doesn't parse is refused without a fetch and cleared from the box; a repo whose tag list answers
+is added even when its pack list then fails (spec §5.2); token-bearing fetches refuse redirects; the
+kit's `release` refuses Fieldbook's own registry. Set aside for later, with rulings: a renamed repo's
+redirect now reads "GitHub couldn't be reached."; the registry guard can refuse a kit unzipped two
+folders inside an owner's repo; a hand-typed `?token=` link is fetched as a manifest URL; a source
+whose token was refused keeps offering Install from its last good pack list.
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md),
+[known issues](../wiki/roadmap/known-issues.md).

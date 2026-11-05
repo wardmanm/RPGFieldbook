@@ -198,9 +198,9 @@ Wanted, not yet done. Each needs work, not a source.
 - **#102's release-tooling minors** (#150): `release-files` deletes before it writes;
   `./build.sh --release --no-zip` skips `releases/data/`; `data-kit.py`'s leak test reads the shared
   temp folder. → ledger L7428, and [Data kit](../data/data-kit.md)
-- **The private-source install is untested against a live token.** (#182) The spike proved the API
-  calls and the browser's CORS behaviour, but the real-token probe (plan Task 1) and the install on
-  Mike's devices are still to run. Pasting a source link is how a private repo's packs reach a player;
+- **The private-source install is untested on Mike's devices.** (#182) A real token read a private
+  repo from `file://` and the app added it (ledger L9016); installing real packs that way waits on the
+  first private release with a pack list (`1.9.0-2`). Pasting a source link is how a private repo's packs reach a player;
   Manual install remains for a file. → [Settings & updates](../features/settings-and-updates.md)
 - **Humblewood species have no size.** (#149) They all resolve to Medium (`charSize()`), but Jerbeen, Luma
   and Hedge are Small in the book. The fix belongs in the private repo's Humblewood extractor, which
@@ -517,3 +517,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-10-30 — Issue numbers and Mike's decisions written back (pre-release 1.9.0, step 2).
 - 2026-11-02 — The phone layout's keyboard order (Skills before Defences and Statuses) recorded as a limitation, from #155's review.
 - 2026-11-05 — Replaced "private packs through a manifest: not built" with the live-token verification still owed: #182 builds the private GitHub source. → ledger L8943, #182
+- 2026-11-05 — The live-token probe passed; what is left is an install on Mike's devices. → ledger L9016, #182
