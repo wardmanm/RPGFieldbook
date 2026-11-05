@@ -62,8 +62,8 @@ Add a second pack with another entry and another folder.
 
 ## 2. Get the data kit and cut a release
 
-The data kit is `fieldbook-data-kit-<version>.zip` on each Fieldbook release page, and it is in the
-app download too. It needs Python 3.8 or later and nothing else. Unzip it anywhere. Use the kit from
+The data kit is `fieldbook-data-kit-<version>.zip` attached on its own to each Fieldbook
+release, on the release page. It is not inside the app download. It needs Python 3.8 or later and nothing else. Unzip it anywhere. Use the kit from
 the same Fieldbook version your players run.
 
 From the **root of your repo**, run:
