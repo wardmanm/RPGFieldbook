@@ -84,10 +84,11 @@ no baseline for shows its version quietly (the `known` state of `dataStatus()`; 
 ### The kit zip
 
 `build.sh`'s `pack_kit` writes `dist/fieldbook-data-kit-<APP_VERSION>[+dev].zip`, and `release.yml`
-attaches it to every app release. It is a flat allowlist of exactly ten files:
+attaches it to every app release. It is a flat allowlist of exactly twelve files:
 
 ```
 fbdata.py                the kit
+fieldbook-version.txt    the Fieldbook version the kit was released with (stamped by pack_kit; read by kit_version())
 README.md                the kit's own guide (tools/data-kit/README.md): the three recipes, what you may share
 convert.py               the converter
 overlay.json             hand-authored effects       (data/overlay.json)
@@ -95,6 +96,7 @@ class-resources.json     hand-authored trackers      (data/class-resources.json)
 srd-corrections.json     the SRD pack's corrections  (scripts/srd-corrections.json)
 README-converter.md      how the converter works     (docs/)
 rules-schema.md          the pack format             (docs/)
+private-sources.md       the owner's guide to private sources (docs/)
 LICENSE
 example-pack/example-pack.json   one invented pack with every category, MIT
 ```
