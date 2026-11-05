@@ -2,11 +2,14 @@
 Updated: 2026-11-05 · Branch: main
 
 ## Current focus
-#182 (private sources) is merged and pushed; CI green. Next: Mike cuts the first private release with
-a pack list (`/release private`, `1.9.0-2`, carrying Homebrew's fix) and installs on his devices with
-a token each; then 1.9.1. No branch open.
+#182 (private sources) is merged and pushed, and private data 1.9.0-2 carries the first pack list the
+app can install from. Installing needs the next app release (1.9.1, #182 is its one note so far) or
+`dist/fieldbook.html` from main. Then 1.9.1. No branch open.
 
 ## Recent changes
+- 2026-11-05: Released private data 1.9.0-2 (Mike: `/release private`, "publish"): Homebrew
+  1.9.0-1 → 1.9.0-2 (the XGE name), the others unchanged; the tag carries `releases/data/` (the pack
+  list and five packs), so private sources can install from it. One private zip; nothing public.
 - 2026-11-05: Homebrew names Xanathar's by its system, `XGE`, so the Extensions page matches its
   requirement (private c9f53c5, ledger L9061; Mike's yes). Pushed, both repos.
 - 2026-11-05: Merged and pushed #182 (closed): Settings → Extensions installs and updates packs from a private
@@ -37,8 +40,8 @@ a token each; then 1.9.1. No branch open.
 - None open.
 
 ## Loose ends
-- The first private release with a pack list (`1.9.0-2`: Homebrew changed, so no `--allow-unchanged`)
-  and the install on Mike's devices are his to do.
+- Installing RPGFieldbookPrivate through Extensions on Mike's devices (a read-only token each) is his
+  to do, with an app that has #182 (main's build now, or the next app release).
 - #182 follow-ups set aside with rulings (ledger L9016): a renamed repo reads "GitHub couldn't be
   reached"; after an import whose file lacked the token, a stale "Needs its token" shows until the next
   check; a public repo's 404 keeps offering its last pack list; a double space in
