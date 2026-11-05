@@ -9042,3 +9042,18 @@ whose token was refused keeps offering Install from its last good pack list.
 
 Pages: [settings & updates](../wiki/features/settings-and-updates.md),
 [known issues](../wiki/roadmap/known-issues.md).
+
+## #182: three fixes before merge (Mike, 2026-11-05)
+
+The three items the final review set aside, closed. The kit's `release` guard refuses Fieldbook's own
+registry only when the kit's root really is a Fieldbook checkout (`app_version()` finds
+`src/js/30-version.js`), so a kit unzipped two folders inside an owner's repo is no longer refused.
+`addSource()` refuses, unfetched and with the box cleared, any text that holds `?token=`, `&token=`,
+`#token=`, `github_pat_` or `ghp_` and isn't a valid source link, so a hand-typed token can't reach a
+URL. A github source whose last check failed on the token (401, "can't see the repo", or needs its
+token; `extGhTokenBad()`) offers nothing from `extOffers()` (no Install, Update or pill count); its
+manifest is kept, so a fixed token offers again at once, and installed packs keep working. A network or
+rate-limit failure still offers. Tests: `data-kit.py` (a kit two levels deep releases) and
+`data-archive.js` (P2 and P3 cases).
+
+Pages: [settings & updates](../wiki/features/settings-and-updates.md), [data kit](../wiki/data/data-kit.md).

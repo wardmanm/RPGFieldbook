@@ -168,7 +168,7 @@ pipeline: the plan, the sha256 check, all or nothing, `packOrigin`.
 
 ### 5.6 When it goes wrong
 
-The row says, in words, and the source keeps its last good manifest:
+The row says, in words, and the source keeps its last good manifest (when the failure is about the token it offers nothing from it until the token is fixed):
 
 | GitHub answers | The row says |
 |---|---|

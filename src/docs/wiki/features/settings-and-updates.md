@@ -122,7 +122,7 @@ binds one delegated click listener to each fresh `#extPage`. From the top:
 
 **A GitHub source** (#182). The URL box also takes a **source link**, `https://github.com/<owner>/<repo>#token=<token>`
 (`extGithubLink()`), or a bare `owner/repo` for a public repo. `addSource()` checks the repo once first
-and adds it once its tag list answers (a manifest that then fails is added, and its row shows the error); otherwise it says why in words and adds nothing. A link wrapped in `<>` or ending in punctuation is cleaned first; a `#token=` link that still isn't valid is refused, unfetched, with the box cleared. The token leaves the box
+and adds it once its tag list answers (a manifest that then fails is added, and its row shows the error); otherwise it says why in words and adds nothing. A link wrapped in `<>` or ending in punctuation is cleaned first; text holding `?token=`, `&token=`, `#token=`, `github_pat_` or `ghp_` that isn't a valid source link is refused, unfetched, with the box cleared. The token leaves the box
 as soon as it is read and shows afterwards only as its last four characters; pasting the link again, or
 **Change token** (`openChangeToken()`), replaces it. The source is `{kind:"github", repo, token, tag, ...}`
 in `settings.sources`. Its check (`checkSource()`) lists the repo's tags through GitHub's REST API
@@ -137,7 +137,7 @@ owner for a new one."; 404 or 403 with a token "This token can't see the repo…
 public repo at this address. If it's private, add its token."; a rate limit (a 429, or a 403 with none left) "GitHub's limit for this hour
 is used up…"; a fetch that fails in the browser "GitHub couldn't be reached.";  a newest release with no pack list names the tag and says the owner needs to cut one; an
 imported source with no token "Needs its token: paste the source link again." Installed packs keep
-working through all of them.
+working through all of them. When the failure is about the token (the 401, "can't see the repo" and needs-token wordings, `extGhTokenBad()`), `extOffers()` offers nothing from that source, so no Install, Update or pill count; the manifest is kept, so a fixed token offers again at once.
 
 **How a source is named.** A manifest names itself, so anyone can publish one called "Fieldbook
 public data". `extSourceName()` gives every manifest source as "*name* (*host*)", the host taken from
@@ -470,3 +470,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-10-28 — The public registry lists SRD 5.2 alone; an installed Homebrew shows its version quietly, with no updates. → ledger L7858, #125
 - 2026-11-05 — A `github` source kind: a source link or `owner/repo` in the URL box, tags and packs read through `api.github.com` with a per-device token, the row, Change token, the wordings for each failure, and a Settings export that never carries the token. → ledger L8943, #182
 - 2026-11-05 — A real token read a private repo from `file://` and the app added it; the final review's fixes: an imported source without its token asks for it at once, a malformed token is never echoed, 429 reads as the rate limit, one source per repo. → ledger L9016, #182
+- 2026-11-05 — A link holding a token is refused unfetched; a source whose token is refused offers nothing. → ledger L9046, #182
