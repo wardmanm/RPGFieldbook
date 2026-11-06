@@ -379,18 +379,20 @@ function ammoLogTitle(kind,fired,back){const nm=ammoPlural(kind);return `${nm.ch
    the sheet — not a bundle, the same lower-cased trimmed name, the same ammo
    bonus and the same grant as the snapshot — and tops that up instead of
    making a second "+1 Arrow" row; any weapon loaded with the old id is
-   repointed to it (its target id kept as `to`, so undoRecovery() only unpoints
-   a weapon the player hasn't re-loaded since). Only when there is none does
-   the old stack come back from its copy, under its old id. A thrown weapon is
-   still on the sheet at ×0, so its throws go back onto it.
+   repointed to it (its target id kept as `to`, so an Undo — undoRecoveryStock()
+   — only unpoints a weapon the player hasn't re-loaded since). Only when there
+   is none does the old stack come back from its copy, under its old id. A
+   thrown weapon is still on the sheet at ×0, so its throws go back onto it.
    Every `added`/`made` record carries `from`: the ammoSpent id it answers for
-   (its own id, except a home-join's, which is the home stack's id) — this is
-   what undoRecovery() uses to tell a cleared entry that DEPENDED on a stack
-   (present for the full top-up, even one giving 0 back; joined into a home
-   stack; or rebuilt) from one whose stack was already gone with nothing given
-   back (review finding 1: that distinction is what Undo must not restore
-   blindly). When `rec` is an object it is filled with what was done, for
-   undoRecovery(). Returns how many pieces came back. */
+   (its `id` is the item it went onto: the home stack's, for a home-join) —
+   this is what undoRecovery() uses to tell a cleared entry that DEPENDED on a
+   stack (present for the full top-up, even one giving 0 back; joined into a
+   home stack; or rebuilt) from one whose stack was already gone with nothing
+   given back (review finding 1: that distinction is what Undo must not
+   restore blindly). When `rec` is an object it is filled with what was done,
+   for an Undo: End combat's (undoEndCombatRecovery(), #170) reads only
+   `added`, `made` and `repointed`; undoRecovery() reads `cleared` too.
+   Returns how many pieces came back. */
 function recoverAmmo(c,kinds,rec,ids){
   const want=Array.isArray(kinds)?new Set(kinds.map(ammoKindOf)):null;
   const only=Array.isArray(ids)?new Set(ids):null;

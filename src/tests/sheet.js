@@ -8637,7 +8637,7 @@ async function t105End() {
        /data-ecrow="ammo" aria-expanded="true"/.test(ctx.endFightHTML(X._endFight, c)) && !/id="ecBody-ammo" hidden/.test(ctx.endFightHTML(X._endFight, c)));
     ck('#105 ...and folds again', ctx.endFightToggle('ammo') === false && !('ammo' in c.endCombatOpen));
     ck('#105 an unknown row is refused', ctx.endFightToggle('nope') === false && !('nope' in c.endCombatOpen));
-    ck('#105 Undo recovery in the window does what the toast\'s did', ctx.endFightUndoAmmo() === true &&
+    ck('#105 Undo recovery in the window takes back what came back (#170: the shots stay spent)', ctx.endFightUndoAmmo() === true &&
        c.inventory.find(i => i.id === 's1').qty === 11 && c.invLog[0].title === 'Arrows: 9 fired, 0 recovered' && X._endFight.ammo.undone === true, c.invLog[0].title);
     h = ctx.endFightHTML(X._endFight, c);
     ck('#105 ...then reads "Recovery undone", with no toast', /Recovery undone/.test(h) && !/id="ecUndoAmmo"/.test(h) && !toasts.some(t => /Recovery undone/.test(t.m)));
@@ -9227,7 +9227,7 @@ async function t181AddClassUndo() {
     const home = qty(c, 'd1');
     ck('#170 a thrown Dagger: Undo leaves it on the sheet at ×0 with nothing on record',
        out === 0 && home === 2 && ctx.endFightUndoAmmo() === true && qty(c, 'd1') === 0 && spent(c) === '{}', [out, home, qty(c, 'd1'), c.ammoSpent]);
-    const tl = X.thrownLineHTML(c, c.inventory[0]);
+    const d1 = c.inventory.find(i => i.id === 'd1'), tl = d1 ? X.thrownLineHTML(c, d1) : '';
     ck('#170 ...Throw disabled, nothing to recover', /data-ammo-throw="d1" disabled/.test(tl) && !/data-ammo-recover/.test(tl), tl);
     X._endFight = null;
     // entries that gave nothing back
