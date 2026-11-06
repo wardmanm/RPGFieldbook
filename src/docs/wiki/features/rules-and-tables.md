@@ -90,7 +90,14 @@ the "Your entries" filter. + Add sits in its heading. Every term is read through
 pack keyword with no term is not listed (the pool drops those, see
 [Rules packs](../architecture/rules-packs.md)), and a player's entry with none is listed as
 "(no term)", so it can be given one or deleted; it never becomes a chip. `openGlossForm()` makes an
-entry of type Text or Rules image (a screenshot stored as a data URL); a term is required.
+entry of type Text or Rules image (a screenshot stored as a data URL); a term is required. Only the
+player's own entries open in it: a pack keyword has Preview alone, and nothing makes an override
+copy of one. Save writes into `character.glossary` and changes only the four fields the form shows
+(`term`, trimmed; `type`; `text`; `image`, both kept whichever type is chosen). It merges them onto
+the entry as stored at Save time, found by id, so every other field the entry carries stays. That
+includes `cond`, which offers the term in the Status editor's suggestions (`statusTermList()`), the
+`{name, description}` a file wrote it with, a pack copy's stamps, and anything else a character
+file brought. Add makes an entry of the form's fields alone.
 An image entry, the player's or a pack's, is drawn through `imgHTML()`: escaped, and only from a
 data: URL, the form rules-schema §6.1 documents. A pack image given as a web address is not fetched;
 the entry says the image isn't stored in the file. See [Rich text](../architecture/rich-text.md).
@@ -177,6 +184,10 @@ a table opened from a spell preview replaces it.
   way a keyword without a term did. `mergeRules()` checks only the name. → L4206
 - **The glossary heading's + Add toggled the section** every time it was pressed, until the handler
   learned to ignore interactive children. → L3189
+- **The editor's Save dropped every field it didn't show** (#136). It put a fresh
+  `{id, term, type, text, image}` in the entry's place, so editing a player's own condition took
+  it out of the Status editor's suggestions (`cond` went), and the aliases, pack stamps and any
+  field a file brought went with it. `migrate()` had kept all of them; Save lost them. → L9101
 
 ## Decisions
 
@@ -188,6 +199,7 @@ a table opened from a spell preview replaces it.
 | An anchor with no table sink active (converter) | Keep the old silent drop | Emitting an anchor: one with no table behind it is worse than the drop |
 | Spell-slot columns in class tables | Skipped | Kept: the app derives slots by level, and a 10-column grid swamps a phone |
 | Where tables are browsed | As one of the Rules browser's own categories (`Tables` in `RB_CATS`), same as any other | Their own tab: one more tab to scroll past (changelog); a card under the glossary (#32): superseded once the whole tab became a browser over every category (#99) |
+| What the glossary editor's Save writes (#136) | The form's four fields, merged onto the entry as stored at Save time | A fresh record from the form: drops every other field. A named carry-list, as the feature and item editors keep: a file can bring any field, and a list misses what nobody named. Merging onto the copy the form opened on: an Undo on a toast while the form is open would be undone by Save |
 | Where a table's footnotes render (#73) | Under the table, outside its scroll box, escaped like a cell | A `<tfoot>` row: it sits inside the scroll box, so a wide d100 table scrolls the note away. Through `highlight()`: cells use `esc()`, and a note is part of the table |
 
 ## Open
@@ -219,3 +231,4 @@ a table opened from a spell preview replaces it.
 - 2026-10-22 — The Rules tab becomes a browser over every loaded category (Classes through Tables), replacing the Glossary and Reference Tables cards: a sidebar with counts and a search across everything, a sortable filterable table per category, a row opening the window the sheet already uses, in reference mode for class/subclass/species/background. `settings.rulesCat` replaces `rulesCollapse`. → ledger L6327, #99, #53
 - 2026-10-22 — Final-review fixes: re-entering the Rules tab always opens the category list; the ☰ flyout scrolls the chosen category into view and shows its count; same-named classes from two packs read distinctly in Subclasses' Class column; `rbNum()` reads the first number instead of joining every digit. The stale fold-state rows above are rewritten to the current truth. → ledger L6455, #99
 - 2026-10-24 — The ☰ section flyout is retired: categories are reached from the browser's own sidebar only. → ledger L6804, #103
+- 2026-11-06 — The glossary editor's Save changes only the fields its form shows and keeps the rest (`cond`, aliases, pack stamps, anything a file brought), merged onto the entry as stored. → ledger L9101, #136

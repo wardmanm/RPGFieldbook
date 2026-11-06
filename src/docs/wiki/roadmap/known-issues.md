@@ -273,8 +273,6 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 - **A subclass's own window shares the title of the window before it** (#146), so "Fighter — Level 3" can
   appear twice in a row (class choices, then Battle Master's). → ledger L4086, and
   [Character building](../features/character-building.md)
-- **The glossary editor's Save replaces the whole entry** (#136), so fields it doesn't show are dropped when
-  a player edits an entry that has them. → ledger L4206
 - **The Gadgeteer's level-1 "Proficiencies" trait** (#149) still arrives on a multiclass add and lists saving
   throws as text, so it can read as if it grants them (Humblewood publishes no multiclass rules).
   → ledger L3886
@@ -518,3 +516,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-02 — The phone layout's keyboard order (Skills before Defences and Statuses) recorded as a limitation, from #155's review.
 - 2026-11-05 — Replaced "private packs through a manifest: not built" with the live-token verification still owed: #182 builds the private GitHub source. → ledger L8943, #182
 - 2026-11-05 — The live-token probe passed; what is left is an install on Mike's devices. → ledger L9016, #182
+- 2026-11-06 — Removed: the glossary editor's Save replacing the whole entry; it keeps the fields it doesn't show. → ledger L9101, #136
