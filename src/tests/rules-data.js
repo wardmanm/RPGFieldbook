@@ -1598,6 +1598,74 @@ function block(html, needle, tag) {
      'dist/fieldbook.html is stale, or loadHTML() no longer splices the way build-html.js does');
 }
 
+// ---------- constraint 1: the page loads nothing from a third-party address (#144)
+// CLAUDE.md's first non-negotiable: one file that works offline, with no
+// <link href> or <script src> to a third-party URL. Nothing checked it, and a
+// Google Fonts link sat in the template from the first commit. The rule covers
+// what the PAGE loads: a link a player follows (<a href>) and the optional
+// fetch() update checks are allowed. Checked in the built page, and in the
+// sources in case the build is stale.
+{
+  const REMOTE = /^\s*(?:https?:)?\/\//i;
+  const LOADS = ['src', 'srcset', 'imagesrcset', 'poster'];
+  const thirdPartyLoads = text => {
+    const hits = [];
+    // [^<>] so a stray "<" in the JS (i<n) cannot swallow the real tag after it
+    for (const m of text.matchAll(/<([a-zA-Z][\w:-]*)\b([^<>]*)>/g)) {
+      const tag = m[1].toLowerCase();
+      for (const a of m[2].matchAll(/(?:^|\s)([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g)) {
+        const name = a[1].toLowerCase(), val = a[2] !== undefined ? a[2] : a[3] !== undefined ? a[3] : a[4];
+        const loads = LOADS.includes(name) || (name === 'data' && tag === 'object') ||
+          ((name === 'href' || name === 'xlink:href') && tag !== 'a' && tag !== 'area');
+        const remote = name.endsWith('srcset') ? /(?:^|,)\s*(?:https?:)?\/\//i.test(val) : REMOTE.test(val);
+        if (loads && remote) hits.push(m[0].slice(0, 120));
+      }
+    }
+    for (const m of text.matchAll(/@import\s+(?:url\(\s*)?["']?\s*(?:https?:)?\/\/[^;\n]*/gi)) hits.push(m[0].slice(0, 120));
+    // CSS is case-blind, so URL( counts; JS's new URL(…) and extUrl(…) are not CSS
+    for (const m of text.matchAll(/(?<![\w$.])(?<!new\s)url\(\s*["']?\s*(?:https?:)?\/\/[^)\n]*/gi)) hits.push(m[0].slice(0, 120));
+    return hits;
+  };
+
+  // The guard must be seen to fail: each way a page loads a remote resource...
+  [
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=X">',
+    '<link rel="preconnect" href="//fonts.gstatic.com" crossorigin>',
+    '<script src="https://cdn.example.com/x.js"></script>',
+    "<img src='http://example.com/a.png'>",
+    '<img srcset="a.png 1x, https://example.com/b.png 2x">',
+    '<svg><use href="https://example.com/s.svg#i"/></svg>',
+    '@import url("https://example.com/a.css");',
+    "@import 'https://example.com/a.css';",
+    '.x{background:url(https://example.com/a.png)}',
+    'src:URL( "//example.com/f.woff2" )',
+  ].forEach(s => ck('constraint 1: the guard catches ' + s, thirdPartyLoads(s).length > 0));
+  // ...and what is not one.
+  [
+    '<a href="https://game-icons.net" target="_blank" rel="noopener">',
+    'fetch("https://api.github.com/repos/x/y/releases/latest")',
+    '.card::before{filter:url(#rough)}',
+    'src:url("data:font/woff2;base64,d09GMgAB")',
+    'new URL("https://example.com/x")',
+    '<html data-tabs="labels">',
+    '<img src="${esc(safeImgSrc(u))}">',
+  ].forEach(s => ck('constraint 1: the guard passes ' + s, thirdPartyLoads(s).length === 0, thirdPartyLoads(s)));
+
+  const built = fs.readFileSync(path.join(ROOT, 'dist/fieldbook.html'), 'utf8');
+  const inBuilt = thirdPartyLoads(built);
+  ck('constraint 1: the built page loads nothing from a third-party address', inBuilt.length === 0, inBuilt);
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const srcs = ['src/fieldbook.template.html', ...manifest.html, ...manifest.css, ...manifest.js];
+  const inSrc = srcs.flatMap(p => thirdPartyLoads(fs.readFileSync(path.join(ROOT, p), 'utf8')).map(h => p + ': ' + h));
+  ck('constraint 1: ...nor do its sources (template, html, css, js)', inSrc.length === 0, inSrc);
+
+  // The fonts' licence travels inside the file (SIL OFL 1.1 §2): the build is
+  // plain concatenation, so the fragment, comment and all, is in the page as written.
+  const fonts = fs.readFileSync(path.join(ROOT, 'src/css/90-fonts.css'), 'utf8');
+  ck('the built page carries 90-fonts.css byte for byte, its licence comment included', built.includes(fonts),
+     'dist/fieldbook.html is stale — rebuild');
+}
+
 // ---------- notes: storage guards and the pure renderers
 {
   const ch = X.blankChar();
