@@ -393,8 +393,16 @@ function openGlossForm(existing){
   document.getElementById("gCancel").addEventListener("click",closeModal);
   document.getElementById("gSave").addEventListener("click",()=>{
     const term=document.getElementById("gTerm").value.trim();if(!term){alert("Give the entry a term.");return;}
-    const rec={id:g.id,term,type:type.value,text:document.getElementById("gText").value,image:img};
-    const i=character.glossary.findIndex(x=>x&&x.id===g.id);if(i>=0)character.glossary[i]=rec;else character.glossary.push(rec);
+    /* Save changes the four fields this form shows and keeps the rest (#136):
+       `cond` (which offers the term in the Status editor), the {name,
+       description} a file wrote it with (glossRepair() keeps them; inert once
+       term and text are set), a pack copy's stamps, anything a character file
+       brought. It merges onto the entry as stored NOW, not the copy the form
+       opened on — an Undo on a toast can swap the character while it is open,
+       as openTrackerForm() allows for. A new entry is the form's fields alone. */
+    const i=character.glossary.findIndex(x=>x&&x.id===g.id);
+    const rec=Object.assign({},i>=0?character.glossary[i]:g,{term,type:type.value,text:document.getElementById("gText").value,image:img});
+    if(i>=0)character.glossary[i]=rec;else character.glossary.push(rec);
     closeModal();renderRulesBrowser();renderFeatures();renderInventory();renderAllRT();scheduleSave();
   });
 }
