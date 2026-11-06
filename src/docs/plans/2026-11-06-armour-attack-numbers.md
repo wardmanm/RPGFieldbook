@@ -69,8 +69,8 @@ The `docs` suite fails while `2026-11-06-vitals-hp-design.md` is on another bran
 
 **Files:** Modify `src/docs/specs/2026-11-06-armour-attack-numbers-design.md:12`
 
-- [ ] Replace the link `([its spec](2026-11-06-vitals-hp-design.md))` with
-  `(its spec, ` + backticked `2026-11-06-vitals-hp-design.md` + `, on that branch until it merges)`.
+- [ ] Replace the "its spec" link (to `2026-11-06-vitals-hp-design.md`) with the backticked file
+  name and ", on that branch until it merges".
   Nothing else in the spec changes. Phase 2 (P2-3) restores the link.
 - [ ] Run `./src/tests/run.sh docs` → `ALL PASSED`.
 - [ ] Commit: `docs(#130): the spec names the Vitals spec until that branch merges`.

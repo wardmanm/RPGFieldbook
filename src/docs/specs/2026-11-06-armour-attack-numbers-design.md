@@ -9,7 +9,7 @@ Read [Armor & AC](../wiki/features/armor-and-ac.md),
 [Computed stats & effects](../wiki/architecture/computed-stats-and-effects.md) and
 [Features & traits](../wiki/features/features-and-traits.md) first.
 
-**Depends on the Vitals & HP branch** ([its spec](2026-11-06-vitals-hp-design.md)): the AC window's
+**Depends on the Vitals & HP branch** (its spec, `2026-11-06-vitals-hp-design.md`, on that branch until it merges): the AC window's
 switch follows the Vitals lock through that branch's `vitalsLocked()`. Vitals & HP merges first in
 wave 1; build this branch's lock step after rebasing on it (everything else can go first).
 
