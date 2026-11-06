@@ -1903,6 +1903,20 @@ function block(html, needle, tag) {
      (cls.match(/setVitalsLocked\(true\)/g) || []).length === 1 && /if\(ch\._wasLocked\)setVitalsLocked\(true\)/.test(fnBody('commitHPChoice')));
   ck('the seed and the un-seed still write hp.max directly (they bypass the lock)',
      /character\.hp\.max=hp;/.test(cls) && /character\.hp\.max=now;/.test(cls) && /character\.hp\.max="";/.test(cls));
+  // ---- #112: on a touchscreen the HP bar opens the Hit points window.
+  // 90-boot.js is dropped from the harness, so its wiring is checked here.
+  const bootSrc = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  ck('#112 hpTouch() reads the primary pointer, not the width',
+     /function hpTouch\(\)\{return !!\(window\.matchMedia&&window\.matchMedia\("\(pointer:coarse\)"\)\.matches\);\}/.test(js));
+  ck('#112 a touchscreen tap on the bar opens Hit points, read at tap time',
+     /if\(\(m=t\.closest\("\.hp-bar"\)\)&&hpTouch\(\)\)\{openHPDialog\(\);return;\}/.test(bootSrc));
+  ck('#112 ...and so do Enter and Space on the bar',
+     /e\.target\.classList\.contains\("hp-bar"\)&&hpTouch\(\)\)\{e\.preventDefault\(\);openHPDialog\(\);return;\}/.test(bootSrc));
+  ck('#112 a change of pointer repaints the bar',
+     /matchMedia\("\(pointer:coarse\)"\)[\s\S]{0,80}addEventListener\("change",renderHP\)/.test(bootSrc));
+  ck('#112 on a touchscreen a tap on a number lands on the bar, not in a box',
+     /@media \(pointer:coarse\)\{[^@]*\.hp-bar input\{pointer-events:none\}/.test(sheetCss));
+  ck('#112 the window keeps out of the bar\'s hooks', !/data-hpq|id="hpq[A-Za-z]*" data-hp/.test(js));
 
   // ---- current-HP colour bands
   ck('the warn colour is its own token, not --accent',

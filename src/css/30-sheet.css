@@ -280,6 +280,31 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 .hp-tmp input::placeholder{color:var(--ink-soft);opacity:.8;font-weight:400}
 .hp-note{text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px}
 .hp-note:empty{display:none}
+/* #112: on a touchscreen the bar is one button that opens Hit points
+   (renderHP() gives it role="button"); a tap on a number lands on the bar,
+   never in a box, so no keyboard comes up under it. */
+@media (pointer:coarse){.hp-bar{cursor:pointer}.hp-bar input{pointer-events:none}}
+.hp-bar:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* ---- the Hit points window (#112, mockup C) ----
+   An amount, then three buttons that each say what they would do; Set exactly
+   folded under them. Drawn in the modal, so the page's own tokens apply. */
+.hpq-now{margin:0 0 10px;text-align:right;font-family:var(--head);font-weight:700;font-size:14px;letter-spacing:.03em;color:var(--ink-soft)}
+.hpq-amt{width:100%;min-height:50px;font-family:var(--display);font-weight:900;font-size:26px;text-align:center}
+.hpq-amt::placeholder{font-family:var(--head);font-weight:400;font-size:16px}
+.hpq-acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.hpq-btn{min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;text-align:center}
+.hpq-btn b{font-weight:700}
+.hpq-dmg b{color:var(--brick)}
+.hpq-heal b{color:var(--accent-2)}
+.hpq-res{font-family:var(--body);font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--ink)}
+.hpq-res:empty{display:none}
+.hpq-set{margin-top:14px;border-top:1px solid var(--hair);padding-top:10px}
+.hpq-set summary{cursor:pointer;font-family:var(--head);font-weight:600;font-size:13px;letter-spacing:.04em;color:var(--accent-2);padding:6px 0}
+.hpq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:8px}
+.hpq-grid label{display:flex;flex-direction:column;gap:4px;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+.hpq-grid input{min-height:42px;text-align:center;font-weight:700}
+.hpq-msg{color:var(--brick)}
+.hpq-msg:empty{display:none}
 /* ✓ ○○○ ☠ ○○○ ✗ (#103, decision 6), under the shield. */
 .death{display:flex;align-items:center;gap:7px;justify-content:center}
 .death .set{display:flex;gap:5px}

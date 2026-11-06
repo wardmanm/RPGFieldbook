@@ -82,6 +82,9 @@ function wire(){
     if(t.closest("[data-trkcompleted]"))return toggleTrkCompleted();
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
+    /* #112: on a touchscreen the HP bar opens the Hit points window (the
+       primary pointer, read at tap time); with a mouse its numbers type. */
+    if((m=t.closest(".hp-bar"))&&hpTouch()){openHPDialog();return;}
     // slot bubbles
     if((m=t.closest(".slot .b"))){const lv=num(m.dataset.slot),i=num(m.dataset.i);const s=character.slots[lv];s.used=(s.used===i)?i-1:i;renderSlotBubbles();scheduleSave();return;}
     // features
@@ -239,6 +242,8 @@ function wire(){
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
     if(e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);return;}
     if(e.target.classList.contains("tblref")){e.preventDefault();openTableByName(e.target.dataset.tbl);}
+    /* #112: on a touchscreen the HP bar is role="button" tabindex="0" */
+    if(e.target.classList.contains("hp-bar")&&hpTouch()){e.preventDefault();openHPDialog();return;}
     /* the notes-tab group headers are role="button" tabindex="0", so they owe
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
@@ -274,6 +279,9 @@ function wire(){
   on("starBtn","click",toggleInspiration);
   on("hpPlus","click",()=>bumpHP(1));
   on("hpMinus","click",()=>bumpHP(-1));
+  /* #112: a device whose primary pointer changes (a tablet docked to a
+     keyboard and trackpad) repaints the bar as a button or as boxes */
+  {const mq=window.matchMedia&&window.matchMedia("(pointer:coarse)");if(mq&&mq.addEventListener)mq.addEventListener("change",renderHP);}
   on("btnLongRest","click",longRest);
   on("btnShortRest","click",shortRest);
   /* the refused-write strip (#81) */

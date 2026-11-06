@@ -44,6 +44,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
   'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
   'EDIT_CARDS', 'editHidden', 'setEditHidden', 'editCardTitle', 'editToggleText', 'editToggleHTML', 'vitalsLocked', 'setVitalsLocked',
+  'hpTouch', 'hpAmount', 'hpQuick', 'hpQuickText', 'hpNowText', 'hpBarLabel', 'hpQuickApply', 'hpSetParse', 'hpSetApply',
+  'hpDialogHTML', 'openHPDialog',
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
@@ -8119,6 +8121,162 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
        X.editToggleText('features', false).title === 'Hide edit buttons' && X.editToggleText('features', true).title === 'Show edit buttons');
     ck('#115 the toggle HTML carries the Vitals words',
        X.editToggleHTML('vitals', true).includes('title="Unlock Vitals"') && X.editToggleHTML('vitals', true).includes('aria-pressed="true"'));
+  }
+  /* #112: the Hit points window — its pure parts */
+  {
+    const A = X.hpAmount;
+    ck('#112 the amount refuses 0, blank, a minus, a fraction, a sign and words',
+       [0, '0', '', '  ', '-3', '1.5', 'abc', null, undefined, '+5'].every(v => A(v) === null));
+    ck('#112 ...and takes a whole number, spaces and commas stripped',
+       A('7') === 7 && A(' 12 ') === 12 && A('1,200') === 1200 && A(7) === 7);
+    const hp = {cur: 26, max: 38, temp: 3}, blank = {cur: '', max: '', temp: ''};
+    const q7 = X.hpQuick(hp, 38, 7);
+    ck('#112 damage soaks temp first, the overflow off Current', q7.damage.cur === 22 && q7.damage.temp === '', q7);
+    ck('#112 heal goes to Current; temp is the amount', q7.heal.cur === 33 && q7.temp.temp === 7, q7);
+    ck('#112 temp that soaks it all leaves Current alone',
+       (q => q.damage.cur === 26 && q.damage.temp === 1)(X.hpQuick(hp, 38, 2)) &&
+       (q => q.damage.cur === 26 && q.damage.temp === '')(X.hpQuick(hp, 38, 3)));
+    ck('#112 a big hit floors at 0; a big heal stops at the maximum',
+       (q => q.damage.cur === 0 && q.heal.cur === 38)(X.hpQuick(hp, 38, 50)));
+    ck('#112 temp replaces what is there, lower as well as higher (decision 11)',
+       X.hpQuick({cur: 10, max: 20, temp: 9}, 20, 2).temp.temp === 2 && X.hpQuick({cur: 10, max: 20, temp: 4}, 20, 9).temp.temp === 9);
+    ck('#112 Current above the maximum is capped on every path',
+       (q => q.damage.cur === 38 && q.heal.cur === 38)(X.hpQuick({cur: 45, max: 38, temp: ''}, 38, 2)));
+    ck('#112 a blank sheet: damage floors at 0, heal adds, nothing is NaN',
+       (q => q.damage.cur === 0 && q.damage.temp === '' && q.heal.cur === 5 && q.temp.temp === 5)(X.hpQuick(blank, 0, 5)));
+    const T = X.hpQuickText;
+    ck('#112 the three lines read as the mockup',
+       JSON.stringify(T(hp, 38, 7)) === JSON.stringify({damage: '→ 22, no temp', heal: '→ 33', temp: '3 → 7'}), T(hp, 38, 7));
+    ck('#112 ...temp soaking it all', T(hp, 38, 2).damage === 'temp 3 → 1' && T(hp, 38, 3).damage === 'temp 3 → 0', [T(hp, 38, 2), T(hp, 38, 3)]);
+    ck('#112 ...with no temp to start', (t => t.damage === '→ 19' && t.temp === '→ 7')(T({cur: 26, max: 38, temp: ''}, 38, 7)));
+    ck('#112 ...a cap shows in the words too', T({cur: 45, max: 38, temp: 3}, 38, 1).damage === '→ 38, temp 2', T({cur: 45, max: 38, temp: 3}, 38, 1));
+    ck('#112 the header: Current / the effective maximum · temp',
+       X.hpNowText(hp, 38) === '26 / 38 · temp 3' && X.hpNowText({cur: 26, max: 38, temp: ''}, 38) === '26 / 38' && X.hpNowText(blank, 0) === '0 / —');
+    ck('#112 the bar as one button names what it holds',
+       X.hpBarLabel(hp, 38) === 'Hit points 26 of 38, temp 3 — change' && X.hpBarLabel(blank, 0) === 'Hit points 0 — change', [X.hpBarLabel(hp, 38), X.hpBarLabel(blank, 0)]);
+    // every preview is exactly what its tap leaves (Review Focus 2)
+    const cases = [[hp, 7], [hp, 2], [hp, 3], [hp, 50], [{cur: 10, max: 20, temp: 9}, 2], [{cur: 45, max: 38, temp: ''}, 2],
+                   [{cur: 45, max: 38, temp: 3}, 1], [blank, 5], [{cur: '', max: 12, temp: 4}, 4], [{cur: 0, max: 12, temp: ''}, 3]];
+    const bad = [];
+    cases.forEach(([h, n]) => ['damage', 'heal', 'temp'].forEach(kind => {
+      const c = X.blankChar(); Object.assign(c.hp, h); X.character = c;
+      const want = X.hpQuick(h, X.effMaxHP(), n)[kind], ok = X.hpQuickApply(kind, n);
+      if (!ok || !Object.keys(want).every(k => c.hp[k] === want[k])) bad.push([h, n, kind, want, JSON.parse(JSON.stringify(c.hp))]);
+    }));
+    ck('#112 every preview is what its tap leaves', bad.length === 0, bad);
+    const c0 = X.blankChar(); c0.hp.cur = 10; c0.hp.max = 20; X.character = c0;
+    ck('#112 an unknown kind or an amount that is not one changes nothing',
+       X.hpQuickApply('nope', 3) === false && X.hpQuickApply('damage', 0) === false && X.hpQuickApply('heal', '-2') === false && c0.hp.cur === 10);
+    // Set exactly
+    const P = X.hpSetParse;
+    ck('#112 Set exactly reads whole numbers', JSON.stringify(P({cur: '20', max: '40', temp: ''}, true)) === JSON.stringify({hp: {cur: 20, max: 40, temp: ''}, bad: []}),
+       P({cur: '20', max: '40', temp: ''}, true));
+    ck('#112 ...a blank Temp is none, and so is 0', P({cur: '5', temp: '0'}, false).hp.temp === '' && P({cur: '5', temp: ' '}, false).hp.temp === '');
+    ck('#112 ...names each box it can\'t read', JSON.stringify(P({cur: 'x', max: '-2', temp: '1.5'}, true).bad) === '["Current","Max","Temp"]');
+    ck('#112 ...leaves Max out while Vitals is locked', !('max' in P({cur: '5', max: '9', temp: ''}, false).hp));
+    ck('#112 ...strips commas and spaces, and keeps a blank Current blank',
+       P({cur: ' 1,200 ', temp: ''}, false).hp.cur === 1200 && P({cur: '', temp: ''}, false).hp.cur === '');
+    const c1 = X.blankChar(); c1.hp.cur = 10; c1.hp.max = 20; c1.hp.temp = 2; X.character = c1;
+    ck('#112 Set exactly writes, clamps, and says Max moved',
+       X.hpSetApply({cur: 50, max: 40, temp: ''}) === true && c1.hp.max === 40 && c1.hp.cur === 40 && c1.hp.temp === '', c1.hp);
+    ck('#112 ...and says so when Max did not move', X.hpSetApply({cur: 12, max: 40, temp: 3}) === false && c1.hp.cur === 12 && c1.hp.temp === 3);
+    X.setVitalsLocked(true);
+    ck('#112 ...and while Vitals is locked refuses a Max, even one passed (Review Focus 4)',
+       X.hpSetApply({cur: 5, max: 99, temp: ''}) === false && c1.hp.max === 40 && c1.hp.cur === 5);
+    X.setVitalsLocked(false);
+    const hUn = X.hpDialogHTML(hp, 38, true), hLk = X.hpDialogHTML(hp, 38, false);
+    ck('#112 the window: an amount box for digits, three greyed buttons, Set exactly folded',
+       /<input type="text" inputmode="numeric" class="hpq-amt" id="hpqAmt"[^>]*placeholder="How much\?"/.test(hUn) &&
+       ['hpqDmg', 'hpqHeal', 'hpqTemp'].every(id => new RegExp('id="' + id + '"[^>]*disabled').test(hUn)) &&
+       />Damage<[\s\S]*>Heal<[\s\S]*>Temp</.test(hUn) && /<details class="hpq-set" id="hpqSet"><summary>Set exactly<\/summary>/.test(hUn), hUn);
+    ck('#112 ...Max only while Vitals is unlocked', /id="hpqMax"/.test(hUn) && !/id="hpqMax"/.test(hLk));
+    ck('#112 ...filled in with what is there now',
+       /id="hpqCur"[^>]*value="26"/.test(hUn) && /id="hpqMax"[^>]*value="38"/.test(hUn) && /id="hpqTmp"[^>]*value="3"/.test(hUn));
+    ck('#112 ...with the header, and no data-hp or data-path box in it', hUn.includes('26 / 38 · temp 3') && !/data-hp|data-path/.test(hUn));
+    ck('#112 ...and a hand-edited value is escaped', !X.hpDialogHTML({cur: '"><x>', max: '', temp: ''}, 0, true).includes('"><x>'));
+  }
+  /* #112: renderHP's touch path, and the window driven through its own wiring */
+  {
+    const kd = {gid: ctx.document.getElementById, qs: ctx.document.querySelector, mm: ctx.window.matchMedia,
+                om: ctx.openModal, cm: ctx.closeModal};
+    const mk = () => ({value: '', readOnly: false, inputMode: 'tel', tabIndex: 0, style: {}, attrs: {},
+      classList: {toggle() {}}, setAttribute(a, v) { this.attrs[a] = String(v); }, removeAttribute(a) { delete this.attrs[a]; }});
+    const els = {hpCur: mk(), hpMax: mk(), hpTemp: mk(), hpFill: mk()}, bar = mk();
+    let opened = null, closed = 0;
+    const D = {};
+    const dlg = id => {
+      if (!D[id]) {
+        const v = opened && (opened.h.match(new RegExp('id="' + id + '"[^>]*value="([^"]*)"')) || [])[1];
+        D[id] = {id, value: v || '', disabled: /disabled/.test((opened && (opened.h.match(new RegExp('id="' + id + '"[^>]*>')) || [''])[0]) || ''),
+          textContent: '', open: false, _on: {}, focused: 0,
+          addEventListener(ty, fn) { (this._on[ty] = this._on[ty] || []).push(fn); },
+          fire(ty, ev) { (this._on[ty] || []).forEach(f => f(Object.assign({preventDefault() {}, key: ''}, ev || {}))); },
+          focus() { this.focused++; }, select() {}, click() { this.fire('click'); },
+          querySelector: s => s === 'summary' ? dlg('hpqSet:summary') : null};
+      }
+      return D[id];
+    };
+    ctx.document.getElementById = id => els[id] || (/^hpq/.test(id) ? (opened && opened.h.includes('id="' + id + '"') ? dlg(id) : null) : kd.gid(id));
+    ctx.document.querySelector = q => q === '.hp-bar' ? bar : kd.qs(q);
+    ctx.openModal = (t, h) => { opened = {t: String(t), h: String(h)}; Object.keys(D).forEach(k => delete D[k]); };
+    ctx.closeModal = () => { closed++; };
+    try {
+      const c = X.blankChar(); c.hp.cur = 26; c.hp.max = 38; c.hp.temp = 3; X.character = c;
+      ctx.window.matchMedia = q => ({matches: q === '(pointer:coarse)', addEventListener() {}});
+      ck('#112 hpTouch reads a coarse primary pointer', X.hpTouch() === true);
+      X.renderHP();
+      ck('#112 on a touchscreen the three boxes take no typing',
+         ['hpCur', 'hpMax', 'hpTemp'].every(id => els[id].readOnly === true && els[id].inputMode === 'none' && els[id].tabIndex === -1),
+         ['hpCur', 'hpMax', 'hpTemp'].map(id => [els[id].readOnly, els[id].inputMode, els[id].tabIndex]));
+      ck('#112 ...and the bar is one button that names the hit points',
+         bar.attrs.role === 'button' && bar.attrs.tabindex === '0' && bar.attrs['aria-label'] === 'Hit points 26 of 38, temp 3 — change', bar.attrs);
+      ctx.window.matchMedia = () => ({matches: false, addEventListener() {}});
+      X.renderHP();
+      ck('#112 with a mouse, Current and Temp type as before and Max is open while Vitals is',
+         ['hpCur', 'hpMax', 'hpTemp'].every(id => els[id].readOnly === false && els[id].inputMode === 'tel' && els[id].tabIndex === 0));
+      ck('#112 ...and the bar is no button', !('role' in bar.attrs) && !('tabindex' in bar.attrs) && !('aria-label' in bar.attrs), bar.attrs);
+      X.setVitalsLocked(true);
+      ck('#115 ...locking Vitals makes Max readOnly, and only Max', els.hpMax.readOnly === true && els.hpCur.readOnly === false && els.hpTemp.readOnly === false);
+      X.setVitalsLocked(false);
+      // the window
+      ctx.window.matchMedia = q => ({matches: q === '(pointer:coarse)', addEventListener() {}});
+      X.openHPDialog();
+      ck('#112 the window is Hit points, with the amount box focused', opened && opened.t === 'Hit points' && D.hpqAmt && D.hpqAmt.focused > 0);
+      ck('#112 ...its three buttons greyed until an amount', ['hpqDmg', 'hpqHeal', 'hpqTemp'].every(id => D[id].disabled === true));
+      D.hpqAmt.value = '7'; D.hpqAmt.fire('input');
+      ck('#112 typing 7 lights them, each saying what it would do',
+         ['hpqDmg', 'hpqHeal', 'hpqTemp'].every(id => D[id].disabled === false) &&
+         D.hpqDmgRes.textContent === '→ 22, no temp' && D.hpqHealRes.textContent === '→ 33' && D.hpqTempRes.textContent === '3 → 7',
+         [D.hpqDmgRes.textContent, D.hpqHealRes.textContent, D.hpqTempRes.textContent]);
+      D.hpqAmt.value = '-7'; D.hpqAmt.fire('input');
+      ck('#112 ...a minus greys them again, with no line', D.hpqDmg.disabled === true && D.hpqDmgRes.textContent === '');
+      D.hpqAmt.value = '7'; D.hpqAmt.fire('input'); D.hpqDmg.fire('click');
+      ck('#112 Damage applies through adjustHP, then closes', c.hp.cur === 22 && c.hp.temp === '' && closed === 1, [c.hp, closed]);
+      closed = 0; X.openHPDialog(); D.hpqAmt.value = '5'; D.hpqAmt.fire('input'); D.hpqTemp.fire('click');
+      ck('#112 Temp sets temp, then closes', c.hp.temp === 5 && c.hp.cur === 22 && closed === 1);
+      closed = 0; X.openHPDialog(); D.hpqAmt.value = '4'; D.hpqAmt.fire('input'); D.hpqHeal.fire('click');
+      ck('#112 Heal heals Current, then closes', c.hp.cur === 26 && c.hp.temp === 5 && closed === 1);
+      // Set exactly
+      closed = 0; X.openHPDialog();
+      D['hpqSet:summary'].fire('click');
+      ck('#112 Set exactly opens on a tap, with Current focused', D.hpqSet.open === true && D.hpqCur.focused > 0);
+      ck('#112 ...its boxes hold what is there now', D.hpqCur.value === '26' && D.hpqMax.value === '38' && D.hpqTmp.value === '5');
+      D.hpqCur.value = 'x'; D.hpqCur.fire('input');
+      ck('#112 ...a box it can\'t read greys Apply and says which', D.hpqApply.disabled === true && D.hpqMsg.textContent === 'Not a whole number: Current', D.hpqMsg.textContent);
+      D.hpqApply.fire('click');
+      ck('#112 ...and Apply then changes nothing', closed === 0 && c.hp.cur === 26);
+      D.hpqCur.value = '30'; D.hpqMax.value = '40'; D.hpqTmp.value = ''; D.hpqCur.fire('input');
+      D.hpqCur.fire('keydown', {key: 'Enter'});
+      ck('#112 ...Enter applies them all, then closes', c.hp.cur === 30 && c.hp.max === 40 && c.hp.temp === '' && closed === 1, [c.hp, closed]);
+      closed = 0; X.openHPDialog(); D.hpqCancel.fire('click');
+      ck('#112 Cancel closes and changes nothing', closed === 1 && c.hp.cur === 30);
+      X.setVitalsLocked(true); X.openHPDialog();
+      ck('#112 while Vitals is locked the window has no Max row', !opened.h.includes('id="hpqMax"') && opened.h.includes('id="hpqCur"'));
+      X.setVitalsLocked(false);
+    } finally {
+      ctx.document.getElementById = kd.gid; ctx.document.querySelector = kd.qs; ctx.window.matchMedia = kd.mm;
+      ctx.openModal = kd.om; ctx.closeModal = kd.cm;
+    }
   }
   X.character = keep.ch;
 }

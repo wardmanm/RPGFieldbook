@@ -201,10 +201,20 @@ function hpBand(){
   return (pct<=25)?"hp-danger":(pct<=50)?"hp-warn":"";
 }
 function renderHP(){
+  /* #112: on a touchscreen the bar is one button that opens the Hit points
+     window, so its boxes take no typing at all: readOnly, no keyboard, out of
+     the tab order. With a mouse they type exactly as before. */
+  const touch=hpTouch();
   ["cur","max","temp"].forEach(k=>{
     const el=document.getElementById("hp"+k[0].toUpperCase()+k.slice(1));
-    if(el){const v=character.hp[k];el.value=(v===null||v===undefined)?"":v;}
+    if(el){const v=character.hp[k];el.value=(v===null||v===undefined)?"":v;
+      el.inputMode=touch?"none":"tel";el.tabIndex=touch?-1:0;if(k!=="max")el.readOnly=touch;}
   });
+  const bar=document.querySelector(".hp-bar");
+  if(bar){
+    if(touch){bar.setAttribute("role","button");bar.setAttribute("tabindex","0");bar.setAttribute("aria-label",hpBarLabel(character.hp,effMaxHP()));}
+    else ["role","tabindex","aria-label"].forEach(a=>bar.removeAttribute(a));
+  }
   const cur=document.getElementById("hpCur"),band=hpBand();
   if(cur){cur.classList.toggle("hp-warn",band==="hp-warn");cur.classList.toggle("hp-danger",band==="hp-danger");}
   /* #103: the rail's HP bar. Its fill is cur over the EFFECTIVE max (as
@@ -220,7 +230,7 @@ function renderHP(){
      browser refuses the edit, AND a refusal in applyHPInput, because readOnly
      is only a hint — paste, autofill and any programmatic caller go straight
      past it. The lock is the Vitals pencil (#115), read by vitalsLocked(). */
-  const mx=document.getElementById("hpMax");if(mx)mx.readOnly=vitalsLocked(character);
+  const mx=document.getElementById("hpMax");if(mx)mx.readOnly=touch||vitalsLocked(character);
   /* #91: your chip and row in the initiative tracker read this HP live */
   renderInitStrip();
 }
@@ -254,6 +264,150 @@ function applyHPInput(inp){
   if(k==="max")recompute();   /* what data-recompute did; nothing is derived from cur/temp */
   scheduleSave();
   return true;
+}
+/* ================= the Hit points window (#112) =================
+   On a touchscreen a tap on the HP bar opens it: type an amount, then Damage,
+   Heal or Temp. A phone's keypad hides the minus sign behind other keyboards,
+   so nothing here needs one; Set exactly, folded underneath, types the numbers
+   straight in. The logic is here, pure where it can be, because the harness
+   drops 90-boot.js, which only wires the tap. adjustHP() stays the one damage
+   path: the preview (hpQuick) works out what each tap would leave, and the tap
+   itself goes through adjustHP/clampHP, the suite holding the two equal. */
+/* "Touchscreen" is the device's PRIMARY pointer (spec decision 8): phones and
+   tablets, not a narrowed laptop window, and a touchscreen laptop counts as
+   desktop. Read at tap time. */
+function hpTouch(){return !!(window.matchMedia&&window.matchMedia("(pointer:coarse)").matches);}
+/* A whole number from 1, or null. Spaces and commas are stripped, as Adjust
+   coins does; a sign, a fraction or anything else is refused. */
+function hpAmount(raw){
+  const s=String(raw==null?"":raw).replace(/[\s,]/g,"");
+  if(!/^\d+$/.test(s))return null;
+  const n=parseInt(s,10);return n>=1?n:null;
+}
+/* What each tap would leave, as the model would store it — adjustHP's rules
+   and clampHP's bounds, mirrored. Pure. */
+function hpQuick(hp,effMax,n){
+  const mx=num(effMax),t0=num(hp.temp),cap=v=>(mx>0&&num(v)>mx)?mx:v;
+  const soak=Math.min(t0,n),over=n-soak;
+  return {
+    damage:{cur:cap(over?Math.max(0,num(hp.cur)-over):hp.cur),temp:soak>0?((t0-soak)||""):hp.temp},
+    heal:{cur:cap(num(hp.cur)+n)},
+    temp:{temp:n}
+  };
+}
+/* The line under each button. Damage says what Current becomes, and what is
+   left of temp ("→ 22, no temp"), or just the temp when it soaks the lot and
+   Current doesn't move ("temp 3 → 1"). */
+function hpQuickText(hp,effMax,n){
+  const q=hpQuick(hp,effMax,n),t0=num(hp.temp),t1=num(q.damage.temp);
+  const damage=(num(q.damage.cur)===num(hp.cur)&&t0>0)?`temp ${t0} → ${t1}`
+    :`→ ${num(q.damage.cur)}`+(t0>0?(t1>0?`, temp ${t1}`:", no temp"):"");
+  return {damage,heal:`→ ${num(q.heal.cur)}`,temp:t0>0?`${t0} → ${n}`:`→ ${n}`};
+}
+/* The window's header: Current / the EFFECTIVE maximum (#maxNote explains it
+   when an effect applies) · temp. */
+function hpNowText(hp,effMax){
+  const t=num(hp.temp);
+  return `${num(hp.cur)} / ${num(effMax)>0?num(effMax):"—"}`+(t>0?` · temp ${t}`:"");
+}
+/* The bar's accessible name while it is a button (touch). */
+function hpBarLabel(hp,effMax){
+  const t=num(hp.temp);
+  return `Hit points ${num(hp.cur)}`+(num(effMax)>0?` of ${num(effMax)}`:"")+(t>0?`, temp ${t}`:"")+" — change";
+}
+/* One tap, on the model. Temp REPLACES what is there (decision 11): temp HP
+   don't stack, and the one you keep is your choice. Callers repaint and save. */
+function hpQuickApply(kind,n){
+  const a=hpAmount(n);if(a===null)return false;
+  if(kind==="damage")adjustHP(-a);
+  else if(kind==="heal")adjustHP(a);
+  else if(kind==="temp"){character.hp.temp=a;clampHP();}
+  else return false;
+  return true;
+}
+/* Set exactly's boxes: plain whole numbers from 0 (one grammar per box: the
+   bar's signed entry on desktop, this one on touch), blank meaning "not set",
+   and a Temp of 0 meaning none. Max only while Vitals is unlocked. */
+function hpSetParse(vals,withMax){
+  const bad=[],one=(raw,label)=>{
+    const s=String(raw==null?"":raw).replace(/[\s,]/g,"");
+    if(s==="")return "";
+    if(!/^\d+$/.test(s)){bad.push(label);return null;}
+    return parseInt(s,10);
+  };
+  const hp={cur:one(vals.cur,"Current")};
+  if(withMax)hp.max=one(vals.max,"Max");
+  hp.temp=one(vals.temp,"Temp");if(hp.temp===0)hp.temp="";
+  return {hp,bad};
+}
+/* Writes what Set exactly parsed, then clampHP(). Returns whether Max moved,
+   so the caller knows to recompute(). A Max is refused while Vitals is locked
+   even when one is passed: the same second layer applyHPInput() keeps. */
+function hpSetApply(hp){
+  if(["cur","max","temp"].some(k=>hp[k]===null))return false;
+  let moved=false;
+  if("max" in hp&&!vitalsLocked(character)){moved=String(hp.max)!==String(character.hp.max);character.hp.max=hp.max;}
+  character.hp.cur=hp.cur;character.hp.temp=hp.temp;
+  clampHP();
+  return moved;
+}
+function hpDialogHTML(hp,effMax,withMax){
+  const v=x=>(x===null||x===undefined)?"":String(x);
+  const box=(id,label,val,ph)=>`<label>${esc(label)}<input type="text" inputmode="numeric" id="${esc(id)}" value="${esc(val)}"${ph?` placeholder="${esc(ph)}"`:""} autocomplete="off"></label>`;
+  const btn=(id,cls,verb)=>`<button type="button" class="tbtn hpq-btn ${esc(cls)}" id="${esc(id)}" disabled><b>${esc(verb)}</b><span class="hpq-res" id="${esc(id+"Res")}"></span></button>`;
+  return `<div class="hpq">
+    <p class="hpq-now">${esc(hpNowText(hp,effMax))}</p>
+    <input type="text" inputmode="numeric" class="hpq-amt" id="hpqAmt" placeholder="How much?" aria-label="How much?" autocomplete="off" enterkeyhint="done">
+    <div class="hpq-acts">${btn("hpqDmg","hpq-dmg","Damage")}${btn("hpqHeal","hpq-heal","Heal")}${btn("hpqTemp","hpq-temp","Temp")}</div>
+    <details class="hpq-set" id="hpqSet"><summary>Set exactly</summary>
+      <div class="hpq-grid">${box("hpqCur","Current",v(hp.cur))}${withMax?box("hpqMax","Max",v(hp.max)):""}${box("hpqTmp","Temp",num(hp.temp)>0?v(hp.temp):"","none")}</div>
+      ${withMax?"":`<p class="hint">Max HP is locked. Unlock Vitals with its pencil to change it.</p>`}
+      <p class="hint hpq-msg" id="hpqMsg" role="status"></p>
+      <div class="m-actions"><button class="tbtn" id="hpqCancel" type="button">Cancel</button><button class="tbtn primary" id="hpqApply" type="button">Apply</button></div>
+    </details>
+  </div>`;
+}
+/* Its listeners bind to elements in its own HTML, which die with it (never to
+   #mBody, which outlives every window). */
+function openHPDialog(){
+  const withMax=!vitalsLocked(character);
+  openModal("Hit points",hpDialogHTML(character.hp,effMaxHP(),withMax));
+  const $=id=>document.getElementById(id),val=id=>{const e=$(id);return e?e.value:"";};
+  const amt=$("hpqAmt"),kinds={damage:"hpqDmg",heal:"hpqHeal",temp:"hpqTemp"};
+  const sync=()=>{
+    const n=hpAmount(amt&&amt.value),txt=n===null?null:hpQuickText(character.hp,effMaxHP(),n);
+    Object.keys(kinds).forEach(k=>{const b=$(kinds[k]),r=$(kinds[k]+"Res");if(b)b.disabled=n===null;if(r)r.textContent=txt?txt[k]:"";});
+  };
+  if(amt)amt.addEventListener("input",sync);
+  Object.keys(kinds).forEach(k=>{const b=$(kinds[k]);if(b)b.addEventListener("click",()=>{
+    if(!hpQuickApply(k,amt&&amt.value))return;
+    renderHP();scheduleSave();closeModal();   /* no toast: the bar shows the result */
+  });});
+  const set=$("hpqSet"),sum=set&&set.querySelector("summary"),msg=$("hpqMsg"),go=$("hpqApply");
+  const check=()=>{
+    const p=hpSetParse({cur:val("hpqCur"),max:val("hpqMax"),temp:val("hpqTmp")},withMax);
+    if(go)go.disabled=p.bad.length>0;
+    if(msg)msg.textContent=p.bad.length?"Not a whole number: "+p.bad.join(", "):"";
+    return p;
+  };
+  ["hpqCur","hpqMax","hpqTmp"].forEach(id=>{const e=$(id);if(!e)return;
+    e.addEventListener("input",check);
+    e.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();if(go&&!go.disabled)go.click();}});});
+  /* Opened by hand, inside the tap, so focusing Current can still bring up the
+     keypad (a focus after the <details> toggles itself is outside the gesture). */
+  if(sum)sum.addEventListener("click",e=>{e.preventDefault();set.open=!set.open;
+    if(set.open){const c=$("hpqCur");if(c){c.focus();c.select();}}});
+  const cancel=$("hpqCancel");if(cancel)cancel.addEventListener("click",closeModal);
+  if(go)go.addEventListener("click",()=>{
+    const p=check();if(p.bad.length)return;
+    const moved=hpSetApply(p.hp);
+    renderHP();if(moved)recompute();scheduleSave();closeModal();
+  });
+  sync();check();
+  /* On touch modalTakeFocus() focuses the dialog box; the amount box is what
+     the player came to type in, and focusing it inside the tap brings up the
+     digits-only keypad. */
+  if(amt)amt.focus();
 }
 function renderAll(){
   /* FIRST, before the [data-path] loop below: rebuilding blanks the six score
