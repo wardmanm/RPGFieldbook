@@ -9156,3 +9156,28 @@ Pages: [theming & icons](../wiki/ui/theming-and-icons.md), [build & source split
 [testing](../wiki/process/testing.md), [building & CI](../wiki/process/building-and-ci.md),
 [settings & updates](../wiki/features/settings-and-updates.md), [overview](../wiki/overview.md),
 [known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).
+
+## #144 follow-up: the final review's fixes (2026-11-06)
+
+A fresh review of the branch found one thing the entry above gets wrong: not every weight lands
+where it did online. Grenze Gotisch's embedded face is one `500 900` range, and Google served one
+face per requested weight (500, 700, 900), which snapped a weight between them to the next one. So
+an 800 drew at 900 online and at 800 embedded; a 600 would draw at 600, not 700. Cinzel's and EB
+Garamond's ranges have no gaps, and every weight beyond a range clamps as before. The only rule it
+reached was `.hcard-name` (the home screen's character names), which asked for 800 and now asks for
+900, the weight it drew at; on the classic skin, Cinzel clamps both to 700. `docs.js` now maps every
+weight the CSS asks of each family both ways (Google's faces, the embedded range) and fails where
+they differ.
+
+The other fixes. Each face's comment carries its file's sha256, and `docs.js` checks it, since a
+same-length change to the base64 kept the size and the `wOF2` header and would have fallen back
+silently. Google now and then answers with `fonts.gstatic.com/l/font?kit=…` addresses instead of
+`/s/…woff2` files (two of the reviewer's four fetches); `fetch-fonts.js` asks again, up to three
+times, then says to re-run, never to widen `GSTATIC`. Fetched licence text holding `</style` is
+refused, as `*/` was, since the comment sits inside the page's one `<style>`. The script exports its
+functions when required, for throwaway checks. Corrections: the italic is a static file, not a
+variable one; Grenze Gotisch falls back to Times New Roman, not Georgia; the Settings page is called
+Credits; the source split has 56 fragments, 39 of them JS. The four font files are unchanged, and
+the built page is 1,588,419 B.
+
+Pages: [theming & icons](../wiki/ui/theming-and-icons.md), [build & source split](../wiki/architecture/build-and-source-split.md).

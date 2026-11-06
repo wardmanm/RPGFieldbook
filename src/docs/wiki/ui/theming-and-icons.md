@@ -17,7 +17,8 @@ by a second fetch script so the page makes no font request, under the SIL Open F
 `00-tokens.css`, the `::before` frames in `20-cards.css` and `30-sheet.css` · **Data:**
 `src/icons/icons.json` ·
 **Tests:** `docs.js` (map against fragment, path-data charset, coverage of shipped names, CC BY;
-the tokens' families against `90-fonts.css`, each face, the OFL text and notices, the fonts' credit),
+the tokens' families against `90-fonts.css`, each face and its sha256, the weights the CSS asks for,
+the OFL text and notices, the fonts' credit),
 `sheet.js` (`iconSVG()` lookups), `rules-data.js` (`--warn` in every palette, the `data-tabs`
 default; the page loads nothing from a third-party address, and carries `90-fonts.css` byte for
 byte) · **See also:** [Shell](shell.md), [Settings & updates](../features/settings-and-updates.md),
@@ -162,20 +163,29 @@ FAMILIES in scripts/fetch-fonts.js  --(node scripts/fetch-fonts.js, by hand)--> 
   the template's Google link made before #144). The names must be the tokens' names exactly.
 - **`fetch-fonts.js`** sends that request to the Google Fonts css2 API (`css2Url()`) with a Chrome
   User-Agent, since woff2 is served only to a browser it knows, and keeps the `/* latin */` faces
-  (`parseLatinFaces()`). Each family comes back as **one variable woff2 per style** covering every
-  weight, four files in all, about 135 KiB (184 KB as base64). It fetches each family's `OFL.txt`
+  (`parseLatinFaces()`). Each style comes back as **one woff2 covering every weight requested**,
+  four files in all, about 135 KiB (184 KB as base64): variable fonts for the three styles with
+  several weights, a static file for the italic's one. It fetches each family's `OFL.txt`
   and splits it into the copyright notice and the licence text (`licenceParts()`), then writes the
   fragment (`fragmentCSS()`). It is strict like `fetch-icons.js`: an unexpected family, style,
   weight, subset range or file, separate files per weight, a file that is not woff2, more than
-  256 KiB in all, a Reserved Font Name, licence texts that differ, or `*/` in them, and it dies
-  naming the problem and writes nothing. `--dry-run` fetches and checks without writing.
+  256 KiB in all, a Reserved Font Name, licence texts that differ, or `*/` or `</style` in them,
+  and it dies naming the problem and writes nothing. One answer is retried: now and then Google
+  gives `fonts.gstatic.com/l/font?kit=…` addresses instead of `/s/…woff2` files, and asking again
+  (up to three times) gets the files. `--dry-run` fetches and checks without writing.
 - **`90-fonts.css` is committed and is the vendored copy of the fonts.** No font files are kept. It
   is last in `manifest.css` (an `@font-face` works anywhere in a sheet, and the readable CSS stays
   first). Its header says GENERATED, DO NOT EDIT; then come the notices and the full OFL text in one
   comment, then one `@font-face` per file: `font-weight` as the range of the requested weights
   (`500 900`, `500 700`, `400 600`, `400`), Google's latin `unicode-range`, `font-display:swap`, and a
-  `data:font/woff2;base64,` URL, each line of base64 one file. A weight the CSS asks for beyond a
-  range (800 and 900 on `--head` and `--body`) clamps to its end, the face the Google link gave.
+  `data:font/woff2;base64,` URL, each line of base64 one file. The comment above each block gives
+  the file's size, sha256 and Google address, and `docs.js` checks the blob against the first two.
+- **Weights.** A weight the CSS asks for beyond a range (800 and 900 on `--head` and `--body`)
+  clamps to its end, the face the Google link gave. One *inside* a range, between two requested
+  weights, renders as asked, where Google's one face per weight snapped it to the next requested
+  one: Grenze Gotisch's range has gaps at 600 and 800. `.hcard-name` once asked for 800, which drew
+  at 900 online, so it asks for 900. `docs.js` maps every weight the CSS asks of each family both
+  ways and fails where they differ.
 
 ### The licence
 
@@ -215,6 +225,9 @@ linked to openfontlicense.org; `docs.js` checks both name every family the fragm
   `rules-data.js` checks the built page and its sources.
 - **Latin only** (Mike, 2026-11-06). Each face keeps Google's latin `unicode-range`; `docs.js`
   checks it, and that no `U+0100` (Latin Extended) is in it.
+- **A `--display` weight is 500, 700 or 900** (Grenze Gotisch's requested weights), or it will not
+  draw as it did online; `docs.js` checks every weight the CSS asks of every family.
+- **Never widen `GSTATIC`** in `fetch-fonts.js` to take Google's `/l/font?kit=` addresses: re-run.
 - **The fonts' notices and licence stay in the file,** in `90-fonts.css`'s comment: a minifier or a
   build step that dropped comments would break the OFL. `rules-data.js` checks the built page holds
   the fragment byte for byte.
@@ -312,3 +325,4 @@ linked to openfontlicense.org; `docs.js` checks both name every family the fragm
 - 2026-10-28 — The emblem coverage check walks `srd52` alone; homebrew's moves to the private suite with the pack. → ledger L7858, #125
 - 2026-11-04 — `--sheet`, `--sheet-edge`, `--sheet-lift`, `--sheet-gutter` and `--parch` join every palette, and the parchment ink each skin, for the journal's page styles. → ledger L8699, #167
 - 2026-11-06 — The fonts are embedded, Latin only: `scripts/fetch-fonts.js` writes `90-fonts.css` with the OFL notices and text; the Google Fonts link is gone, and a guard checks the page loads nothing from a third-party address. → ledger L9101, #144
+- 2026-11-06 — After review: `.hcard-name` asks for 900, the weight it drew at online; `docs.js` checks every weight and each face's sha256; the fetcher retries Google's `/l/font?kit=` answer and refuses `</style`. → ledger L9160, #144

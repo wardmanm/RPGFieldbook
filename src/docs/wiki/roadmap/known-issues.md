@@ -515,3 +515,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-02 — The phone layout's keyboard order (Skills before Defences and Statuses) recorded as a limitation, from #155's review.
 - 2026-11-05 — Replaced "private packs through a manifest: not built" with the live-token verification still owed: #182 builds the private GitHub source. → ledger L8943, #182
 - 2026-11-05 — The live-token probe passed; what is left is an install on Mike's devices. → ledger L9016, #182
+- 2026-11-06 — Google Fonts in the template (#144) is fixed: the fonts are embedded. → ledger L9101, #144

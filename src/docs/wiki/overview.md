@@ -247,3 +247,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-11-02 — The code map's `00-sheet.html` line: the grid's stacks are Skills/Statuses and Defences/Resources (Mike's decision). → ledger L8339, #155
 - 2026-11-04 — The pre-release is part of `/release`, not a command of its own. → ledger L8860, #180
 - 2026-11-05 — `docs/` ships four files: `private-sources.md`, the owner's guide to private sources, joins the three. → ledger L8943, #182
+- 2026-11-06 — The code map gains `90-fonts.css`, and the scripts list `fetch-fonts.js`. → ledger L9101, #144
