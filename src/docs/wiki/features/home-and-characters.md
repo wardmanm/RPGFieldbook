@@ -71,7 +71,11 @@ its id is still indexed. Otherwise it renders an in-memory blank (glossary seede
 screen so the sheet underneath is valid. `migrateOldChar()` returns "" or why the move failed; the
 legacy key is removed only once both the copy and its index entry have landed, and `boot()` alerts
 on a failure — no character is open yet for the save warning strip to be about (see
-[Storage](../architecture/storage.md)).
+[Storage](../architecture/storage.md)). It alerts, too, when the browser blocks storage for the
+page: every read fails quietly, so the home screen opens as a first run, and nothing will be kept
+(#142). An autoloaded character whose packs are still on their way from IndexedDB is asked about
+rules updates once they arrive (`promptAfterRulesRestored()`, see
+[Rules-update tool](rules-update-tool.md)).
 
 **Export.** Save (`#btnSave`) is `exportChar()`: the whole `character`, pretty-printed, downloaded
 by `dl()` as `humblewood-<name>.json`. The prefix is the same for a D&D character.
@@ -155,3 +159,4 @@ exports and imports *settings and rules data* — not characters (see
 - 2026-08-10 — backups return the snapshot on failure and verify the index write. → ledger L1116
 - 2026-09-29 — A refused character write raises a warning strip that stays until a save lands; new, imported and migrated characters report it too. → ledger L4771, #81
 - 2026-09-29 — Opening, making or importing a character first saves the one left, and asks before dropping changes it can't save; delete and the star say when the library refuses them. → ledger L4856, #81
+- 2026-11-06 — Boot opens, and alerts, where the browser blocks storage; the autoloaded character gets its rules-update prompt once the packs are back. → ledger L9101, #142, #135

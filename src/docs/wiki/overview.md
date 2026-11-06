@@ -152,9 +152,9 @@ name says where its first function came from, not everything it holds: `migrate(
 | `66-coins-hp.js` | portrait, coins and the Adjust transaction, HP entry, `renderAll()` | [Inventory](features/inventory.md), [Vitals & rest](features/vitals-and-rest.md) |
 | `67-trade.js` | the inventory log (one line per item or coin change), its undo and its dialog, and the trade window | [Inventory](features/inventory.md), [Grants & provenance](architecture/grants-and-provenance.md), [Character model](architecture/character-model.md) |
 | `70-persistence.js` | localStorage keys, the character library, backups, IndexedDB with timeouts, LZW | [Storage](architecture/storage.md), [Home & characters](features/home-and-characters.md) |
-| `71-char-io.js` | IDB rules-cache hydration, `migrate()`, export/import, print | [Character model](architecture/character-model.md), [Home & characters](features/home-and-characters.md), [Storage](architecture/storage.md) |
+| `71-char-io.js` | the rules cache's boot reads (localStorage, then IDB hydration), `migrate()`, export/import, print | [Character model](architecture/character-model.md), [Home & characters](features/home-and-characters.md), [Storage](architecture/storage.md) |
 | `72-char-update.js` | pure diff of a sheet against its packs: `stampSrc()`, `diffCharacter()` | [Rules-update tool](features/rules-update-tool.md) |
-| `73-char-update-ui.js` | the review modal for that diff | [Rules-update tool](features/rules-update-tool.md) |
+| `73-char-update-ui.js` | the review modal for that diff; the prompt on load, and after the boot hydration | [Rules-update tool](features/rules-update-tool.md), [Storage](architecture/storage.md) |
 | `75-home-theme.js` | home screen, `newCharacter()`, `skinForSystem()`, `applyTheme()` | [Home & characters](features/home-and-characters.md), [Theming & icons](ui/theming-and-icons.md) |
 | `80-modal-forms.js` | `openModal()` with dismiss guards and focus; the item, feature, spell, status and familiar forms | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md) |
 | `85-browse.js` | `openBrowse()`, the full-screen finder; item, spell and feat pickers | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md), [Features & traits](features/features-and-traits.md) |
@@ -245,3 +245,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-11-02 — The code map's `00-sheet.html` line: the grid's stacks are Skills/Statuses and Defences/Resources (Mike's decision). → ledger L8339, #155
 - 2026-11-04 — The pre-release is part of `/release`, not a command of its own. → ledger L8860, #180
 - 2026-11-05 — `docs/` ships four files: `private-sources.md`, the owner's guide to private sources, joins the three. → ledger L8943, #182
+- 2026-11-06 — The code map: `71-char-io.js` holds both boot reads of the rules cache, `73-char-update-ui.js` the prompt after the boot hydration. → ledger L9101, #134, #135

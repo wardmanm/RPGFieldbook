@@ -42,6 +42,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **What happens when the LZW dictionary is full** — Stop growing
 - **A hanging IndexedDB request** — Time out at 4 s and fall back
 - **What a failed backup returns** — `{error, copy}`, so the caller can offer a download
+- **Which rules copy boot keeps** — The `localStorage` copy when there is a readable one; IndexedDB's otherwise (#134)
+- **How boot reports storage it can't use** — One alert once the home screen is up (#142)
 
 ### [Character model](architecture/character-model.md)
 

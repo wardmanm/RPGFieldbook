@@ -12,7 +12,7 @@ player's own numbers**, and it **never updates without a backup first**.
 `diffCharacter()`, `applyUpdateRow()`, `applyUpdates()`, `updResyncAttack()`, `atkGenFp()`,
 `stampAtkGen()`, `updAtkEdited()`, `charNeedsUpdate()` in `72-char-update.js`;
 `openUpdateReview()`, `commitUpdates()`, `finishUpdates()`, `markCharChecked()`,
-`maybePromptUpdate()`, `updRowHTML()` in `73-char-update-ui.js`; `fpHash()`, `fpNorm()` in
+`maybePromptUpdate()`, `promptAfterRulesRestored()`, `updRowHTML()` in `73-char-update-ui.js`; `fpHash()`, `fpNorm()` in
 `00-constants.js`; `backupCharacter()` in `70-persistence.js`; `migrate()` in `71-char-io.js`;
 `itemMetaLine()`, `costToGp()` in `25-origins-items.js`; `migrateAmmo()`, `rebaseAmmo()` in
 `62-ammo.js` · **Tests:** `char-update.js`, with source
@@ -30,7 +30,14 @@ a check finds nothing to offer — and it clears `skipUpdate`. The library index
 the home cards badge a sheet that is behind.
 
 **When it asks.** `maybePromptUpdate()` runs last in `loadCharById()` and `finishImport()`, with the
-sheet already drawn. `charNeedsUpdate()` says no for a backup (`isBackup`), when
+sheet already drawn. A character the boot autoload opens is the one case where the packs may not
+be there yet: when they live in IndexedDB, `loadRulesCacheAsync()` restores them after the first
+paint. So `boot()` calls `promptAfterRulesRestored()` once that hydration restores them, which runs
+`maybePromptUpdate()` for the open sheet, unless no character is open, the home screen is up or a
+dialog is open (then it asks nothing; the manual check below is still there). With a
+`localStorage` copy the autoload already has the packs and asks as it opens, and no hydration
+follows (see [Storage](../architecture/storage.md)), so a sheet is asked once either way.
+`charNeedsUpdate()` says no for a backup (`isBackup`), when
 `skipUpdate === APP_VERSION`, when the stamp is not behind, and when no packs are loaded. If it is
 behind and the diff is empty, the sheet is quietly marked checked; otherwise a modal offers
 **Not now**, **Don't ask again for vX** (sets `skipUpdate`, leaves the stamp) and **Review
@@ -172,11 +179,11 @@ state survives. Attack mechanics: [Attacks & damage](attacks-and-damage.md).
 - **A resync overwrote player-edited attacks**, splicing the row out and regenerating it. The first
   `genFp` then left out `proficient` and `addAbilityDamage`, so unticking either was undone by the
   next resync.
-- **The boot autoload gets no nudge.** The rules cache now lives in IndexedDB and
-  `loadRulesCacheAsync()` hydrates it *after* the autoload, so `charNeedsUpdate()` sees no packs at
-  that moment, and the hydration does not ask again. Loading from the home screen or importing still
-  prompts. Traced in the code; the ledger's "cache restored before autoload" predates the IndexedDB
-  move.
+- **The boot autoload got no nudge (#135).** Once the rules cache moved to IndexedDB,
+  `loadRulesCacheAsync()` hydrated it *after* the autoload, so `charNeedsUpdate()` saw no packs at
+  that moment, and the hydration never asked. Loading from the home screen or importing still
+  prompted. The ledger's "cache restored before autoload" (L702) predates the IndexedDB move; with
+  IndexedDB it still isn't, which is why the prompt follows the hydration instead.
 
 ## Decisions
 
@@ -197,7 +204,6 @@ state survives. Attack mechanics: [Attacks & damage](attacks-and-damage.md).
 
 ## Open
 
-- The missing nudge on boot autoload, above.
 - Attacks resolve only through their item; a hand-made attack is never offered an update.
 - See [Known issues](../roadmap/known-issues.md).
 
@@ -219,3 +225,4 @@ state survives. Attack mechanics: [Attacks & damage](attacks-and-damage.md).
 - 2026-10-02 — Ammunition: launchers fire from a loaded stack with Undo, bundles unpack on arrival, recovery at End combat and on the row, the loaded +N. → ledger L4952, #6
 - 2026-10-16 — A pool entry from a pack older than ammunition is filled in at load, so repaired copies read as unchanged. → ledger L5780, #96
 - 2026-10-30 — Corrected: the manual check is Settings → Extensions → This sheet → Check for rules updates, and the backup failure names Settings → Extensions → Remove all (pre-release 1.9.0, step 1).
+- 2026-11-06 — A character the boot autoload opens is asked about rules updates once the IndexedDB packs are back (`promptAfterRulesRestored()`). → ledger L9101, #135

@@ -31,3 +31,11 @@ Bullets below this line — leave the heading in place.
 - Extensions can install and update packs from a private GitHub repo, using a link and a token the repo's
   owner sends you; paste the link into Settings → Extensions → Sources. A new guide in the app's docs shows
   owners how to set one up for their table.
+- In a browser that blocks storage for the page, Fieldbook now opens and tells you it can't keep your
+  characters or settings, instead of stopping on a half-drawn screen.
+- Rules packs you added or removed while your browser couldn't use its main store no longer come back
+  as the older set the next time you open Fieldbook.
+- A character that opens automatically at launch now gets the rules-update prompt, the same as one you
+  open from the home screen.
+- Removing a pack, or Remove all, now says on its status line when the change couldn't be saved, and
+  that what you removed may come back next time.

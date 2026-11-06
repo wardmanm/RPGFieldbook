@@ -307,17 +307,22 @@ themes.
 
 `boot()` then runs: settings from localStorage (`foldLegacySettings()`, which converts the old
 `rulesSources` and `rulesUrl` into `settings.sources`, #102),
-the rules cache from localStorage synchronously (`readRulesCacheString()`), `reindexRules()`,
+the rules cache from localStorage synchronously (`loadRulesCacheLocal()`), `reindexRules()`,
 `recomputeDups()`, `buildStats()`, `buildDeath()`, `buildSlots()`, `buildBio()`, `wire()`,
-`applyTheme()`, `migrateOldChar()`. It opens the autoload character, or seeds a blank one behind
-`showHome()`. It writes the save-state warning if storage is refused, then runs
-`loadRulesCacheAsync()` (IndexedDB, after first paint, see [Storage](../architecture/storage.md))
+`applyTheme()`, `migrateOldChar()` (an alert if the move fails). It opens the autoload character,
+or seeds a blank one behind `showHome()`. If the browser blocks storage, it says so in an alert
+(`storageBlockedWhy()`). Then it runs `loadRulesCacheAsync(haveLocal)` (IndexedDB, after first
+paint, only when localStorage had no copy, see [Storage](../architecture/storage.md)), which calls
+`promptAfterRulesRestored()` when it restores the packs,
 and the three network checks, each optional and silent: `checkForUpdate()`, `checkForDataUpdate()`
 and `checkSources({boot:true})`. `wire()` has already drawn the Extensions pill from the manifests
 saved at the last check (`renderExtPill()`), so it shows before the network answers.
 
-The test harness evaluates every fragment except `90-boot.js`, so `wire()` and `boot()` never run
-under test. What guards them is regexes over the source in `rules-data.js`, plus browser QA.
+The test harness evaluates every fragment except `90-boot.js`. `sheet.js`'s boot & storage block
+evaluates it in a fresh context and runs the real `boot()` (and so `wire()`), to check boot with
+storage blocked, which rules copy it keeps and the autoload's prompt; no listener `wire()` binds is
+driven there. What guards the handlers is regexes over the source in `rules-data.js`, plus browser
+QA.
 
 ## Rules that must hold
 
@@ -487,3 +492,4 @@ under test. What guards them is regexes over the source in `rules-data.js`, plus
 - 2026-10-27 — Fix round 2: a pointer click on either button is ignored for 400 ms after opening (`ASK_CLICK_GRACE`), so a double-click can't accept it unread. → ledger L7710, #118
 - 2026-10-29 — `askConfirm()` gains two users, End combat and the End of combat window's "Add N XP?"; that window's guard is the first to answer a dismissal through it, returning `true` and closing the window itself on the answer. → ledger L7921, #105
 - 2026-11-04 — The wide dialog is for windows that scroll their own panes; Roll initiative left it (#161), and a test counts the wide callers. → ledger L8514
+- 2026-11-06 — `boot()` survives storage the browser blocks and says so, keeps the newest rules copy, and asks the autoloaded sheet about updates once the packs are back; it now runs under test. → ledger L9101, #142, #134, #135
