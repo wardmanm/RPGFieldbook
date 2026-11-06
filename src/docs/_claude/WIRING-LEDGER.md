@@ -9097,3 +9097,53 @@ and into waves by dependency. Mike's decisions on it: **1.9.1 is cut after wave 
 moves to 1.9.2**, not yet scoped. The 22 issues of waves 4–5 were relabelled `1.9.1` → `1.9.2`
 (a new label); all stay on the v1.9.0 milestone, which holds every 1.9.x issue. 1.9.1 is now 32
 issues: the 24 P1s and 8 P2s that ride along in the same functions.
+
+## #153, #154, #128: a grant shows at once; weapons arrive equipped (Grants redraw, 2026-11-06)
+
+**#153, #154 (cause).** Every class, species and background change (add, change, remove, a level
+up or down, a subclass, the Done of a choice window) ends in `renderClassRace()`, which since #103
+repainted only the header. So gold a grant added or took back never reached the coin boxes, a
+granted language never became a Bio pill, and a fixed grant's items, or a removed source's, stayed
+off the inventory until a reload. Only `runExtraChoices()`' Done redrew the inventory, and it alone
+skipped `renderClassRace()`. Confirmed with recorder elements before the fix: no flow wrote
+`#coins` or `#bioLanguages`, and only the picker's Done wrote `#inventoryList`.
+
+**Fix.** `renderClassRace()` repaints the header, the inventory, the coins and the chips; the
+caller's `renderFeatures()` and `recompute()` do the rest, as before. `runExtraChoices()`' Done
+calls it in place of `renderInventory();renderAttacks()`. One redraw at the end of every grant and
+revert path, rather than a render in each grant function (`addGrantGold()`, `grantLanguages()` and
+the rest are model-only and run in loops), so a new flow that ends where the others do is covered.
+`renderAll()`, `applyTheme()` and `refreshRulesUI()` wanted the header alone and call
+`renderSheetHead()`, so they draw exactly what they drew.
+
+**#128 (cause).** Only the finder equipped a weapon as it arrived (`equipped:!!x.weapon`);
+`grantItemByName()` and a new item on the form left it `equipped:false`, and `attackVisible()` hides
+an unequipped weapon's row. A new character's starting weapons were equipped by
+`migrateWeaponEquip()` on its first reload, because `newCharacter()` skips `migrate()`; that same
+pass then also re-equipped any weapon the player had unequipped before the reload.
+
+**Fix.** The finder's path is one function, `equipNewWeapon(it)` in `85-browse.js` (equip a
+weapon and add its row), called by `addLibraryItems()` and `grantItemByName()`. In
+`openItemForm()` a new item's Equipped box follows its Weapon box (ticked, or a pack weapon
+inserted) until the player sets Equipped; an item being edited keeps what it has. `newCharacter()`
+sets `wpnEquipInit`, as it sets `ammoInit` and `langLifted`. **Weapons only (Mike):** granted armour
+and shields stay unequipped, because #130 changes shield stacking and must not go live first.
+
+Ruling: the form's Equipped box follows Weapon visibly, rather than Save equipping a new weapon
+behind an unticked box — the form already shows Equipped, and a silent override would contradict
+it — if wrong, a player who never looks at Equipped sees it ticked and can untick it.
+
+Ruling: the tests sit just before `sheet.js`'s closing promise chain, not after it — a synchronous
+block after that call runs while `t118EndToEnd()` is suspended mid level-up with its doubles in
+place — if wrong, the block moves below the chain line at merge.
+
+Tests: `sheet.js`, the new block before the async chain: the add, change and remove flows for a
+species and a background, a class's picker and its removal, checked against what the recorder
+screen holds; granted, finder, form and new-sheet weapons. Pages:
+[grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[attacks & damage](../wiki/features/attacks-and-damage.md),
+[inventory](../wiki/features/inventory.md), [story & notes](../wiki/features/story-and-notes.md),
+[character model](../wiki/architecture/character-model.md),
+[theming & icons](../wiki/ui/theming-and-icons.md) (its `applyTheme()` paragraph still named the
+pre-#103 `#craceWord`), [decisions](../wiki/decisions.md),
+[known issues](../wiki/roadmap/known-issues.md).

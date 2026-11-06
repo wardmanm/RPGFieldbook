@@ -95,13 +95,17 @@ Cost (gp) — applies to the whole batch and survives a filter redraw (`readFoot
 (`unpackAmmo()`, [Ammunition](ammunition.md)) — ×2 of "Arrows (20)" adds 40 single arrows — then an
 item already carried gains N, a new one is one stack of N with the meta line (`itemMetaLine()`)
 prepended to its description, cost from the override or the listed price, weight, category, type,
-weapon, a `src` stamp, and `equipped` set for weapons; a weapon gets one linked attack however many
-are added. `finderQty()`: blank, 0, negative or text → 1, decimals floor, cap 999.
+weapon, a `src` stamp, and a weapon equipped with one linked attack however many are added
+(`equipNewWeapon()`, the path grants share, #128). `finderQty()`: blank, 0, negative or text → 1, decimals floor, cap 999.
 
 **Granted items** come from `grantItemByName()`: a bundle unpacks the same way, so starting
 equipment's "Arrows (20)" grants 20 single arrows; otherwise the same copy with cost parsed through
-`costToGp()` and category/type copied, tagged `grant: sid`, and removed again when the source goes —
-see [Grants & provenance](../architecture/grants-and-provenance.md).
+`costToGp()` and category/type copied, tagged `grant: sid`, a weapon equipped with its attack row
+as the finder's is (#128; armour and shields arrive unequipped), and removed again when the source
+goes — see [Grants & provenance](../architecture/grants-and-provenance.md). What a species,
+background or class adds or takes back, items and gold alike, shows at once: every such change
+ends in `renderClassRace()`, which redraws the inventory and the coin boxes (#153). On the item
+form, a new item's Equipped box follows its Weapon box until the player sets it (#128).
 
 **The inventory log (#47).** Every change to items and coins writes one line to `character.invLog`
 through `logInv()`, which stamps `id` and `at`, puts the line first and trims the log to
@@ -430,3 +434,4 @@ the inventory and recompute, because coins have weight.
 - 2026-10-29 — The finder's way back focuses ⇄ Trade only for a trade with no `onClose`; Loot's seeded `with` is capped at 60 characters. → ledger L8025, #105
 - 2026-11-04 — End of combat's Loot opens the trade window as Loot (`openTrade({loot:true})`): From, You get alone, Worth, Take loot; logged "Looted from …" under Trades; rules items arrive Found. → ledger L8645, #166
 - 2026-11-04 — Balance trade; coins split to pay (typed or balanced), each split a receipt line; Complete warns, in the warning window, when short or giving more. → ledger L8780, #168
+- 2026-11-06 — Granted items and gold show at once, on add, change and remove (`renderClassRace()`); a granted weapon, or a new one on the form, arrives equipped with its attack row. → ledger L9101, #153, #128

@@ -71,7 +71,9 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    id becomes text), so the Rules tab's Edit and Delete can find it. One with no term at all stays,
    listed there as "(no term)" and never matched (see [Rich text](rich-text.md)).
 7. `migrateWeaponEquip()` runs next. It is a one-time fix, recorded by `wpnEquipInit`, that equips
-   every weapon on a sheet saved before weapons could be equipped.
+   every weapon on a sheet saved before weapons could be equipped. `newCharacter()` sets
+   `wpnEquipInit` on the sheet it creates, whose weapons arrive equipped (#128), so the pass never
+   re-equips a weapon the player unequipped there.
 8. `migrateAmmo()` runs after it: a one-time pass, recorded by `ammoInit` (never defaulted in
    `blankChar()`, as `wpnEquipInit` isn't), that unpacks known ammunition bundles and gives a kind to
    known pieces and launchers. It runs while `ammoInit` is below `AMMO_PASS` (2): pass 1 for sheets
@@ -131,7 +133,7 @@ in [Conditions & concentration](../features/conditions-and-concentration.md)).
 object, indented, as `humblewood-<name>.json`, whatever the system. Every load path runs `migrate()`:
 `loadCharById()`, `importChar()` (which accepts a file only if it parses and has `abilities`) and
 `migrateOldChar()`. `newCharacter()` builds straight from `blankChar()`, then adds the default
-languages and marks `ammoInit` and `langLifted` done.
+languages and marks `ammoInit`, `langLifted` and `wpnEquipInit` done.
 
 **The version stamp, `appVersion`,** means "the app version this sheet was last **reconciled**
 against", not "last saved with". `blankChar()` seeds `""`, `newCharacter()` stamps `APP_VERSION`,
@@ -254,3 +256,4 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - 2026-10-27 — `migrate()` normalizes the inside of each kept `levelLog` record (features, grants, `hp`, `subclass`, `abilities`), keeping its other keys, so a malformed import can't make Level down throw. → ledger L7657, #118
 - 2026-10-29 — `xpSplit` (`false`) and `endCombatOpen` (`{}`) join `blankChar()`; `trackers[i]` and `journal[i]` gain an optional `afterCombat:true`; `migrate()` keeps `xpSplit` only when `true`, cleans `endCombatOpen` through `cleanEndCombatOpen()` and drops a non-`true` `afterCombat`. → ledger L7921, #105
 - 2026-11-04 — `journal[i]` gains an optional `look` (the page style, absent for Sheet), kept as it is by `migrate()`. → ledger L8699, #167
+- 2026-11-06 — `newCharacter()` marks `wpnEquipInit` done: a new sheet's weapons arrive equipped, and the first reload no longer re-equips one the player unequipped. → ledger L9101, #128

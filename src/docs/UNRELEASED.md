@@ -31,3 +31,9 @@ Bullets below this line — leave the heading in place.
 - Extensions can install and update packs from a private GitHub repo, using a link and a token the repo's
   owner sends you; paste the link into Settings → Extensions → Sources. A new guide in the app's docs shows
   owners how to set one up for their table.
+- Gold, languages and items from a species, background or class now show the moment you add, change
+  or remove it: the coin boxes, the Languages pills on the Bio tab and the inventory no longer wait
+  for a reload.
+- Starting and granted weapons now arrive equipped, with their attack ready under Attacks & Weapons,
+  as weapons from the item finder always have. A new weapon you make in the item form starts
+  equipped too; untick Equipped if you'd rather it didn't.

@@ -41,7 +41,9 @@ fields, and when nothing would change.
 top of the Bio tab, and — unlike the bio cards — takes a section note. It holds, top to bottom:
 **Alignment** (`character.alignment`, moved here from the Sheet), **Languages** and **Senses** as
 chip rows (`renderBioChips()`, `chipsHTML()`; a sense may carry a range, "DARKVISION · 60 FT"; a
-granted language shows its source, "· species", and has no ×), and the Proficiencies prose
+granted language shows its source, "· species", and has no ×; it appears, and leaves with its
+source, at once, since every species, background and class change redraws the chips through
+`renderClassRace()`, #154), and the Proficiencies prose
 (`character.proficiencies`, the same `renderRT()`). The chips, their grants and the default
 language are on [Character model](../architecture/character-model.md) and
 [Grants & provenance](../architecture/grants-and-provenance.md). #97's pencil on this card hides
@@ -176,3 +178,4 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - 2026-10-24 — The ☰ section flyout is retired: the Bio tab has no ☰ title, and the note preview's `<span>` rule rests on `renderNoteIcons()` alone. → ledger L6804, #103
 - 2026-10-25 — `jumpToNote()` unhides the note's tab first when it is hidden, toasts the tab's own label, then jumps as before. → ledger L6989, #52
 - 2026-10-25 — The Party card: a roster of companions that joins every fight the player starts; 19 sections. → ledger L7097, #91
+- 2026-11-06 — A granted language's pill appears and leaves at once with its species or background, on add, change and remove. → ledger L9101, #154

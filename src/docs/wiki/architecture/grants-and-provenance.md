@@ -9,8 +9,8 @@ background or drop a class without hand-cleaning the sheet.
 **Code:** `originSid()`, `grantProf()`, `removeGrants()`, `grantedProf()`, `grantSources()`,
 `sidLabel()`, `effSkill()`, `effSaveProf()` in `00-constants.js`; `addFeatureFromDef()`,
 `removeFeaturesWhere()`, `grantItemByName()`, `addGrantGold()`, `applyEquipOption()`,
-`applyEquipGrants()`, `revertEquipmentGrants()`, `grantFeatDef()`, `runExtraChoices()` in
-`50-classrace.js`; `applyRace()`, `removeRace()` in `52-race.js`; `applyBackground()`,
+`applyEquipGrants()`, `revertEquipmentGrants()`, `grantFeatDef()`, `runExtraChoices()`,
+`renderClassRace()` in `50-classrace.js`; `equipNewWeapon()` in `85-browse.js`; `applyRace()`, `removeRace()` in `52-race.js`; `applyBackground()`,
 `removeBackground()` in `54-background.js`; `addClass()`, `applyClassLevel()`, `removeClass()`,
 `grantClassSaves()`, `multiclassChoices()`, `selectSubclass()`, `doLevelDown()`, `seedLevel1HP()` in
 `56-class.js`; `runChoices()`,
@@ -19,7 +19,7 @@ background or drop a class without hand-cleaning the sheet.
 `forgetGrantAmmo()` in `62-ammo.js`; `logGrant()`, `grantSourceName()` in `67-trade.js`; `grantLanguages()`, `dropLanguages()`, `langParse()` in
 `41-chips.js` · **Tests:**
 `char-update.js` (grant and revert, `grantItemByName()` called for real, the pending equipment
-picker travelling with its window, the order the choice windows open in), `sheet.js` (`invSection()` filing) · **See also:** [Character building](../features/character-building.md),
+picker travelling with its window, the order the choice windows open in), `sheet.js` (`invSection()` filing; what the screen holds after each add, change and remove, and granted weapons equipped) · **See also:** [Character building](../features/character-building.md),
 [Inventory](../features/inventory.md), [Ammunition](../features/ammunition.md),
 [Class resources](../features/class-resources.md),
 [Rules-update tool](../features/rules-update-tool.md)
@@ -70,8 +70,9 @@ case-insensitively, and copies `description`, `effects`, `weapon`, `weight`, `ca
 **`cost` through `costToGp()`**, because the pack stores cost as a display string ("2 gp") and the
 sheet as a gp number. A bundle unpacks into its pieces the same way the finder does (`unpackAmmo()`),
 so "Arrows (20)" grants 20 single arrows, each tagged with the grant's `sid` — see
-[Ammunition](../features/ammunition.md). It stamps the copy, and a weapon gets its attack. An
-unmatched name becomes a plain named item. A second grant of the same name from the same sid adds to
+[Ammunition](../features/ammunition.md). It stamps the copy, and a weapon arrives equipped with its
+attack row through `equipNewWeapon()`, the finder's own path (#128); armour and shields arrive
+unequipped. An unmatched name becomes a plain named item. A second grant of the same name from the same sid adds to
 the quantity. The item's origin badge (C, B or A) comes from `originFromSid()`.
 
 **The grant's line in the inventory log (#47).** `grantItemByName()` and `addGrantGold()` each
@@ -123,6 +124,17 @@ none was on the sheet. A later class gets its level-1 features and the pack's `m
 choice, all under its own `class:<Name>` sid, so removing it reverts exactly that. The table of who
 gets what is in [Character building](../features/character-building.md).
 
+**The redraw (#153, #154).** Every class, species and background change ends in
+`renderClassRace()`: an add, change or remove, a level up or down, a subclass, and the Done of each
+choice window (`commitChoices()`, `runExtraChoices()`). It repaints the header and everything a
+grant can touch beyond it: the inventory (items, and a removed source's leaving), the coin boxes
+(`renderCoins()`) and the chips (`renderChipsAll()`: languages and senses). The caller's
+`renderFeatures()` and `recompute()` repaint the features, the numbers, the attack rows and the
+resources. The grant functions themselves (`addGrantGold()`, `grantLanguages()`,
+`grantItemByName()` and the rest) only change the character: they run in loops and inside one
+another. `renderAll()`, `applyTheme()` and `refreshRulesUI()` want the header alone and call
+`renderSheetHead()`.
+
 **Removal and swapping.** `removeRace()`, `removeBackground()` and `removeClass()` each remove the
 features by origin, the proficiencies by sid, and the equipment and gold by sid. `removeClass()`
 also removes every `subclass:<Class>:` grant and un-seeds the level-1 HP. Removing the first class
@@ -153,6 +165,10 @@ features and grants before applying the new one.
 - **The level-1 HP seed reads CON with `modOf()` on the score, not `abilFinal()`.** Effects come
   and go (un-equip a cloak), and the seed has to be recomputable unchanged when the class is
   removed. `resyncLevel1HP()` re-seeds when CON is edited so the match keeps landing.
+- **Every grant and revert path ends in `renderClassRace()`.** A flow that changes what a source
+  grants and ends anywhere else shows the change only after a reload (#153, #154).
+- **A granted weapon arrives through `equipNewWeapon()`,** the finder's path; armour and shields do
+  not (#128, until #130's shield stacking).
 - **What waits behind a choice window travels with it, and one window opens at a time.** Never park
   the queue in a module global, and never open a second window from a Done that already opened one.
 
@@ -174,6 +190,12 @@ features and grants before applying the new one.
   offered maneuvers or Student of War. The queue now waits behind the subclass's window.
 - **A picked option's cost was dropped:** `commitChoices()` did not pass `cost` into
   `addFeatureFromDef()`. It does now, because `useFeature()` spends from a resource matched by name.
+- **Grants that showed only after a reload (#153, #154).** Since #103 `renderClassRace()` repainted
+  only the header, so a grant's gold never reached the coin boxes, its languages never became
+  pills, and a fixed grant's items (or a removed source's) stayed off the inventory until a reload;
+  only the equipment picker's Done redrew the inventory, and it alone skipped `renderClassRace()`.
+  Changing a species showed the old pill and not the new one. The tests read what recorder elements
+  hold after each flow, not which functions ran.
 - **Free-text proficiencies do not revert.** That is why Student of War's tool lands as a feature
   rather than in the Proficiencies box: as a feature, it leaves with the subclass.
 
@@ -192,6 +214,8 @@ features and grants before applying the new one.
 | How a species or background grants languages (#103) | Chips stamped with the grant's sid, removed with it; a choice ("one of your choice") is the player's to add | Appending "Languages: …" to Proficiencies: it never reverted. Player-entered only: grants would keep writing prose |
 | What the inventory log records for a grant (#47) | One line per source, no Undo | One line per item: a class's starting gear floods the log. An Undo: it would take back part of a grant the source still claims; removing the source reverts it |
 | What the log records when a source is removed (#47) | One "Removed with *source*" line listing what left, no Undo | No line: the kit and its gold vanished without a trace. An Undo: granting again belongs to the source |
+| Where a grant's redraw happens (#153, #154) | Once, at the end of every grant and revert path, in `renderClassRace()` | A render in each grant function: they run in loops and inside one another. A call per flow: one missed caller brought the bug back (L9101) |
+| Which granted items arrive equipped (#128) | Weapons, through the finder's `equipNewWeapon()` | Armour and shields too: #130 changes shield stacking and must not go live first (Mike, L9101) |
 
 ## Open
 
@@ -235,3 +259,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-25 — Grants write one inventory-log line per source (`logGrant()`), with no Undo. → ledger L7291, #47
 - 2026-10-25 — Removing a source writes one "Removed with *source*" line; an undone item whose source is gone comes back ordinary. → ledger L7339, #47
 - 2026-10-27 — Species and background feat choices are granted with their origin through `commitExtraChoices()`; a feat at an ASI carries the class-level origin with its +1 on the feature; level down reverts what a level's record names. → ledger L7569, #118
+- 2026-11-06 — Every grant and revert path ends in one redraw, `renderClassRace()`, which repaints the inventory, coins and chips; granted weapons arrive equipped through `equipNewWeapon()`. → ledger L9101, #153, #154, #128

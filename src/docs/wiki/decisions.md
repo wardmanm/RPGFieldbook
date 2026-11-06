@@ -112,6 +112,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **How a species or background grants languages (#103)** — Chips stamped with the grant's sid, removed with it; a choice is the player's to add
 - **What the inventory log records for a grant (#47)** — One line per source, no Undo
 - **What the log records when a source is removed (#47)** — One "Removed with *source*" line listing what left, no Undo
+- **Where a grant's redraw happens (#153, #154)** — Once, at the end of every grant and revert path, in `renderClassRace()`
+- **Which granted items arrive equipped (#128)** — Weapons, through the finder's `equipNewWeapon()`
 
 ### [Computed stats & effects](architecture/computed-stats-and-effects.md)
 
@@ -248,6 +250,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **What happens to a weapon's attack on unequip?** — Hidden
 - **Order of starred attacks** — Insertion order
 - **Should `attackNumbers()` skip the effects of the item that owns the row? (#74)** — No: effects are global, a weapon's own bonus is its `atkMisc`/`dmgMisc`, and the packs are fixed
+- **How a new weapon arrives (#128)** — Equipped with its row, from the finder, a grant or a new item on the form; armour and shields unequipped (Mike)
+- **How the item form equips a new weapon (#128)** — Its Equipped box follows Weapon until the player sets Equipped
 
 ### [Ammunition](features/ammunition.md)
 
