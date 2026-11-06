@@ -322,6 +322,61 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   ck('the app says the icons were changed', /background square was removed/i.test(settings));
 }
 
+// ---------- embedded web fonts (#144): the tokens vs the generated fragment
+// Like the emblems: scripts/fetch-fonts.js writes 90-fonts.css by hand-run, and
+// the drift that can happen offline is a token naming a family nobody embedded,
+// which falls back to Georgia with no error anywhere.
+{
+  const FONTS = 'src/css/90-fonts.css';
+  const have = fs.existsSync(path.join(ROOT, FONTS));
+  ck('the fonts fragment exists — else run: node scripts/fetch-fonts.js', have);
+  const css = have ? read(FONTS) : '';
+  ck('90-fonts.css is marked generated, naming its command',
+     /GENERATED, DO NOT EDIT/.test(css) && css.includes('node scripts/fetch-fonts.js'));
+
+  const tokens = read('src/css/00-tokens.css');
+  const named = new Set([...tokens.matchAll(/--(?:display|head|body):\s*"([^"]+)"/g)].map(m => m[1]));
+  ck('the tokens name the three families', ['Grenze Gotisch', 'Cinzel', 'EB Garamond'].every(f => named.has(f)),
+     [...named]);
+  // Each face: its one-line comment, then the block itself.
+  const faces = [...css.matchAll(/\/\* ([^\n]*?): latin, (\d+) bytes[^\n]*\*\/\n@font-face\{([^}]*)\}/g)]
+    .map(m => ({ label: m[1], bytes: +m[2], body: m[3],
+                 family: (/font-family:"([^"]+)"/.exec(m[3]) || [])[1],
+                 style: (/font-style:(\w+)/.exec(m[3]) || [])[1] }));
+  ck('90-fonts.css holds every @font-face as a labelled block',
+     faces.length > 0 && faces.length === (css.match(/@font-face\{/g) || []).length, faces.length);
+  const embedded = new Set(faces.map(f => f.family));
+  const unembedded = [...named].filter(f => !embedded.has(f));
+  ck('every font family the tokens name is embedded — else run: node scripts/fetch-fonts.js',
+     unembedded.length === 0, unembedded);
+  const stray = [...embedded].filter(f => !named.has(f));
+  ck('...and it embeds no family the tokens do not name', stray.length === 0, stray);
+  ck('EB Garamond has a normal and an italic face',
+     ['normal', 'italic'].every(s => faces.some(f => f.family === 'EB Garamond' && f.style === s)));
+  faces.forEach(f => {
+    const w = /font-weight:(\d+)(?: (\d+))?;/.exec(f.body);
+    ck(f.label + ': a font-weight or a weight range', !!w && (!w[2] || +w[1] <= +w[2]));
+    ck(f.label + ': font-display:swap', /font-display:swap;/.test(f.body));
+    const range = (/unicode-range:([^;]+);/.exec(f.body) || [])[1] || '';
+    ck(f.label + ': the Latin unicode-range, not Latin Extended',
+       /^U\+0000-00FF,/.test(range) && !/U\+0100/.test(range), range.slice(0, 40));
+    const b64 = (/src:url\("data:font\/woff2;base64,([A-Za-z0-9+/=]+)"\) format\("woff2"\)/.exec(f.body) || [])[1];
+    const bytes = b64 ? Buffer.from(b64, 'base64') : Buffer.alloc(0);
+    ck(f.label + ': a woff2 data: URL', bytes.subarray(0, 4).toString('latin1') === 'wOF2');
+    ck(f.label + ': its blob is the ' + f.bytes + ' bytes its comment says', bytes.length === f.bytes, bytes.length);
+  });
+
+  // SIL OFL 1.1: each copy carries the copyright notice and the licence.
+  ck('90-fonts.css carries the SIL Open Font License 1.1 text',
+     css.includes('SIL OPEN FONT LICENSE Version 1.1') && css.includes('OTHER DEALINGS IN THE FONT SOFTWARE.'));
+  [...embedded].forEach(fam =>
+    ck('90-fonts.css carries ' + fam + "'s copyright notice",
+       new RegExp('^ {3}' + fam + ': Copyright ', 'm').test(css)));
+  const notices = css.split('\n').filter(l => /^ {3}[^:\n]+: Copyright /.test(l));
+  ck('no embedded family declares a Reserved Font Name',
+     notices.length > 0 && notices.every(l => !/Reserved Font Name/i.test(l)));
+}
+
 // ---------- the wiki (src/docs/wiki/) — see src/docs/specs/1.7.2/2026-09-28-living-wiki-design.md §7
 // Facts only, like everything above: a page is listed, its links resolve, the
 // code it names exists, and no JS fragment goes undocumented. Wrong PROSE is

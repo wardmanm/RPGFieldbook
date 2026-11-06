@@ -17,7 +17,8 @@
     "src/css/40-spells-coins.css",
     "src/css/45-combat.css",
     "src/css/47-journal.css",
-    "src/css/50-modal.css"
+    "src/css/50-modal.css",
+    "src/css/90-fonts.css"
   ],
   "js": [
     "src/js/00-constants.js",
