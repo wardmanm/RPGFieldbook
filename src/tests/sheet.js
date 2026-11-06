@@ -8056,9 +8056,9 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
        X.applyHPInput({dataset: {hp: 'max'}, value: '30'}) === true && c.hp.max === 30);
     const u = X.editToggleText('vitals', false), l = X.editToggleText('vitals', true);
     ck('#115 the pencil says Lock Vitals, and what that does',
-       u.title === 'Lock Vitals' && u.label === 'Lock Vitals — hides the portrait buttons and locks Max HP', u);
+       u.title === 'Lock Vitals' && u.label === 'Lock Vitals — hides the portrait buttons and locks Max HP and a flat AC', u);
     ck('#115 ...and Unlock Vitals while locked',
-       l.title === 'Unlock Vitals' && l.label === 'Unlock Vitals — shows the portrait buttons and unlocks Max HP', l);
+       l.title === 'Unlock Vitals' && l.label === 'Unlock Vitals — shows the portrait buttons and unlocks Max HP and a flat AC', l);
     ck('#115 ...while every other card keeps its words',
        X.editToggleText('features', false).title === 'Hide edit buttons' && X.editToggleText('features', true).title === 'Show edit buttons');
     ck('#115 the toggle HTML carries the Vitals words',
@@ -8763,6 +8763,34 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#129 ...and its attack row takes no damage bonus: nothing to add it to', n.dmgFx === 0 && n.dmgBonus === 0 && X.attackDamageStr(c.attacks[0], n.dmgBonus) === '', n);
   c.attacks[0].damageDice = '1d4';
   ck('#129 ...give it dice and the ticked +2 is back', X.attackNumbers(c.attacks[0]).dmgBonus === 2, X.attackNumbers(c.attacks[0]));
+  X.character = X.blankChar();
+}
+
+/* ---- #130 phase 2: the Armor Class window follows the Vitals lock ----
+   Like Max HP, the switch and the Flat number are read-only while the Vitals
+   pencil is locked (spec decision 7). */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const setACMode = fn('setACMode'), setACFlat = fn('setACFlat');
+  const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1;
+  c.acMode = 'flat'; c.ac = 15;
+  X.setVitalsLocked(true);
+  ck('#130 locked: the switch is refused, and nothing changes', setACMode('calc') === false && c.acMode === 'flat' && c.ac === 15, [c.acMode, c.ac]);
+  ck('#130 locked: the Flat box is refused, and nothing changes', setACFlat('18') === false && c.ac === 15, c.ac);
+  let m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 locked: the window says so', /Vitals is locked — unlock it to change your AC/.test(m.b), m.b.slice(0, 500));
+  const btns = m.b.match(/<button[^>]*data-acmode="[a-z]+"[^>]*>/g) || [];
+  ck('#130 ...with both halves of the switch disabled', btns.length === 2 && btns.every(b => / disabled/.test(b)), btns);
+  ck('#130 ...and the Flat box', /<input id="acFlat"[^>]* disabled/.test(m.b), (m.b.match(/<input id="acFlat"[^>]*>/) || [''])[0]);
+  ck('#130 locked: the number still shows, and counts', /id="acTotal">15</.test(m.b) && painted(['acDisp']).acDisp === '15');
+  X.setVitalsLocked(false);
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 unlocked: no lock line, nothing disabled', !/Vitals is locked/.test(m.b) && !/ disabled/.test(m.b), m.b.slice(0, 500));
+  ck('#130 unlocked: the box and the switch work again', setACFlat('18') === true && c.ac === 18 && setACMode('calc') === true && c.acMode === 'calc', [c.ac, c.acMode]);
+  c.acMode = 'calc'; X.setVitalsLocked(true);
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 locked on Calculated: the switch is disabled too, and Flat refused', /data-acmode="flat"[^>]* disabled/.test(m.b) && setACMode('flat') === false && c.acMode === 'calc', m.b.slice(0, 400));
+  X.setVitalsLocked(false);
   X.character = X.blankChar();
 }
 

@@ -299,12 +299,14 @@ function openStatBreakdown(target){
    player types, the AC from their paper sheet: the struck line names what it
    already counts, and only a status or a summoned familiar adds to it. */
 function acWindowHTML(c){
-  const flat=acIsFlat(character);
+  /* the Vitals pencil locks the switch and the Flat number, like Max HP */
+  const flat=acIsFlat(character), locked=vitalsLocked(character), dis=locked?" disabled":"";
   const line=(l,v)=>`<div${v<0?' class="bd-neg"':""} style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(l)}</span><b>${fmt(v)}</b></div>`;
-  let b=`<div class="seg" id="acMode" style="margin-bottom:12px">${[["calc","Calculated"],["flat","Flat"]].map(([v,l])=>{const on=(v==="flat")===flat;return `<button type="button" data-acmode="${esc(v)}" class="${on?"on":""}" aria-pressed="${on?"true":"false"}">${l}</button>`;}).join("")}</div>`;
+  let b=`<div class="seg" id="acMode" style="margin-bottom:12px">${[["calc","Calculated"],["flat","Flat"]].map(([v,l])=>{const on=(v==="flat")===flat;return `<button type="button" data-acmode="${esc(v)}" class="${on?"on":""}" aria-pressed="${on?"true":"false"}"${dis}>${l}</button>`;}).join("")}</div>`;
+  if(locked)b+=`<p class="hint" style="margin:-4px 0 10px">Vitals is locked — unlock it to change your AC</p>`;
   const AB=armorAC(c), fx=acEffects(c);
   if(flat){
-    b+=`<div class="field"><label class="f" for="acFlat">Your AC</label><input id="acFlat" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${esc(acFlatValue(character.ac))}"></div>`;
+    b+=`<div class="field"><label class="f" for="acFlat">Your AC</label><input id="acFlat" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${esc(acFlatValue(character.ac))}"${dis}></div>`;
     const gone=[];const put=n=>{if(n&&!gone.includes(n))gone.push(n);};
     put(AB.bodyName);put(AB.shieldName);c.filter(x=>x.target==="ac"&&(x.kind==="item"||x.kind==="feature")).forEach(x=>put(x.source));
     b+=`<p class="hint" style="margin:0 0 6px"><s>${esc(gone.length?gone.join(", "):"Armour, shields, items and features")}</s> don't add: your AC already counts them.</p>`;
@@ -332,6 +334,7 @@ function openACWindow(){
    with no number fills it from the sheet as it stands (acFlatSeed()), so the
    number does not jump, and going back keeps it for next time. */
 function setACMode(mode){
+  if(vitalsLocked(character))return false;
   const flat=mode==="flat";
   if(flat&&acFlatValue(character.ac)==null)character.ac=acFlatSeed(contributions());
   character.acMode=flat?"flat":"calc";
@@ -339,6 +342,7 @@ function setACMode(mode){
 }
 /* The Flat box: a whole number, or refused (and the caller puts the last one back) */
 function setACFlat(v){
+  if(vitalsLocked(character))return false;
   const n=acFlatValue(v);if(n==null)return false;
   character.ac=n;recompute();scheduleSave();return true;
 }

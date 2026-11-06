@@ -293,8 +293,9 @@ function renderNoteIcons(){
    Delete now live, is not a list in play. A stored editHide.familiars is left
    and ignored, as class and origin's are.
    `vitals` (#115) is the rail: its pencil hides the portrait's add and remove
-   buttons AND locks Max HP, so it is the one card whose pencil also locks a
-   number. vitalsLocked() reads it and setVitalsLocked() sets it from code. */
+   buttons AND locks Max HP and a flat AC (#130), so it is the one card whose
+   pencil also locks a number. vitalsLocked() reads it and setVitalsLocked()
+   sets it from code. */
 const EDIT_CARDS=["statuses","attacks","resources","features","spells","inventory","trackers","journal","secnotes","defences","proficiencies","party","vitals"];
 function editHideMap(c){const m=c&&c.editHide;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
 /* `=== true`, so anything else a hand-edited file holds reads as shown. */
@@ -306,12 +307,13 @@ function setEditHidden(c,k,hidden){
 }
 function editCardTitle(k){return k==="journal"?"Journal":k==="secnotes"?"Section Notes":noteTitle(noteDef(k));}
 /* The title is the action; the aria-label adds the card, as the combat toggle's does.
-   Vitals says Lock/Unlock (#115), because it also locks Max HP, and its label
+   Vitals says Lock/Unlock (#115), because it also locks Max HP and the Armor
+   Class window's Calculated / Flat switch and Flat number (#130), and its label
    says what that does rather than naming the card. */
 function editToggleText(k,hidden){
   if(k==="vitals")return hidden
-    ?{title:"Unlock Vitals",label:"Unlock Vitals — shows the portrait buttons and unlocks Max HP"}
-    :{title:"Lock Vitals",label:"Lock Vitals — hides the portrait buttons and locks Max HP"};
+    ?{title:"Unlock Vitals",label:"Unlock Vitals — shows the portrait buttons and unlocks Max HP and a flat AC"}
+    :{title:"Lock Vitals",label:"Lock Vitals — hides the portrait buttons and locks Max HP and a flat AC"};
   const title=hidden?"Show edit buttons":"Hide edit buttons";return {title,label:title+" — "+editCardTitle(k)};
 }
 function editToggleSVG(hidden){
