@@ -137,7 +137,7 @@ function applyTheme(){
   if(wmM)wmM.textContent=wm.main; if(wmS)wmS.textContent=wm.sub;
   document.title=wm.title;
   /* the header's "+ Species" / "+ Race" follows the skin (raceTerm()) */
-  if(document.getElementById("sheetHead"))renderClassRace();
+  if(document.getElementById("sheetHead"))renderSheetHead();
   const on=t==="dark";
   document.getElementById("themeIcon").innerHTML=on
     ?'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'

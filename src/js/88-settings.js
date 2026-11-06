@@ -372,7 +372,7 @@ function updateRulesStatus(msg,cls){const el=document.getElementById("rulesStatu
 /* renderNotes and renderJournal are here because notes and journal pages run
    through highlight() too — editing the glossary changes how every one reads.
    An open journal editor is left alone (renderJournal()). */
-function refreshRulesUI(){renderRulesBrowser();renderFeatures();renderInventory();renderSpells();renderClassRace();renderNotes();renderJournal();renderAllRT();}
+function refreshRulesUI(){renderRulesBrowser();renderFeatures();renderInventory();renderSpells();renderSheetHead();renderNotes();renderJournal();renderAllRT();}
 const RULE_CATS=["keywords","features","items","spells","races","classes","feats","backgrounds","subclasses","tables"];
 /* display names for a category — one map, used by both the group summary and
    the headings in the loaded-data list */
