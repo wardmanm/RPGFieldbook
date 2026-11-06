@@ -9593,3 +9593,38 @@ Pages: [armor & AC](../wiki/features/armor-and-ac.md), [attacks & damage](../wik
 [features & traits](../wiki/features/features-and-traits.md), [character model](../wiki/architecture/character-model.md),
 [vitals & rest](../wiki/features/vitals-and-rest.md), [combat view](../wiki/features/combat-view.md),
 [known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).
+
+## #130, #132: Flat AC follows the Vitals lock; the item form keeps scaling uses — phase 2 (Mike's design, 2026-11-06)
+
+Phase 2 of the Armour & attack numbers branch (phase 1 is the entry above), built after rebasing
+onto `main` with the Vitals & HP (#115) and Grants redraw (#128) branches merged.
+
+**The Vitals lock reaches AC (#130, spec decision 7).** `setACMode()` and `setACFlat()` refuse while
+`vitalsLocked(character)`, as `applyHPInput()` refuses Max. `acWindowHTML()` says "Vitals is locked —
+unlock it to change your AC" and disables both halves of the switch and the Flat box; the number
+still shows and counts. The pencil's label (`editToggleText("vitals")`) now ends "…locks Max HP and a
+flat AC" / "…unlocks Max HP and a flat AC"; the Vitals spec's decision 2 carries a note. The smoke
+list is Mike's file and is not edited here: the proposed AC wording went to him through the
+coordinator.
+
+**The item form keeps scaling uses (#132, spec decision 15).** `openItemForm()` opens Limited uses on
+`itemUsesMax()`, shows `usesScaleHint()` under it (`#iUsesHint`), and saves through
+`usesFromForm()`, the feature form's rule: an unchanged box keeps a `byLevel` or formula maximum,
+a new number replaces it.
+
+**The final review's minors, fixed before merge (the coordinator's call).** Escape (or ×) in the
+Armor Class window commits a Flat number typed but not yet committed: `openACWindow()` registers a
+dismiss guard, because `closeModal()` removes the box before its `change` fires. `acFlatSeed()` is
+never below 0, so switching to Flat always takes. The struck line spells "Armor" as the app's UI
+does and says "doesn't add … counts it" with one name. `fxChips()` adds "· includes spells" to a
+ticked to-hit or damage effect. The tick is an 18px box on a 32px line. `openACWindow()`'s switch,
+box (refuse and revert, take and repaint) and Escape are driven by checks. The initiative table's
+"You · AC" not repainting from the window predates this branch and is the coordinator's to file.
+
+The spec's link to the Vitals spec is restored, now that it is on `main`.
+
+Pages: [armor & AC](../wiki/features/armor-and-ac.md), [vitals & rest](../wiki/features/vitals-and-rest.md),
+[sections & layout](../wiki/ui/sections-and-layout.md), [inventory](../wiki/features/inventory.md),
+[features & traits](../wiki/features/features-and-traits.md),
+[computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).

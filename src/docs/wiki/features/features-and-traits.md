@@ -95,7 +95,8 @@ from rules pack" select over `rules.features`. **Limited uses** opens on `usesMa
 number; when the maximum scales, a hint under it says so (`usesScaleHint()`: "Grows with your
 level: 3 now…", "From your WIS modifier: 3 now…"). Saving goes through `usesFromForm()`: while the
 box still holds what it opened on, the original `uses.max` is kept as it was (`byLevel`, formula or
-number), and only a changed number replaces it; `used` is clamped to the new maximum (#132). The source is the group field (`groupFieldHTML()`, see
+number), and only a changed number replaces it; `used` is clamped to the new maximum (#132). The
+item form does the same ([Inventory](inventory.md)). The source is the group field (`groupFieldHTML()`, see
 [Sections & layout](../ui/sections-and-layout.md)): it offers every group on the list, and left
 empty it reads "Automatic (*the group it came from*)". Save stores the source tidied as a tag
 (`tagLabel()`), rebuilds the record from the form and carries `fav`, `origin` and `src` across.
@@ -165,9 +166,7 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 
 - A feat picked from the browser gets no skill-choice prompt; `grantFeatDef()` offers those only
   when there is an origin source id.
-- The item form still freezes a scaling use count: it gets the same fix once the Grants redraw
-  branch, which edits `openItemForm()` first, has merged (#132 phase 2). See
-  [Known issues](../roadmap/known-issues.md).
+- See [Known issues](../roadmap/known-issues.md).
 
 ## History
 
@@ -184,3 +183,4 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 - 2026-11-02 — The card is a full-width row under the Sheet's three columns, its rows two across within each group. → ledger L8262, #155
 - 2026-11-02 — One feature per row at every width (Mike); the two-across groups are gone. → ledger L8301, #155
 - 2026-11-06 — Editing a feature keeps a use count that scales (`usesFromForm()`), with a hint under the box; `usesMax()` gets its first checks. → ledger L9537, #132
+- 2026-11-06 — The item form gets the same fix, so the freeze is gone from both forms. → ledger L9597, #132

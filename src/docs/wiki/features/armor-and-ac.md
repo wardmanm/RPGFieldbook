@@ -72,12 +72,19 @@ and a total (`#acTotal`, the number on the sheet).
   when negative), the total.
 - **Flat**: "Your AC" in a box (`#acFlat`, `inputmode="numeric"`, committed on change), a struck
   line naming what no longer adds (the worn armor, the best shield, each item or feature `ac`
-  effect; "Armour, shields, items and features" when there are none), each status or familiar
-  `ac` effect, the total.
+  effect; "Armor, shields, items and features" when there are none; "doesn't add … counts it" for
+  one name, "don't add … counts them" for more), each status or familiar `ac` effect, the total.
 - `setACMode()` switches. Switching to Flat with no number fills it with `acFlatSeed()`, the
-  Calculated total less the status and familiar effects, so the number does not jump; going back
-  keeps the number for next time. `setACFlat()` takes a whole number and refuses anything else,
-  and the box gets the last number back.
+  Calculated total less the status and familiar effects (never below 0), so the number does not
+  jump; going back keeps the number for next time. `setACFlat()` takes a whole number and refuses
+  anything else, and the box gets the last number back.
+- **Escape keeps a typed number.** Escape (and ×) close the window before the box's `change`
+  fires, so `openACWindow()` registers a dismiss guard (`setDismissGuard()`) that commits a whole
+  number still in the box; anything else closes as it is.
+- **The Vitals lock** ([Vitals & rest](vitals-and-rest.md)): while `vitalsLocked(character)`,
+  `setACMode()` and `setACFlat()` refuse, and the window says "Vitals is locked — unlock it to
+  change your AC" with both halves of the switch and the box disabled. The number still shows and
+  counts, Calculated or Flat; only how it is set is locked, as for Max HP.
 
 **Equipping.** `isEquippable()` is true for anything `itemArmor()` recognises, so parsed armor gets an
 Equip control even with no effects. Only equipped items count — both for the base and for their `ac`
@@ -111,6 +118,8 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - **Calculated never reads `character.ac`.** It is the Flat number. An old save that carries one
   opens Calculated, and its number is what Flat shows; opening it Flat would silently stop its
   shield adding.
+- **The Vitals lock locks how AC is set.** Both writers (`setACMode()`, `setACFlat()`) check
+  `vitalsLocked()` themselves; the disabled controls are not the guard.
 - **A Flat AC always has a number.** A blank box is refused, switching fills it, and `migrate()`
   turns `acMode:"flat"` with no whole number into `"calc"`.
 - **Only the best shield counts.** The rules allow one.
@@ -156,6 +165,7 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 | An old sheet with a typed `character.ac` (#130) | Opens Calculated, which never reads it; the old number fills the Flat box | Opening it Flat: its shield would stop adding, silently |
 | Shields (#130) | Only the best equipped shield counts | Stacking: a bug |
 | Showing Flat (#130) | FLAT in place of AC under the number, in every skin, and a `--rail-flat` rim unlike each palette's `--rail-line` | No mark: putting on armour would seem to do nothing. `--rail-accent` for the rim: no change on default dark, red on classic |
+| Locking (#130) | The switch and the number follow the Vitals pencil: read-only while it is locked, like Max HP | Always editable: the one rail number left open |
 | An empty Flat box (#130) | Not accepted: clearing it puts the last number back, switching to Flat fills it, and `migrate()` turns a numberless Flat into Calculated | Showing 0: an AC of 0 reads as a bug. Falling back silently: the mode and the number disagree |
 | Structured field or description when both exist | The field wins — explicit over prose, as `weapon` already behaves | — |
 | How a custom item becomes armor | An Armor toggle writing the structured field | Typing the description incantation: nothing in the UI said so |
@@ -164,9 +174,6 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 
 ## Open
 
-- **The switch does not follow the Vitals lock yet.** The design has the switch and the Flat box
-  read-only while Vitals is locked, like Max HP; that waits on the Vitals lock, which the Vitals &
-  HP branch adds (#130 phase 2).
 - **Unarmored Defense and Mage Armor are not formulas.** They need an `ac` effect, or a Flat AC.
 - **Bracers of Defense add nothing on their own.** Their +2 needs no armor and no shield, which
   `armorAC()` already knows (`hasArmor`, `shield`), but an effect cannot be scoped to it, so it is
@@ -183,3 +190,4 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - 2026-08-18 — Weapons became equippable too; `isEquippable()` is effects, armor or a weapon. → ledger L3213
 - 2026-09-28 — A pack item's `ac` effect is a standing bonus only; five conditional ones (Quarterstaff of the Acrobat among them) stay in the description. → ledger L4502, #76
 - 2026-11-06 — Calculated or Flat AC: one `acTotal()`, only the best shield, `character.ac` the Flat number only, the Armor Class window's switch, FLAT on the rail. → ledger L9537, #130
+- 2026-11-06 — The AC window follows the Vitals lock; Escape keeps a typed Flat number; the Flat seed is never below 0; the struck line's wording. → ledger L9597, #130

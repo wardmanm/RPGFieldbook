@@ -32,7 +32,7 @@ mockups).
 | # | Question | Decision | Rejected, and why |
 |---|---|---|---|
 | 1 | Does Vitals start locked? | **Unlocked**, like every other card's pencil (Mike) | Locked, reusing `hp.locked` (the lean offered): it keeps the 1.7-era "Max HP locked by default", but hides Add portrait on a new character and makes Vitals the one card whose pencil works backwards |
-| 2 | What the pencil covers | **The portrait's add and remove buttons, and Max HP.** Current, Temp, −/+, death saves, hit dice, Size and the badges work either way | Hiding more: those are play controls |
+| 2 | What the pencil covers | **The portrait's add and remove buttons, and Max HP.** Current, Temp, −/+, death saves, hit dice, Size and the badges work either way. *(Since #130: it also locks how AC is set, the Armor Class window's Calculated / Flat switch and Flat box; the AC badge still opens its window, so "the badges work either way" stays true of Init, Speed and Prof. See the armour & attack numbers spec, decision 7.)* | Hiding more: those are play controls |
 | 3 | Existing sheets | **All open unlocked.** Today every sheet's Max is locked because that is the default; a deliberate lock can't be told from it, so the padlock's state is not carried over | Carrying `hp.locked` over: every sheet would open locked, against decision 1 |
 | 4 | Level-up | **Unchanged in effect:** a level-up (and Add class) unlocks Vitals so the new total can be typed, and the hit-points step's Done puts it back as it was | Leaving a locked Vitals locked: the level-up's "type it yourself" fallback would have nowhere to type |
 | 5 | Combat view | **The same pencil**, because it is the same card moved | — |

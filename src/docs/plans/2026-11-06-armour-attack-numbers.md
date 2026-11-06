@@ -348,6 +348,13 @@ opens the AC window; not the lock), `combat-view.md` (the shield's FLAT mark tra
 Build only once both branches are on `main` and this branch is rebased on it. Re-run the full suite
 first; re-point any wiki `L<n>` citation the rebase moved.
 
+**As built (2026-11-06):** the coordinator rebased onto `main` at ea3a65a and re-pointed the
+citations (phase 1's entry is L9537). Two changes to this section, both the coordinator's: the
+smoke list is Mike's file and is not edited (the proposed wording goes in the report), and the
+final review's deferred minors are fixed here before merge (Escape commits the Flat box, the seed
+is never negative, the struck line's wording, a ticked chip says "includes spells", the tick's
+target, and checks that drive `openACWindow()`). Phase 2's ledger entry is L9597.
+
 ### Task P2-1: The AC window follows the Vitals lock
 
 **Files:** `src/js/80-modal-forms.js` (`acWindowHTML()`, `setACMode()`, `setACFlat()`), the Vitals

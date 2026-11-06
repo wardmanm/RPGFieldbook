@@ -210,7 +210,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How HP boxes commit** — On `change`, outside `data-path`
 - **Where the lock lives (#115)** — The Vitals pencil, `editHide.vitals`, read by `vitalsLocked()`
 - **Does Vitals start locked? (#115, Mike)** — Unlocked, like every card's pencil
-- **What the pencil covers (#115)** — The portrait's add and remove buttons, and Max HP
+- **What the pencil covers (#115)** — The portrait's add and remove buttons, and Max HP; and how AC is set (#130)
 - **Existing sheets (#115)** — All open unlocked; `hp.locked` is kept, unread
 - **Whether the lock confirms** — No confirm
 - **How HP is typed on a touchscreen (#112, Mike)** — Tapping the bar opens Hit points
@@ -365,6 +365,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Shields (#130)** — Only the best equipped shield counts
 - **Showing Flat (#130)** — FLAT in place of AC under the number, and a `--rail-flat` rim unlike each palette's `--rail-line`
 - **An empty Flat box (#130)** — Not accepted; `migrate()` turns a numberless Flat into Calculated
+- **Locking (#130)** — The AC window's switch and Flat number follow the Vitals pencil, read-only while it is locked
 
 ### [Story & notes](features/story-and-notes.md)
 

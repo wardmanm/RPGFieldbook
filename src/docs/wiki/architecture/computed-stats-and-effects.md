@@ -58,7 +58,8 @@ it applies, not a new kind of effect. In the editor, `fxRow()` draws the tick un
 only for those six targets; one delegated `change` listener on the modal (`fxRowSync()`) shows and
 hides it as the target changes, because the four editors wire their rows apart. `collectFx()`
 writes `spells: true` only for a ticked row with one of the six targets, so a hidden tick is never
-saved, and drops a zero-valued row. Everything that copies an effect copies the object whole (a
+saved, and drops a zero-valued row. On the sheet, `fxChips()` adds "· includes spells" to a ticked
+effect's chip, so "To-hit (all attacks) +1" reads the same only when it is for weapons alone. Everything that copies an effect copies the object whole (a
 feat grant, the choices path, `updProject()`, the item finder, a granted item, the trade window,
 `migrate()`), so the flag travels.
 
@@ -211,3 +212,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-29 — a `check` target reaches every skill, initiative and passive Perception; the proficiency bonus is marked and tappable. → ledger L4689, #79
 - 2026-10-13 — A number any one effect lowers is marked red with ▼ (`fxNeg()`, `.fx-neg`), even when a bonus outweighs it; breakdowns redden the penalty's line. → ledger L5700, #89
 - 2026-11-06 — Contributions carry their `kind` and the `spells` flag; Include spells on the six generic targets; AC is `acTotal()`; `usesMax()` gets its checks and `usesShape()`. → ledger L9537, #129, #130, #132
+- 2026-11-06 — A ticked effect's chip says "includes spells". → ledger L9597, #129
