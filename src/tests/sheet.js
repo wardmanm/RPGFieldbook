@@ -4327,8 +4327,8 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
      !!ctx.endCombatNow() && c.inventory.find(i => i.id === 's1').qty === 13 && (c.inventory.find(i => i.id === 's2') || {}).qty === 2, c.inventory);
   ck('#104 ...and the lone needle, which gives nothing back, is spent: cleared', JSON.stringify(c.ammoSpent) === '{}', c.ammoSpent);
   c = mk(); const rec = {}; X.recoverAmmo(c, ['arrow', 'bolt'], rec);
-  ck("#104 the toast's Undo recovery puts it all back",
-     ctx.undoRecoveryTap(rec, c) === true && c.inventory.find(i => i.id === 's1').qty === 7 && !c.inventory.some(i => i.id === 's2') && c.ammoSpent.s1.n === 13);
+  ck("#104 End combat's Undo recovery takes it all back (#170: and leaves the shots spent)",
+     ctx.undoRecoveryTap(rec, c) === true && c.inventory.find(i => i.id === 's1').qty === 7 && !c.inventory.some(i => i.id === 's2') && !('s1' in c.ammoSpent), c.ammoSpent);
   ck('#104 ...but not on another sheet',
      (() => { const k = mk(), r = {}; X.recoverAmmo(k, ['arrow'], r); X.character = X.blankChar(); return ctx.undoRecoveryTap(r, k) === false && k.inventory[0].qty === 13; })());
   c = mk(); c.ammoRecovery = 'none';
@@ -4356,16 +4356,16 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     ck('#104 ...so switching to All afterwards recovers nothing from those fights',
        X.ammoRecoverable(k).length === 0 && ctx.applyAmmoRecovery() === null && k.inventory[1].qty === 10);
   }
-  /* ...and Undo recovery restores every entry that End combat cleared, the
-     ones that gave nothing back included */
+  /* ...and Undo recovery puts back none of the entries End combat cleared,
+     the ones that gave nothing back included: the fight is settled (#170) */
   {
     const k = mk();
     ctx.endCombatNow();
     const undo = X._endFight && X._endFight.ammo.undo;
     ck('#105 End combat that recovered something hands the window its Undo recovery, the needle cleared too',
        typeof undo === 'function' && JSON.stringify(k.ammoSpent) === '{}', X._endFight && X._endFight.ammo);
-    ck('#104 ...and Undo recovery brings the needle back with the rest',
-       typeof undo === 'function' && undo() === true && k.ammoSpent.s3 && k.ammoSpent.s3.n === 1 && k.ammoSpent.s1.n === 13 && k.ammoSpent.s2.n === 4 &&
+    ck('#104 ...and Undo recovery leaves every cleared entry spent, the needle included (#170)',
+       typeof undo === 'function' && undo() === true && JSON.stringify(k.ammoSpent) === '{}' &&
        k.inventory.find(i => i.id === 's1').qty === 7, k.ammoSpent);
   }
   ck('#104 a spent entry no longer carries asked', !('asked' in X.ammoSpentEntry({ammoSpent: {a: {n: 2, kind: 'arrow', asked: 1}}}, 'a')));
@@ -8064,9 +8064,9 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#105 quiet recovers exactly what the toast path recovers', qty(quiet) === qty(loud) && JSON.stringify(quiet.ammoSpent) === '{}', [qty(quiet), qty(loud)]);
   ck('#105 ...and hands back {lines, undo}', b && Array.isArray(b.lines) && typeof b.undo === 'function' &&
      b.lines.map(r => r.kind + ':' + r.back).join() === a.list.map(r => r.kind + ':' + r.back).join() && toasts.length === 0, b);
-  ck("#105 undo restores what the toast's Undo restores, and corrects the log line",
+  ck("#105 undo takes back what came back, leaves the shots spent (#170), and corrects the log line",
      b.undo() === true && quiet.inventory.find(i => i.id === 's1').qty === 7 && !quiet.inventory.some(i => i.id === 's2') &&
-     quiet.ammoSpent.s1.n === 13 && quiet.ammoSpent.s3.n === 1 && logged[0].e.meta.back === 0 && logged[0].e.title === 'Arrows: 13 fired, 0 recovered', logged[0].e);
+     JSON.stringify(quiet.ammoSpent) === '{}' && logged[0].e.meta.back === 0 && logged[0].e.title === 'Arrows: 13 fired, 0 recovered', [quiet.ammoSpent, logged[0].e]);
   ck('#105 ...quietly: no "Recovery undone" toast', !toasts.some(t => /Recovery undone/.test(t.m)), toasts);
   ck('#105 ...once', b.undo() === false);
   ck("#105 the toast's own Undo still says so", (() => { const k = mk(), rec = {}; X.recoverAmmo(k, null, rec); toasts.length = 0;
@@ -9150,6 +9150,115 @@ async function t181AddClassUndo() {
     ctx.setTimeout = keep.st; ctx.clearTimeout = keep.ct; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
     ctx.document.getElementById = keep.gid; ctx.toast = keep.toast; ctx.window.matchMedia = keep.mm; X.activeId = keep.id;
     X.character = keep.ch; X.rules = keep.rules; X._undo = null; X.resetRules();
+  }
+}
+
+/* ---------- #170 End combat's Undo recovery leaves the fired ammunition spent:
+   it takes back what End combat gave and puts nothing back on record, so the
+   next fight starts from nothing fired (Mike, 2026-11-06). A weapon row's
+   Recover mid-fight is untouched. Synchronous, and kept above the chain below:
+   a block after that line runs while t118EndToEnd() has openModal, toast and
+   the character patched. */
+{
+  const keep = {ch: X.character, toast: ctx.toast};
+  ctx.toast = () => null;
+  const bow = () => ({id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}});
+  const xbow = () => ({id: 'w2', name: 'Light Crossbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'bolt', dice: '1d8'}});
+  const arrows = n => ({id: 's1', name: 'Arrow', qty: n, ammo: {kind: 'arrow'}});
+  const boltSnap = () => ({id: 'b1', name: 'Bolt', qty: 1, ammo: {kind: 'bolt'}});
+  const sheet = inv => { const c = X.blankChar(); X.character = c; c.inventory = inv; return c; };
+  const qty = (c, id) => { const it = c.inventory.find(i => i.id === id); return it ? it.qty : null; };
+  const spent = c => JSON.stringify(c.ammoSpent);
+  const n = (c, id) => ((c.ammoSpent || {})[id] || {}).n, top = c => c.invLog[0] || {}, fight = () => X._endFight || {ammo: {}};
+  try {
+    // the issue's case: fire 4, End combat, Undo, then a fight with nothing fired
+    let c = sheet([bow(), arrows(20)]);
+    X.startCombatNow();
+    for (let i = 0; i < 4; i++) X.fireWeapon('w1', false);
+    ctx.endCombatNow();
+    ck("#170 the issue's case: 4 fired, End combat brings 2 back",
+       qty(c, 's1') === 18 && top(c).title === 'Arrows: 4 fired, 2 recovered', [qty(c, 's1'), c.invLog.map(l => l.title)]);
+    ck('#170 Undo recovery takes the 2 back and leaves the 4 spent',
+       ctx.endFightUndoAmmo() === true && qty(c, 's1') === 16 && spent(c) === '{}', [qty(c, 's1'), c.ammoSpent]);
+    ck('#170 ...the line reads that nothing came back', top(c).title === 'Arrows: 4 fired, 0 recovered' && (top(c).meta || {}).back === 0, c.invLog[0]);
+    ck('#170 ...and the row has nothing to recover', X.ammoRecoverable(c).length === 0 && !/data-ammo-recover/.test(X.ammoLineHTML(c, {itemId: 'w1'})));
+    X._endFight = null; X.startCombatNow(); ctx.endCombatNow();
+    ck('#170 the next fight, nothing fired: no line, nothing back, no Undo',
+       qty(c, 's1') === 16 && c.invLog.length === 1 && (fight().ammo.lines || [1]).length === 0 && fight().ammo.undo === null,
+       [qty(c, 's1'), c.invLog.map(l => l.title)]);
+    X._endFight = null; X.startCombatNow(); X.fireWeapon('w1', false); X.fireWeapon('w1', false); ctx.endCombatNow();
+    ck('#170 ...and a fight after that recovers only what it fired',
+       qty(c, 's1') === 15 && top(c).title === 'Arrows: 2 fired, 1 recovered', [qty(c, 's1'), c.invLog.map(l => l.title)]);
+    // a row's Recover mid-fight, then End combat and its Undo
+    X._endFight = null; c = sheet([bow(), arrows(20)]);
+    X.startCombatNow();
+    for (let i = 0; i < 6; i++) X.fireWeapon('w1', false);
+    ck("#170 a row's Recover mid-fight is untouched: it recovers, and keeps its count for the fight's line",
+       X.recoverWeaponAmmo('w1', false) === 3 && qty(c, 's1') === 17 && spent(c) === '{}' && JSON.stringify(c.ammoFight) === '{"arrow":{"fired":6,"back":3}}',
+       [qty(c, 's1'), c.ammoSpent, c.ammoFight]);
+    for (let i = 0; i < 4; i++) X.fireWeapon('w1', false);
+    ctx.endCombatNow();
+    const line = top(c);
+    ck("#170 ...End combat's Undo takes back only End combat's part",
+       qty(c, 's1') === 15 && line.title === 'Arrows: 10 fired, 5 recovered' && ctx.endFightUndoAmmo() === true &&
+       qty(c, 's1') === 13 && line.title === 'Arrows: 10 fired, 3 recovered' && spent(c) === '{}', [qty(c, 's1'), line.title, c.ammoSpent]);
+    X._endFight = null; c = sheet([bow(), arrows(20)]);
+    for (let i = 0; i < 4; i++) X.fireWeapon('w1', false);
+    const mid = {}; X.recoverAmmo(c, ['arrow'], mid);
+    ck('#170 the reversal for a recovery mid-fight is unchanged: undoRecovery() puts the shots back on record',
+       qty(c, 's1') === 18 && X.undoRecovery(c, mid) === true && qty(c, 's1') === 16 && n(c, 's1') === 4, c.ammoSpent);
+    // a stack End combat rebuilt from its copy
+    c = sheet([xbow(), {id: 'b1', name: 'Bolt', qty: 4, ammo: {kind: 'bolt'}}]);
+    X.startCombatNow();
+    for (let i = 0; i < 4; i++) X.fireWeapon('w2', false);
+    ctx.endCombatNow();
+    const rebuilt = qty(c, 'b1');
+    ck('#170 a stack End combat rebuilt goes with the Undo, and nothing is left to rebuild it',
+       rebuilt === 2 && ctx.endFightUndoAmmo() === true && qty(c, 'b1') === null && spent(c) === '{}', [rebuilt, c.inventory, c.ammoSpent]);
+    X._endFight = null; X.startCombatNow(); ctx.endCombatNow();
+    ck('#170 ...the next End combat brings none back', qty(c, 'b1') === null, c.inventory);
+    // a thrown weapon
+    X._endFight = null;
+    c = sheet([{id: 'd1', name: 'Dagger', qty: 2, equipped: true, weapon: {kind: 'melee', dice: '1d4', notes: 'Range 20/60 · Finesse, Light, Thrown'}}]);
+    X.startCombatNow();
+    X.throwWeaponTap('d1', false); X.throwWeaponTap('d1', false);
+    const out = qty(c, 'd1');
+    ctx.endCombatNow();
+    const home = qty(c, 'd1');
+    ck('#170 a thrown Dagger: Undo leaves it on the sheet at ×0 with nothing on record',
+       out === 0 && home === 2 && ctx.endFightUndoAmmo() === true && qty(c, 'd1') === 0 && spent(c) === '{}', [out, home, qty(c, 'd1'), c.ammoSpent]);
+    const tl = X.thrownLineHTML(c, c.inventory[0]);
+    ck('#170 ...Throw disabled, nothing to recover', /data-ammo-throw="d1" disabled/.test(tl) && !/data-ammo-recover/.test(tl), tl);
+    X._endFight = null;
+    // entries that gave nothing back
+    c = sheet([arrows(7)]);
+    c.ammoSpent = {s1: {n: 13, kind: 'arrow'}, s3: {n: 1, kind: 'needle'}};
+    let got = X.applyAmmoRecovery({quiet: true});
+    ck('#170 entries that gave nothing back stay cleared', qty(c, 's1') === 13 && got.undo() === true && qty(c, 's1') === 7 && spent(c) === '{}', c.ammoSpent);
+    // a shot fired since (the window makes the page inert, but the function must not count what Undo took away)
+    c = sheet([xbow()]);
+    c.ammoSpent = {b1: {n: 4, kind: 'bolt', snap: boltSnap()}};
+    got = X.applyAmmoRecovery({quiet: true});
+    X.fireAmmo(c, c.inventory[0]); X.fireAmmo(c, c.inventory[0]);
+    ck('#170 a shot fired since from a rebuilt stack is not counted: those bolts never came back',
+       qty(c, 'b1') === null && n(c, 'b1') === 2 && got.undo() === true && qty(c, 'b1') === null && spent(c) === '{}', c.ammoSpent);
+    c = sheet([bow(), arrows(16)]);
+    c.ammoSpent = {s1: {n: 4, kind: 'arrow'}};
+    got = X.applyAmmoRecovery({quiet: true});
+    X.fireAmmo(c, c.inventory[0]);
+    ck('#170 ...one fired from arrows that were there stays on record',
+       qty(c, 's1') === 17 && got.undo() === true && qty(c, 's1') === 15 && n(c, 's1') === 1, c.ammoSpent);
+    c = sheet([xbow(), {id: 'h1', name: 'Bolt', qty: 1, ammo: {kind: 'bolt'}}]);
+    c.ammoSpent = {b1: {n: 4, kind: 'bolt', snap: boltSnap()}};
+    got = X.applyAmmoRecovery({quiet: true});
+    const joined = qty(c, 'h1');
+    X.fireAmmo(c, c.inventory[0], 'hit'); X.fireAmmo(c, c.inventory[0], 'hit'); X.fireAmmo(c, c.inventory[0], 'miss');
+    const h = () => { const e = (c.ammoSpent || {}).h1; return e ? [e.n, e.hits, e.misses].join() : ''; };
+    ck("#170 ...a shortfall on a stack it joined comes off that stack's own shots, hits kept first",
+       joined === 3 && qty(c, 'h1') === null && h() === '3,2,1' && got.undo() === true && h() === '1,1,0' && !('b1' in c.ammoSpent), [joined, c.ammoSpent]);
+    ck('#170 ...once', got.undo() === false && h() === '1,1,0');
+  } finally {
+    ctx.toast = keep.toast; X.character = keep.ch; X._endFight = null;
   }
 }
 
