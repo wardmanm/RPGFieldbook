@@ -9157,3 +9157,39 @@ previews wrongly; the blank Temp's width at desktop on the Classic skin is for t
 **Waiting on Mike:** `src/docs/qa/smoke.md` line 23 ("the Max padlock stops Max from moving") is his
 file (#150); the proposed line is "locking Vitals stops Max from moving; on a touchscreen the HP bar
 opens Hit points".
+
+## #113: centring fixed for a blank Temp: symmetric columns, Temp placed by a measured fit (QA, 2026-11-06)
+
+Browser QA of the Vitals & HP branch measured the numbers' centre against the bar's: within ±0.4px
+with Temp typed or beside the label, but with **Temp blank and inside the bar** "126 / 138" sat up to
+15.5px left on the Sheet at 1280 and 23px left in the combat view at 375 (Classic; Humblewood 6.8 and
+14.3), the "+TEMP" placeholder 2.5–5px from the digits.
+
+**Cause.** Two of my own choices from L9101. The bar's third column was `minmax(min-content,1fr)`, a
+floor meant as a safety net. A blank Temp draws its placeholder at a fixed 4.6ch, wider than its half of
+the leftover space, so the floor won and the middle column slid left by the excess: the offset was
+(W − N)/2 − Temp's column, which is why three digits doubled it on Classic (12.4px per digit pair).
+And Temp only left the bar below a guessed 220px container width; the combat view at 375 is 221px.
+
+**Fix.** The two outer columns are identical, `minmax(0,1fr) auto minmax(0,1fr)`, so the numbers are
+exactly centred in every state. Where Temp goes is measured: `hpTempFits(barW, numW, tmpW)` is true when
+half the space beside the numbers holds Temp (its "+", `.hp-tplus`, and its box), its 6px margin
+(`HP_TMP_EDGE`) and a 6px gap (`HP_TMP_GAP`); `hpPlaceTemp()` sets `.rail-hp.hp-out` otherwise, which
+puts Temp beside the "Hit points" label. It runs from `renderHP()` and `hpFitBox()`, and from
+`90-boot.js` on a `ResizeObserver` over `.hp-bar` and `.hp-num` (a resize, the combat view, a skin,
+digits), on `document.fonts.ready`, and when Temp loses focus. A Temp box being typed in moves out the
+moment it stops fitting and comes back only on blur. Temp keeps its sizes in both places, so the
+measurement doesn't depend on where it is. The container query, and with it the 17px step for the
+numbers at narrow widths, are gone: with Temp out of the way, "126 / 138" at 19px fits the 360px
+Sheet's bar.
+
+Ruling: the #155 guard ("the levelling is CSS alone"), which banned the word `ResizeObserver`, now
+exempts exactly this one observer line; any other observer still fails it (checked by planting one on
+the grid). Mike's #155 decision is that nothing measures the Sheet's columns, which this observer
+does not. Tests: `rules-data.js` (the outer columns identical and nothing content-sized in the bar —
+the check that fails on the old template; placement by class, by the fit check; the wiring; the
+margin constant), `sheet.js` (`hpTempFits()` on QA's widths, `hpPlaceTemp()` on recorded elements,
+the focus rule).
+
+Pages: [vitals & rest](../wiki/features/vitals-and-rest.md), [decisions](../wiki/decisions.md),
+[known issues](../wiki/roadmap/known-issues.md), [sections & layout](../wiki/ui/sections-and-layout.md).

@@ -1395,8 +1395,12 @@ function block(html, needle, tag) {
       // nothing may come back to toggle a class on the grid.
       const allJs = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8')).js
         .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+      // #113's observer is the one exception, matched exactly: it watches only
+      // the HP bar and its numbers to place Temp (hpPlaceTemp), measures no
+      // column and marks nothing on the grid. Any other ResizeObserver fails.
+      const hpRo = '{const w=document.querySelector(".rail-hp");if(w&&window.ResizeObserver){const ro=new ResizeObserver(()=>hpPlaceTemp());[".hp-bar",".hp-num"].forEach(q=>{const e=w.querySelector(q);if(e)ro.observe(e);});}}';
       ck('#155 the levelling is CSS alone: no script measures the columns or marks the grid',
-         !/SHEET_STRETCH_MAX|sheetShouldStretch|sheetLevel|SheetLevel|cols-even|ResizeObserver/.test(allJs));
+         !/SHEET_STRETCH_MAX|sheetShouldStretch|sheetLevel|SheetLevel|cols-even|ResizeObserver/.test(allJs.split(hpRo).join('')));
     }
     ck('#155 Features is one card per row at every width (Mike, 2026-11-02): no .fgroup grid anywhere, scoped or not',
        !/\.fgroup\{[^}]*display:grid/.test(all.replace(/\/\*[\s\S]*?\*\//g, '')));
@@ -1924,8 +1928,13 @@ function block(html, needle, tag) {
      barBlock.indexOf('class="hp-num"') < barBlock.indexOf('class="hp-tmp"'), barBlock);
   // the declarations of a top-level rule whose selector is exactly `sel`
   const rule = sel => (sheetCss.match(new RegExp('(?:^|[}\\s])' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}')) || [])[1] || '';
-  ck('#113 the bar is three columns whose outer two are equal, so the middle one is centred',
-     /display:grid/.test(rule('.hp-bar')) && /grid-template-columns:minmax\(0,1fr\) auto minmax\(min-content,1fr\)/.test(rule('.hp-bar')), rule('.hp-bar'));
+  // QA (2026-11-06): the third column was minmax(min-content,1fr), so a blank
+  // Temp's 4.6ch placeholder floored it wider than its half and pushed
+  // "126 / 138" up to 23px left. The two outer columns must be identical.
+  const cols = (rule('.hp-bar').match(/grid-template-columns:([^;]*)/) || ['', ''])[1].trim().split(/\s+/);
+  ck('#113 the bar is three columns whose outer two are identical, so the middle one is always centred',
+     /display:grid/.test(rule('.hp-bar')) && cols.length === 3 && cols[1] === 'auto' && cols[0] === cols[2] && cols[0] === 'minmax(0,1fr)', cols);
+  ck('#113 ...and nothing in the bar sizes a column from its content', !/min-content|max-content|fit-content/.test(rule('.hp-bar')));
   ck('#113 ...the numbers in the middle column, Temp at the right of the third',
      /grid-column:2/.test(rule('.hp-num')) && /grid-column:3/.test(rule('.hp-tmp')) && /justify-self:end/.test(rule('.hp-tmp')) && !/margin-left:auto/.test(rule('.hp-tmp')));
   ck('#113 the fill spans the bar as a grid item, under the numbers',
@@ -1933,9 +1942,21 @@ function block(html, needle, tag) {
      /position:relative/.test(rule('.hp-num')) && /position:relative/.test(rule('.hp-tmp')));
   ck('#113 the bar itself is not positioned, so a narrow Temp can leave it',
      !/position:/.test(rule('.hp-bar')) && !/\.hp-bar\{position|\.hp-bar>\*:not\(\.hp-fill\)/.test(sheetCss));
-  ck('#113 where it would collide, Temp moves beside the Hit points label',
-     /position:relative/.test(rule('.rail-hp')) && /container:hp\/inline-size/.test(rule('.rail-hp')) &&
-     /@container hp \(max-width:220px\)\{[^@]*\.hp-tmp\{[^}]*position:absolute[^}]*top:0[^}]*right:0/.test(sheetCss));
+  // Temp's place follows what has to fit (hpTempFits, measured), not a guessed
+  // width: the 220px container query missed Combat at 375 (221px) by 1px.
+  ck('#113 where Temp can\'t fit beside centred numbers it moves beside the Hit points label, by class',
+     /position:relative/.test(rule('.rail-hp')) &&
+     /\.rail-hp\.hp-out \.hp-tmp\{[^}]*position:absolute[^}]*top:0[^}]*right:0/.test(sheetCss));
+  ck('#113 ...decided by a fit check, not a width threshold', !/@container/.test(sheetCss.slice(sheetCss.indexOf('.hp-row{'), sheetCss.indexOf('.hp-note{'))) &&
+     /function hpPlaceTemp\(\)\{[\s\S]*?hpTempFits\(/.test(js) &&
+     /hpPlaceTemp\(\)/.test((js.match(/function renderHP\(\)\{[\s\S]*?\n\}/) || [''])[0]) &&
+     /hpPlaceTemp\(\)/.test((js.match(/function hpFitBox\(el\)\{[^\n]*\}/) || [''])[0]));
+  ck('#113 the fit check knows the margin CSS gives Temp',
+     /const HP_TMP_EDGE=6;/.test(js) && /margin-right:6px/.test(rule('.hp-tmp')));
+  ck('#113 ...and re-runs when the bar or the numbers change size, when fonts arrive, and when Temp loses focus',
+     /new ResizeObserver\(\(\)=>hpPlaceTemp\(\)\)/.test(bootSrc) && /\["\.hp-bar","\.hp-num"\]\.forEach/.test(bootSrc) &&
+     /document\.fonts\.ready\.then\(hpPlaceTemp\)/.test(bootSrc) && /focusout[\s\S]{0,120}hpTemp[\s\S]{0,60}hpPlaceTemp/.test(bootSrc));
+  ck('#113 Temp\'s "+" can be measured on its own', /<span class="hp-tmp"><span class="hp-tplus" aria-hidden="true">\+<\/span>/.test(t));
   ck('#113 no fixed-width number boxes left', !/width:3\.1ch/.test(sheetCss) && /el\.style\.width=hpBoxWidth\(k,/.test(js));
   ck('#113 − and + are drawn strokes in flex-centred buttons, not font glyphs',
      /<button class="hp-btn" id="hpMinus"[^>]*><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"\/><\/svg><\/button>/.test(t) &&

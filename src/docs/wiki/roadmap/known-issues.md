@@ -235,8 +235,7 @@ Wanted, not yet done. Each needs work, not a source.
 - **Rests do not move condition or spell clocks.** (#145) → [Conditions & concentration](../features/conditions-and-concentration.md)
 - **An item's Use cannot apply a timed condition.** (#147) → [Conditions & concentration](../features/conditions-and-concentration.md)
 - **The Hit points window has no Undo** (#175, a toast with Undo), and Coins don't have its "amount,
-  then Gain or Spend" shape yet (a 1.9.2 issue). The 220px rail width at which Temp leaves the HP bar
-  is an estimate for the screenshot pass to set. → ledger L9101, and [Vitals & rest](../features/vitals-and-rest.md)
+  then Gain or Spend" shape yet (a 1.9.2 issue). → ledger L9101, and [Vitals & rest](../features/vitals-and-rest.md)
 - **What the level-up fanfare's final review left (#101).** None blocks a level-up:
   - A long level card at phone width (a multiclass add with a long note) puts the HP step and Done
     below the fold, so the player scrolls (#146). Pinning them to the card's foot is Mike's call, after his
@@ -522,3 +521,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-05 — Replaced "private packs through a manifest: not built" with the live-token verification still owed: #182 builds the private GitHub source. → ledger L8943, #182
 - 2026-11-05 — The live-token probe passed; what is left is an install on Mike's devices. → ledger L9016, #182
 - 2026-11-06 — The Hit points window's deferrals: no Undo (#175), Coins' version for 1.9.2, the estimated 220px threshold. → ledger L9101, #112, #113
+- 2026-11-06 — The estimated 220px threshold went: Temp's place is a measured fit now. → ledger L9161, #113

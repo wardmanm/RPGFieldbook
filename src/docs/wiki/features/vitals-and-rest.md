@@ -11,7 +11,8 @@ mouse, the Hit points window on a touchscreen), the Max HP lock, the level-1 see
 the hit-dice bar and its spend box, the level badge, and what each rest gives back.
 
 **Code:** `applyHPInput()`, `adjustHP()`, `renderHP()`, `hpBand()`, `signedEntry()`,
-`signedDelta()`, `entryDigits()`, `hpBoxWidth()`, `hpFitBox()`, and the Hit points window's
+`signedDelta()`, `entryDigits()`, `hpBoxWidth()`, `hpFitBox()`, `hpTempFits()`, `hpPlaceTemp()`,
+`HP_TMP_EDGE`, `HP_TMP_GAP`, and the Hit points window's
 `hpTouch()`, `hpAmount()`, `hpQuick()`, `hpQuickText()`, `hpNowText()`, `hpBarLabel()`,
 `hpQuickApply()`, `hpSetParse()`, `hpSetApply()`, `hpDialogHTML()`, `openHPDialog()` in
 `66-coins-hp.js`; `vitalsLocked()`, `setVitalsLocked()`, `toggleEditCard()` in `87-notes.js`; `clampHP()`, `effMaxHP()`, `buildDeath()` in
@@ -72,19 +73,26 @@ and is empty (and hidden) otherwise.
 **The HP bar.** The three boxes sit inside `.hp-bar`, "26 / 38" in the middle with "+3" temp at its
 right. `renderHP()` sets the fill (`#hpFill`) to Current ÷ `effMaxHP()`, clamped 0–100 and 0 with no
 maximum, and gives it the band class, so the bar itself turns amber or red. **Centring (#113):** the
-bar is a grid of three columns, `minmax(0,1fr) auto minmax(min-content,1fr)`. Current, the slash and
-Max sit in `.hp-num`, the middle column; Temp's `.hp-tmp` is the third, against the right edge. The
-outer two columns are equal, so the numbers are centred whatever Temp shows; the third's floor is
-Temp's own width, so a Temp too wide for its half pushes the numbers left rather than over them.
-`renderHP()` sizes each box to what it holds (`hpBoxWidth()`: its length in `ch` plus 0.2, a blank
-one its placeholder's width) and `hpFitBox()` keeps it sized as it is typed (an `input` listener in
-`90-boot.js`). The fill is a grid item spanning all three columns, not absolutely positioned, so the
+bar is a grid of three columns, `minmax(0,1fr) auto minmax(0,1fr)`: the outer two identical, so
+Current, the slash and Max (`.hp-num`, the middle column) are exactly centred in every state. Temp's
+`.hp-tmp` sits at the right of the third column only when it fits there: `hpTempFits(barW, numW,
+tmpW)` asks whether half the space beside the numbers holds Temp's "+" (`.hp-tplus`) and box, its 6px
+margin (`HP_TMP_EDGE`, `.hp-tmp`'s `margin-right`) and a 6px gap (`HP_TMP_GAP`). Otherwise
+`hpPlaceTemp()` sets `.hp-out` on `.rail-hp`, and Temp is `position:absolute` at its top right, beside
+the "Hit points" label, reading "+3 TEMP" (`.hp-tmpw` shows after a value). What has to fit is
+measured, not guessed from the rail's width: digits, skins, the fonts and a blank Temp's "+temp"
+placeholder (4.6ch, wider than most values, so a blank Temp is usually beside the label) all move it.
+`hpPlaceTemp()` runs from `renderHP()` and `hpFitBox()`, and from `90-boot.js` on a `ResizeObserver`
+over `.hp-bar` and `.hp-num` (a resize, the combat view, a skin, the digits), on
+`document.fonts.ready`, and when Temp loses focus. A Temp box being typed in moves out the moment it
+stops fitting, and comes back only once it loses focus, never under the caret. Temp keeps its sizes in
+both places, so the measurement doesn't depend on where it is and the class can't flip back and
+forth. `renderHP()` sizes each box to what it holds (`hpBoxWidth()`: its length in `ch` plus 0.2, a
+blank one its placeholder's width) and `hpFitBox()` keeps it sized as it is typed (an `input` listener
+in `90-boot.js`). The fill is a grid item spanning all three columns, not absolutely positioned, so the
 bar itself is not positioned; `.hp-num` and `.hp-tmp` are, so they paint over the half-opaque fill.
-That is what lets Temp leave the bar: `.rail-hp` is a size container (`container:hp/inline-size`), and
-at 220px or less (a phone's rail; the two-column layout's is 216px) Temp is `position:absolute` at the
-top right of `.rail-hp`, beside the "Hit points" label, reading "+3 TEMP" (`.hp-tmpw` shows after a
-value), and the numbers step down to 17px. The − and + are SVG strokes in flex-centred buttons, since
-a font's − and + sit high in their line.
+The numbers stay 19px at every width. The − and + are SVG strokes in flex-centred buttons, since a
+font's − and + sit high in their line.
 
 **The Hit points window (touch, #112).** On a touchscreen — the device's primary pointer is coarse,
 `hpTouch()`, read at tap time — a tap anywhere on `.hp-bar` (Temp in the label row included), or
@@ -258,6 +266,9 @@ came back.
   and `pointer-events:none`: a tap that focused a box would bring up the keyboard over the window.
 - **The bar is not positioned.** Temp leaves it for the label row by `position:absolute` against
   `.rail-hp`; a positioned `.hp-bar` would become its containing block and clip it.
+- **The bar's outer columns are identical, and nothing in them is sized by content.** A floor on the
+  third (`min-content`) is exactly what pushed the numbers off centre (L9161); Temp's fit is decided by
+  `hpPlaceTemp()`, never by the grid.
 - **The automatic writers bypass the lock.** `seedLevel1HP()`, `resyncLevel1HP()`, `removeClass()`'s
   un-seed and the level-up step write `character.hp.max` directly; routing them through
   `applyHPInput()` would leave a locked level-1 character with no hit points.
@@ -307,8 +318,12 @@ came back.
   unlocked, by decision; the checks that asserted "a missing flag means locked" were inverted.
 - **Fixed-width boxes can't centre.** Three 3.1ch boxes (temp 4.6ch) with Temp at `margin-left:auto`
   put "26 / 38" at the bar's left, and a one-digit Current sat a digit off centre (#113). The boxes are
-  sized to their content now, and the 220px threshold for moving Temp out is an estimate set by the
-  screenshot pass, not a measurement.
+  sized to their content now.
+- **A content floor on one column pushed the numbers left (#113, QA).** The first fix gave the third
+  column a `min-content` floor "so a wide Temp shifts the numbers rather than overlapping them".
+  A blank Temp's placeholder is wider than its half, so the floor always won: "126 / 138" sat 15.5px
+  left on the Sheet at 1280 and 23px in the combat view at 375 on Classic. And Temp left the bar below
+  a guessed 220px; the combat view at 375 is 221px. Both went for identical columns and a measured fit.
 - **The layout guards once encoded nesting.** `rules-data.js` sliced "to the next card" and "to the
   first `</div>`"; moving a block broke them for reasons unrelated to what they guarded. They now
   use a `block` helper that counts divs, and each was mutation-tested.
@@ -331,8 +346,8 @@ came back.
 | What the window holds (#112, Mike) | One amount, then Damage, Heal or Temp, with Set exactly in a fold | The bar's three boxes, bigger, signed: damage needs a minus, which phone keypads hide. Adjust coins' shape: also a minus, and setting an exact number means working out the difference |
 | What Temp does in the window (#112) | Replaces what you have | Adding: temp HP don't stack, and you choose which to keep |
 | Undo in the window (#112) | None; a mis-tap is fixed by reopening (a toast with Undo is #175) | — |
-| How the numbers centre (#113) | Three grid columns, the outer two equal, boxes sized to their content | Fixed-width boxes with Temp pushed right: the issue |
-| A Temp that doesn't fit (#113) | It moves beside the "Hit points" label at 220px or less, on touch and desktop | Shrinking the numbers further: unreadable at the table. Relaxing the centring while Temp shows: the issue |
+| How the numbers centre (#113) | Three grid columns, the outer two identical (both `0` to `1fr`), boxes sized to their content | Fixed-width boxes with Temp pushed right: the issue. A `min-content` floor on the third column: a blank Temp pushed three digits up to 23px left (QA) |
+| A Temp that doesn't fit (#113) | It moves beside the "Hit points" label wherever a measured fit says it can't sit beside the centred numbers with a 6px gap, on touch and desktop | A width threshold (220px): fit depends on digits, skin, fonts and a blank placeholder, and the combat view at 375 missed it by 1px. Shrinking the numbers (the 17px step went too): unreadable at the table. Relaxing the centring while Temp shows: the issue |
 | CON in the level-1 seed | `modOf()` of the typed score | `abilFinal()`: effects change minutes later and the un-seed match would fail silently |
 | CON when spending a hit die | `abilFinal()` | Harmonising with the seed: the value is consumed at once and never re-derived |
 | Tracking CON edits after the seed | Stateless: recompute what the previous CON would have written and match it | A new character field: no migration surface, and an old sheet upgrades on its first CON edit |
@@ -362,9 +377,7 @@ came back.
   close this; not done.
 - On a phone the AC shield overlaps the small portrait's bottom edge; whether that reads well on a
   device is Mike's pass.
-- The 220px width at which Temp leaves the HP bar is estimated from the CSS and the glyph widths, not
-  measured; the screenshot pass (light and dark, both skins, one to three digits) sets it. A
-  real-phone pass of the Hit points window, keypad included, is Mike's.
+- A real-phone pass of the Hit points window, keypad included, is Mike's.
 - The window has no Undo; a toast with Undo is #175. Coins could take the same "amount, then Gain or
   Spend" shape (a 1.9.2 issue).
 - See [Known issues](../roadmap/known-issues.md).
@@ -400,3 +413,6 @@ came back.
   touchscreen the HP bar opens a Hit points window (an amount, then Damage, Heal or Temp; Set exactly);
   the numbers and the − and + sit centred, Temp moving beside the label on a narrow rail.
   → ledger L9101, #115, #112, #113
+- 2026-11-06 — Centring held for a blank Temp: the bar's outer columns are identical, and Temp leaves
+  the bar wherever a measured fit says it can't sit beside the numbers, not below a fixed width; the
+  17px step went. → ledger L9161, #113

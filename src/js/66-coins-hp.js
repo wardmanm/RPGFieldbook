@@ -208,7 +208,39 @@ function hpBoxWidth(k,v){
   return s===""?(k==="temp"?"4.6ch":"1.2ch"):(s.length+0.2)+"ch";
 }
 /* ...and as it is typed (wired in 90-boot.js), so "+12" never scrolls. */
-function hpFitBox(el){if(el&&el.style&&el.dataset)el.style.width=hpBoxWidth(el.dataset.hp,el.value);}
+function hpFitBox(el){if(el&&el.style&&el.dataset){el.style.width=hpBoxWidth(el.dataset.hp,el.value);hpPlaceTemp();}}
+/* #113: where Temp goes. The bar's two outer columns are identical, so the
+   numbers are always exactly centred; Temp sits at the right of the third only
+   if it fits there with its margin and a clear gap before the numbers, and
+   otherwise moves beside the "Hit points" label (.rail-hp.hp-out). What has to
+   fit is measured — fonts, skins, digits and a blank Temp's "+temp" all vary —
+   rather than guessed from the rail's width: a fixed 220px threshold missed
+   the combat view at 375px (221px) by a pixel. HP_TMP_EDGE is .hp-tmp's
+   margin-right in 30-sheet.css. */
+const HP_TMP_EDGE=6;
+const HP_TMP_GAP=6;
+/* The bar's inner width, the numbers' width, Temp's width ("+" and its box,
+   which are the same in both places): true if Temp fits beside the centred
+   numbers, null for a bar that isn't laid out (a hidden tab). Pure. */
+function hpTempFits(barW,numW,tmpW){
+  if(!(barW>0))return null;
+  return (barW-numW)/2-tmpW-HP_TMP_EDGE>=HP_TMP_GAP;
+}
+/* Run by renderHP(), hpFitBox(), and from 90-boot.js when the bar or the
+   numbers change size, when the fonts arrive, and when Temp loses focus. A
+   Temp box being typed in moves OUT the moment it stops fitting (it must never
+   touch the numbers) but is not pulled back IN under the caret; that waits for
+   the blur. The measurements don't depend on where Temp is, so the class can't
+   flip back and forth. */
+function hpPlaceTemp(){
+  const wrap=document.querySelector(".rail-hp");if(!wrap)return;
+  const bar=wrap.querySelector(".hp-bar"),num=wrap.querySelector(".hp-num"),plus=wrap.querySelector(".hp-tplus"),inp=document.getElementById("hpTemp");
+  if(!bar||!num||!plus||!inp||!inp.getBoundingClientRect)return;
+  const fits=hpTempFits(bar.clientWidth,num.getBoundingClientRect().width,plus.getBoundingClientRect().width+inp.getBoundingClientRect().width);
+  if(fits===null)return;
+  const out=wrap.classList.contains("hp-out"),next=!fits||(out&&document.activeElement===inp);
+  if(next!==out)wrap.classList.toggle("hp-out",next);
+}
 function renderHP(){
   /* #112: on a touchscreen the bar is one button that opens the Hit points
      window, so its boxes take no typing at all: readOnly, no keyboard, out of
@@ -241,6 +273,7 @@ function renderHP(){
      is only a hint — paste, autofill and any programmatic caller go straight
      past it. The lock is the Vitals pencil (#115), read by vitalsLocked(). */
   const mx=document.getElementById("hpMax");if(mx)mx.readOnly=touch||vitalsLocked(character);
+  hpPlaceTemp();   /* #113: the values (and so the widths) may have changed */
   /* #91: your chip and row in the initiative tracker read this HP live */
   renderInitStrip();
 }

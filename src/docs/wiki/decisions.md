@@ -214,8 +214,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **What the window holds (#112, Mike)** — One amount, then Damage, Heal or Temp, with Set exactly in a fold
 - **What Temp does in the window (#112)** — Replaces what you have
 - **Undo in the window (#112)** — None; a mis-tap is fixed by reopening (a toast with Undo is #175)
-- **How the numbers centre (#113)** — Three grid columns, the outer two equal, boxes sized to their content
-- **A Temp that doesn't fit (#113)** — It moves beside the "Hit points" label at 220px or less, on touch and desktop
+- **How the numbers centre (#113)** — Three grid columns, the outer two identical (both `0` to `1fr`), boxes sized to their content
+- **A Temp that doesn't fit (#113)** — It moves beside the "Hit points" label wherever a measured fit says it can't sit beside the centred numbers with a gap
 - **CON in the level-1 seed** — `modOf()` of the typed score
 - **CON when spending a hit die** — `abilFinal()`
 - **Tracking CON edits after the seed** — Stateless: recompute what the previous CON would have written and match it

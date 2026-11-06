@@ -356,7 +356,10 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - **The levelling stays CSS (#155, Mike 2026-11-02).** It is unconditional, so there is nothing to
   measure: no script reads the columns' heights or sets a class on the grid. The 240px rule it
   replaced needed one, a ResizeObserver over every card's contents, because only a script can compare
-  heights. `rules-data.js` checks that no JS fragment names that machinery.
+  heights. `rules-data.js` checks that no JS fragment names that machinery. The one
+  `ResizeObserver` in the app, which places the HP bar's Temp (`hpPlaceTemp()`,
+  [Vitals & rest](../features/vitals-and-rest.md)), watches only that bar and its numbers; the check
+  exempts that line exactly and fails on any other.
 - **At three columns and two, where a card sits is the markup's business (#155).** Both layouts keep
   the stacks whole and reorder nothing, so the order on screen is the document order, which is the
   order Tab walks; the levelling names no card, so whichever card is last in a stack grows.
@@ -481,3 +484,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-11-02 — Mike's decisions ("option 2", then the review's risk 4): Statuses moves under Skills at three columns, so an everyday sheet levels, and at two, where the column now reads Skills, Statuses, Defences, Resources, the order Tab walks; one column is unchanged. → ledger L8339, #155
 - 2026-11-02 — Mike's decision: at three columns the columns always end on one line, in CSS alone; the 240px rule and its script (`SHEET_STRETCH_MAX`, `sheetLevel()`, the ResizeObserver, `.cols-even`) go; two columns and one are unchanged. → ledger L8408, #155
 - 2026-11-06 — Vitals joins `EDIT_CARDS` (thirteen): its pencil hides the portrait buttons and locks Max HP, reads "Lock Vitals" / "Unlock Vitals", and repaints Max. → ledger L9101, #115
+- 2026-11-06 — The #155 "CSS alone" check exempts exactly the HP bar's Temp observer, which measures no column. → ledger L9161, #113

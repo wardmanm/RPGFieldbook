@@ -45,7 +45,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
   'EDIT_CARDS', 'editHidden', 'setEditHidden', 'editCardTitle', 'editToggleText', 'editToggleHTML', 'vitalsLocked', 'setVitalsLocked',
   'hpTouch', 'hpAmount', 'hpQuick', 'hpQuickText', 'hpNowText', 'hpBarLabel', 'hpQuickApply', 'hpSetParse', 'hpSetApply',
-  'hpDialogHTML', 'openHPDialog', 'hpBoxWidth', 'hpFitBox',
+  'hpDialogHTML', 'openHPDialog', 'hpBoxWidth', 'hpFitBox', 'hpTempFits', 'hpPlaceTemp', 'HP_TMP_EDGE', 'HP_TMP_GAP',
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
@@ -8307,6 +8307,46 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       ck('#113 renderHP sizes all three boxes', els.hpCur.style.width === '1.2ch' && els.hpMax.style.width === '3.2ch' && els.hpTemp.style.width === '4.6ch',
          ['hpCur', 'hpMax', 'hpTemp'].map(k => els[k].style.width));
     } finally { ctx.document.getElementById = kd.gid; }
+  }
+  /* #113 QA fix: Temp sits in the bar only where it fits beside numbers that
+     stay exactly centred, with a gap; otherwise beside the label. The widths
+     below are QA's (2026-11-06): the bar's inside at the Sheet's 1280 is 161px,
+     "126 / 138" on Classic about 92px, a blank Temp's "+temp" about 44px. */
+  {
+    const F = X.hpTempFits;
+    ck('#113 the fit is: half the space beside the numbers holds Temp, its margin and a gap',
+       X.HP_TMP_EDGE === 6 && X.HP_TMP_GAP === 6 && F(100, 40, 18) === true && F(100, 40, 18.5) === false);
+    ck('#113 QA\'s failing case: 126 / 138 with Temp blank at 1280 does not fit, so Temp leaves the bar', F(161, 92, 44) === false);
+    ck('#113 ...nor 26 / 38 with Temp blank on Classic (QA: 3.1px left)', F(161, 67, 44) === false);
+    ck('#113 ...but a typed +3 beside 126 / 138 does', F(161, 92, 17) === true);
+    ck('#113 a bar with no width (a hidden tab) decides nothing', F(0, 40, 10) === null);
+    // hpPlaceTemp() on recorded elements
+    const kd = {qs: ctx.document.querySelector, gid: ctx.document.getElementById, ae: Object.getOwnPropertyDescriptor(ctx.document, 'activeElement')};
+    const cls = new Set(), rect = w => ({getBoundingClientRect: () => ({width: w})});
+    const wrap = {classList: {contains: c => cls.has(c), toggle: (c, on) => { if (on) cls.add(c); else cls.delete(c); }},
+      querySelector: q => ({'.hp-bar': bar, '.hp-num': num, '.hp-tplus': plus})[q] || null, getBoundingClientRect: () => ({width: 236})};
+    const bar = {clientWidth: 161}, num = rect(92), plus = rect(7);
+    let tw = 37; const tmp = {getBoundingClientRect: () => ({width: tw})};
+    ctx.document.querySelector = q => q === '.rail-hp' ? wrap : kd.qs(q);
+    ctx.document.getElementById = id => id === 'hpTemp' ? tmp : kd.gid(id);
+    let active = null; Object.defineProperty(ctx.document, 'activeElement', {get: () => active, configurable: true});
+    try {
+      X.hpPlaceTemp();
+      ck('#113 hpPlaceTemp moves a blank Temp (+temp) beside the label when it can\'t fit', cls.has('hp-out'));
+      tw = 10; X.hpPlaceTemp();
+      ck('#113 ...and back into the bar once it fits (a typed 3)', !cls.has('hp-out'));
+      tw = 37; active = tmp; X.hpPlaceTemp();
+      ck('#113 ...moves it out even while it is being typed in, rather than let it touch the numbers', cls.has('hp-out'));
+      tw = 10; X.hpPlaceTemp();
+      ck('#113 ...but doesn\'t pull a box being typed in back into the bar under the caret', cls.has('hp-out'));
+      active = null; X.hpPlaceTemp();
+      ck('#113 ...which happens once it loses focus', !cls.has('hp-out'));
+      bar.clientWidth = 0; tw = 37; X.hpPlaceTemp();
+      ck('#113 ...and a bar that isn\'t laid out (another tab) is left as it was', !cls.has('hp-out'));
+    } finally {
+      ctx.document.querySelector = kd.qs; ctx.document.getElementById = kd.gid;
+      if (kd.ae) Object.defineProperty(ctx.document, 'activeElement', kd.ae); else delete ctx.document.activeElement;
+    }
   }
   X.character = keep.ch;
 }

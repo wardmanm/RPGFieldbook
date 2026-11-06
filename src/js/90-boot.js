@@ -284,6 +284,14 @@ function wire(){
   /* #112: a device whose primary pointer changes (a tablet docked to a
      keyboard and trackpad) repaints the bar as a button or as boxes */
   {const mq=window.matchMedia&&window.matchMedia("(pointer:coarse)");if(mq&&mq.addEventListener)mq.addEventListener("change",renderHP);}
+  /* #113: Temp sits in the bar only where it fits beside the centred numbers
+     (hpPlaceTemp). That changes with the bar's width (a resize, the combat
+     view, a layout) and the numbers' (digits, a skin, the fonts arriving), and
+     a Temp box that left the bar while typed in comes back once it loses
+     focus. Temp itself isn't observed: its own size changes with its place. */
+  {const w=document.querySelector(".rail-hp");if(w&&window.ResizeObserver){const ro=new ResizeObserver(()=>hpPlaceTemp());[".hp-bar",".hp-num"].forEach(q=>{const e=w.querySelector(q);if(e)ro.observe(e);});}}
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(hpPlaceTemp);
+  document.addEventListener("focusout",e=>{if(e.target&&e.target.id==="hpTemp")setTimeout(hpPlaceTemp,0);});
   on("btnLongRest","click",longRest);
   on("btnShortRest","click",shortRest);
   /* the refused-write strip (#81) */

@@ -259,20 +259,22 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
    Bands colour the fill, not the text (text over a band-coloured fill would
    vanish): amber at half, brick at a quarter. --warn is its own token rather
    than --accent because on the classic skin --accent IS --brick.
-   #113: the bar is three grid columns. The outer two are equal (the third's
-   floor is Temp's own width, so a Temp too wide for its half shifts the
-   numbers rather than overlapping them), which holds "26 / 38" in the middle
-   whatever Temp shows; renderHP() sizes each box to what it holds. The fill
-   is a grid item spanning all three, not absolute, so the bar itself is not
-   positioned: a narrow rail's Temp can then leave it for the label row (the
-   container query below) without being clipped by its overflow. */
+   #113: the bar is three grid columns, the outer two IDENTICAL, so "26 / 38"
+   is exactly centred whatever Temp shows; renderHP() sizes each box to what
+   it holds. (The third column once had a min-content floor: a blank Temp's
+   placeholder floored it past its half and pushed three digits up to 23px
+   left.) Temp sits at the right of the third column only when hpTempFits()
+   says it fits there with a gap; otherwise hpPlaceTemp() sets .hp-out and it
+   moves beside the label. The fill is a grid item spanning all three, not
+   absolute, so the bar itself is not positioned: Temp can then leave it
+   without being clipped by its overflow. */
 .hp-row{display:flex;align-items:center;gap:6px}
 .hp-btn{flex:none;width:30px;height:34px;border-radius:7px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;padding:0;
   display:flex;align-items:center;justify-content:center}
 .hp-btn svg{display:block;width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.6;stroke-linecap:round}
 .hp-btn:hover{border-color:var(--accent)}
-.rail-hp{position:relative;container:hp/inline-size}
-.hp-bar{flex:1;min-width:0;height:38px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(min-content,1fr);grid-template-rows:minmax(0,1fr);
+.rail-hp{position:relative}
+.hp-bar{flex:1;min-width:0;height:38px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-rows:minmax(0,1fr);
   align-items:center;overflow:hidden;border:1.5px solid var(--line);border-radius:7px;background:var(--field)}
 .hp-fill{grid-row:1;grid-column:1/-1;justify-self:start;align-self:stretch;width:0;background:var(--accent-2);opacity:.5;transition:width .15s}
 .hp-fill.hp-warn{background:var(--warn)}
@@ -290,18 +292,14 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 .hp-tmp input{width:4.6ch;font-family:var(--head);font-size:13px;font-weight:700;text-align:left}
 .hp-tmp input::placeholder{color:var(--ink-soft);opacity:.8;font-weight:400}
 .hp-tmpw{display:none}
-/* A narrow rail (a phone's, ≤220px: 360–390px screens put it at 182–212px)
-   can't hold a centred "126 / 138" and a Temp beside it, so Temp moves out
-   to the right of the "Hit points" label, reading "+3 temp", and the numbers
-   step down a size. The same rule on touch and desktop. */
-@container hp (max-width:220px){
-  .hp-bar input{font-size:17px}
-  .hp-sl{font-size:15px}
-  .hp-tmp{position:absolute;top:0;right:0;margin:0;line-height:1;font-size:11px}
-  .hp-tmp input{font-size:12px;line-height:1}
-  .hp-tmpw{display:inline;margin-left:3px;font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
-  .hp-tmp input:placeholder-shown~.hp-tmpw{display:none}
-}
+/* Where Temp doesn't fit beside the centred numbers (hpTempFits), it sits to
+   the right of the "Hit points" label, reading "+3 TEMP". The same on touch
+   and desktop. Its "+" and box keep their sizes here, so what hpPlaceTemp()
+   measures is the same in both places and the class can't flip-flop. */
+.rail-hp.hp-out .hp-tmp{position:absolute;top:0;right:0;margin:0;line-height:1}
+.rail-hp.hp-out .hp-tmp input{line-height:1}
+.rail-hp.hp-out .hp-tmpw{display:inline;margin-left:3px;font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.rail-hp.hp-out .hp-tmp input:placeholder-shown~.hp-tmpw{display:none}
 .hp-note{text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px}
 .hp-note:empty{display:none}
 /* #112: on a touchscreen the bar is one button that opens Hit points
