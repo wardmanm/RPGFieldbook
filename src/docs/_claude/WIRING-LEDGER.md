@@ -9533,3 +9533,58 @@ the focus rule).
 
 Pages: [vitals & rest](../wiki/features/vitals-and-rest.md), [decisions](../wiki/decisions.md),
 [known issues](../wiki/roadmap/known-issues.md), [sections & layout](../wiki/ui/sections-and-layout.md).
+## #130, #129, #132: Flat AC, Include spells, scaling uses — phase 1 (Mike's design, 2026-11-06)
+
+Wave 1 of 1.9.1, the Armour & attack numbers worktree; the design is
+`src/docs/specs/2026-11-06-armour-attack-numbers-design.md` (Mike approved it on 2026-11-06), the
+plan `src/docs/plans/2026-11-06-armour-attack-numbers.md`. Built in two phases: this entry is
+phase 1, everything but the two steps that wait on other wave-1 branches.
+
+**#130, Flat AC.** `acTotal()` (`25-origins-items.js`) is now the one place AC is added up; the
+rail (`recompute()`), `youAC()` and the AC window read it, and print reads `#acDisp`. `armorAC()`
+takes the **best** equipped shield (it summed them) and no longer reads `character.ac`, so the
+"Base AC 0" breakdown and the shield added on top of a manual value are gone with it. A new
+`character.acMode` (`"calc"` default) picks Calculated or Flat; `character.ac` is the Flat number
+only. Flat adds only the `ac` effects whose contribution kind is `status` or `familiar`
+(`acEffects()`), because the typed number already counts armour, shields, items and features.
+Tapping AC opens the Armor Class window (`openACWindow()`, `acWindowHTML()`): a Calculated / Flat
+switch, the lines, and a total. Switching to Flat with no number fills it from `acFlatSeed()`
+(the Calculated total less what still adds), so the number doesn't jump; the box takes whole
+numbers only (`acFlatValue()`, `setACFlat()`) and puts the last one back otherwise. `migrate()`
+turns a Flat with no whole number into Calculated. An old save with a typed `ac` opens Calculated
+and its number is what Flat shows. The rail's shield reads FLAT and draws its rim in a new
+`--rail-flat` token, one per palette, each unlike that palette's `--rail-line`.
+
+**#129, Include spells.** `contributions()` tags each entry with its `kind` and carries the
+effect's `spells` flag. `spellFxList()` (`60-attacks.js`) is the one set a spell's to-hit or
+damage takes: `spell.attack`, plus the six generic targets' effects ticked Include spells
+(`spells:true`; melee- or ranged-only ones where the spell's range is known). The Spellcasting
+card, `promptSpellAttack()`, a spell's row in `attackNumbers()` (which keeps its own ability part,
+#74), print, the marks and both breakdowns read it, so they agree. A weapon row is unchanged. A
+save spell's row and cast window now show its ticked damage, marked. The editors' rows get the
+tick (`fxRow()`), shown only for the six targets through one delegated `change` listener on the
+modal (`fxRowSync()`); `collectFx()` writes `spells:true` only for a ticked one. The copy paths
+already carried the flag (effect objects copied whole); checks pin each. Pack data is unchanged:
+Archery's `attack.ranged` +2 stays unticked, so a Fire Bolt row with Archery reads 2 lower. That
+is the fix: Archery is ranged weapon attacks.
+
+**#132, the feature form.** `usesFromForm()` (`20-lists.js`) keeps a `byLevel` or formula
+`uses.max` while the box still holds what it opened on, and only a changed number replaces it;
+`usesScaleHint()` puts a line under the box. Both read `usesShape()`, now `usesMax()`'s grammar.
+`usesMax()` gets its first checks.
+
+**Rulings (builder's calls).** The `sheet.js` block sits at the end of the synchronous checks, not
+after the async chain, whose first function swaps `ctx` globals before its first `await`. The
+spec's link to the Vitals spec is a backticked name until that branch merges (the docs suite
+checks dated links). The window is titled "Armor Class". `--rail-flat`: default light `#d8a544`,
+default dark `#efe6d0` (its rail line is already gold), classic `#dcae4e`.
+
+**Phase 2, after rebasing on Vitals & HP and Grants redraw:** the AC window's switch and box
+follow `vitalsLocked()` (the Vitals pencil's label and the Vitals wiki and smoke line with it), and
+`openItemForm()` gets #132's fix through `usesFromForm()`.
+
+Pages: [armor & AC](../wiki/features/armor-and-ac.md), [attacks & damage](../wiki/features/attacks-and-damage.md),
+[spells](../wiki/features/spells.md), [computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
+[features & traits](../wiki/features/features-and-traits.md), [character model](../wiki/architecture/character-model.md),
+[vitals & rest](../wiki/features/vitals-and-rest.md), [combat view](../wiki/features/combat-view.md),
+[known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).

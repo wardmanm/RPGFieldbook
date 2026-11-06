@@ -136,7 +136,8 @@ when it is the only card there brings the hint back instead of leaving the view 
 `scrollToCard()`, which clears both the tab bar and the header. Ability Scores & Saves and Skills, added here like any other card, draw compact and
 read-only instead — `syncStatLock()` disables their score boxes and proficiency dots while they sit
 in `#cvList` ([Abilities & skills](abilities-and-skills.md)). **Vitals is the rail** (#103): the
-same dark card, laid out in the view as two columns — the portrait and its AC shield at the left,
+same dark card, laid out in the view as two columns — the portrait and its AC shield at the left
+(the same element, so a Flat AC's FLAT label and rim come with it, see [Armor & AC](armor-and-ac.md)),
 the death saves, badges, HP and hit-dice bars beside it (`#cvList .rail`, 45-combat.css), 96px for
 the portrait at ≤480px.
 
@@ -544,3 +545,4 @@ Settled in the [End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-d
 - 2026-11-04 — The fight header is three rows: the title and round centred between the arrows, the strip, and Combatants ▾ with End combat centred at the foot; the +N never shrinks to a sliver on a phone; the open table matches the header's width. → ledger L8605, #165
 - 2026-11-04 — Loot opens the trade window as Loot, You get alone (no You give, no switches), with Take loot; the row reads "Open loot…", then "Looted from …". → ledger L8645, #166
 - 2026-11-06 — The window's Undo recovery takes back what came back and leaves the fired ammunition spent, so the next fight starts from nothing fired. → ledger L9155, #170
+- 2026-11-06 — The rail's AC shield reads FLAT, with its own rim, for a Flat AC; the view's copy is the same element. → ledger L9101, #130

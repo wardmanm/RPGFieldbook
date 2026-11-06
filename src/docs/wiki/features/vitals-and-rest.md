@@ -37,8 +37,9 @@ tinted in dark mode while the cards' own rules draw it ([Sections & layout](../u
 Every id `recompute()`, `renderHP()` and the death-save code paint kept its id when it moved here.
 At ≤700px the portrait sits small at the left with the rest of the rail beside it.
 
-**The badges.** AC (the shield), Initiative, Speed and the proficiency bonus tap through to their breakdowns (`data-stat`); AC is
-[Armor & AC](armor-and-ac.md), and Speed is its base plus `speed` effects, then encumbrance.
+**The badges.** AC (the shield), Initiative, Speed and the proficiency bonus tap through to their breakdowns (`data-stat`); AC
+opens the Armor Class window instead, with its Calculated / Flat switch, and its shield reads FLAT
+while it is Flat ([Armor & AC](armor-and-ac.md)). Speed is its base plus `speed` effects, then encumbrance.
 **Size** is `charSize()`: the size the player chose, else the ancestry's (`raceDefSize()`), else
 Medium. Tapping it (or Enter/Space) opens `openSizePicker()` — a chooser, not a breakdown, with
 "From ancestry (…)" first and a carrying-capacity preview from `capacityFor()`. The same list,
@@ -416,3 +417,4 @@ came back.
 - 2026-11-06 — Centring held for a blank Temp: the bar's outer columns are identical, and Temp leaves
   the bar wherever a measured fit says it can't sit beside the numbers, not below a fixed width; the
   17px step went. → ledger L9501, #113
+- 2026-11-06 — Tapping AC opens the Armor Class window (Calculated / Flat); the shield reads FLAT for a Flat AC. → ledger L9101, #130

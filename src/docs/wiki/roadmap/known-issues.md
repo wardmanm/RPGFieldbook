@@ -278,18 +278,17 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
   seeded `speed` and `size`, `spellAbility`, and the legacy `ancestry`/`background` strings. Because
   `applyRace()` fills speed and size only when they are empty, *swapping* ancestry keeps the old ones.
   This goes against the provenance invariant. → [Grants & provenance](../architecture/grants-and-provenance.md)
-- **Editing a feature freezes a scaling use count.** (#132) `openFeatureForm()` saves `usesMax()` as a plain
-  number, replacing a by-level or formula maximum. → [Features & traits](../features/features-and-traits.md)
+- **Editing an item freezes a scaling use count.** (#132, the item half) `openItemForm()` saves `itemUsesMax()`
+  as a plain number, replacing a by-level or formula maximum; the feature form is fixed, and the item
+  form gets the same fix after the Grants redraw branch merges. → [Features & traits](../features/features-and-traits.md)
 - **The Size box shows as "set by hand" whenever the ancestry has a size** (#146), because `recompute()`
   highlights it whenever `character.size` is set and `applyRace()` fills that field. This
   contradicts L1711. → [Vitals & rest](../features/vitals-and-rest.md)
-- **A spell attack row can disagree with the cast dialog.** (#129) `attackNumbers()` adds `attack`/`damage`
-  effects to spell rows, but the Spellcasting card and `promptSpellAttack()` don't. → [Attacks & damage](../features/attacks-and-damage.md)
 - **Deleting a weapon's attack row by hand doesn't stick.** (#145) The next item save (`syncItemAttack()`) or
   rules update (`updResyncAttack()`) recreates it. → [Attacks & damage](../features/attacks-and-damage.md)
-- **Manual AC has no control.** (#130) Nothing sets `character.ac`, although ledger L239 describes a manual
-  fallback. `armorAC()` adds shields on top of a manual AC and lets several shields stack, and the
-  breakdown shows "Base AC 0" when the value is `null`. → [Armor & AC](../features/armor-and-ac.md)
+- **A Flat AC does not follow the Vitals lock yet.** (#130, phase 2) The Armor Class window's switch and Flat
+  box stay editable while Vitals is locked, until the Vitals & HP branch, which adds the lock, merges.
+  → [Armor & AC](../features/armor-and-ac.md)
 - **"Insert from rules pack" in the item form** (#147) copies no `category`, `type` or `src` stamp, so the item
   is filed by guesswork and the rules-update tool can match it only by name. → [Inventory](../features/inventory.md)
 - **Homebrew loaded alone reports "15 missing" for 14 entries** (#149): Warlock is counted by both the
@@ -351,11 +350,11 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 - **`docs.js` still tolerates `DATA_VERSIONS` naming XPHB, Humblewood, XGE, TCE and Homebrew** (#150)
   (`LEFT_FOR_PRIVATE`). The next release retakes `DATA_VERSIONS` from the pruned registry, after
   which the tolerance is inert: delete it then. → ledger L5426, and [Testing](../process/testing.md)
-- **Tests the ledger says exist but don't** (#150): unit tests for `usesMax()` and for the casting engine's
-  `pickSlotLevel()` and `parseDurationSec()` (L16, L179); an explicit assertion of the Defense effect
+- **Tests the ledger says exist but don't** (#150): unit tests for the casting engine's
+  `pickSlotLevel()` and `parseDurationSec()` (L179); an explicit assertion of the Defense effect
   (L625); a plain-modal-after-emblem-modal regression check (L3289). `pbValue()` is untested too.
-  (`autoSlots()`, `attackNumbers()`, Archery's effect and the Rage/Focus/Sorcery trackers are tested
-  now.)
+  (`autoSlots()`, `attackNumbers()`, `usesMax()`, Archery's effect and the Rage/Focus/Sorcery trackers
+  are tested now.)
   → [Testing](../process/testing.md)
 - **Invisible bytes in tracked files** (#150): `src/tests/tables.js` has four literal private-use
   characters. → [Building & CI](../process/building-and-ci.md)
@@ -499,3 +498,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — Google Fonts in the template (#144) is fixed: the fonts are embedded. → ledger L9357, #144
 - 2026-11-06 — The Hit points window's deferrals: no Undo (#175), Coins' version for 1.9.2, the estimated 220px threshold. → ledger L9441, #112, #113
 - 2026-11-06 — The estimated 220px threshold went: Temp's place is a measured fit now. → ledger L9501, #113
+- 2026-11-06 — #129 and #130 fixed (Include spells; Flat AC, best shield); #132 fixed for the feature form; what waits on phase 2 recorded (the Vitals lock, the item form); `usesMax()` is tested. → ledger L9101, #129, #130, #132

@@ -8,13 +8,14 @@ attack, attack to-hit and damage, and effective Max HP. An effect is `{target, v
 not a number (advantage, resistance, darkvision) is deliberately not an effect.
 
 **Code:** `contributions()`, `sumFx()`, `fxNeg()`, `abilFinal()`, `pbValue()`, `effMaxHP()`, `clampHP()`,
-`effSkill()`, `effSaveProf()`, `fxTargets()`, `autoSlots()` in `00-constants.js`; `recompute()`,
-`mark()` in `10-compute.js`; `usesMax()` in `20-lists.js`; `armorAC()`, `encState()`, `encSpeed()`
-in `25-origins-items.js`; `attackNumbers()`, `spellDC()`, `spellAtkBonus()` in `60-attacks.js`;
-`resolveResMax()`, `resolveResDie()`, `syncResources()` in `65-resources.js`;
-`openStatBreakdown()`, `collectFx()` in `80-modal-forms.js` · **Tests:** `sheet.js`
-(`contributions()`, `armorAC()`, encumbrance, HP bounds), `char-update.js` (`syncResources()`, die
-size, `clampHP()`) · **See also:** [Armor & AC](../features/armor-and-ac.md),
+`effSkill()`, `effSaveProf()`, `fxTargets()`, `fxSpellable()`, `FX_SPELL_TARGETS`, `autoSlots()` in
+`00-constants.js`; `recompute()`, `mark()` in `10-compute.js`; `usesMax()`, `usesShape()` in
+`20-lists.js`; `armorAC()`, `acTotal()`, `acEffects()`, `encState()`, `encSpeed()` in
+`25-origins-items.js`; `attackNumbers()`, `spellDC()`, `spellAtkBonus()`, `spellFxList()` in
+`60-attacks.js`; `resolveResMax()`, `resolveResDie()`, `syncResources()` in `65-resources.js`;
+`openStatBreakdown()`, `fxRow()`, `fxRowSync()`, `collectFx()` in `80-modal-forms.js` · **Tests:**
+`sheet.js` (`contributions()`, `armorAC()`, `acTotal()`, the spell sums, `usesMax()`, encumbrance,
+HP bounds), `char-update.js` (`syncResources()`, die size, `clampHP()`) · **See also:** [Armor & AC](../features/armor-and-ac.md),
 [Attacks & damage](../features/attacks-and-damage.md),
 [Class resources](../features/class-resources.md), [Grants & provenance](grants-and-provenance.md),
 [Abilities & skills](../features/abilities-and-skills.md)
@@ -22,14 +23,18 @@ size, `clampHP()`) · **See also:** [Armor & AC](../features/armor-and-ac.md),
 ## How it works
 
 **Where effects come from.** `contributions()` walks four lists and returns
-`{source, target, value}` for every effect that is live:
+`{source, target, value, kind, spells}` for every effect that is live:
 
-| Source | Live when |
-|---|---|
-| `features[]` | `enabled !== false` (the On/Off toggle) |
-| `inventory[]` | `equipped` |
-| `statuses[]` | `active !== false` |
-| `familiars[]` | `active` (named "(summoned)" in the breakdown) |
+| Source | `kind` | Live when |
+|---|---|---|
+| `features[]` | `feature` | `enabled !== false` (the On/Off toggle) |
+| `inventory[]` | `item` | `equipped` |
+| `statuses[]` | `status` | `active !== false` |
+| `familiars[]` | `familiar` | `active` (named "(summoned)" in the breakdown) |
+
+`kind` lets a Flat AC keep only what comes and goes, statuses and familiars
+([Armor & AC](../features/armor-and-ac.md)). `spells` is `true` only when the effect carries
+`spells: true`, the **Include spells** tick (#129).
 
 `value` goes through `num()`, so an effect is an integer. `sumFx(target, contribs)` adds up one
 target. The targets are exactly those `fxTargets()` lists, which is also the effect editor's
@@ -45,7 +50,17 @@ dropdown:
 | `save.<abil>`, `skill.<skill>` | that save or skill |
 | `check` | every ability check: each skill, initiative and passive Perception; never an ability modifier or a save |
 
-`collectFx()` drops a zero-valued row when an effect is saved.
+**Include spells.** An effect is `{target, value}`, plus an optional `spells: true` on the six
+generic targets (`FX_SPELL_TARGETS`, `fxSpellable()`): `attack`, `damage` and their `.melee` /
+`.ranged` forms. Unticked, such an effect counts for weapon rows only; ticked, for spells too, by
+way of `spellFxList()` ([Spells](../features/spells.md)). It is still a number: the flag says where
+it applies, not a new kind of effect. In the editor, `fxRow()` draws the tick under the row, shown
+only for those six targets; one delegated `change` listener on the modal (`fxRowSync()`) shows and
+hides it as the target changes, because the four editors wire their rows apart. `collectFx()`
+writes `spells: true` only for a ticked row with one of the six targets, so a hidden tick is never
+saved, and drops a zero-valued row. Everything that copies an effect copies the object whole (a
+feat grant, the choices path, `updProject()`, the item finder, a granted item, the trade window,
+`migrate()`), so the flag travels.
 
 **`recompute()`** takes `contributions()` once and passes it down (`abilFinal(k, c)`,
 `pbValue(c)`, `armorAC(c)`), then in order:
@@ -56,7 +71,8 @@ dropdown:
   proficiency bonus if proficient (the player's own dot or a grant) plus `save.x` effects;
 - for each skill: modifier + proficiency bonus (level ≥ 1) + proficiency bonus again (expertise) +
   `skill.x` effects + `check` effects;
-- AC is `armorAC(c).base` plus `ac` effects. Initiative is the typed value, or the DEX modifier when
+- AC is `acTotal(c)`: `armorAC(c).base` plus every `ac` effect, or in Flat the typed number plus the
+  status and familiar ones (`acEffects()`), marked from those effects. Initiative is the typed value, or the DEX modifier when
   blank, plus `init` and `check` effects (initiative is a Dexterity check);
 - speed is the typed speed plus `speed` effects, **then** encumbrance through `encSpeed()`, which is
   applied last and outside the engine;
@@ -82,10 +98,10 @@ supplied a proficiency, and each contribution by source name, with a penalty's l
 that ability adds. The proficiency bonus shows "Level N: +2" as its base.
 
 **Elsewhere, the same pattern:** `attackNumbers(a)` (the better of STR/DEX for finesse, proficiency
-if set, `atkMisc`, `attack` + `attack.<kind>` effects, and `spell.attack` on a spell attack row
-only; damage adds the modifier if `addAbilityDamage`, `dmgMisc`, `damage` + `damage.<kind>`),
-`spellDC()`/`spellAtkBonus()`, which the card, save rows, the cast window and the print sheet all
-read, and `effMaxHP()`. Every HP change ends in `clampHP()`. AC's base is covered in
+if set, `atkMisc`; a weapon row adds every `attack` + `attack.<kind>` effect and damage adds the
+modifier if `addAbilityDamage`, `dmgMisc`, `damage` + `damage.<kind>`; a spell row takes
+`spellFxList()` instead), `spellDC()`/`spellAtkBonus()`, which the card, save rows, the cast window
+and the print sheet all read, and `effMaxHP()`. Every HP change ends in `clampHP()`. AC's base is covered in
 [Armor & AC](../features/armor-and-ac.md). Magic armor still needs an `ac` effect for its bonus.
 
 **Use counts that scale.** `usesMax(f)` resolves a feature's `uses.max`:
@@ -98,7 +114,9 @@ read, and `effMaxHP()`. Every HP change ends in `clampHP()`. AC's base is covere
 | `{formula:"wis"}`, `"cha+1"`, … (or the bare string) | that ability's modifier, effects included, ± N, **minimum 1** |
 
 It is re-resolved at every render, so it follows ability changes (Night Domain's Ward of Shadows is
-`{formula:"wis"}`). Class resource pools use the same grammar through `resolveResMax()`, with two
+`{formula:"wis"}`). `usesShape()` names which of the four a maximum is, for `usesMax()` and for the
+feature form's hint; editing a feature keeps a scaling maximum (`usesFromForm()`, see
+[Features & traits](../features/features-and-traits.md)). Class resource pools use the same grammar through `resolveResMax()`, with two
 differences. `level` there is **the owning class's level**, and anything unresolvable is 0, which
 removes the pool. `resolveResDie()` sizes a pool's die the same way (`{byLevel:[sides…]}`, or a
 fixed `8`/`"d8"`).
@@ -111,8 +129,9 @@ fixed `8`/`"d8"`).
   ability boosts on feats (Sun Touched, Moonlit) all stay as prose or glossary. That is correct,
   not a gap, so do not "fix" it.
 - **An effect is global to its target.** An equipped item's `attack` or `damage` effect reaches every
-  attack row, spell rows included, so a bonus scoped to one weapon is not an effect: a weapon's own
-  `+N` is its `atkMisc`/`dmgMisc`, and a bonus for bows or unarmed strikes stays prose (#74).
+  weapon row (and every spell row too when ticked Include spells), so a bonus scoped to one weapon
+  is not an effect: a weapon's own `+N` is its `atkMisc`/`dmgMisc`, and a bonus for bows or unarmed
+  strikes stays prose (#74).
 - **An effect is always on while its source is live.** Nothing can say "against one attack", "once
   per rest" or "while unarmored", so a bonus the book gives only in a moment is prose, not an effect:
   Quarterstaff of the Acrobat's Reaction, the Arrow-Catching Shield's +2 against ranged attacks, the
@@ -160,6 +179,8 @@ fixed `8`/`"d8"`).
 |---|---|---|
 | What an effect can express | Numeric modifiers only (`{target, value}`) | Modelling advantage, resistance, senses and alternate speeds as effects: they stay prose or glossary, verified NOT gaps (L2581, CLAUDE.md) |
 | How `uses.max` scales | A number, `byLevel`, or a `formula` re-resolved at render | — (L16) |
+| Spells and the generic to-hit and damage effects (#129) | A per-effect `spells: true` (the Include spells tick), unticked by default, so every existing effect is weapons only | Ticked by default: the card and the cast window would move on every sheet with such an effect. A new target per case: a second copy of six targets |
+| Where an effect came from (#130) | A `kind` on each contribution (feature, item, status, familiar) | Filtering the source lists again in each reader: four walks to keep in step |
 | Where encumbrance applies | After the effects, outside the engine | As a speed effect: two outcomes replace speed and one is not numeric (code comment, `10-compute.js`) |
 | A bonus scoped to one weapon (#74) | The weapon's `atkMisc`/`dmgMisc`, or prose on an item with no weapon | An `attack`/`damage` effect: it reaches every row, and on a weapon it doubled the row's own `atkMisc` |
 | A bonus that holds only in a moment (#76) | Prose, like advantage and resistance | An effect: it is on whenever the source is live, so a once-per-rest Reaction read as +5 AC all day |
@@ -172,8 +193,6 @@ fixed `8`/`"d8"`).
 
 ## Open
 
-- `usesMax()` has no suite coverage. The ledger records it as unit-tested, but no test in
-  `src/tests/` calls it now.
 - A feat that lets the player choose an ability to boost is applied by hand. There is no
   feat-level ability-choice mechanism, though it could mirror the skill-choice path.
 
@@ -191,3 +210,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — `spell.attack` and `spell.dc` targets; `spellDC()`/`spellAtkBonus()` add them and the card paints through them. → ledger L4568, #77
 - 2026-09-29 — a `check` target reaches every skill, initiative and passive Perception; the proficiency bonus is marked and tappable. → ledger L4689, #79
 - 2026-10-13 — A number any one effect lowers is marked red with ▼ (`fxNeg()`, `.fx-neg`), even when a bonus outweighs it; breakdowns redden the penalty's line. → ledger L5700, #89
+- 2026-11-06 — Contributions carry their `kind` and the `spells` flag; Include spells on the six generic targets; AC is `acTotal()`; `usesMax()` gets its checks and `usesShape()`. → ledger L9101, #129, #130, #132
