@@ -89,7 +89,7 @@ function grantItemByName(name,qty,sid){
   }
   if(def)stampSrc(it,def,"item","items");   /* no def = a named grant with no matching item entry */
   character.inventory.push(it);
-  if(it.weapon)addAttackForItem(it);
+  equipNewWeapon(it);   /* as the finder's: equipped, with its attack row (#128) */
   logGrant(sid,{dir:"+",text:`${name} ×${qty}`});
 }
 function addGrantGold(amt,sid){
@@ -180,17 +180,27 @@ function runExtraChoices(pending){
       const ei=num(div.dataset.eqi),sel=div.querySelector('[data-eq-opt]:checked'),x=equips[ei];
       if(x&&sel)applyEquipOption(x.options[num(sel.dataset.eqOpt)],x.sid);
     });
-    closeModal();renderInventory();renderAttacks();renderFeatures();renderAllRT();recompute();scheduleSave();
+    /* the picks can grant gold and items: through the one redraw (#153) */
+    closeModal();renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
     /* a picked feat's own skill choices: the next window, one at a time (#63) */
     if(next.length)runExtraChoices(next);
   }));
 }
 
-/* Every class, species and background change ends here. The Class and
+/* Every class, species and background change ends here: adding, changing or
+   removing one, a level up or down, a subclass, and the Done of each choice
+   window they open (commitChoices(), runExtraChoices()). The Class and
    Ancestry & Background cards it once drew are gone (#103): their controls
    live in the sheet header — the class line, its flyout and the species and
-   background windows — so all this does now is repaint the header. */
+   background windows — so it repaints the header. And what a change grants or
+   takes back lands beyond the header, so it repaints that too, or it shows
+   only after a reload (#153, #154): items in the inventory, gold in the coin
+   boxes, languages as Bio chips. The caller's renderFeatures() and
+   recompute() do the features, the numbers, the attack rows and the
+   resources. renderAll(), applyTheme() and refreshRulesUI(), which want the
+   header alone, call renderSheetHead(). */
 function renderClassRace(){
   renderSheetHead();
+  renderInventory();renderCoins();renderChipsAll();
 }
 

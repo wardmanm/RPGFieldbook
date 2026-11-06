@@ -33,10 +33,10 @@ runs, is Humblewood, light, rough, word tabs.
 | `data-tabs` | `icons`, `labels` | `settings.tabIcons` (Icon tabs) | `labels` |
 
 `applyTheme()` also writes the wordmark (`#wmMain` / `#wmSub`: "Humblewood / The Fieldbook" or
-"D&D / Character Sheet"), `document.title`, the Race/Ancestry word in the origin card's heading
-(`#craceWord`, via `raceTerm()`) and the sun/moon glyph on the theme button. It then redraws the
-class and ancestry chips, whose labels use the same word. It runs at boot, on every character load,
-create and import, and on each Appearance control.
+"D&D / Character Sheet"), `document.title` and the sun/moon glyph on the theme button, and repaints
+the sheet header (`renderSheetHead()`), whose "+ Race" / "+ Ancestry" follows the skin through
+`raceTerm()`. It runs at boot, on every character load, create and import, and on each Appearance
+control.
 
 ### Skins follow the system
 
@@ -260,3 +260,4 @@ removed".
 - 2026-10-25 — `--on-accent` joins every palette and the rail; every rule with text on an accent fill uses it. → ledger L7401, #47
 - 2026-10-28 — The emblem coverage check walks `srd52` alone; homebrew's moves to the private suite with the pack. → ledger L7858, #125
 - 2026-11-04 — `--sheet`, `--sheet-edge`, `--sheet-lift`, `--sheet-gutter` and `--parch` join every palette, and the parchment ink each skin, for the journal's page styles. → ledger L8699, #167
+- 2026-11-06 — `applyTheme()` repaints the header alone (`renderSheetHead()`), now that `renderClassRace()` also redraws what a grant touches; the stale `#craceWord` line is gone. → ledger L9101, #153

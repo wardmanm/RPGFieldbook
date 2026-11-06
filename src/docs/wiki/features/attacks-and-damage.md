@@ -9,7 +9,8 @@ alive through edits, rules updates and old saves without ever overwriting what t
 **Code:** `attackNumbers()`, `attackDamageStr()`, `extraDamageList()`, `renderAttacks()`,
 `openAttackForm()`, `openAttackBreakdown()`, `carryAttackLinks()`, `syncSpellAttack()`,
 `detectSpellAttack()`, `spellDamageFromText()`, `ensureSpellAttacks()` in `60-attacks.js` ·
-`attackVisible()`, `isEquippable()` in `25-origins-items.js` · `addAttackForItem()` in `85-browse.js` ·
+`attackVisible()`, `isEquippable()` in `25-origins-items.js` · `addAttackForItem()`, `equipNewWeapon()` in `85-browse.js` ·
+`newCharacter()` in `75-home-theme.js` ·
 `syncItemAttack()` in `80-modal-forms.js` · `updResyncAttack()`, `updAtkEdited()`, `stampAtkGen()` in
 `72-char-update.js` · `migrateWeaponEquip()` in `71-char-io.js` · **Data:** an item's `weapon` object
 ([rules-schema §6.8](../../../../docs/rules-schema.md)) · **Tests:** `sheet.js`, `char-update.js`
@@ -72,9 +73,16 @@ Finesse, Light, Thrown · Mastery: Nick") are copied onto the row as text; nothi
 **Equipping.** `isEquippable()` is true for effects, armor *or* a weapon. `attackVisible(a)` gates only
 rows with an `itemId` whose item still exists, on that item's `equipped`; hand-made rows and spell rows
 always show, and so does an orphan (its item was deleted, so nothing could ever re-equip it). Rows are
-hidden, never removed. The finder adds weapons already equipped (`equipped:!!x.weapon`).
-`migrateWeaponEquip()`, run at the end of `migrate()`, equips every weapon once and records
-`wpnEquipInit` — pre-existing weapons were all `equipped:false` because no control existed.
+hidden, never removed. **A weapon arrives equipped, with its row showing** (#128): the finder
+(`addLibraryItems()`) and a grant (`grantItemByName()`, starting equipment) share one path,
+`equipNewWeapon()`, which equips it and calls `addAttackForItem()`. On the item form a new item's
+Equipped box follows its Weapon box and Insert from rules pack (on for a weapon, off for anything
+else, so a shield inserted after a sword stays unequipped) until the player sets Equipped; an item
+being edited keeps what it has. Armour and shields arrive unequipped (Mike: #130
+changes shield stacking first). `migrateWeaponEquip()`, run at the end of `migrate()`, equips every
+weapon once and records `wpnEquipInit` — pre-existing weapons were all `equipped:false` because no
+control existed. `newCharacter()` sets `wpnEquipInit` on the sheet it creates, so the pass never
+runs on a new sheet.
 
 **Editing.** `openAttackForm()` rebuilds its record from the boxes, so `carryAttackLinks()` copies the
 four `ATTACK_LINK_FIELDS` (`itemId`, `spellId`, `source`, `save`) across, and the save carries `genFp`.
@@ -123,7 +131,8 @@ longer allows, leaving orphan rows alone.
   `syncItemAttack()`); otherwise editing the weapon makes its own attack look hand-edited forever.
 - **Hidden, never removed** on unequip; orphans stay visible.
 - **`wpnEquipInit` is never set by `blankChar()`** — `migrate()` builds from `blankChar()`, so every
-  old sheet would arrive pre-marked and skip the migration. A test asserts it.
+  old sheet would arrive pre-marked and skip the migration. A test asserts it. `newCharacter()` sets
+  it, since a new sheet's weapons arrive equipped.
 - **A spell row is derived.** Anything it shows must be a field on the spell; the row has no editor.
 - `extraDamage` and `genFp` are optional and absent when empty, so old saves load byte-identical.
 
@@ -167,6 +176,11 @@ longer allows, leaving orphan rows alone.
 - **Every literal-id `getElementById` lookup in a form is checked by `rules-data.js`** against the
   ids the app renders; a generated id is not "declared", which is why clearing the spell form's list
   goes through `clearXDmgField()`. → L2863
+- **Starting weapons had no attack row until a reload (#128).** Only the finder equipped a weapon on
+  arrival; a grant and a new item on the form left it `equipped:false`. A new character's weapons
+  were equipped only on its first reload, by `migrateWeaponEquip()` (`newCharacter()` skips
+  `migrate()` and never set `wpnEquipInit`), and that pass also re-equipped any weapon the player
+  had unequipped before it. → L9101
 
 ## Decisions
 
@@ -178,6 +192,8 @@ longer allows, leaving orphan rows alone.
 | Auto-detect a second damage type? | No — leave the box blank | A pattern: phrased too many ways for a guess to beat a blank |
 | Heal old sheets' damage-free rows | A targeted sweep, `dropDamagelessSpellRows()` | A blanket re-sync: new uids, collapse state lost on rows that were fine |
 | What happens to a weapon's attack on unequip? | Hidden | Removed: throws away an attack the player tuned |
+| How a new weapon arrives (#128) | Equipped with its row, from the finder, a grant or a new item on the form; armour and shields unequipped (Mike) | Equipped from the finder only: starting weapons showed no row until a reload. Armour and shields too: #130 changes shield stacking and must not go live first |
+| How the item form equips a new weapon (#128) | Its Equipped box follows Weapon until the player sets Equipped | Save equipping it behind an unticked box: the form would show one thing and save another |
 | Order of starred attacks | Insertion order | Sorting: the list is short and hand-built, so a row stays where it was put |
 | Should `attackNumbers()` skip the effects of the item that owns the row? (#74) | No: effects are global, a weapon's own bonus is its `atkMisc`/`dmgMisc`, and the packs are fixed | Skipping them: fixes only the weapon's own row on an old sheet (every other row keeps the +N), and makes an effect the player typed on a weapon mean one thing on its row and another on the rest |
 
@@ -188,9 +204,6 @@ longer allows, leaving orphan rows alone.
   (`spellAtkBonus()`, damage bonus 0) do not — with an Archery-style `attack.ranged` effect, a Fire
   Bolt row reads 2 higher than the dialog. `spell.attack` reaches all three alike (#77). Verified in
   the code, not in a browser.
-- **Only the finder adds weapons equipped.** `grantItemByName()` and a new item from the form start
-  `equipped:false`, so their attack is hidden until equipped. A brand-new character's starting weapons
-  are equipped by `migrateWeaponEquip()` on its first reload; one granted after that is not.
 - **Deleting a weapon's row is not sticky:** the next item save or rules update recreates it.
   Unequipping is the way to hide it.
 - `syncSpellAttack()` copies `sp.atkNote` into the row's notes, but nothing in the app or the packs
@@ -223,3 +236,4 @@ longer allows, leaving orphan rows alone.
 - 2026-10-13 — A to-hit, damage or save DC an effect lowers is red with ▼; the breakdown reddens that effect's line. → ledger L5700, #89
 - 2026-10-23 — The card moves, unchanged, from the Sheet to the top of the Inventory tab, its note, combat-view place and #97 pencil with it. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired; `.inv-sec-head` gives the card its heading style only. → ledger L6804, #103
+- 2026-11-06 — A weapon arrives equipped with its row from a grant and from the item form, as from the finder, through `equipNewWeapon()`; `newCharacter()` sets `wpnEquipInit`. Armour and shields arrive unequipped. → ledger L9101, #128

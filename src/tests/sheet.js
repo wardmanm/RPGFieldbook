@@ -9153,4 +9153,183 @@ async function t181AddClassUndo() {
   }
 }
 
+/* ---------- #153 #154 #128: what a grant gives shows at once, with no reload ----------
+   Gold granted by a species, background or class never reached the coin boxes,
+   and a granted language never became a Bio pill, until a reload (#153, #154):
+   the add, change and remove flows changed the character and redrew only the
+   header and features. Driven through the real flows (applyRace, removeRace,
+   applyBackground, removeBackground, addClass with its equipment picker's Done,
+   removeClass) against recorder elements, and what is checked is what the
+   screen holds afterwards. Synchronous on purpose, and BEFORE the async chain
+   below: code after that call runs while t118EndToEnd() is suspended mid
+   level-up with its doubles in place. Everything swapped is put back. */
+{
+  const noop = () => {};
+  let els = {};
+  /* A recorder: innerHTML is kept (and clears what was appended), appendChild
+     and insertAdjacentHTML collect HTML, listeners are kept to be fired, and
+     firstElementChild is the element itself, so renderInventory()'s rows land
+     in its list. */
+  const rec = id => {
+    const t = {id: id || '', value: '', checked: false, disabled: false, textContent: '', title: '', placeholder: '',
+      _h: '', _kids: [], _on: {}, style: {setProperty: noop}, dataset: {}, children: [], options: [],
+      classList: {toggle: noop, add: noop, remove: noop, contains: () => false},
+      addEventListener: (type, fn) => { (t._on[type] = t._on[type] || []).push(fn); },
+      appendChild: c => { t._kids.push(c && typeof c.__html === 'string' ? c.__html : ''); return c; },
+      insertAdjacentHTML: (pos, h) => { t._kids.push(String(h)); },
+      querySelector: () => null, querySelectorAll: () => [], closest: () => null,
+      getBoundingClientRect: () => ({top: 0, bottom: 0, left: 0, right: 0, height: 0, width: 0}),
+      setAttribute: noop, removeAttribute: noop, hasAttribute: () => false, focus: noop, remove: noop};
+    const p = new Proxy(t, {
+      get: (o, k) => k === 'innerHTML' ? o._h : k === '__html' ? o._h + o._kids.join('')
+        : k === 'firstElementChild' ? p : (k in o ? o[k] : noop),
+      set: (o, k, v) => { if (k === 'innerHTML') { o._h = String(v); o._kids = []; } else o[k] = k === 'textContent' ? String(v) : v; return true; },
+    });
+    return p;
+  };
+  const el = id => els[id] || (els[id] = rec(id));
+  const screen = id => (els[id] ? els[id].__html : '');
+  const fire = (id, type) => (el(id)._on[type] || []).slice().forEach(fn => fn({target: el(id)}));
+  /* the equipment picker's radio: which option the player left checked */
+  let equipPick = null;
+  const doc = ctx.document;
+  const keep = {gid: doc.getElementById, ce: doc.createElement, qsa: doc.querySelectorAll, ch: X.character, save: ctx.scheduleSave};
+  doc.getElementById = el;
+  doc.createElement = () => rec();
+  doc.querySelectorAll = sel => (sel === '[data-ctype="equip"]' && equipPick !== null)
+    ? [{dataset: {eqi: '0'}, querySelector: () => ({dataset: {eqOpt: String(equipPick)}})}] : [];
+  ctx.scheduleSave = noop;
+  const flow = fn => { els = {}; let err = null; try { fn(); } catch (e) { err = e; } return err; };
+  const why = e => e && String(e.stack || e).split('\n').slice(0, 3).join(' | ');
+  const gp = n => new RegExp('data-coin="gp" value="' + n + '"').test(screen('coins'));
+  const srdItems = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'items.json'), 'utf8')).items;
+  try {
+    X.resetRules();
+    X.mergeRules({system: 'T153',
+      races: [{name: 'Testfolk', languages: 'Common, Birdfolk', equipmentGrants: [{items: [{name: 'Lucky Pebble'}], gold: 3}]},
+              {name: 'Otherfolk', languages: 'Sylvan'}],
+      backgrounds: [{name: 'Wanderer', languages: 'Auran', equipmentGrants: [{items: [{name: 'Walking Stick'}], gold: 10}]}],
+      classes: [{name: 'Tester', hitDie: 'd8', levels: {},
+        equipmentGrants: [{choose: [{label: 'A', items: [{name: 'Club'}], gold: 15}, {label: 'B', gold: 50}]}]}],
+      items: srdItems.filter(x => ['Club', 'Longsword', 'Shield', 'Chain Mail'].includes(x.name))}, 'test-153');
+    X.character = X.blankChar(); X.character.system = 'dnd'; X.character.name = 'Grant';
+    const C = () => X.character;
+
+    // A. add an ancestry: its gold, its languages and its item, all on screen
+    let err = flow(() => { ctx.applyRace('Testfolk', null, {}); });
+    ck('#153 adding a species that grants 3 gp: the GP box shows 3 at once', !err && gp(3), why(err) || screen('coins'));
+    ck('#154 ...its language is a pill on the Bio tab at once', /BIRDFOLK/.test(screen('bioLanguages')), screen('bioLanguages'));
+    ck('#153 ...and its item is in the inventory at once', /Lucky Pebble/.test(screen('inventoryList')), screen('inventoryList').slice(0, 200));
+
+    // B. change it: the old one's pill, gold and item leave, the new one's pill arrives
+    err = flow(() => { ctx.applyRace('Otherfolk', null, {}); });
+    ck('#154 changing the species: the old language pill is gone and the new one is there',
+       !err && !/BIRDFOLK/.test(screen('bioLanguages')) && /SYLVAN/.test(screen('bioLanguages')), why(err) || screen('bioLanguages'));
+    ck('#153 ...the old species\' gold is taken back on screen (GP 0)', gp(0), screen('coins'));
+    ck('#153 ...and its item leaves the inventory', !/Lucky Pebble/.test(screen('inventoryList')) && screen('inventoryList') !== '', screen('inventoryList').slice(0, 200));
+
+    // C. remove it
+    err = flow(() => { ctx.removeRace(); });
+    ck('#154 removing the species takes its pill off the Bio tab at once', !err && !/SYLVAN/.test(screen('bioLanguages')) && screen('bioLanguages') !== '', why(err) || screen('bioLanguages'));
+
+    // D. a background, added and removed
+    err = flow(() => { ctx.applyBackground('Wanderer', {}); });
+    ck('#153 adding a background that grants 10 gp: the GP box shows 10 at once', !err && gp(10), why(err) || screen('coins'));
+    ck('#154 ...its language is a pill at once', /AURAN/.test(screen('bioLanguages')), screen('bioLanguages'));
+    ck('#153 ...and its item is in the inventory', /Walking Stick/.test(screen('inventoryList')), screen('inventoryList').slice(0, 200));
+    err = flow(() => { ctx.removeBackground(); });
+    ck('#153 removing it: GP back to 0 on screen', !err && gp(0), why(err) || screen('coins'));
+    ck('#154 ...its pill gone', !/AURAN/.test(screen('bioLanguages')) && screen('bioLanguages') !== '', screen('bioLanguages'));
+    ck('#153 ...and its item gone', !/Walking Stick/.test(screen('inventoryList')) && screen('inventoryList') !== '', screen('inventoryList').slice(0, 200));
+
+    // E. a class whose starting equipment is a choice: the picker's Done
+    err = flow(() => {
+      equipPick = 0;
+      ctx.addClass('Tester', 1);
+      if (!(el('xchDone')._on.click || []).length) throw new Error('the equipment picker did not open');
+      fire('xchDone', 'click');
+    });
+    ck('#153 a class\'s equipment picker, option A with 15 gp: its Done shows GP 15 at once', !err && gp(15), why(err) || screen('coins'));
+    ck('#153 ...and the Club in the inventory', /Club/.test(screen('inventoryList')), screen('inventoryList').slice(0, 200));
+    equipPick = null;
+
+    // F. the player added 5 gp of their own; removing the class takes back exactly its 15
+    C().coins.gp = 20;
+    err = flow(() => { ctx.removeClass(0); });
+    ck('#153 removing the class: the box shows what is left, GP 5, at once', !err && gp(5), why(err) || screen('coins'));
+    ck('#153 ...and the Club leaves the inventory', !/Club/.test(screen('inventoryList')) && screen('inventoryList') !== '', screen('inventoryList').slice(0, 200));
+    // ...and when the player has spent some of it, the revert stops at 0 and the box says so
+    err = flow(() => { equipPick = 0; ctx.addClass('Tester', 1); fire('xchDone', 'click'); });
+    equipPick = null; C().coins.gp = 5;
+    err = err || flow(() => { ctx.removeClass(0); });
+    ck('#153 removing it after 10 of its 15 gp were spent: GP 0 on screen, never below', !err && gp(0) && C().coins.gp === 0, why(err) || [screen('coins'), C().coins.gp]);
+
+    /* #128: a weapon that arrives outside the finder (starting equipment, a
+       grant, a new item on the form) arrives the way the finder's does:
+       equipped, with its attack row showing. Weapons only (Mike): granted
+       armour and shields stay as they were, unequipped. */
+    const by = n => C().inventory.find(i => i.name === n);
+    const rows = it => C().attacks.filter(a => a.itemId === (it && it.id));
+    const shows = it => rows(it).length === 1 && X.attackVisible(rows(it)[0], C().inventory);
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    X.grantItemByName('Longsword', 1, 'class:Tester');
+    ck('#128 a granted Longsword arrives equipped, its attack row showing', by('Longsword').equipped === true && shows(by('Longsword')), [by('Longsword'), C().attacks]);
+    X.grantItemByName('Shield', 1, 'class:Tester'); X.grantItemByName('Chain Mail', 1, 'class:Tester');
+    ck('#128 ...a granted Shield and Chain Mail do not: weapons only', by('Shield').equipped === false && by('Chain Mail').equipped === false && rows(by('Shield')).length === 0);
+    let thrown = null;
+    try { X.grantItemByName('Imaginary Blade', 1, 'class:Tester'); } catch (e) { thrown = e; }
+    ck('#128 ...a granted name with no pack entry stays a plain, unequipped item with no row', !thrown && by('Imaginary Blade').equipped === false && rows(by('Imaginary Blade')).length === 0, why(thrown));
+    X.grantItemByName('Longsword', 1, 'class:Tester');
+    ck('#128 ...granted again by the same source it stacks: two Longswords, still one row', by('Longsword').qty === 2 && rows(by('Longsword')).length === 1, [by('Longsword'), rows(by('Longsword'))]);
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    X.addLibraryItems(X.rules.items.filter(x => x.name === 'Longsword' || x.name === 'Shield'), null, null, 1);
+    ck('#128 the finder, sharing the path: its Longsword equipped with one row, its Shield not',
+       by('Longsword').equipped === true && shows(by('Longsword')) && by('Shield').equipped === false, C().inventory);
+
+    // a class's starting weapon, through the picker's Done
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    err = flow(() => { equipPick = 0; ctx.addClass('Tester', 1); fire('xchDone', 'click'); });
+    equipPick = null;
+    ck('#128 a class\'s starting Club arrives equipped, its row showing, with no reload', !err && !!by('Club') && by('Club').equipped === true && shows(by('Club')), why(err) || by('Club'));
+
+    // the item form: a NEW item's Equipped follows its Weapon box until the player sets it
+    const at = n => String(X.rules.items.findIndex(x => x.name === n));
+    const last = () => C().inventory[C().inventory.length - 1] || {};
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    err = flow(() => { ctx.openItemForm(); el('iName').value = 'Rusty Pick'; fire('iIsWeapon', 'click'); el('iWDice').value = '1d6'; fire('iSave', 'click'); });
+    ck('#128 a new item ticked Weapon on the form arrives equipped, its row showing', !err && last().name === 'Rusty Pick' && last().equipped === true && shows(last()), why(err) || last());
+    err = flow(() => { ctx.openItemForm(); el('iName').value = 'Spare Pick'; fire('iIsWeapon', 'click'); el('iWDice').value = '1d6'; fire('iEquip', 'click'); fire('iSave', 'click'); });
+    ck('#128 ...unless the player unticks Equipped: then it is saved unequipped', !err && last().name === 'Spare Pick' && last().equipped === false, why(err) || last());
+    err = flow(() => { ctx.openItemForm(); el('iLib').value = at('Longsword'); fire('iLib', 'change'); el('iName').value = 'Longsword'; el('iWDice').value = '1d8'; fire('iSave', 'click'); });
+    ck('#128 a new item filled from the pack\'s Longsword arrives equipped', !err && last().name === 'Longsword' && last().equipped === true && shows(last()), why(err) || last());
+    err = flow(() => { ctx.openItemForm(); el('iLib').value = at('Shield'); fire('iLib', 'change'); el('iName').value = 'Shield'; fire('iSave', 'click'); });
+    ck('#128 ...one filled from the pack\'s Shield does not', !err && last().name === 'Shield' && last().equipped === false, why(err) || last());
+    /* final review: a mis-pick, a Longsword inserted and then a Shield, must
+       not save the shield equipped (weapons only, until #130) */
+    err = flow(() => { ctx.openItemForm(); el('iLib').value = at('Longsword'); fire('iLib', 'change'); el('iLib').value = at('Shield'); fire('iLib', 'change'); el('iName').value = 'Shield'; el('iWDice').value = '1d8'; fire('iSave', 'click'); });
+    ck('#128 ...nor one filled from a Longsword and then a Shield: it is saved unequipped', !err && last().name === 'Shield' && last().equipped === false, why(err) || last());
+    const kept = {id: 'kp', name: 'Old Axe', qty: 1, description: '', effects: [], equipped: false, weapon: {kind: 'melee', ability: 'str', dice: '1d6', damageType: 'slashing', notes: ''}};
+    C().inventory.push(kept);
+    err = flow(() => {
+      ctx.openItemForm(kept);
+      [['iName', 'Old Axe'], ['iWKind', 'melee'], ['iWAbil', 'str'], ['iWDice', '1d6'], ['iWType', 'slashing']].forEach(([id, v]) => { el(id).value = v; });
+      fire('iSave', 'click');
+    });
+    ck('#128 ...and editing a weapon the player unequipped leaves it unequipped', !err && C().inventory.find(i => i.id === 'kp').equipped === false, why(err) || C().inventory.find(i => i.id === 'kp'));
+
+    // a new sheet: the one-time equip pass is already done, so a reload never re-equips
+    err = flow(() => { ctx.newCharacter('Fresh', 'dnd'); });
+    ck('#128 newCharacter() marks the one-time weapon pass done', !err && C().wpnEquipInit === 1, why(err) || C().wpnEquipInit);
+    X.grantItemByName('Longsword', 1, 'class:Tester'); by('Longsword').equipped = false;
+    const reloaded = X.migrate(JSON.parse(JSON.stringify(C())));
+    ck('#128 ...so a weapon the player unequipped is still unequipped after a reload',
+       reloaded.inventory.find(i => i.name === 'Longsword').equipped === false, reloaded.inventory);
+  } catch (e) {
+    ck('#153 the grants-redraw block ran without throwing', false, why(e));
+  } finally {
+    doc.getElementById = keep.gid; doc.createElement = keep.ce; doc.querySelectorAll = keep.qsa;
+    ctx.scheduleSave = keep.save; X.character = keep.ch; X.resetRules();
+  }
+}
+
 t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(t168Ask).then(t181AddClassUndo).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

@@ -27,6 +27,7 @@ function newCharacter(name,system){
   c.appVersion=APP_VERSION;   // safe here: runtime, long after 30-version.js has run
   c.ammoInit=AMMO_PASS;   // a new sheet has nothing for the one-time ammo pass to migrate (never in blankChar — see wpnEquipInit)
   c.langLifted=true;   // a new sheet has no "Languages:" line in Proficiencies to lift (never in blankChar — see ammoInit above)
+  c.wpnEquipInit=1;   // its weapons arrive equipped (#128), so the one-time pass has none to equip; unset, the first reload re-equipped one the player had unequipped
   luAbandon();   /* #101: a level-up belongs to the sheet it started on */
   character=c;activeId=c.id;
   /* as finishImport(): listed only once stored, and a refusal says so (#81) */
@@ -137,7 +138,7 @@ function applyTheme(){
   if(wmM)wmM.textContent=wm.main; if(wmS)wmS.textContent=wm.sub;
   document.title=wm.title;
   /* the header's "+ Species" / "+ Race" follows the skin (raceTerm()) */
-  if(document.getElementById("sheetHead"))renderClassRace();
+  if(document.getElementById("sheetHead"))renderSheetHead();
   const on=t==="dark";
   document.getElementById("themeIcon").innerHTML=on
     ?'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'

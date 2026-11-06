@@ -294,10 +294,6 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 - **The Size box shows as "set by hand" whenever the ancestry has a size** (#146), because `recompute()`
   highlights it whenever `character.size` is set and `applyRace()` fills that field. This
   contradicts L1711. → [Vitals & rest](../features/vitals-and-rest.md)
-- **Weapons granted outside the item finder arrive unequipped** (#128), so their attack row is hidden.
-  `grantItemByName()` and a new item from `openItemForm()` start with `equipped:false`. A brand-new
-  character's starting weapons get equipped only on its first reload, by `migrateWeaponEquip()`,
-  because `newCharacter()` skips `migrate()`. → [Attacks & damage](../features/attacks-and-damage.md)
 - **A spell attack row can disagree with the cast dialog.** (#129) `attackNumbers()` adds `attack`/`damage`
   effects to spell rows, but the Spellcasting card and `promptSpellAttack()` don't. → [Attacks & damage](../features/attacks-and-damage.md)
 - **Deleting a weapon's attack row by hand doesn't stick.** (#145) The next item save (`syncItemAttack()`) or
@@ -518,3 +514,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-02 — The phone layout's keyboard order (Skills before Defences and Statuses) recorded as a limitation, from #155's review.
 - 2026-11-05 — Replaced "private packs through a manifest: not built" with the live-token verification still owed: #182 builds the private GitHub source. → ledger L8943, #182
 - 2026-11-05 — The live-token probe passed; what is left is an install on Mike's devices. → ledger L9016, #182
+- 2026-11-06 — Removed: weapons granted outside the item finder arrive unequipped; #128 fixes it. → ledger L9101, #128
