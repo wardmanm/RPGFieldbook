@@ -262,4 +262,4 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - 2026-11-04 — `journal[i]` gains an optional `look` (the page style, absent for Sheet), kept as it is by `migrate()`. → ledger L8699, #167
 - 2026-11-06 — `newCharacter()` marks `wpnEquipInit` done: a new sheet's weapons arrive equipped, and the first reload no longer re-equips one the player unequipped. → ledger L9101, #128
 - 2026-11-06 — `hp.locked` is retired: gone from `blankChar()`, kept unread on an old sheet; the Max HP lock is `editHide.vitals`, so every sheet opens unlocked. → ledger L9441, #115
-- 2026-11-06 — `acMode` (`"calc"`) joins `blankChar()`; `ac` becomes the Flat number only; `migrate()` makes a Flat with no whole number Calculated. Effects may carry `spells: true` (#129), kept as they are. → ledger L9101, #130
+- 2026-11-06 — `acMode` (`"calc"`) joins `blankChar()`; `ac` becomes the Flat number only; `migrate()` makes a Flat with no whole number Calculated. Effects may carry `spells: true` (#129), kept as they are. → ledger L9537, #130

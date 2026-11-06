@@ -136,7 +136,7 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 - **The form froze a scaling use count (#132).** Its "Limited uses" box was filled from `usesMax(f)`
   and saved as that number, so editing any field of a feature whose max is `{byLevel}` or a formula
   replaced the scaling with today's value. A byLevel that is 0 at the current level opens blank,
-  so the fix keeps it on an unchanged save rather than dropping its uses. → L9101
+  so the fix keeps it on an unchanged save rather than dropping its uses. → L9537
 - **A favourited granted feature loses its star** when the grant is rebuilt — a subclass change,
   a removed class, a swapped ancestry — because `addFeatureFromDef()` makes a new object with a new
   id. Levelling up only adds, so it is safe. Inventory avoids this because `grantItemByName()`
@@ -183,4 +183,4 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 - 2026-10-24 — The ☰ section flyout is retired, so the Favourites-in-the-menu decision is moot. → ledger L6804, #103
 - 2026-11-02 — The card is a full-width row under the Sheet's three columns, its rows two across within each group. → ledger L8262, #155
 - 2026-11-02 — One feature per row at every width (Mike); the two-across groups are gone. → ledger L8301, #155
-- 2026-11-06 — Editing a feature keeps a use count that scales (`usesFromForm()`), with a hint under the box; `usesMax()` gets its first checks. → ledger L9101, #132
+- 2026-11-06 — Editing a feature keeps a use count that scales (`usesFromForm()`), with a hint under the box; `usesMax()` gets its first checks. → ledger L9537, #132

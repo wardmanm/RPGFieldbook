@@ -131,7 +131,7 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - **A manual AC with no control (#130).** `armorAC()` read `character.ac` when no body armor was
   worn, though nothing on the sheet could set it; shields were added on top of it, two shields
   added up, and the breakdown read "Base AC 0" for a hand-edited `null` over a computed 10 + Dex.
-  The number was added up in four places, so a fix had to reach all four. → L9101
+  The number was added up in four places, so a fix had to reach all four. → L9537
 - **No pack item carries the structured field** (31 armor items when measured; still none today).
   Every one states its AC in the description and is parsed, so armor worked invisibly, on prose, and a
   custom item could only be armor by typing the exact incantation. → L3092
@@ -182,4 +182,4 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - 2026-08-18 — The item form's Armor toggle writes a structured `armor` field; the form carries it across saves. → ledger L3092
 - 2026-08-18 — Weapons became equippable too; `isEquippable()` is effects, armor or a weapon. → ledger L3213
 - 2026-09-28 — A pack item's `ac` effect is a standing bonus only; five conditional ones (Quarterstaff of the Acrobat among them) stay in the description. → ledger L4502, #76
-- 2026-11-06 — Calculated or Flat AC: one `acTotal()`, only the best shield, `character.ac` the Flat number only, the Armor Class window's switch, FLAT on the rail. → ledger L9101, #130
+- 2026-11-06 — Calculated or Flat AC: one `acTotal()`, only the best shield, `character.ac` the Flat number only, the Armor Class window's switch, FLAT on the rail. → ledger L9537, #130

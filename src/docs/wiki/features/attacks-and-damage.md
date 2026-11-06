@@ -156,7 +156,7 @@ longer allows, leaving orphan rows alone.
   and `damage` effect to spell rows, while the Spellcasting card and `promptSpellAttack()` added
   none, so with Archery a Fire Bolt row read 2 above the window. Archery is ranged *weapon*
   attacks: the fix is an Include spells tick, unticked by default, and the packs are unchanged. A
-  character with Archery sees Fire Bolt's row drop by 2. → L9101
+  character with Archery sees Fire Bolt's row drop by 2. → L9537
 - **The flag in `blankChar()`.** `wpnEquipInit` was first set there and silently skipped the
   migration for every existing sheet; caught by a test before it shipped. → L3213
 - **Gating on `equipped` without a migration** would have emptied every existing Attacks card, and a
@@ -255,4 +255,4 @@ longer allows, leaving orphan rows alone.
 - 2026-10-23 — The card moves, unchanged, from the Sheet to the top of the Inventory tab, its note, combat-view place and #97 pencil with it. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired; `.inv-sec-head` gives the card its heading style only. → ledger L6804, #103
 - 2026-11-06 — A weapon arrives equipped with its row from a grant and from the item form, as from the finder, through `equipNewWeapon()`; `newCharacter()` sets `wpnEquipInit`. Armour and shields arrive unequipped. → ledger L9101, #128
-- 2026-11-06 — A spell's row takes `spellFxList()`: `spell.attack` and the effects ticked Include spells, as the card and the cast window do; a save row shows its ticked damage. → ledger L9101, #129
+- 2026-11-06 — A spell's row takes `spellFxList()`: `spell.attack` and the effects ticked Include spells, as the card and the cast window do; a save row shows its ticked damage. → ledger L9537, #129

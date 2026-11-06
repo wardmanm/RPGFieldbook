@@ -9533,6 +9533,7 @@ the focus rule).
 
 Pages: [vitals & rest](../wiki/features/vitals-and-rest.md), [decisions](../wiki/decisions.md),
 [known issues](../wiki/roadmap/known-issues.md), [sections & layout](../wiki/ui/sections-and-layout.md).
+
 ## #130, #129, #132: Flat AC, Include spells, scaling uses — phase 1 (Mike's design, 2026-11-06)
 
 Wave 1 of 1.9.1, the Armour & attack numbers worktree; the design is

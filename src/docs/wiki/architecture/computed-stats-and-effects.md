@@ -210,4 +210,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-09-28 — `spell.attack` and `spell.dc` targets; `spellDC()`/`spellAtkBonus()` add them and the card paints through them. → ledger L4568, #77
 - 2026-09-29 — a `check` target reaches every skill, initiative and passive Perception; the proficiency bonus is marked and tappable. → ledger L4689, #79
 - 2026-10-13 — A number any one effect lowers is marked red with ▼ (`fxNeg()`, `.fx-neg`), even when a bonus outweighs it; breakdowns redden the penalty's line. → ledger L5700, #89
-- 2026-11-06 — Contributions carry their `kind` and the `spells` flag; Include spells on the six generic targets; AC is `acTotal()`; `usesMax()` gets its checks and `usesShape()`. → ledger L9101, #129, #130, #132
+- 2026-11-06 — Contributions carry their `kind` and the `spells` flag; Include spells on the six generic targets; AC is `acTotal()`; `usesMax()` gets its checks and `usesShape()`. → ledger L9537, #129, #130, #132

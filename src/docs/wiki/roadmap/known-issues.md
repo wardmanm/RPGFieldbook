@@ -498,4 +498,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — Google Fonts in the template (#144) is fixed: the fonts are embedded. → ledger L9357, #144
 - 2026-11-06 — The Hit points window's deferrals: no Undo (#175), Coins' version for 1.9.2, the estimated 220px threshold. → ledger L9441, #112, #113
 - 2026-11-06 — The estimated 220px threshold went: Temp's place is a measured fit now. → ledger L9501, #113
-- 2026-11-06 — #129 and #130 fixed (Include spells; Flat AC, best shield); #132 fixed for the feature form; what waits on phase 2 recorded (the Vitals lock, the item form); `usesMax()` is tested. → ledger L9101, #129, #130, #132
+- 2026-11-06 — #129 and #130 fixed (Include spells; Flat AC, best shield); #132 fixed for the feature form; what waits on phase 2 recorded (the Vitals lock, the item form); `usesMax()` is tested. → ledger L9537, #129, #130, #132

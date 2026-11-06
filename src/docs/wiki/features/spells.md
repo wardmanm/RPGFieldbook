@@ -185,4 +185,4 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
 - 2026-10-24 — Half casters (Paladin, Ranger, Artificer) round up, matching SRD 5.2.1 p.26, for
   every ruleset including Humblewood; a Paladin 1 now gets its two 1st-level slots. → ledger L6840, #101
 - 2026-10-24 — The half-caster rounding gains its Decisions row. → ledger L6928, #101
-- 2026-11-06 — The card, the cast window and a spell's row take one set of effects, `spellFxList()`: `spell.attack` and the effects ticked Include spells. → ledger L9101, #129
+- 2026-11-06 — The card, the cast window and a spell's row take one set of effects, `spellFxList()`: `spell.attack` and the effects ticked Include spells. → ledger L9537, #129

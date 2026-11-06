@@ -417,4 +417,4 @@ came back.
 - 2026-11-06 — Centring held for a blank Temp: the bar's outer columns are identical, and Temp leaves
   the bar wherever a measured fit says it can't sit beside the numbers, not below a fixed width; the
   17px step went. → ledger L9501, #113
-- 2026-11-06 — Tapping AC opens the Armor Class window (Calculated / Flat); the shield reads FLAT for a Flat AC. → ledger L9101, #130
+- 2026-11-06 — Tapping AC opens the Armor Class window (Calculated / Flat); the shield reads FLAT for a Flat AC. → ledger L9537, #130
