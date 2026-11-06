@@ -92,19 +92,6 @@ Known behaviour that is accepted for now.
 - **Ammunition picker rows can look identical** when two grants each give "Arrow ×20": stacks of
   different grants stay apart by design, and nothing on the row tells them apart (#145). An origin hint
   would. → ledger L4989, and [Ammunition](../features/ammunition.md)
-- **`undoRecovery()` drops a home-joined entry's unrecovered remainder once the home stack is fired
-  out.** (#145) When recovery tops up an equivalent stack already on the sheet (the old one being gone)
-  and that stack is then fired down to nothing, `undoRecovery()` finds the stack it depended on gone
-  and does not restore the cleared entry, so the shots recovery did not give back are not put back
-  on record. Nothing in the app calls `undoRecovery()` since #170: End combat's Undo recovery puts
-  nothing back on record by design (`undoEndCombatRecovery()`), so this and the next entry matter
-  only if a row's Recover ever gets an Undo. → ledger L6147, L9101, and
-  [Ammunition](../features/ammunition.md)
-- **`undoRecovery()` asks whether a grant is live now, not whether it was revoked since.** (#145)
-  `grantSidLive()` checks the character's race, background and classes at Undo time, so a class
-  removed and re-added inside the Undo window reads as never revoked, and a cleared entry from its
-  old grant comes back. No app caller since #170 (above). → ledger L6147, and
-  [Ammunition](../features/ammunition.md)
 - **A reload with the End of combat window open loses the typed XP** (#105). The fight had already
   ended and saved; the window's state (`_endFight`) is never saved, as any unsaved form isn't. →
   ledger L7921, and [Combat view](../features/combat-view.md)
@@ -524,4 +511,5 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-02 — The phone layout's keyboard order (Skills before Defences and Statuses) recorded as a limitation, from #155's review.
 - 2026-11-05 — Replaced "private packs through a manifest: not built" with the live-token verification still owed: #182 builds the private GitHub source. → ledger L8943, #182
 - 2026-11-05 — The live-token probe passed; what is left is an install on Mike's devices. → ledger L9016, #182
-- 2026-11-06 — `undoRecovery()`'s two gaps have no app caller now that End combat's Undo recovery leaves the shots spent; a settled shot is put back by hand; added: a row's Recover has no Undo. → ledger L9101, #170
+- 2026-11-06 — A settled shot is put back by hand, not by Undo recovery, which now leaves the shots spent; added: a row's Recover has no Undo. → ledger L9101, #170
+- 2026-11-06 — Closed: Undo recovery dropping a home-joined entry's remainder, and its grant check reading "live now" rather than "revoked since": the full reversal they described is removed (#145's two entries). → ledger L9142, #170

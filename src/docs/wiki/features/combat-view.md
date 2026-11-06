@@ -280,7 +280,7 @@ in `endCombatOpen`; the first time every row is folded.
 - **Ammunition** (when anything was fired since Start): per kind, `ammoLogTitle()`'s own words,
   "Arrows: 9 fired, 4 recovered", read from the log line's `meta` so an Undo shows at once; under
   None, "Arrows: 9 fired, none come back (recovery: None)". **Undo recovery** (`endFightUndoAmmo()`)
-  runs the quiet `undoRecoveryTap()` that `applyAmmoRecovery()` handed back once, then reads
+  runs, once, the quiet `undoRecoveryTap()` that `applyAmmoRecovery()` handed back, then reads
   "Recovery undone": what came back goes, the fired ammunition stays spent, and nothing goes back on
   record (`undoEndCombatRecovery()`, #170), so the next fight starts from nothing fired; the line is
   corrected ("Arrows: 9 fired, 0 recovered"). Offered only while the window is open, and only when

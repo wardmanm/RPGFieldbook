@@ -65,7 +65,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'unpackAmmo', 'rebaseAmmo', 'migrateAmmo', 'ammoTable', 'fpMap', 'fpHash',
   'AMMO_PASS', 'ammoRepairDef', 'stampSrc', 'updChangedFields', 'updEdited',
   'AMMO_RECOVERY', 'ammoRecoveryOf', 'itemRecover', 'weaponThrown', 'ammoThrownKind', 'AMMO_RECOVER_DEFAULTS', 'ammoDefaultRecover', 'ammoRecoverRule', 'ammoBack',
-  'ammoSpentEntry', 'fireAmmo', 'undoFire', 'throwAmmo', 'ammoRecordShot', 'ammoEntryItem', 'ammoRecoverable', 'recoverAmmo', 'grantSidLive', 'undoRecovery', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
+  'ammoSpentEntry', 'fireAmmo', 'undoFire', 'throwAmmo', 'ammoRecordShot', 'ammoEntryItem', 'ammoRecoverable', 'recoverAmmo', 'grantSidLive', 'undoEndCombatRecovery', 'ammoSummaryText', 'attackAmmo', 'forgetAmmo',
   'forgetGrantAmmo',
   'ammoLineHTML', 'thrownLineHTML', 'ammoAsks', 'throwWeaponTap', 'ammoChoiceHTML', 'fireWeapon', 'undoFireTap', 'openAmmoPicker', 'loadAmmo', 'recoverWeaponAmmo',
   'applyAmmoRecovery', 'undoRecoveryTap', 'revertEquipmentGrants',
@@ -3958,104 +3958,46 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('#104 ...and the arrows, a kind not asked for, stay on record', 's1' in c.ammoSpent && !('d1' in c.ammoSpent));
 
   c = mk('all'); const r2 = {};
-  const inv0 = JSON.stringify(c.inventory), spent0 = norm(c.ammoSpent);
+  const inv0 = JSON.stringify(c.inventory);
   X.recoverAmmo(c, ['arrow', 'dagger'], r2);
-  ck('#104 recovery records what it gave and what it cleared',
-     r2.added.length === 2 && r2.made.length === 0 && Object.keys(r2.cleared).sort().join() === 'd1,s1', r2);
-  ck('#104 Undo recovery puts everything back as it was',
-     X.undoRecovery(c, r2) && JSON.stringify(c.inventory) === inv0 && norm(c.ammoSpent) === spent0, [c.inventory, c.ammoSpent]);
-  ck('#104 ...once', X.undoRecovery(c, r2) === false);
+  ck('#104 recovery records what it gave', r2.added.length === 2 && r2.made.length === 0 && r2.repointed.length === 0, r2);
+  ck('#104 Undo recovery puts the stock back as it was, and the shots stay spent (#170)',
+     X.undoEndCombatRecovery(c, r2) && JSON.stringify(c.inventory) === inv0 && Object.keys(c.ammoSpent).join() === 'b1', [c.inventory, c.ammoSpent]);
+  ck('#104 ...once', X.undoEndCombatRecovery(c, r2) === false);
 
   c = mk('all'); const r3 = {};
   X.recoverAmmo(c, ['arrow'], r3);                                           // arrows 2 -> 8; s1 cleared
   X.fireAmmo(c, {id: 'w', name: 'Bow', weapon: {ammo: 'arrow'}}, 'hit');      // 8 -> 7; a new s1 entry n 1, hits 1
-  X.undoRecovery(c, r3);
+  X.undoEndCombatRecovery(c, r3);
   ck('#104 Undo recovery after a later shot takes back only what it gave, and keeps the shot',
-     c.inventory[0].qty === 1 && c.ammoSpent.s1.n === 7 && c.ammoSpent.s1.hits === 4, [c.inventory[0], c.ammoSpent.s1]);
+     c.inventory[0].qty === 1 && (c.ammoSpent.s1 || {}).n === 1 && (c.ammoSpent.s1 || {}).hits === 1, [c.inventory[0], c.ammoSpent.s1]);
 
   c = mk('all'); c.inventory.splice(0, 1); c.ammoSpent.s1.snap = {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}}; const r4 = {};
   X.recoverAmmo(c, ['arrow'], r4);
   ck('#104 a stack rebuilt by recovery is removed by its Undo',
-     r4.made.length === 1 && X.undoRecovery(c, r4) && !c.inventory.some(i => i.id === 's1') && c.ammoSpent.s1.n === 6, c.inventory);
+     r4.made.length === 1 && X.undoEndCombatRecovery(c, r4) && !c.inventory.some(i => i.id === 's1') && !('s1' in c.ammoSpent), c.inventory);
   ck('#104 a call with no record still returns the count', X.recoverAmmo(mk('half'), ['arrow']) === 3);
-  ck('#104 Undo with no record, or a junk one, does nothing', X.undoRecovery(mk('half'), null) === false && X.undoRecovery(mk('half'), {}) === false);
-
-  /* ---- review round 1, finding 1: Undo must not resurrect a stack — or a
-     grant's history — that is no longer there (spec §8 wins over §6's "put
-     back as it was") ---- */
-  c = mk('all'); const ra = {};
-  X.recoverAmmo(c, ['arrow'], ra);                            // s1: arrows 2 -> 8, cleared
-  c.inventory = c.inventory.filter(i => i.id !== 's1');       // the delete handler's own removal...
-  X.forgetAmmo(c, 's1');                                       // ...and its own forgetAmmo() call
-  ck('#104 review 1a: Undo does not restore a topped-up stack the player deleted',
-     X.undoRecovery(c, ra) === true && !('s1' in c.ammoSpent) && !X.ammoRecoverable(c).some(r => r.kind === 'arrow'));
-
-  c = mk('all'); c.inventory.splice(0, 1);
-  c.ammoSpent.s1.snap = {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}};
-  const rb = {};
-  X.recoverAmmo(c, ['arrow'], rb);                            // rebuilds s1 at qty 6
-  c.inventory = c.inventory.filter(i => i.id !== 's1');       // deleted before Undo
-  X.forgetAmmo(c, 's1');
-  ck('#104 review 1b: Undo does not restore a rebuilt stack the player deleted',
-     X.undoRecovery(c, rb) === true && !('s1' in c.ammoSpent));
-
-  {
-    const g = X.blankChar(); X.character = g; g.ammoRecovery = 'all';
-    g.inventory = [{id: 'g1', name: 'Arrow', qty: 2, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}];
-    g.ammoSpent = {g1: {n: 6, hits: 3, misses: 1, kind: 'arrow',
-      snap: {id: 'g1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}}};
-    const rc = {};
-    ck('#104 review 1c setup: recovering the granted stack', X.recoverAmmo(g, ['arrow'], rc) === 6 && g.inventory[0].qty === 8);
-    X.revertEquipmentGrants('class:Ranger');                   // the real removal path (50-classrace.js)
-    ck('#104 review 1c: the grant removed the stack it had just topped up', !g.inventory.length);
-    ck('#104 review 1c: Undo does not restore a granted stack whose source is gone',
-       X.undoRecovery(g, rc) === true && !('g1' in g.ammoSpent));
-  }
-
-  /* The entry has NO dependency at all — its stack was already gone, nothing
-     was given back — so this exercises grantSidLive() specifically: restored
-     when the granting class is still there, not when it isn't (reproduced
-     without a full removeClass(), which this suite can't call directly; the
-     distinction grantSidLive() reads is exactly what removeClass() leaves
-     behind either way: whether character.classes still names it). */
-  {
-    const g2 = X.blankChar(); g2.ammoRecovery = 'none';         // arrow has no app default, so None really gives 0
-    g2.inventory = [];
-    g2.ammoSpent = {g2a: {n: 2, kind: 'arrow', snap: {id: 'g2a', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}}};
-    const re = {};
-    ck('#104 review 1 (grantSidLive) setup: nothing to recover for an already-gone granted stack',
-       X.recoverAmmo(g2, ['arrow'], re) === 0);
-    ck('#104 review 1 (grantSidLive): Undo does not restore it when the class is gone',
-       X.undoRecovery(g2, re) === true && !('g2a' in g2.ammoSpent));
-
-    const g3 = X.blankChar(); g3.ammoRecovery = 'none'; g3.classes = [{name: 'Ranger', level: 1}];
-    g3.inventory = [];
-    g3.ammoSpent = {g3a: {n: 2, kind: 'arrow', snap: {id: 'g3a', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}, grant: 'class:Ranger'}}};
-    const rf = {};
-    X.recoverAmmo(g3, ['arrow'], rf);
-    ck('#104 review 1 (grantSidLive): ...but comes back when the class is still there',
-       X.undoRecovery(g3, rf) === true && g3.ammoSpent.g3a && g3.ammoSpent.g3a.n === 2);
-  }
+  ck('#104 Undo with no record, or a junk one, does nothing', X.undoEndCombatRecovery(mk('half'), null) === false && X.undoEndCombatRecovery(mk('half'), {}) === false);
 
   /* ---- review round 1, finding 2: a shot since recovery that Undo cannot
-     fully take back must not be counted twice ---- */
+     fully take back was of ammunition Undo says never came back (#170) ---- */
   c = mk('all'); const rg = {};
   X.recoverAmmo(c, ['arrow'], rg);                             // s1: arrows 2 -> 8
   for (let i = 0; i < 8; i++) X.fireAmmo(c, {id: 'w', name: 'Bow', weapon: {ammo: 'arrow'}}, '');
   ck('#104 review 2 setup: firing the whole recovered stack removes it, with a fresh n-8 entry',
-     !c.inventory.some(i => i.id === 's1') && c.ammoSpent.s1.n === 8);
-  X.undoRecovery(c, rg);
-  ck('#104 review 2: Undo after it is all fired out does not double-count those shots (8, not 14)',
-     c.ammoSpent.s1.n === 8 && !c.inventory.some(i => i.id === 's1'));
+     !c.inventory.some(i => i.id === 's1') && (c.ammoSpent.s1 || {}).n === 8);
+  X.undoEndCombatRecovery(c, rg);
+  ck('#104 review 2: Undo after it is all fired out counts only the 2 arrows that were there',
+     (c.ammoSpent.s1 || {}).n === 2 && !c.inventory.some(i => i.id === 's1'), c.ammoSpent);
 
   c = mk('none'); const rh = {};
   X.recoverAmmo(c, ['dagger'], rh);                            // dagger: ×0 -> ×2 (Thrown defaults to always)
   X.throwAmmo(c, c.inventory[2], ''); X.throwAmmo(c, c.inventory[2], '');
   ck('#104 review 2 setup: throwing the recovered dagger back out leaves it at ×0 with a fresh n-2 entry',
-     c.inventory[2].qty === 0 && c.ammoSpent.d1.n === 2);
-  X.undoRecovery(c, rh);
-  ck('#104 review 2: Undo of a thrown weapon does not double-count either (n 2, ×0)',
-     c.inventory[2].qty === 0 && c.ammoSpent.d1.n === 2);
+     c.inventory[2].qty === 0 && (c.ammoSpent.d1 || {}).n === 2);
+  X.undoEndCombatRecovery(c, rh);
+  ck('#104 review 2: Undo of a thrown weapon thrown back out leaves it at ×0 with nothing counted',
+     c.inventory[2].qty === 0 && !('d1' in c.ammoSpent), c.ammoSpent);
 
   /* ---- review round 1, finding 3: Undo re-points a weapon only if it is
      still pointed where recovery left it ---- */
@@ -4065,12 +4007,12 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
       {id: 'w1', name: 'Longbow', qty: 1, equipped: true, weapon: {kind: 'ranged', ammo: 'arrow', dice: '1d8'}, ammoStack: 's1'},
       {id: 's2', name: 'Arrow', qty: 3, ammo: {kind: 'arrow'}}];
     c5.ammoSpent = {s1: {n: 6, hits: 3, misses: 1, kind: 'arrow', snap: {id: 's1', name: 'Arrow', qty: 1, ammo: {kind: 'arrow'}}}};
-    const inv5 = JSON.stringify(c5.inventory), spent5 = norm(c5.ammoSpent), rh3 = {};
+    const inv5 = JSON.stringify(c5.inventory), rh3 = {};
     X.recoverAmmo(c5, ['arrow'], rh3);
     ck('#104 review 3 setup: a home-join repoints the weapon and records its target',
        rh3.repointed.length === 1 && rh3.repointed[0].to === 's2' && c5.inventory[0].ammoStack === 's2' && c5.inventory[1].qty === 9);
-    ck('#104 review 3: Undo of a home-join round-trips inventory, ammoSpent and the pointer',
-       X.undoRecovery(c5, rh3) && JSON.stringify(c5.inventory) === inv5 && norm(c5.ammoSpent) === spent5 && c5.inventory[0].ammoStack === 's1');
+    ck('#104 review 3: Undo of a home-join round-trips the inventory and the pointer, the shots spent',
+       X.undoEndCombatRecovery(c5, rh3) && JSON.stringify(c5.inventory) === inv5 && JSON.stringify(c5.ammoSpent) === '{}' && c5.inventory[0].ammoStack === 's1');
   }
   {
     const c6 = X.blankChar(); c6.ammoRecovery = 'all';
@@ -4082,7 +4024,7 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     X.recoverAmmo(c6, ['arrow'], rh4);
     ck('#104 review 3 setup: the weapon is repointed to the home stack', c6.inventory[0].ammoStack === 's2');
     c6.inventory[0].ammoStack = 's3';                          // the player loads a different stack since
-    X.undoRecovery(c6, rh4);
+    X.undoEndCombatRecovery(c6, rh4);
     ck('#104 review 3: Undo leaves a weapon the player has since re-loaded alone',
        c6.inventory[0].ammoStack === 's3');
   }
@@ -4097,8 +4039,8 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
     const rz = {};
     ck('#104 folded-in setup: half of 1 shot is 0, so recovery clears the entry but gives nothing',
        X.recoverAmmo(c7, ['arrow'], rz) === 0 && c7.inventory[0].id === 'z1' && c7.inventory[0].qty === 0 && !('z1' in c7.ammoSpent));
-    ck('#104 folded-in: Undo recovery leaves the ×0 stack on the sheet, not removed, and restores the entry',
-       X.undoRecovery(c7, rz) && c7.inventory.some(i => i.id === 'z1') && c7.inventory[0].qty === 0 && c7.ammoSpent.z1.n === 1,
+    ck('#104 folded-in: Undo recovery leaves the ×0 stack on the sheet, not removed, and the shot spent',
+       X.undoEndCombatRecovery(c7, rz) && c7.inventory.some(i => i.id === 'z1') && c7.inventory[0].qty === 0 && !('z1' in c7.ammoSpent),
        [c7.inventory, c7.ammoSpent]);
   }
 }
@@ -9202,12 +9144,8 @@ async function t181AddClassUndo() {
     ck("#170 ...End combat's Undo takes back only End combat's part",
        qty(c, 's1') === 15 && line.title === 'Arrows: 10 fired, 5 recovered' && ctx.endFightUndoAmmo() === true &&
        qty(c, 's1') === 13 && line.title === 'Arrows: 10 fired, 3 recovered' && spent(c) === '{}', [qty(c, 's1'), line.title, c.ammoSpent]);
-    X._endFight = null; c = sheet([bow(), arrows(20)]);
-    for (let i = 0; i < 4; i++) X.fireWeapon('w1', false);
-    const mid = {}; X.recoverAmmo(c, ['arrow'], mid);
-    ck('#170 the reversal for a recovery mid-fight is unchanged: undoRecovery() puts the shots back on record',
-       qty(c, 's1') === 18 && X.undoRecovery(c, mid) === true && qty(c, 's1') === 16 && n(c, 's1') === 4, c.ammoSpent);
     // a stack End combat rebuilt from its copy
+    X._endFight = null;
     c = sheet([xbow(), {id: 'b1', name: 'Bolt', qty: 4, ammo: {kind: 'bolt'}}]);
     X.startCombatNow();
     for (let i = 0; i < 4; i++) X.fireWeapon('w2', false);

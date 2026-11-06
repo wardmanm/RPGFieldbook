@@ -9,7 +9,7 @@ is its count.
 `unpackAmmo()`, `ammoTable()`, `rebaseAmmo()`, `migrateAmmo()`, `ammoSpentEntry()`, `ammoRecordShot()`,
 `fireAmmo()`, `undoFire()`, `ammoRecoverable()`, `ammoFightSummary()`, `ammoFightTotals()`,
 `ammoFightKeep()`, `ammoLogTitle()`, `recoverAmmo()`, `recoveryUndoable()`, `undoRecoveryStock()`,
-`undoRecovery()`, `undoEndCombatRecovery()`, `grantSidLive()`,
+`undoEndCombatRecovery()`, `grantSidLive()` (the trade window's: [Inventory](inventory.md)),
 `attackAmmo()`, `forgetAmmo()`, `forgetGrantAmmo()`, `ammoLineHTML()`, `thrownLineHTML()`,
 `ammoChoiceHTML()`, `fireWeapon()`, `throwWeaponTap()`, `throwAmmo()`, `shotDone()`, `undoFireTap()`,
 `openAmmoPicker()`, `loadAmmo()`, `recoverWeaponAmmo()`, `applyAmmoRecovery()`, `undoRecoveryTap()`,
@@ -167,38 +167,24 @@ equivalent stack already on the sheet (repointing any weapon loaded from the old
 from the `snap` under the old id; for a thrown weapon, onto the weapon item, still on the sheet at
 ×0 — and clears every entry it visits, the ones that gave nothing back included: their shots are
 spent. When `rec` is passed it is filled with a **recovery
-record**: `added`, `made` and `repointed` lists (each carrying `from`, the `ammoSpent` id it answers
-for) and `cleared` (each entry's value just before it was cleared).
+record**, exactly what End combat's Undo takes back: `added` and `made` lists of `{id, n}` (the item a
+quantity went onto — a home-join's is the home stack — and how many) and `repointed`, `{id, from,
+to}` per weapon it repointed.
 
-Undoing a recovery has two halves. **The stock half**, `undoRecoveryStock(c, rec)`, reverses exactly
-what that recovery gave, no more: each `added`/`made` quantity comes back off its item (any stack it
-leaves at ×0 is removed, as the last shot removes one — true everywhere else in the app too; a
-thrown weapon stays at ×0 instead of being removed); a stack it rebuilt goes while it holds no more
-than it was given; a weapon it repointed points back only if it still points where recovery left
-it, not wherever the player has since loaded it. A shot fired since may have already used some or
-all of what Undo is taking back; it returns that shortfall both by the entry the record answers for
-and by the item it was taken from. `recoveryUndoable()` is the record check both Undos open with.
-
-**End combat's Undo**, `undoEndCombatRecovery(c, rec)` (#170), is the stock half and **nothing back
-on record**: End combat settled every shot of the fight, so the fired ammunition stays spent, the
-next fight starts from nothing fired, and the row's Recover has nothing to pick up. A find the DM
-allows is added by hand. A shot fired since from what Undo takes away (unreachable: the End of
-combat window keeps the page inert) was of ammunition that never came back, so the shortfall comes
-off that item's own entry, hits kept first, and an entry left with nothing goes; a shot of
-ammunition that was still there stays on record.
-
-**`undoRecovery(c, rec)`** is the full reversal of a recovery while a fight is still on: the stock
-half, then every cleared entry back on record for End combat to settle. Nothing in the app calls it
-since #170 (a row's Recover has no Undo; see Open), and its tests stay. Its shortfall comes off the
-restored entry's own `n` first, so shots fired since are never counted twice. A cleared entry that
-depended on a stack at recovery (present even for a zero-back entry, joined into a home stack, or
-rebuilt) comes back only if that stack is still on the sheet, or a new entry has already taken its
-id (a shot fired since); one with no dependency at all — its stack was already gone when it was
-cleared — comes back as before, unless its snapshot names a granting source that has since been
-revoked (`grantSidLive()`, mirroring the sid shapes `removeRace()`/`removeBackground()`/
-`removeClass()` check — an unrecognised shape reads as still live, so Undo defaults to restoring
-rather than guessing). Either Undo applies once; End combat's does nothing after a switch to
-another character.
+**Undo recovery** is End combat's only (#170): `undoEndCombatRecovery(c, rec)` takes back what
+came back and puts **nothing back on record**. End combat settled every shot of the fight, so the
+fired ammunition stays spent, the next fight starts from nothing fired, and the row's Recover has
+nothing to pick up; a find the DM allows is added by hand. Its stock half, `undoRecoveryStock(c,
+rec)`, reverses exactly what the recovery gave, no more: each `added`/`made` quantity comes back off
+its item (any stack it leaves at ×0 is removed, as the last shot removes one — true everywhere else in
+the app too; a thrown weapon stays at ×0 instead of being removed); a stack it rebuilt goes while it
+holds no more than it was given; a weapon it repointed points back only if it still points where
+recovery left it, not wherever the player has since loaded it. A shot fired since may have already
+used some of what Undo takes back (unreachable: the End of combat window keeps the page inert); that
+shot was of ammunition that never came back, so the shortfall comes off that item's own entry, hits
+kept first, and an entry left with nothing goes; a shot of ammunition that was still there stays on
+record. `recoveryUndoable()` is the record check. Undo applies once, and does nothing after a switch
+to another character.
 
 End combat recovers on its own (`applyAmmoRecovery()`), in place of the old Yes/No question, and
 **retires every outstanding count**: whenever any entry is on record it calls `recoverAmmo()` for
@@ -314,10 +300,11 @@ to the inserted entry's own default, keeping an explicit Always or Never.
 - **A bundle the player marked as ammunition is theirs.** The obvious workaround for #96 was ticking
   Ammunition on "Bolts (20)" and typing the bolts left. Unpacking it would multiply that count by
   twenty, so the bundle step skips any item that is already ammunition (caught in review).
-- **Undo recovery re-armed the fight (#170).** End combat's Undo ran `undoRecovery()`, which puts
-  every cleared entry back on record: after fire 4, End combat and Undo, the next fight with nothing
-  fired reported "Arrows: 4 fired, 2 recovered" and added 2 arrows the character never had. End
-  combat's Undo is `undoEndCombatRecovery()` now.
+- **Undo recovery re-armed the fight (#170).** End combat's Undo ran the full reversal #104 built,
+  which put every cleared entry back on record: after fire 4, End combat and Undo, the next fight
+  with nothing fired reported "Arrows: 4 fired, 2 recovered" and added 2 arrows the character never
+  had. End combat's Undo is `undoEndCombatRecovery()` now, and the full reversal, with nothing left
+  to call it, is gone.
 - **A launcher the player gave a kind by hand, copied from the bare pack**, keeps its bare baseline
   (the pass skips it), so against the repaired pool the update tool lists a `weapon` change. Applying
   it is harmless, and the data release would list the same.
@@ -372,7 +359,8 @@ Settled with Mike on 2026-11-06 (#170).
   shot back would count it as spent again and recover it twice. A shot fired by mistake is put back
   by correcting the stack's count by hand; Undo recovery takes back only what came back (#170).
 - **A row's Recover has no Undo.** Its toast says what came back and offers nothing; End combat's
-  Undo recovery never takes a row's recovery back. `undoRecovery()` is the reversal one would call.
+  Undo recovery never takes a row's recovery back. The reversal one would need (shots back on record
+  for End combat to settle) was removed with #170, unused; git has it.
 - **End combat's screen-reader announcement no longer says what was recovered (#105).** The toast
   used to carry it; `#cvLive` now says only that combat ended, and it lands in a region the End of
   combat window makes inert the same moment, so a screen reader may not speak it. The window's
@@ -406,4 +394,5 @@ Settled with Mike on 2026-11-06 (#170).
 - 2026-10-25 — End combat writes one inventory-log line per kind fired, from `ammoFightSummary()`. → ledger L7291, #47
 - 2026-10-25 — A row's Recover counts in the fight's line (`ammoFight`, `ammoFightTotals()`), which reads "Fight of N rounds"; Undo recovery takes End combat's recovery back off it. → ledger L7339, #47
 - 2026-10-29 — End combat recovers quietly (`applyAmmoRecovery({quiet, logged})` hands back `{lines, undo}`) and the End of combat window's Ammunition row shows it with Undo recovery (`undoRecoveryTap(…, {quiet})`); there is no End combat toast; a shot's Undo refuses once End combat has settled it. → ledger L7921, #105
-- 2026-11-06 — End combat's Undo recovery takes back what came back and leaves the fired ammunition spent (`undoEndCombatRecovery()`, the stock half split out as `undoRecoveryStock()`); `undoRecovery()` is unchanged and has no app caller. → ledger L9101, #170
+- 2026-11-06 — End combat's Undo recovery takes back what came back and leaves the fired ammunition spent (`undoEndCombatRecovery()`, the stock half split out as `undoRecoveryStock()`). → ledger L9101, #170
+- 2026-11-06 — The full reversal that put a recovery's shots back on record is removed, unused; the recovery record keeps only what End combat's Undo reads. → ledger L9142, #170

@@ -9138,3 +9138,26 @@ shots stay spent.
 
 Pages: [ammunition](../wiki/features/ammunition.md), [combat view](../wiki/features/combat-view.md),
 [known issues](../wiki/roadmap/known-issues.md). Plan: `src/docs/plans/2026-11-06-ammo-undo.md`.
+
+## #170 follow-up: the unused full reversal of a recovery is removed (coordinator's call, 2026-11-06)
+
+With End combat's Undo on `undoEndCombatRecovery()`, nothing in the app called `undoRecovery()`,
+the reversal that put a recovery's cleared shots back on record (a row's Recover has no Undo). The
+wave coordinator decided to delete it and told Mike; git keeps it if a row Undo is ever wanted.
+
+**Removed with it**, because only it read them: the recovery record's `cleared` map (a deep copy of
+every cleared entry), the `from` on its `added` and `made` items, and the zero-quantity `added`
+items `recoverAmmo()` logged only to tie a cleared entry to its stack; and the per-entry `short` map
+`undoRecoveryStock()` returned. The record is now `added`/`made` `{id, n}` and `repointed` `{id,
+from, to}`, exactly what End combat's Undo reads; `recoveryUndoable()` no longer asks for
+`cleared`; `undoRecoveryStock()` returns the Map of shortfalls by item. `grantSidLive()` stays: the
+trade window's `invRestore()` uses it, and its comment now says so. Nothing a player sees changes.
+
+**Tests** (`sheet.js`). The #104 checks of the shared stock half (the round trip, a later shot, a
+rebuilt stack, a junk record, all fired back out, a thrown weapon thrown back out, the home-join
+pointer, a re-loaded weapon, the ×0 stack) now call `undoEndCombatRecovery()`, each expecting the
+shots spent; the nine that tested only the restoring (review 1a, 1b, 1c, the `grantSidLive` pair,
+the #170 "unchanged" check) are gone.
+
+Pages: [ammunition](../wiki/features/ammunition.md), [known issues](../wiki/roadmap/known-issues.md),
+[1.9.1](../wiki/roadmap/1.9.1.md).
