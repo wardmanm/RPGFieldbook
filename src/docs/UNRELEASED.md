@@ -37,3 +37,6 @@ Bullets below this line — leave the heading in place.
 - Starting and granted weapons now arrive equipped, with their attack ready under Attacks & Weapons,
   as weapons from the item finder always have. A new weapon you make in the item form starts
   equipped too; untick Equipped if you'd rather it didn't.
+- Undo recovery in the End of combat window no longer brings your ammunition back in the next fight. It
+  takes back the arrows that came back and leaves the ones you fired spent, so the next fight starts with
+  nothing fired. If your DM lets you find some, add them to the stack by hand.

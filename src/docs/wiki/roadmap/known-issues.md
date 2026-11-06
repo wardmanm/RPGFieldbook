@@ -92,23 +92,16 @@ Known behaviour that is accepted for now.
 - **Ammunition picker rows can look identical** when two grants each give "Arrow ×20": stacks of
   different grants stay apart by design, and nothing on the row tells them apart (#145). An origin hint
   would. → ledger L4989, and [Ammunition](../features/ammunition.md)
-- **Undo recovery drops a home-joined entry's unrecovered remainder once the home stack is fired
-  out.** (#145) When recovery tops up an equivalent stack already on the sheet (the old one being gone)
-  and that stack is then fired down to nothing, `undoRecovery()` finds the stack it depended on gone
-  and does not restore the cleared entry, so the shots recovery did not give back are not put back
-  on record. Unreachable from the UI today: Undo recovery lives in the End of combat window (#105),
-  which keeps the sheet inert, so nothing can be fired while it is offered. → ledger L6147, L7921,
-  and [Ammunition](../features/ammunition.md)
-- **Undo recovery asks whether a grant is live now, not whether it was revoked since.** (#145)
-  `grantSidLive()` checks the character's race, background and classes at Undo time, so a class
-  removed and re-added inside the Undo window reads as never revoked, and a cleared entry from its
-  old grant comes back. → ledger L6147, and [Ammunition](../features/ammunition.md)
 - **A reload with the End of combat window open loses the typed XP** (#105). The fight had already
   ended and saved; the window's state (`_endFight`) is never saved, as any unsaved form isn't. →
   ledger L7921, and [Combat view](../features/combat-view.md)
 - **A shot's Undo refuses once End combat has settled it** (#105, by design): its toast is hidden at
   End combat, and a shot fired outside a fight stops undoing once a later End combat sweeps it up.
-  The window's Undo recovery is the way back. → ledger L7921, and
+  A shot fired by mistake is put back by correcting the stack's count by hand: the window's Undo
+  recovery takes back only what came back (#170). → ledger L7921, L9155, and
+  [Ammunition](../features/ammunition.md)
+- **A row's Recover has no Undo** (#170, noticed). Its toast says what came back and offers
+  nothing, and End combat's Undo recovery never takes a row's recovery back. → ledger L9155, and
   [Ammunition](../features/ammunition.md)
 - **A weapon made in the item editor cannot be Thrown.** (#145) The editor has no weapon-notes field; Save
   carries `weapon.notes` from the pack entry last inserted, so only pack data marks a weapon Thrown.
@@ -515,3 +508,5 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-05 — Replaced "private packs through a manifest: not built" with the live-token verification still owed: #182 builds the private GitHub source. → ledger L8943, #182
 - 2026-11-05 — The live-token probe passed; what is left is an install on Mike's devices. → ledger L9016, #182
 - 2026-11-06 — Removed: weapons granted outside the item finder arrive unequipped; #128 fixes it. → ledger L9101, #128
+- 2026-11-06 — A settled shot is put back by hand, not by Undo recovery, which now leaves the shots spent; added: a row's Recover has no Undo. → ledger L9155, #170
+- 2026-11-06 — Closed: Undo recovery dropping a home-joined entry's remainder, and its grant check reading "live now" rather than "revoked since": the full reversal they described is removed (#145's two entries). → ledger L9196, #170

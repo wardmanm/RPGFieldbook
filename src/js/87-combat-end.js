@@ -362,8 +362,9 @@ function endFightRepaintSection(k,focusSel){
   el.outerHTML=endFightSectionHTML(k,st,character);
   if(focusSel){const f=document.querySelector(focusSel);if(f&&f.focus)f.focus({preventScroll:true});}
 }
-/* The toast's Undo recovery (undoRecoveryTap(), via applyAmmoRecovery's
-   undo), offered only while this window is open; once. */
+/* Undo recovery (undoRecoveryTap(), via applyAmmoRecovery's undo), offered
+   only while this window is open; once. It takes back what End combat gave
+   and leaves the fired ammunition spent (#170). */
 function endFightUndoAmmo(){
   const st=endFightLive(),a=st&&st.ammo;
   if(!a||a.undone||typeof a.undo!=="function")return false;
