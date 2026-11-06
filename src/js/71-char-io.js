@@ -1,7 +1,21 @@
-/* Boot reads localStorage synchronously (below), so the IDB copy — which is the
-   authoritative one once it exists — is hydrated straight after and replaces it. */
-function loadRulesCacheAsync(){
-  if(!idbReady())return Promise.resolve(false);
+/* Boot reads the localStorage copy synchronously, so the first paint has rules
+   in hand. true when it held a pool. That copy is there only when the last save
+   that landed went to it: a save IndexedDB takes deletes it (saveRulesCache).
+   So it is never older than the IndexedDB copy, and when boot has one, it is
+   the one kept (#134). An unreadable copy counts as none. */
+function loadRulesCacheLocal(){
+  try{
+    const rr=readRulesCacheString(localStorage.getItem(K_RULES));if(!rr)return false;
+    const parsed=JSON.parse(rr);if(!parsed||typeof parsed!=="object")return false;
+    rules=Object.assign(rules,parsed);return true;
+  }catch(e){return false;}
+}
+/* The IndexedDB copy, hydrated over the first paint — only when boot found no
+   localStorage copy (`haveLocal`). Laying it over one put back an older pool
+   whenever a save had fallen back to localStorage after IndexedDB once held it
+   (#134). true when it restored the packs. */
+function loadRulesCacheAsync(haveLocal){
+  if(haveLocal||!idbReady())return Promise.resolve(false);
   return idbTx("readonly",st=>st.get(IDB_KEY)).then(json=>{
     if(!json)return false;
     const parsed=JSON.parse(json);

@@ -401,11 +401,11 @@ function boot(){
   try{const s=localStorage.getItem(K_SET);if(s)settings=Object.assign(settings,JSON.parse(s));}catch(e){}
   if(foldLegacySettings())saveSettings();
   /* localStorage first and synchronously, so the sheet draws with rules already
-     in hand. It is now only the FALLBACK store and the migration source — the
-     IndexedDB copy is authoritative and is hydrated over the top a tick later
-     (see loadRulesCacheAsync), because five packs no longer fit in localStorage
-     at all. */
-  try{const rr=readRulesCacheString(localStorage.getItem(K_RULES));if(rr)rules=Object.assign(rules,JSON.parse(rr));}catch(e){}
+     in hand. It is the FALLBACK store and the migration source; IndexedDB holds
+     the pool otherwise, because five packs no longer fit in localStorage. A
+     localStorage copy is never older than the IndexedDB one, so when there is
+     one it is kept, and IndexedDB is read only when there is none (#134). */
+  const haveLocal=loadRulesCacheLocal();
   reindexRules();recomputeDups();
   buildStats();buildDeath();buildSlots();buildBio();
   wire();applyTheme();
@@ -425,9 +425,9 @@ function boot(){
      the save strip is for an open character, and the home screen covers it. */
   {const why=storageBlockedWhy();if(why)alert("Fieldbook can't use this browser's storage — "+why+". Your characters and settings won't be kept when you close it: save each character to a file with Save before you leave, or allow this page to store data and open Fieldbook again.");}
   /* After the first paint, not before it: the rules cache lives in IndexedDB now
-     and reading it is async. Everything above already drew with whatever
-     localStorage had (usually nothing, once migrated), and this replaces it. */
-  loadRulesCacheAsync();
+     and reading it is async. Everything above drew with what localStorage had;
+     when it had nothing, this brings the IndexedDB copy and redraws. */
+  loadRulesCacheAsync(haveLocal);
   checkForUpdate();checkForDataUpdate();checkSources({boot:true}).catch(()=>false);
 }
 boot();

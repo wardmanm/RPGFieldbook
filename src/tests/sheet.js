@@ -9172,6 +9172,30 @@ const BS = (() => {
      cookies blocked for the site */
   const denied = () => ({getItem() { throw secErr(); }, setItem() { throw secErr(); }, removeItem() { throw secErr(); }});
   const settle = () => new Promise(r => setImmediate(r));
+  /* A small IndexedDB: open, one store, put and get, each firing its event a
+     microtask later, as the real one fires them after the call returns. `data`
+     is the store's contents, shared across boots like the disk; st.failPut
+     makes every put abort, the way a full or broken IndexedDB refuses. */
+  function fakeIDB(data) {
+    const st = {failPut: false};
+    const later = f => Promise.resolve().then(f);
+    const db = {objectStoreNames: {contains: () => true}, createObjectStore() {}, close() {},
+      transaction() {
+        const tx = {};
+        const os = {
+          put(v, k) {
+            const rq = {};
+            if (st.failPut) later(() => { tx.error = new Error('QuotaExceededError'); if (tx.onabort) tx.onabort(); });
+            else { data[k] = v; later(() => { if (tx.oncomplete) tx.oncomplete(); }); }
+            return rq;
+          },
+          get(k) { const rq = {result: data[k]}; later(() => { if (tx.oncomplete) tx.oncomplete(); }); return rq; },
+        };
+        tx.objectStore = () => os;
+        return tx;
+      }};
+    return {api: {open() { const rq = {result: db}; later(() => { if (rq.onsuccess) rq.onsuccess(); }); return rq; }}, data, st};
+  }
   /* store: localStorage contents to start from. opts.ls: null, an object, or
      'getter' (the localStorage property itself throws). opts.idb: a fake
      IndexedDB from fakeIDB(). opts.before(app): last setup before boot.
@@ -9192,7 +9216,7 @@ const BS = (() => {
     a.bootThrew = opts.noBoot ? null : a.ctx.__bsBoot();
     return a;
   }
-  return {js, bootSrc, bootDef, secErr, denied, settle, app};
+  return {js, bootSrc, bootDef, secErr, denied, settle, fakeIDB, app};
 })();
 
 async function tBootStorage142() {
@@ -9219,8 +9243,70 @@ async function tBootStorage142() {
      /function idbReady\(\)\{try\{[^\n]*\}catch\(e\)\{return false;\}\}/.test(BS.js('70-persistence.js')));
 }
 
+/* #134: the newest copy of the rules cache is the one a boot keeps. Every
+   case saves through the real saveRulesCache() and boots the real boot() over
+   what it left, the store and the IndexedDB carried across like the disk. */
+async function tBootStorage134() {
+  const names = a => (a.X.rules.spells || []).map(s => s.name).sort().join();
+  const reboot = (from, idb) => BS.app(from.store, {idb: BS.fakeIDB(idb.data)});
+  // IndexedDB takes pack A; then refuses, and pack B falls back to localStorage
+  {
+    const idb = BS.fakeIDB({});
+    const a = BS.app({}, {idb, noBoot: true});
+    a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}]}, 'a.json');
+    await a.X.saveRulesCache();
+    ck('#134 setup: IndexedDB holds the first save, localStorage nothing', !!idb.data.rules && !(a.X.K_RULES in a.store));
+    idb.st.failPut = true;
+    a.X.mergeRules({system: 'BBB', spells: [{name: 'Beta'}]}, 'b.json');
+    const err = await a.X.saveRulesCache();
+    ck('#134 setup: the second save falls back to localStorage and lands', err === '' && (a.X.K_RULES in a.store), err);
+    const b = reboot(a, idb);
+    ck('#134 the next boot paints the newer localStorage copy', names(b) === 'Alpha,Beta', names(b));
+    await BS.settle();
+    ck('#134 ...and the older IndexedDB copy is not laid over it', names(b) === 'Alpha,Beta', names(b));
+  }
+  // the usual path: IndexedDB holds the pool and localStorage has no copy
+  {
+    const idb = BS.fakeIDB({});
+    const a = BS.app({}, {idb, noBoot: true});
+    a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}, {name: 'Beta'}]}, 'a.json');
+    await a.X.saveRulesCache();
+    const b = reboot(a, idb);
+    ck('#134 with only an IndexedDB copy, the first paint has no packs', names(b) === '', names(b));
+    await BS.settle();
+    ck('#134 ...and the IndexedDB copy arrives a moment later', names(b) === 'Alpha,Beta', names(b));
+  }
+  // an old build's plain-JSON localStorage copy, IndexedDB empty: the migration source
+  {
+    const b = BS.app({'hw-fb-rules': JSON.stringify({name: '', version: 1, spells: [{name: 'Gamma'}]})}, {idb: BS.fakeIDB({})});
+    await BS.settle();
+    ck('#134 an old build\'s localStorage copy is kept when IndexedDB has none', names(b) === 'Gamma', names(b));
+  }
+  // a localStorage copy that can't be read, beside an IndexedDB copy
+  {
+    const idb = BS.fakeIDB({rules: JSON.stringify({name: '', version: 1, spells: [{name: 'Delta'}]})});
+    const b = BS.app({'hw-fb-rules': '{not json'}, {idb});
+    await BS.settle();
+    ck('#134 an unreadable localStorage copy gives way to the IndexedDB one', names(b) === 'Delta', names(b));
+  }
+  // both refused after an IndexedDB save: the next boot has what last landed, as the warning said
+  {
+    const idb = BS.fakeIDB({});
+    const a = BS.app({}, {idb, noBoot: true});
+    a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}]}, 'a.json');
+    await a.X.saveRulesCache();
+    idb.st.failPut = true; a.state.quotaFull = true;
+    a.X.mergeRules({system: 'BBB', spells: [{name: 'Beta'}]}, 'b.json');
+    const err = await a.X.saveRulesCache();
+    ck('#134 setup: both stores refuse, and it says so', /won't be there next time/.test(err), err);
+    const b = reboot(a, idb);
+    await BS.settle();
+    ck('#134 ...and the next boot has the copy that landed last', names(b) === 'Alpha', names(b));
+  }
+}
+
 {
   const bsDone = ck.done;
-  const bsRun = tBootStorage142();
+  const bsRun = tBootStorage142().then(tBootStorage134);
   ck.done = () => bsRun.then(() => bsDone(), err => { ck('1.9.1 boot & storage block ran without throwing', false, String(err && err.stack || err)); bsDone(); });
 }
