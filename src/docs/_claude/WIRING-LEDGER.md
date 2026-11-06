@@ -9146,3 +9146,14 @@ Pages: [vitals & rest](../wiki/features/vitals-and-rest.md),
 [character building](../wiki/features/character-building.md),
 [sections & layout](../wiki/ui/sections-and-layout.md),
 [character model](../wiki/architecture/character-model.md), [decisions](../wiki/decisions.md).
+
+**Final review (a fresh reviewer, "with fixes"; no Critical).** Two re-graded fixes: Set exactly's Max
+box reads "Base max", with the effective maximum on a line under it, when an effect makes the two
+differ (the header shows the effective one, so its number typed in would count the effect twice); and
+Enter in the amount box (a phone keypad's Done) blurs it, putting the keypad away. A player note now
+says "a narrow screen", since the two-column layout moves Temp out too. Deferred: the Temp tap's
+preview doesn't show the clamp a Current above the maximum gets; a hand-edited negative Temp
+previews wrongly; the blank Temp's width at desktop on the Classic skin is for the screenshot pass.
+**Waiting on Mike:** `src/docs/qa/smoke.md` line 23 ("the Max padlock stops Max from moving") is his
+file (#150); the proposed line is "locking Vitals stops Max from moving; on a touchscreen the HP bar
+opens Hit points".

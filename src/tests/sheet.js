@@ -8194,6 +8194,13 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
        /id="hpqCur"[^>]*value="26"/.test(hUn) && /id="hpqMax"[^>]*value="38"/.test(hUn) && /id="hpqTmp"[^>]*value="3"/.test(hUn));
     ck('#112 ...with the header, and no data-hp or data-path box in it', hUn.includes('26 / 38 · temp 3') && !/data-hp|data-path/.test(hUn));
     ck('#112 ...and a hand-edited value is escaped', !X.hpDialogHTML({cur: '"><x>', max: '', temp: ''}, 0, true).includes('"><x>'));
+    // final review: the header shows the EFFECTIVE maximum and the box holds the base,
+    // so typing the header's number would add an effect twice
+    ck('#112 review: with an effect on Max, Set exactly calls its box the base and says what effects make it',
+       (h => /Base max<input[^>]*id="hpqMax"[^>]*value="38"/.test(h) && h.includes('Your maximum is 43 with effects; this box is the base.'))(X.hpDialogHTML(hp, 43, true)) &&
+       (h => /Max<input[^>]*id="hpqMax"/.test(h) && !/Base max/.test(h) && !h.includes('with effects'))(X.hpDialogHTML(hp, 38, true)),
+       X.hpDialogHTML(hp, 43, true));
+    ck('#112 review: ...and says nothing of it while the box is locked away', !X.hpDialogHTML(hp, 43, false).includes('with effects'));
   }
   /* #112: renderHP's touch path, and the window driven through its own wiring */
   {
@@ -8211,7 +8218,7 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
           textContent: '', open: false, _on: {}, focused: 0,
           addEventListener(ty, fn) { (this._on[ty] = this._on[ty] || []).push(fn); },
           fire(ty, ev) { (this._on[ty] || []).forEach(f => f(Object.assign({preventDefault() {}, key: ''}, ev || {}))); },
-          focus() { this.focused++; }, select() {}, click() { this.fire('click'); },
+          focus() { this.focused++; }, blur() { this.blurred = (this.blurred || 0) + 1; }, select() {}, click() { this.fire('click'); },
           querySelector: s => s === 'summary' ? dlg('hpqSet:summary') : null};
       }
       return D[id];
@@ -8248,6 +8255,8 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
          ['hpqDmg', 'hpqHeal', 'hpqTemp'].every(id => D[id].disabled === false) &&
          D.hpqDmgRes.textContent === '→ 22, no temp' && D.hpqHealRes.textContent === '→ 33' && D.hpqTempRes.textContent === '3 → 7',
          [D.hpqDmgRes.textContent, D.hpqHealRes.textContent, D.hpqTempRes.textContent]);
+      D.hpqAmt.fire('keydown', {key: 'Enter'});
+      ck('#112 review: the keypad\'s Done (Enter) puts the keypad away and applies nothing', D.hpqAmt.blurred === 1 && c.hp.cur === 26 && closed === 0);
       D.hpqAmt.value = '-7'; D.hpqAmt.fire('input');
       ck('#112 ...a minus greys them again, with no line', D.hpqDmg.disabled === true && D.hpqDmgRes.textContent === '');
       D.hpqAmt.value = '7'; D.hpqAmt.fire('input'); D.hpqDmg.fire('click');

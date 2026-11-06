@@ -37,4 +37,4 @@ Bullets below this line — leave the heading in place.
 - On a phone or tablet, tapping the HP bar opens a Hit points window: type how much, then tap Damage,
   Heal or Temp. No minus sign needed. "Set exactly" underneath types the numbers straight in.
 - The hit-point numbers and the − and + signs now sit in the middle of the bar and their buttons. On a
-  narrow phone screen your temporary hit points show beside the Hit points label instead.
+  narrow screen your temporary hit points show beside the Hit points label instead.

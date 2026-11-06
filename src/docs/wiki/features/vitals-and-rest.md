@@ -98,8 +98,9 @@ With a mouse the bar has none of that. A `(pointer:coarse)` change listener repa
 - a header, `hpNowText()`: Current / `effMaxHP()` · temp ("26 / 38 · temp 3", "0 / —" with nothing
   set);
 - an amount box, `inputmode="numeric"`, "How much?", focused on open (focusing it inside the tap
-  brings up the digits-only keypad; `modalTakeFocus()` focuses the dialog box on touch). `hpAmount()`
-  reads it: spaces and commas stripped, then a whole number from 1, else `null`;
+  brings up the digits-only keypad; `modalTakeFocus()` focuses the dialog box on touch). Enter (the
+  keypad's Done) puts the keypad away and applies nothing. `hpAmount()` reads it: spaces and commas
+  stripped, then a whole number from 1, else `null`;
 - **Damage**, **Heal** and **Temp**, greyed until it reads, each with its line from `hpQuickText()`:
   "→ 22, no temp", or "temp 3 → 1" when Temp soaks it all and Current doesn't move; "→ 33"; "3 → 7",
   or "→ 7" with none. One tap runs `hpQuickApply()` — Damage `adjustHP(-n)`, Heal `adjustHP(n)`, Temp
@@ -108,7 +109,9 @@ With a mouse the bar has none of that. A `(pointer:coarse)` change listener repa
   reopening;
 - **Set exactly**, a `<details>` folded by default and opened by hand in its summary's click (so
   focusing Current stays inside the tap): Current, Max (only while Vitals is unlocked; otherwise a line
-  says how to unlock it) and Temp, filled with what is there, `inputmode="numeric"`. `hpSetParse()`
+  says how to unlock it) and Temp, filled with what is there, `inputmode="numeric"`. Max is the base;
+  when an effect makes the effective maximum differ, the box reads "Base max" and a line gives the
+  effective one, so the header's number isn't typed in and counted twice. `hpSetParse()`
   reads them: blank is "not set" (`""`), a whole number from 0 is itself, a Temp of 0 is none, and
   anything else names its box ("Not a whole number: Current") and greys Apply. Apply (or Enter in a
   box) runs `hpSetApply()`, which writes them, refuses a Max while Vitals is locked even if one is

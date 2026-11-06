@@ -363,6 +363,10 @@ function hpSetApply(hp){
 }
 function hpDialogHTML(hp,effMax,withMax){
   const v=x=>(x===null||x===undefined)?"":String(x);
+  /* The header shows the EFFECTIVE maximum; Set exactly's box holds the base,
+     so when an effect makes them differ the box says so (typing the header's
+     number would count the effect twice). */
+  const fx=num(effMax)!==num(hp.max);
   const box=(id,label,val,ph)=>`<label>${esc(label)}<input type="text" inputmode="numeric" id="${esc(id)}" value="${esc(val)}"${ph?` placeholder="${esc(ph)}"`:""} autocomplete="off"></label>`;
   const btn=(id,cls,verb)=>`<button type="button" class="tbtn hpq-btn ${esc(cls)}" id="${esc(id)}" disabled><b>${esc(verb)}</b><span class="hpq-res" id="${esc(id+"Res")}"></span></button>`;
   return `<div class="hpq">
@@ -370,8 +374,9 @@ function hpDialogHTML(hp,effMax,withMax){
     <input type="text" inputmode="numeric" class="hpq-amt" id="hpqAmt" placeholder="How much?" aria-label="How much?" autocomplete="off" enterkeyhint="done">
     <div class="hpq-acts">${btn("hpqDmg","hpq-dmg","Damage")}${btn("hpqHeal","hpq-heal","Heal")}${btn("hpqTemp","hpq-temp","Temp")}</div>
     <details class="hpq-set" id="hpqSet"><summary>Set exactly</summary>
-      <div class="hpq-grid">${box("hpqCur","Current",v(hp.cur))}${withMax?box("hpqMax","Max",v(hp.max)):""}${box("hpqTmp","Temp",num(hp.temp)>0?v(hp.temp):"","none")}</div>
-      ${withMax?"":`<p class="hint">Max HP is locked. Unlock Vitals with its pencil to change it.</p>`}
+      <div class="hpq-grid">${box("hpqCur","Current",v(hp.cur))}${withMax?box("hpqMax",fx?"Base max":"Max",v(hp.max)):""}${box("hpqTmp","Temp",num(hp.temp)>0?v(hp.temp):"","none")}</div>
+      ${!withMax?`<p class="hint">Max HP is locked. Unlock Vitals with its pencil to change it.</p>`
+        :fx?`<p class="hint">Your maximum is ${esc(num(effMax))} with effects; this box is the base.</p>`:""}
       <p class="hint hpq-msg" id="hpqMsg" role="status"></p>
       <div class="m-actions"><button class="tbtn" id="hpqCancel" type="button">Cancel</button><button class="tbtn primary" id="hpqApply" type="button">Apply</button></div>
     </details>
@@ -388,7 +393,10 @@ function openHPDialog(){
     const n=hpAmount(amt&&amt.value),txt=n===null?null:hpQuickText(character.hp,effMaxHP(),n);
     Object.keys(kinds).forEach(k=>{const b=$(kinds[k]),r=$(kinds[k]+"Res");if(b)b.disabled=n===null;if(r)r.textContent=txt?txt[k]:"";});
   };
-  if(amt)amt.addEventListener("input",sync);
+  if(amt){amt.addEventListener("input",sync);
+    /* the keypad's Done is an Enter: put the keypad away so the three buttons
+       show, and apply nothing (which one is the player's tap) */
+    amt.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();amt.blur();}});}
   Object.keys(kinds).forEach(k=>{const b=$(kinds[k]);if(b)b.addEventListener("click",()=>{
     if(!hpQuickApply(k,amt&&amt.value))return;
     renderHP();scheduleSave();closeModal();   /* no toast: the bar shows the result */
