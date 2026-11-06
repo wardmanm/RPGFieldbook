@@ -309,9 +309,6 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
   a refused write (#81): autosave (`saveNow()`), `newCharacter()`, `finishImport()`,
   `migrateOldChar()`, `deleteCharacter()` and `setAutoload()`. `saveSettings()` still returns why it
   was refused, but most of its callers ignore that. → [Storage](../architecture/storage.md)
-- **Google Fonts in the template (constraint 1).** (#144) `src/fieldbook.template.html` links
-  `fonts.googleapis.com`. It has been there since the first commit, with no recorded decision. Offline,
-  the font stacks fall back to local serifs. → [Theming & icons](../ui/theming-and-icons.md)
 
 ### Latent: no shipped data triggers these yet
 
@@ -497,3 +494,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — Closed: Undo recovery dropping a home-joined entry's remainder, and its grant check reading "live now" rather than "revoked since": the full reversal they described is removed (#145's two entries). → ledger L9196, #170
 - 2026-11-06 — Removed: the glossary editor's Save replacing the whole entry; it keeps the fields it doesn't show. → ledger L9219, #136
 - 2026-11-06 — Removed four fixed in 1.9.1's Boot & storage branch: boot stopping where storage is blocked, a stale rules cache winning, no prompt for the boot autoload, and Remove's green line over a refused save. → ledger L9281, #142, #134, #135, #143
+- 2026-11-06 — Google Fonts in the template (#144) is fixed: the fonts are embedded. → ledger L9357, #144

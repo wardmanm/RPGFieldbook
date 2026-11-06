@@ -508,6 +508,13 @@ follows your chosen theme. Which icon came from whom is recorded in
 `src/icons/icons.json` in the source repository, and the same credit appears in the app
 under **Settings → Credits & licences**.
 
+**Fonts.** The lettering uses three fonts, Grenze Gotisch, Cinzel and EB Garamond, each by its
+project's authors and used under the [SIL Open Font License 1.1](https://openfontlicense.org).
+They are built into `fieldbook.html`, so the app looks the same offline as online; only their
+Latin letters are included, and a letter outside that set shows in a standard serif. Their
+copyright notices and the licence's full text are kept inside `fieldbook.html` itself, and the
+same credit appears in the app under **Settings → Credits**.
+
 **Rules data** comes separately from the app, as the rules-data zip,
 `fieldbook-data-standalone-<version>.zip`, which holds one pack, SRD 5.2. Every pack keeps its own
 terms: they are listed in the zip's `NOTICE.md`, and in the app under **Settings → Credits &

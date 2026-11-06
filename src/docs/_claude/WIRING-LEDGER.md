@@ -9353,3 +9353,87 @@ fixed: the home screen's status line shows the refusal as plain hint text, not i
 `boot()`, not `loadRulesCacheAsync()`, that calls `promptAfterRulesRestored()`. Deferred:
 `loadRulesCacheLocal()` accepts any parsed object (an array would end the IndexedDB read), and two
 promise chains (`boot()`'s prompt, `clearAllRules()`'s report) have no `catch`.
+
+## #144: the web fonts are embedded, Latin only (Mike, 2026-11-06)
+
+The template linked Google Fonts (two preconnects and a css2 stylesheet: Grenze Gotisch 500/700/900,
+Cinzel 500/600/700, EB Garamond 400/500/600 and italic 400), the one third-party URL in the shipped
+file since the first commit, against constraint 1. Offline the stacks fell back to Georgia/Times: no
+gothic lettering, and Cinzel's small capitals went mixed case.
+
+**Design (Mike, 2026-11-06).** The same three families and weights are embedded in the stylesheet,
+and the page makes no font request at all. **Latin only:** Google's `latin` subset with its exact
+`unicode-range`, so a letter outside it ("Ł") falls back to Georgia for that letter; Latin Extended
+is not included. Each family is one variable woff2 per style: Cinzel 25,888 B, EB Garamond 44,172 B,
+EB Garamond italic 25,412 B, Grenze Gotisch 42,272 B (137,744 B; 183,664 B as base64). The built
+page goes from 1,396,238 B to 1,587,893 B.
+
+**The pipeline is the emblems'.** `scripts/fetch-fonts.js`, run by hand and never from `build.sh` or
+CI, asks the css2 API for exactly the old request (`css2Url()` builds it from `FAMILIES`) with a
+Chrome User-Agent so woff2 is served, keeps the `/* latin */` faces (`parseLatinFaces()`), downloads
+the files and each family's `OFL.txt` from google/fonts (`licenceParts()`), and writes the committed,
+generated `src/css/90-fonts.css`, last in `manifest.css` (`fragmentCSS()`): a GENERATED header, each
+family's copyright notice and the full OFL 1.1 text once in a comment, then one `@font-face` per file
+with a `data:font/woff2;base64,` URL, the requested weights as a range (`500 900`, `500 700`,
+`400 600`, `400`), Google's latin `unicode-range` and `font-display:swap`. A weight the CSS asks for
+outside a range (800 and 900 on `--head` and `--body`) clamps to the face it got online. The script
+is strict like `fetch-icons.js`: an unexpected face, weight, file shape, subset range, non-woff2
+file, a total over 256 KiB, a notice that is not a copyright line, a licence text that differs
+between families, or `*/` in it, and it dies writing nothing.
+
+**The licence.** Subsetting modifies a font under the OFL, and a Reserved Font Name would forbid
+keeping the name; none of the three `OFL.txt` declares one (checked 2026-11-06), and the script dies
+on one that does. Notices: "Copyright 2020 The Grenze Gotisch Project Authors
+(https://github.com/Omnibus-Type/Grenze-Gotisch)", "Copyright 2020 The Cinzel Project Authors
+(https://github.com/NDISCOVER/Cinzel)", "Copyright 2017 The EB Garamond Project Authors
+(https://github.com/octaviopardo/EBGaramond12)". The comment travels inside `fieldbook.html`, which is
+shared alone; the build is plain concatenation, so it reaches the built page as written. Settings →
+Credits gains a Fonts line ("two kinds of third-party work") and README §10 a **Fonts** paragraph,
+both naming the families and the SIL Open Font License 1.1, linked to openfontlicense.org.
+
+**Tests.** `rules-data.js`: constraint 1 is checked for the first time. Neither the built page nor
+its sources (template, html, css, js) may load from `http:`, `https:` or `//` through a `<link href>`,
+`<script src>`, any `src`/`srcset`/`poster`, an `<object data>`, an `href` on anything but `<a>` and
+`<area>`, a CSS `@import` or a CSS `url()` (case-blind, not JS's `new URL(`). Ten cases it must catch
+and seven it must pass pin the detector; the built page carries `90-fonts.css` byte for byte. It sits
+in `rules-data.js` because that suite holds the markup guards and already needs a current
+`dist/fieldbook.html`; `docs.js` reads only sources and docs. `docs.js`: the families the tokens name
+and the families embedded agree both ways; each face has a weight or range, swap, the Latin range and
+no `U+0100`, and a blob that is woff2 and the byte count its comment states; the OFL text and each
+family's notice are there and no notice names a Reserved Font Name; README and Settings credit every
+embedded family and the licence. Long base64 lines (up to 58,949 characters) trip nothing: the build
+is Buffer-based, CI's hygiene loop is `grep`/`head`/`tail`, and the private leak scan splits them into
+words no prose matches.
+
+The CSS fragment count moves to 10 (CLAUDE.md, ADR-001); the zip guard already bans every
+`scripts/` path, so `build.sh` is unchanged.
+
+Pages: [theming & icons](../wiki/ui/theming-and-icons.md), [build & source split](../wiki/architecture/build-and-source-split.md),
+[testing](../wiki/process/testing.md), [building & CI](../wiki/process/building-and-ci.md),
+[settings & updates](../wiki/features/settings-and-updates.md), [overview](../wiki/overview.md),
+[known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).
+
+## #144 follow-up: the final review's fixes (2026-11-06)
+
+A fresh review of the branch found one thing the entry above gets wrong: not every weight lands
+where it did online. Grenze Gotisch's embedded face is one `500 900` range, and Google served one
+face per requested weight (500, 700, 900), which snapped a weight between them to the next one. So
+an 800 drew at 900 online and at 800 embedded; a 600 would draw at 600, not 700. Cinzel's and EB
+Garamond's ranges have no gaps, and every weight beyond a range clamps as before. The only rule it
+reached was `.hcard-name` (the home screen's character names), which asked for 800 and now asks for
+900, the weight it drew at; on the classic skin, Cinzel clamps both to 700. `docs.js` now maps every
+weight the CSS asks of each family both ways (Google's faces, the embedded range) and fails where
+they differ.
+
+The other fixes. Each face's comment carries its file's sha256, and `docs.js` checks it, since a
+same-length change to the base64 kept the size and the `wOF2` header and would have fallen back
+silently. Google now and then answers with `fonts.gstatic.com/l/font?kit=…` addresses instead of
+`/s/…woff2` files (two of the reviewer's four fetches); `fetch-fonts.js` asks again, up to three
+times, then says to re-run, never to widen `GSTATIC`. Fetched licence text holding `</style` is
+refused, as `*/` was, since the comment sits inside the page's one `<style>`. The script exports its
+functions when required, for throwaway checks. Corrections: the italic is a static file, not a
+variable one; Grenze Gotisch falls back to Times New Roman, not Georgia; the Settings page is called
+Credits; the source split has 56 fragments, 39 of them JS. The four font files are unchanged, and
+the built page is 1,588,419 B.
+
+Pages: [theming & icons](../wiki/ui/theming-and-icons.md), [build & source split](../wiki/architecture/build-and-source-split.md).

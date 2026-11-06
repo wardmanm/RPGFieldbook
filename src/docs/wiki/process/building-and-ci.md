@@ -324,8 +324,8 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 - **Staleness is checked in CI and `pre-push` only.** It is never checked in `build.sh`, whose job is to
   fix staleness, and never in `pre-commit`, because a stale `dist/` is the expected state on a feature
   branch.
-- **`build.sh` needs no network.** Icon fetching (`scripts/fetch-icons.js`) and the workflow YAML
-  check are kept out of it deliberately.
+- **`build.sh` needs no network.** Icon and font fetching (`scripts/fetch-icons.js`,
+  `scripts/fetch-fonts.js`) and the workflow YAML check are kept out of it deliberately.
 - **Every build needs Python now (#85).** `fbdata.py bundle` runs before the zips, under `--no-zip`
   too; only running a single Node suite directly, skipping `run.sh`'s rebundle, needs none.
 - **The archive that ships is the archive that validated.** A failed `fbdata.py validate` deletes
@@ -443,3 +443,4 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 - 2026-11-02 — `/pre-release` step 3: the test pass is Mike's high-level manual pass by feature; Claude's pre-drive is a separate report. → ledger L8249
 - 2026-11-04 — The pre-release becomes part of `/release` (`.claude/skills/release/pre-release.md`): one command runs the open steps, stops when one waits on Mike, and goes on to the cut. → ledger L8860, #180
 - 2026-11-05 — `docs/private-sources.md` joins the app zip's allowlist and the kit zip, which also carries a `fieldbook-version.txt` stamp; `/release private` writes `releases/data/` and offers `--allow-unchanged`. → ledger L8943, #182
+- 2026-11-06 — `scripts/fetch-fonts.js` joins `fetch-icons.js` as a fetcher kept out of the build. → ledger L9357, #144

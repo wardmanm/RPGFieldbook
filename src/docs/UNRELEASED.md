@@ -51,3 +51,4 @@ Bullets below this line — leave the heading in place.
   open from the home screen.
 - Removing a pack, or Remove all, now says on its status line when the change couldn't be saved, and
   that what you removed may come back next time.
+- The app's lettering now looks the same offline as online: its fonts are built in.

@@ -557,6 +557,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the credit appears** — Settings (folded) and README §10, both generated or asserted
 - **Text on an accent fill** — `--on-accent`, chosen per palette
 - **The mid-band HP colour** — Its own `--warn` token in all four palettes
+- **The web fonts (#144)** — Embedded: the three families as base64 woff2 in a generated fragment, `90-fonts.css`, Latin only (Mike, 2026-11-06)
 
 ## Data
 

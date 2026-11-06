@@ -322,6 +322,121 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   ck('the app says the icons were changed', /background square was removed/i.test(settings));
 }
 
+// ---------- embedded web fonts (#144): the tokens vs the generated fragment
+// Like the emblems: scripts/fetch-fonts.js writes 90-fonts.css by hand-run, and
+// the drift that can happen offline is a token naming a family nobody embedded,
+// which falls back to Georgia with no error anywhere.
+{
+  const FONTS = 'src/css/90-fonts.css';
+  const have = fs.existsSync(path.join(ROOT, FONTS));
+  ck('the fonts fragment exists — else run: node scripts/fetch-fonts.js', have);
+  const css = have ? read(FONTS) : '';
+  ck('90-fonts.css is marked generated, naming its command',
+     /GENERATED, DO NOT EDIT/.test(css) && css.includes('node scripts/fetch-fonts.js'));
+
+  const tokens = read('src/css/00-tokens.css');
+  const named = new Set([...tokens.matchAll(/--(?:display|head|body):\s*"([^"]+)"/g)].map(m => m[1]));
+  ck('the tokens name the three families', ['Grenze Gotisch', 'Cinzel', 'EB Garamond'].every(f => named.has(f)),
+     [...named]);
+  // Each face: its one-line comment, then the block itself.
+  const faces = [...css.matchAll(/\/\* ([^\n]*?): latin, (\d+) bytes([^\n]*)\*\/\n@font-face\{([^}]*)\}/g)]
+    .map(m => ({ label: m[1], bytes: +m[2], sha: (/, sha256 ([0-9a-f]{64})\b/.exec(m[3]) || [])[1], body: m[4],
+                 family: (/font-family:"([^"]+)"/.exec(m[4]) || [])[1],
+                 style: (/font-style:(\w+)/.exec(m[4]) || [])[1] }));
+  ck('90-fonts.css holds every @font-face as a labelled block',
+     faces.length > 0 && faces.length === (css.match(/@font-face\{/g) || []).length, faces.length);
+  const embedded = new Set(faces.map(f => f.family));
+  const unembedded = [...named].filter(f => !embedded.has(f));
+  ck('every font family the tokens name is embedded — else run: node scripts/fetch-fonts.js',
+     unembedded.length === 0, unembedded);
+  const stray = [...embedded].filter(f => !named.has(f));
+  ck('...and it embeds no family the tokens do not name', stray.length === 0, stray);
+  ck('EB Garamond has a normal and an italic face',
+     ['normal', 'italic'].every(s => faces.some(f => f.family === 'EB Garamond' && f.style === s)));
+  faces.forEach(f => {
+    const w = /font-weight:(\d+)(?: (\d+))?;/.exec(f.body);
+    ck(f.label + ': a font-weight or a weight range', !!w && (!w[2] || +w[1] <= +w[2]));
+    ck(f.label + ': font-display:swap', /font-display:swap;/.test(f.body));
+    const range = (/unicode-range:([^;]+);/.exec(f.body) || [])[1] || '';
+    ck(f.label + ': the Latin unicode-range, not Latin Extended',
+       /^U\+0000-00FF,/.test(range) && !/U\+0100/.test(range), range.slice(0, 40));
+    const b64 = (/src:url\("data:font\/woff2;base64,([A-Za-z0-9+/=]+)"\) format\("woff2"\)/.exec(f.body) || [])[1];
+    const bytes = b64 ? Buffer.from(b64, 'base64') : Buffer.alloc(0);
+    ck(f.label + ': a woff2 data: URL', bytes.subarray(0, 4).toString('latin1') === 'wOF2');
+    ck(f.label + ': its blob is the ' + f.bytes + ' bytes its comment says', bytes.length === f.bytes, bytes.length);
+    // A same-length change (a search-and-replace that reaches the base64) keeps
+    // the size and the wOF2 header, and the font silently falls back.
+    ck(f.label + ': its blob has the sha256 its comment says',
+       !!f.sha && require('crypto').createHash('sha256').update(bytes).digest('hex') === f.sha, f.sha || 'no sha256');
+  });
+
+  // Same weights as online. Google served one @font-face per requested weight,
+  // so a weight between two of them snapped to a requested one (800 -> 900);
+  // one face with a range renders it as asked (800). Every weight the CSS asks
+  // of a family must land where it did, or "looks the same" is false (#144).
+  const snap = (w, have) => {                         // CSS Fonts 4 §5.2, font-weight
+    if (have.includes(w)) return w;
+    const up = have.filter(x => x > w).sort((a, b) => a - b), down = have.filter(x => x < w).sort((a, b) => b - a);
+    if (w >= 400 && w <= 500) {
+      const near = up.filter(x => x <= 500);
+      return near.length ? near[0] : down.length ? down[0] : up[0];
+    }
+    return w < 400 ? (down.length ? down[0] : up[0]) : (up.length ? up[0] : down[0]);
+  };
+  const requested = {};                               // "Family|style" -> [weights], from each face's comment
+  faces.forEach(f => {
+    const m = /, weights ([\d/]+)$/.exec(f.label);
+    if (m) requested[f.family + '|' + f.style] = m[1].split('/').map(Number);
+  });
+  const TOKEN_FAMS = { display: ['Grenze Gotisch', 'Cinzel'], head: ['Cinzel'], body: ['EB Garamond'] };
+  const WORD = { normal: 400, bold: 700 };
+  const asked = [];                                   // {where, family, w}
+  manifest.css.filter(p => p !== FONTS).forEach(p => {
+    const src = read(p).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const r of src.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const tok = /var\(--(display|head|body)\)/.exec(r[2]);
+      const w = /font-weight:\s*(\d+|normal|bold)\b/.exec(r[2]) || /font:\s*(\d+|bold)\b/.exec(r[2]);
+      if (tok && w) TOKEN_FAMS[tok[1]].forEach(family =>
+        asked.push({ where: p.slice(8) + ' ' + r[1].trim().replace(/\s+/g, ' '), family, w: WORD[w[1]] || +w[1] }));
+    }
+  });
+  ck('the CSS asks the fonts for weights (the parse found them)', asked.length > 10, asked.length);
+  const moved = asked.filter(a => {
+    const f = faces.find(x => x.family === a.family && x.style === 'normal');
+    const wr = f && /font-weight:(\d+)(?: (\d+))?;/.exec(f.body);
+    const have = requested[a.family + '|normal'];
+    if (!wr || !have) return true;
+    const lo = +wr[1], hi = wr[2] ? +wr[2] : lo;
+    return Math.min(hi, Math.max(lo, a.w)) !== snap(a.w, have);
+  }).map(a => a.where + ': ' + a.family + ' ' + a.w);
+  ck('every weight the CSS asks of a font renders as it did from Google', moved.length === 0, moved);
+
+  // SIL OFL 1.1: each copy carries the copyright notice and the licence.
+  ck('90-fonts.css carries the SIL Open Font License 1.1 text',
+     css.includes('SIL OPEN FONT LICENSE Version 1.1') && css.includes('OTHER DEALINGS IN THE FONT SOFTWARE.'));
+  [...embedded].forEach(fam =>
+    ck('90-fonts.css carries ' + fam + "'s copyright notice",
+       new RegExp('^ {3}' + fam + ': Copyright ', 'm').test(css)));
+  const notices = css.split('\n').filter(l => /^ {3}[^:\n]+: Copyright /.test(l));
+  ck('no embedded family declares a Reserved Font Name',
+     notices.length > 0 && notices.every(l => !/Reserved Font Name/i.test(l)));
+
+  // The credit, beside the emblems' CC BY one above: README §10 and Settings ->
+  // Credits name every family embedded and the licence, linked. The app's copy is
+  // the one that counts: fieldbook.html travels as a lone file.
+  const settings = read('src/js/88-settings.js');
+  const credits = (/const secCredits=`([\s\S]*?)`;/.exec(settings) || [, ''])[1];
+  ck('88-settings.js has its Credits page', credits.length > 0);
+  [...embedded].forEach(fam => {
+    ck('README credits the ' + fam + ' font', readme.includes(fam));
+    ck('the app credits the ' + fam + ' font', credits.includes(fam));
+  });
+  ck('README names the SIL Open Font License 1.1', readme.includes('SIL Open Font License 1.1'));
+  ck('README links the OFL', readme.includes('https://openfontlicense.org'));
+  ck('the app names the SIL Open Font License 1.1', credits.includes('SIL Open Font License 1.1'));
+  ck('the app links the OFL', credits.includes('<a href="https://openfontlicense.org"'));
+}
+
 // ---------- the wiki (src/docs/wiki/) — see src/docs/specs/1.7.2/2026-09-28-living-wiki-design.md §7
 // Facts only, like everything above: a page is listed, its links resolve, the
 // code it names exists, and no JS fragment goes undocumented. Wrong PROSE is

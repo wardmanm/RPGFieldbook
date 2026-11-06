@@ -5,7 +5,7 @@ version button, which opens the in-app changelog, the **update pill** that takes
 GitHub has a newer release, and the **Extensions pill** when a source offers newer packs (#102).
 Settings holds the look of the app, the open character's own options, **Extensions** — the rules
 packs that are loaded or offered, where they come from, which have updates, and installing them —
-backup of settings and rules, and the credits that the icons and the loaded packs require.
+backup of settings and rules, and the credits that the icons, the fonts and the loaded packs require.
 
 **Code:** `SET_PAGES`, `setPageOf()`, `setNavHTML()`, `setPageHTML()`, `setRowHTML()`, `tabsGroupHTML()` (#52), `rulesNavBadgeHTML()`, `openSettings()`, `encSettingsHint()`,
 `rulesStatusText()`, `updateRulesStatus()`, `refreshRulesUI()`, `loadedRulesGroups()`,
@@ -55,7 +55,7 @@ and actions are buttons.
 | **Carrying** | Only with a character open, titled "For *name*". *Size and weight:* size (a dropdown), encumbrance (segmented: Off, Standard, Variant), coins count as weight, and the live "carrying X of Y" line (`encSettingsHint()`) |
 | **Extensions** (Rules data until #102; a stored `setPage:"rules"` opens it) | The updates banner, *Rules data*, *Unsupported* (only when something is in it) and *Sources*, each a folding section (below); then the status line, and *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against |
 | **Backup** | *Characters:* the character library. *Settings file:* Export and Import, and the status line that says what an import did (`#setImpStatus`) |
-| **Credits** | The game-icons.net attribution CC BY 3.0 requires, in the app because `fieldbook.html` travels as a lone file (see [Theming & icons](../ui/theming-and-icons.md)); then "Rules data you have loaded" (`rulesCreditsHTML()`): each loaded pack that states a licence or a credit, as its title, its attribution and its licence. `CC-BY-4.0`, `CC-BY-SA-3.0` and `MIT` link to their licence pages; any other id is plain text; everything is escaped. The list is left out when no loaded pack has a credit. The credits come from `rules.credits` (see [Data archive](../architecture/data-archive.md)) |
+| **Credits** | The game-icons.net attribution CC BY 3.0 requires, in the app because `fieldbook.html` travels as a lone file (see [Theming & icons](../ui/theming-and-icons.md)); the fonts' credit (#144): Grenze Gotisch, Cinzel and EB Garamond under the SIL Open Font License 1.1, linked, Latin letters only, their notices and licence kept in the file; then "Rules data you have loaded" (`rulesCreditsHTML()`): each loaded pack that states a licence or a credit, as its title, its attribution and its licence. `CC-BY-4.0`, `CC-BY-SA-3.0` and `MIT` link to their licence pages; any other id is plain text; everything is escaped. The list is left out when no loaded pack has a credit. The credits come from `rules.credits` (see [Data archive](../architecture/data-archive.md)) |
 
 The sidebar lists Sheet display and Carrying under a "This character" caption, set apart from the
 rest. Extensions carries the entry count, and a dot while an update is pending
@@ -476,3 +476,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-11-05 — A real token read a private repo from `file://` and the app added it; the final review's fixes: an imported source without its token asks for it at once, a malformed token is never echoed, 429 reads as the rate limit, one source per repo. → ledger L9016, #182
 - 2026-11-05 — A link holding a token is refused unfetched; a source whose token is refused offers nothing. → ledger L9046, #182
 - 2026-11-06 — Remove and Remove all say on their status line, and the home screen's, when the change couldn't be saved. → ledger L9281, #143
+- 2026-11-06 — Credits gains the fonts' line, beside the icons'. → ledger L9357, #144

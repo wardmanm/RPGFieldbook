@@ -173,12 +173,18 @@ function openSettings(){
      ICON_ARTISTS is generated from the icons actually vendored (05-icons.js), so
      this list cannot drift from what ships. The links are dead offline; the
      artists' names and the licence name are plain text on purpose. */
+  /* The fonts (#144): the SIL OFL 1.1 asks that each copy carry the copyright
+     notices and the licence, which 90-fonts.css's comment does inside the file
+     itself (scripts/fetch-fonts.js writes it). This line is the credit a player
+     can see; docs.js checks it names every family that file embeds. */
   /* Each <p> is ONE line on purpose: .m-body p is white-space:pre-wrap, so a
      wrapped source line renders its newline and indentation literally. */
   const secCredits=`
-    <p class="hint">Fieldbook itself is MIT-licensed. It includes one third-party work:</p>
+    <p class="hint">Fieldbook itself is MIT-licensed. It includes two kinds of third-party work:</p>
     <div class="field"><label class="f">Icons</label>
       <p class="hint">The emblems beside each class, ${raceTerm().toLowerCase()} and background, and the crossed swords on the combat button, are from <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>, by ${ICON_ARTISTS.map(esc).join(", ")}. Used under <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>. Each icon has been changed: its background square was removed and its colour now follows your theme.</p></div>
+    <div class="field"><label class="f">Fonts</label>
+      <p class="hint">The lettering uses three fonts, built into the app so it looks the same offline: Grenze Gotisch, Cinzel and EB Garamond, each by its project's authors. Each is used under the <a href="https://openfontlicense.org" target="_blank" rel="noopener">SIL Open Font License 1.1</a>, and only its Latin letters are included. Their copyright notices and the licence's full text are kept inside the app's own file.</p></div>
     ${rulesCreditsHTML()}
     <div class="field"><label class="f">Rules content</label>
       <p class="hint">Rules data comes separately from the app, as the rules data zip or files you supply. Each pack keeps its own terms; the ones you have loaded are listed above.</p></div>`;
