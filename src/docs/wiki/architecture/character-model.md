@@ -30,7 +30,7 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 | Kind | Fields |
 |---|---|
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
-| structured objects | `hp` `{cur, max, temp, locked:true}`, `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
+| structured objects | `hp` `{cur, max, temp}` (a sheet from before #115 also carries `locked`, kept and unread), `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
 | lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers`, `party` `[{id, name, ac, maxHp}]` (#91, the Bio-tab roster), `combatants` `[{id, kind, name, init, ac, track, band, hp, maxHp, dead, partyId}]` (#91, always `[]` out of combat), `invLog` `[{id, at, kind, title, lines, undo, undone, meta}]` (#47, the inventory log, newest first), `levelLog` `[{at, class, level, hp, features:[{id, name, grants}], abilities, subclass, grants, slots}]` (#118, one record per level-up for level down, oldest first, at most 200; `migrate()` keeps a record only when it is an object with a string `class`, a `level` above 0 and a `features` array, then normalizes the inside without dropping other keys: features are objects with a non-empty string `id`, each with a `grants` array; grants are objects with string `sid`/`type`/`key`; `hp` is a number ≥ 0, `subclass` a string, `abilities` an object) |
 | chip lists (#103) | `resists` `[{id, name}]`, `immunes` `[{id, name}]`, `senses` `[{id, name, range}]` (`range` whole feet or `""`), `languages` `[{id, name, src}]` (`src` `""` the player's, `race:…` / `bg:…` a grant, `system` a ruleset default) — all `[]` in `blankChar()` |
 | maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0), `ammoFight` (ammunition kind → `{fired, back}`: what a row's Recover gave back during the current fight, for End combat's log line; `{}` default, emptied at the start and end of a fight, #47), `endCombatOpen` (End of combat window row key → `true` for a row the player left open: `ammo`, `xp`, `loot`, `after`; `{}` default, #105) |
@@ -51,8 +51,9 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
 2. Keep `s.id` (or mint one). Coerce `system` to `"dnd"` or `"humblewood"`, since anything else
    becomes `"humblewood"`. Keep `appVersion` if it is a string, else `""`.
 3. `hp`, `death`, `abilities`, `saves`, `skills` and `slots` become `Object.assign(default, saved)`
-   when the saved value is a plain object. That fills missing **sub-keys**, which is how every old
-   sheet gained `hp.locked:true` with no migration code at all.
+   when the saved value is a plain object. That fills missing **sub-keys** (it is how every old
+   sheet once gained the retired `hp.locked:true` with no migration code), and keeps saved ones the
+   defaults don't have, as that `locked` now is.
 4. `coins` maps the legacy Humblewood keys (`km`, `sm`, `em`, `gm`, `pm`) onto `cp`…`pp`.
 5. The list fields are forced to arrays **of objects**: `null` (what JSON writes for a hole or an
    `undefined`) and bare strings or numbers are dropped. The map fields are forced to plain
@@ -191,8 +192,11 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - **`wpnEquipInit` in `blankChar()`.** It was first set there ("a new sheet has nothing to
   migrate"), which pre-marked every old sheet and silently skipped the migration. The suite caught
   it, and asserts that `blankChar()` does not set the flag.
-- **An object that never went through `migrate()`.** `hp.locked` is read as `!== false`, never as a
-  truth test, so a character object with no `locked` key is locked, not silently editable.
+- **A lock whose default can't be told from a choice.** The Max HP lock was `hp.locked`, `true` by
+  default and gained by every old sheet through the sub-key fill, read as `!== false` so an object
+  with no key read locked. Once every sheet carried it, a deliberate lock could no longer be told
+  from the default, so when the lock moved to the Vitals pencil (`editHide.vitals`, #115) it could
+  not be carried over: every sheet opened unlocked, by decision, and the old key stays unread.
 - **`system` is not a pack name.** It is `"dnd"` or `"humblewood"`, and `migrate()` enforces that.
   Supplements such as `XGE` and `TCE` are packs, never systems a character is created in.
 
@@ -203,7 +207,7 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 | What `migrate()` does with fields it does not know | Keep every field, then normalize the known structured ones | A field whitelist: new fields were silently dropped on every load, the autosave restore included (L284) |
 | What `appVersion` means | The version last *reconciled* against | "Last saved with": `migrate()` runs on every load, so stamping there erases the mismatch the update tool needs (L702) |
 | Where a new character is stamped | `newCharacter()` | `blankChar()`: it runs at top level before `30-version.js` defines `APP_VERSION`, a TDZ white screen (L702) |
-| Where the Max HP lock lives | `hp.locked`, inside `hp` | A top-level `hpLocked`: inside `hp`, `migrate()`'s sub-key fill gives every old sheet the default for free (L2105) |
+| Where the Max HP lock lives (#115) | `editHide.vitals`, the Vitals pencil, absent (unlocked) by default; read only by `vitalsLocked()` | `hp.locked` inside `hp` (L2105): the sub-key fill gave every old sheet a locked default, so a deliberate lock couldn't be told from it. A top-level `hpLocked`: no better |
 | The section-notes field | `secNotes` | Reusing `notes`: already the Story tab's bio field, so merging breaks that tab silently (L1497) |
 | The chip lists (#103) | Their own fields, read through one guard, `chipList()` | Prose in `proficiencies`: a grant can't be taken back cleanly, and the Defences card needs a list |
 | How often the Languages lift runs (#103) | Once, flagged by `langLifted` (never in `blankChar()`) | Every load: a "Languages:" line the player types later would be lifted too |
@@ -254,3 +258,4 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - 2026-10-27 — `migrate()` normalizes the inside of each kept `levelLog` record (features, grants, `hp`, `subclass`, `abilities`), keeping its other keys, so a malformed import can't make Level down throw. → ledger L7657, #118
 - 2026-10-29 — `xpSplit` (`false`) and `endCombatOpen` (`{}`) join `blankChar()`; `trackers[i]` and `journal[i]` gain an optional `afterCombat:true`; `migrate()` keeps `xpSplit` only when `true`, cleans `endCombatOpen` through `cleanEndCombatOpen()` and drops a non-`true` `afterCombat`. → ledger L7921, #105
 - 2026-11-04 — `journal[i]` gains an optional `look` (the page style, absent for Sheet), kept as it is by `migrate()`. → ledger L8699, #167
+- 2026-11-06 — `hp.locked` is retired: gone from `blankChar()`, kept unread on an old sheet; the Max HP lock is `editHide.vitals`, so every sheet opens unlocked. → ledger L9101, #115

@@ -9097,3 +9097,52 @@ and into waves by dependency. Mike's decisions on it: **1.9.1 is cut after wave 
 moves to 1.9.2**, not yet scoped. The 22 issues of waves 4–5 were relabelled `1.9.1` → `1.9.2`
 (a new label); all stay on the v1.9.0 milestone, which holds every 1.9.x issue. 1.9.1 is now 32
 issues: the 24 P1s and 8 P2s that ride along in the same functions.
+
+## #115 #112 #113: the Vitals pencil, the Hit points window, centring (Mike's spec, 2026-11-06)
+
+Wave 1 of 1.9.1, the Vitals & HP worktree, built from
+[the spec](../specs/2026-11-06-vitals-hp-design.md) and
+[its plan](../plans/2026-11-06-vitals-hp.md).
+
+**#115.** The Vitals rail joins `EDIT_CARDS` (thirteen keys): its pencil hides the portrait's add and
+remove buttons (`#btnPortrait`, `#btnPortraitDel` gain `ed`) and locks Max HP. The lock is
+`character.editHide.vitals`; `vitalsLocked(c)` (`= editHidden(c,"vitals")`) is the one reader
+(`renderHP()`'s readOnly, `applyHPInput()`'s second layer, the Hit points window's Max row,
+`hpChoice()`'s `_wasLocked`), and `setVitalsLocked(locked)` the one writer from code (it sets the flag,
+`ed-off`, repaints the pencil and calls `renderHP()`): `addClass()` (a second class, and a first
+class above level 1) and `doLevelUp()` unlock, `commitHPChoice()` relocks only what it found locked.
+A tap goes through `toggleEditCard()`, which now repaints Max for `vitals`. The pencil says "Lock
+Vitals" / "Unlock Vitals" (`editToggleText()`). `hp.locked` is retired: gone from `blankChar()`, read
+and written nowhere; an old save's value survives `migrate()` (which keeps every field) unread, so
+**every sheet opens unlocked** (decision 3: the old default can't be told from a deliberate lock).
+The padlock's markup, CSS and click handler went; `LU_HP_CLOSE` says "Vitals is unlocked".
+
+**#112.** On a touchscreen (`hpTouch()`, `(pointer:coarse)` read at tap time) a tap on `.hp-bar`, or
+Enter/Space on it, opens Hit points (`openHPDialog()`): an amount box (`inputmode="numeric"`,
+focused on open), then Damage, Heal and Temp, greyed until `hpAmount()` reads a whole number ≥ 1,
+each showing `hpQuickText()`'s line; one tap applies (`hpQuickApply()`: `adjustHP(∓n)`, or Temp
+replaces) and closes, with no toast. Set exactly, a `<details>` opened by hand inside the tap, holds
+Current, Max (only while Vitals is unlocked) and Temp, parsed by `hpSetParse()` and written by
+`hpSetApply()`. `hpQuick()` is the pure preview; the suite holds it equal to what each tap leaves.
+On touch `renderHP()` makes the bar a button (`role`, `tabindex`, `hpBarLabel()`) and its boxes
+readOnly with `inputmode="none"`, and CSS gives them `pointer-events:none`; with a mouse nothing
+changed. A `(pointer:coarse)` change listener repaints.
+
+**#113.** The bar is three grid columns, the outer two equal (the third floored at Temp's width), with
+Current / Max in `.hp-num` in the middle; `hpBoxWidth()` sizes each box to what it holds, from
+`renderHP()` and as it is typed (`hpFitBox()`). The fill is a grid item, so the bar isn't positioned
+and a container query (`.rail-hp`, `container:hp/inline-size`, ≤220px) can move Temp beside the
+"Hit points" label ("+3 temp") with the numbers a size smaller. − and + are SVG strokes in
+flex-centred buttons.
+
+Ruling: the 220px threshold is estimated (CSS arithmetic and the spec's glyph widths), not measured:
+there was no browser in this run. It sends Temp out at phone widths and in the two-column layout
+(216px); the screenshot pass sets it. Ruling: Set exactly takes a blank Current or Max as "not set",
+as the bar's blank does. Tests: `sheet.js` (the rewritten lock checks; a new block above the async
+chain), `char-update.js` (the level-up checks on `editHide.vitals`; Add class unlocks),
+`rules-data.js` (the padlock block rewritten; the wiring and CSS of #112 and #113).
+
+Pages: [vitals & rest](../wiki/features/vitals-and-rest.md),
+[character building](../wiki/features/character-building.md),
+[sections & layout](../wiki/ui/sections-and-layout.md),
+[character model](../wiki/architecture/character-model.md), [decisions](../wiki/decisions.md).

@@ -48,7 +48,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **What `migrate()` does with fields it does not know** — Keep every field, then normalize the known structured ones
 - **What `appVersion` means** — The version last *reconciled* against
 - **Where a new character is stamped** — `newCharacter()`
-- **Where the Max HP lock lives** — `hp.locked`, inside `hp`
+- **Where the Max HP lock lives (#115)** — `editHide.vitals`, the Vitals pencil, unlocked by default, read only by `vitalsLocked()`
 - **The section-notes field** — `secNotes`
 - **List items that are not objects** — Dropped: `null`, strings, numbers
 - **A player's glossary entry with no term** — Kept, given an id if it lacks one, listed as "(no term)"
@@ -202,8 +202,20 @@ When a page gains a Decisions row, add its line here under that page.
 
 - **Where HP's upper bound lives** — `clampHP()`, run by every HP-changing path
 - **How HP boxes commit** — On `change`, outside `data-path`
-- **Where the lock flag lives** — `hp.locked`, inside `hp`
-- **Whether the padlock confirms** — No confirm
+- **Where the lock lives (#115)** — The Vitals pencil, `editHide.vitals`, read by `vitalsLocked()`
+- **Does Vitals start locked? (#115, Mike)** — Unlocked, like every card's pencil
+- **What the pencil covers (#115)** — The portrait's add and remove buttons, and Max HP
+- **Existing sheets (#115)** — All open unlocked; `hp.locked` is kept, unread
+- **Whether the lock confirms** — No confirm
+- **How HP is typed on a touchscreen (#112, Mike)** — Tapping the bar opens Hit points
+- **And on desktop (#112, Mike)** — The bar keeps its type-in numbers, −7 and +4 included
+- **What "touchscreen" means (#112, Mike)** — The primary pointer is coarse; a touchscreen laptop is desktop
+- **The − and + buttons (#112, Mike)** — Stay, on every device
+- **What the window holds (#112, Mike)** — One amount, then Damage, Heal or Temp, with Set exactly in a fold
+- **What Temp does in the window (#112)** — Replaces what you have
+- **Undo in the window (#112)** — None; a mis-tap is fixed by reopening (a toast with Undo is #175)
+- **How the numbers centre (#113)** — Three grid columns, the outer two equal, boxes sized to their content
+- **A Temp that doesn't fit (#113)** — It moves beside the "Hit points" label at 220px or less, on touch and desktop
 - **CON in the level-1 seed** — `modOf()` of the typed score
 - **CON when spending a hit die** — `abilFinal()`
 - **Tracking CON edits after the seed** — Stateless: recompute what the previous CON would have written and match it

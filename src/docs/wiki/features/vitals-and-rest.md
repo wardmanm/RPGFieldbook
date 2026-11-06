@@ -2,22 +2,26 @@
 
 The Sheet's dark rail (the `vitals` section, #103) and the rest and level controls in the header
 above it. The rail runs down the left: the portrait with the AC shield over its bottom edge, the
-death saves `✓ ○○○ ☠ ○○○ ✗`, Init / Speed / Prof badges, the Hit Points bar (Current, Max and Temp
-boxes inside it, − and + either side, the Max padlock beside its label), the Hit Dice bar, and Size ·
-Passive Perception in small text. The header holds Short Rest, Long Rest, the Inspiration star and
-the level ring with the XP. This page covers how hit points are typed and spent, the Max HP lock,
-the level-1 seed, the colour bands, the hit-dice bar and its spend box, the level badge, and what
-each rest gives back.
+death saves `✓ ○○○ ☠ ○○○ ✗`, Init / Speed / Prof badges, the Hit Points bar (Current / Max centred
+inside it, Temp at its right, − and + either side), the Hit Dice bar, and Size · Passive Perception in
+small text. Its header carries the pencil every list card has, which locks Max HP and hides the
+portrait's buttons. The Sheet's header holds Short Rest, Long Rest, the Inspiration star and the level
+ring with the XP. This page covers how hit points are typed and spent (typed into the bar with a
+mouse, the Hit points window on a touchscreen), the Max HP lock, the level-1 seed, the colour bands,
+the hit-dice bar and its spend box, the level badge, and what each rest gives back.
 
 **Code:** `applyHPInput()`, `adjustHP()`, `renderHP()`, `hpBand()`, `signedEntry()`,
-`signedDelta()`, `entryDigits()` in `66-coins-hp.js`; `clampHP()`, `effMaxHP()`, `buildDeath()` in
+`signedDelta()`, `entryDigits()`, `hpBoxWidth()`, `hpFitBox()`, and the Hit points window's
+`hpTouch()`, `hpAmount()`, `hpQuick()`, `hpQuickText()`, `hpNowText()`, `hpBarLabel()`,
+`hpQuickApply()`, `hpSetParse()`, `hpSetApply()`, `hpDialogHTML()`, `openHPDialog()` in
+`66-coins-hp.js`; `vitalsLocked()`, `setVitalsLocked()`, `toggleEditCard()` in `87-notes.js`; `clampHP()`, `effMaxHP()`, `buildDeath()` in
 `00-constants.js`; `longRest()`, `shortRest()`, `hitDicePool()`, `renderHitDice()`, `hdBarHTML()`,
 `hdSpendHTML()`, `hdFootHTML()`, `hdBoxOpen()`, `hdRefresh()`, `hdDiceEdited()`, `toggleHdMode()`,
 `openHdSpend()`, `hdConMod()`, `hdHeal()`, `hdSpendCheck()`, `spendHitDie()`,
 `rollHitDie()`, `recoverHitDice()`, `renderDeath()` in `65-resources.js`; `level1HP()`, `seedLevel1HP()`,
 `resyncLevel1HP()`, `hitDieMax()` in `56-class.js`; `charSize()`, `sizeOptionsHTML()`,
 `capacityFor()` in `25-origins-items.js`; `openSizePicker()` in `80-modal-forms.js`; `bumpHP()`,
-the padlock, death-save and hit-dice handlers in `90-boot.js` · `xpProgress()`, `xpNumber()`,
+the HP bar's tap, death-save and hit-dice handlers in `90-boot.js` · `xpProgress()`, `xpNumber()`,
 `advancementFor()`, `advancementOf()` in `41-chips.js` · `levelBadgeHTML()`, `levelRingHTML()`,
 `xpBarHTML()`, `renderLevelBadge()`, `renderSheetHead()` in `40-sheet.js` · `toggleInspiration()`
 in `10-compute.js` · **Tests:** `sheet.js`,
@@ -43,12 +47,13 @@ and that only while Encumbrance is on. Passive Perception is covered in
 `toggleInspiration()` flips `character.inspiration`, and `recompute()` paints `#starBtn` and the
 combat view's own `[data-inspire]` star together.
 
-**Typing hit points.** The three boxes are `type="text" inputmode="tel"` with `data-hp`, **not**
-`data-path`, and commit on `change` (blur) or Enter, which reselects the box for the next entry.
-`applyHPInput()`:
+**Typing hit points (with a mouse).** The three boxes are `type="text" inputmode="tel"` with
+`data-hp`, **not** `data-path`, and commit on `change` (blur) or Enter, which reselects the box for
+the next entry. On a touchscreen they take no typing at all; the Hit points window (below) is the
+only way in. `applyHPInput()`:
 
-1. Ignores anything but `cur`, `max` and `temp`.
-2. Refuses Max while it is locked, and repaints.
+1. Ignores anything but `cur`, `max` and `temp` (an old sheet still carries `hp.locked`).
+2. Refuses Max while Vitals is locked, and repaints.
 3. In Current or Temp, a signed negative (`signedDelta()`: "-7") is damage → `adjustHP()`.
 4. Otherwise `signedEntry()`: "12" sets, "+4" adds, "-3" subtracts (Max only, by now), blank clears,
    and anything else ("1 2", "+ab") returns `null` and the box is put back. Then `clampHP()`.
@@ -64,16 +69,73 @@ and Temp is untouched.
 is Max plus any `hp.max` effects; `#maxNote` shows the effective maximum when an effect applies,
 and is empty (and hidden) otherwise.
 
-**The HP bar.** The three boxes sit inside `.hp-bar`, "26 / 38" with "+3" temp at its right.
-`renderHP()` sets the fill (`#hpFill`) to Current ÷ `effMaxHP()`, clamped 0–100 and 0 with no
-maximum, and gives it the band class, so the bar itself turns amber or red.
+**The HP bar.** The three boxes sit inside `.hp-bar`, "26 / 38" in the middle with "+3" temp at its
+right. `renderHP()` sets the fill (`#hpFill`) to Current ÷ `effMaxHP()`, clamped 0–100 and 0 with no
+maximum, and gives it the band class, so the bar itself turns amber or red. **Centring (#113):** the
+bar is a grid of three columns, `minmax(0,1fr) auto minmax(min-content,1fr)`. Current, the slash and
+Max sit in `.hp-num`, the middle column; Temp's `.hp-tmp` is the third, against the right edge. The
+outer two columns are equal, so the numbers are centred whatever Temp shows; the third's floor is
+Temp's own width, so a Temp too wide for its half pushes the numbers left rather than over them.
+`renderHP()` sizes each box to what it holds (`hpBoxWidth()`: its length in `ch` plus 0.2, a blank
+one its placeholder's width) and `hpFitBox()` keeps it sized as it is typed (an `input` listener in
+`90-boot.js`). The fill is a grid item spanning all three columns, not absolutely positioned, so the
+bar itself is not positioned; `.hp-num` and `.hp-tmp` are, so they paint over the half-opaque fill.
+That is what lets Temp leave the bar: `.rail-hp` is a size container (`container:hp/inline-size`), and
+at 220px or less (a phone's rail; the two-column layout's is 216px) Temp is `position:absolute` at the
+top right of `.rail-hp`, beside the "Hit points" label, reading "+3 TEMP" (`.hp-tmpw` shows after a
+value), and the numbers step down to 17px. The − and + are SVG strokes in flex-centred buttons, since
+a font's − and + sit high in their line.
 
-**The Max HP lock.** `hp.locked` (default `true`) is read as `!==false`. `renderHP()` makes Max
-`readOnly` and draws the padlock (`[data-hplock]`, an inline SVG with both shackles, toggled by
-`.hp-lock.open`); `applyHPInput()` refuses Max again, because `readOnly` does not stop a paste.
-Tapping the padlock toggles it with no confirm, and focuses Max when opening. A level-up opens it;
-the level's hit-points step puts it back as it was ([Character building](character-building.md)).
-Adding a second class opens it too, and so does a first class that starts above level 1.
+**The Hit points window (touch, #112).** On a touchscreen — the device's primary pointer is coarse,
+`hpTouch()`, read at tap time — a tap anywhere on `.hp-bar` (Temp in the label row included), or
+Enter or Space on it, opens `openHPDialog()`, on the Sheet and in the combat view alike. `renderHP()`
+makes the bar one button there (`role="button"`, `tabindex="0"`, `hpBarLabel()`'s "Hit points 26 of
+38, temp 3 — change") and its boxes readOnly, `inputmode="none"`, out of the tab order, and CSS
+(`@media (pointer:coarse)`) gives them `pointer-events:none`, so no keyboard comes up under the tap.
+With a mouse the bar has none of that. A `(pointer:coarse)` change listener repaints. The window
+(`hpDialogHTML()`), titled "Hit points":
+
+- a header, `hpNowText()`: Current / `effMaxHP()` · temp ("26 / 38 · temp 3", "0 / —" with nothing
+  set);
+- an amount box, `inputmode="numeric"`, "How much?", focused on open (focusing it inside the tap
+  brings up the digits-only keypad; `modalTakeFocus()` focuses the dialog box on touch). `hpAmount()`
+  reads it: spaces and commas stripped, then a whole number from 1, else `null`;
+- **Damage**, **Heal** and **Temp**, greyed until it reads, each with its line from `hpQuickText()`:
+  "→ 22, no temp", or "temp 3 → 1" when Temp soaks it all and Current doesn't move; "→ 33"; "3 → 7",
+  or "→ 7" with none. One tap runs `hpQuickApply()` — Damage `adjustHP(-n)`, Heal `adjustHP(n)`, Temp
+  sets `hp.temp` to the amount, **replacing** what is there, then `clampHP()` — and `renderHP()`,
+  `scheduleSave()`, closes. No toast and no Undo: the bar shows the result, and a mis-tap is fixed by
+  reopening;
+- **Set exactly**, a `<details>` folded by default and opened by hand in its summary's click (so
+  focusing Current stays inside the tap): Current, Max (only while Vitals is unlocked; otherwise a line
+  says how to unlock it) and Temp, filled with what is there, `inputmode="numeric"`. `hpSetParse()`
+  reads them: blank is "not set" (`""`), a whole number from 0 is itself, a Temp of 0 is none, and
+  anything else names its box ("Not a whole number: Current") and greys Apply. Apply (or Enter in a
+  box) runs `hpSetApply()`, which writes them, refuses a Max while Vitals is locked even if one is
+  passed, `clampHP()`s and says whether Max moved; then `renderHP()`, `recompute()` if it did, save,
+  close. Cancel closes.
+
+`hpQuick()` is the pure preview of all three taps, mirroring `adjustHP()`'s temp-first rule and
+`clampHP()`'s bounds; the suite holds it equal to what `hpQuickApply()` leaves. The window's
+listeners bind to its own elements. None of its boxes carries `data-hp` or `data-path`.
+
+**The Max HP lock: the Vitals pencil (#115).** The rail's header carries the pencil every list card
+has ([Sections & layout](../ui/sections-and-layout.md)): `vitals` is in `EDIT_CARDS`, and the flag is
+`character.editHide.vitals`, `true` when locked. Locked, the portrait's add and remove buttons
+(`#btnPortrait`, `#btnPortraitDel`, which carry `ed`) are hidden and Max can't be changed; Current,
+Temp, −/+, the death saves, the hit dice, Size and the badges work either way. Every sheet starts
+unlocked. Its title is "Lock Vitals" or "Unlock Vitals" and its aria-label says what that does ("Lock
+Vitals — hides the portrait buttons and locks Max HP"). **One reader:** `vitalsLocked(c)`, which is
+`editHidden(c,"vitals")`, used by `renderHP()` (Max `readOnly`), `applyHPInput()` (which refuses Max
+again, because `readOnly` does not stop a paste), the Hit points window's Max row and `hpSetApply()`,
+and `hpChoice()`. **One writer from code:** `setVitalsLocked(locked)`, which sets the flag through
+`setEditHidden()`, toggles `ed-off` on the card, repaints the pencil (`paintEditToggle()`) and calls
+`renderHP()`. A level-up unlocks Vitals; the level's hit-points step puts it back as it was
+([Character building](character-building.md)). Adding a second class unlocks it too, and so does a
+first class that starts above level 1. A player's tap goes through `toggleEditCard()`, which calls
+`renderHP()` for `vitals`. The old `hp.locked` (locked by default, behind a padlock beside "Max") is
+retired: an old save keeps the key through `migrate()` and nothing reads it, so every existing sheet
+opened unlocked.
 
 **The level-1 seed.** `level1HP(d)` is max(1, hit die + CON modifier), with CON read by `modOf()`
 from the typed score; it returns 0 for a die it cannot parse. `seedLevel1HP()` writes it to Max
@@ -128,7 +190,7 @@ for me, "I rolled" plus Apply (live-checked, the same shape of range message), o
 (it is gaining hit points, not spending a die, so there is nothing to clamp against a pool), but the
 wording and the live-checked "I rolled" field are deliberately the same box a player already knows
 from here. Pressing its Done or Continue — not Apply — is what raises Max and Current
-(`commitHPChoice()`) and puts the Max HP lock back as it was. This box's own spends never touch the
+(`commitHPChoice()`) and puts the Vitals lock back as it was. This box's own spends never touch the
 lock. See [Character building](character-building.md) for the flow.
 
 **Where the auto/manual pill and the manual-dice field live.** `[data-hdmode]` and
@@ -183,6 +245,16 @@ came back.
 - **Every HP change ends in `clampHP()`**, which is model-only and testable. The ceiling is not in
   the parser: coins share `signedEntry()` and have no maximum.
 - **`adjustHP()` is the only damage path** and stays out of `90-boot.js`, which the harness drops.
+- **One reader and one writer for the lock.** Everything reads it through `vitalsLocked()` and code
+  sets it through `setVitalsLocked()`, never `editHide.vitals` directly, so a new thing the pencil
+  locks reads the same flag the same way.
+- **The window's preview is its tap.** `hpQuick()` mirrors `adjustHP()` and `clampHP()`; a change to
+  either changes what the window promises, and the `sheet.js` loop over its cases fails until the two
+  agree again. The taps themselves still go through `adjustHP()`.
+- **On a touchscreen the boxes take no typing.** `readOnly`, `inputmode="none"`, out of the tab order,
+  and `pointer-events:none`: a tap that focused a box would bring up the keyboard over the window.
+- **The bar is not positioned.** Temp leaves it for the label row by `position:absolute` against
+  `.rail-hp`; a positioned `.hp-bar` would become its containing block and clip it.
 - **The automatic writers bypass the lock.** `seedLevel1HP()`, `resyncLevel1HP()`, `removeClass()`'s
   un-seed and the level-up step write `character.hp.max` directly; routing them through
   `applyHPInput()` would leave a locked level-1 character with no hit points.
@@ -224,7 +296,16 @@ came back.
   ("starting above level 1 does not seed HP") and was inverted with the fix (#66).
 - **`bumpHP` once had no floor** (holding − went to −7), and an `applyHPInput()` guard written as
   `k in character.hp` would have let a `data-hp="locked"` hook write a boolean.
-- **`recompute()` does not call `renderHP()`**, so anything that changes the lock renders it itself.
+- **`recompute()` does not call `renderHP()`**, so anything that changes the lock renders it itself;
+  `setVitalsLocked()` and `toggleEditCard()` do.
+- **The padlock's default couldn't be carried over (#115).** `hp.locked` defaulted to `true`, and an
+  old sheet gained it by `migrate()`'s sub-key fill, so every sheet's Max read locked whether the
+  player had chosen it or not. Moving the lock to `editHide.vitals` therefore opened every sheet
+  unlocked, by decision; the checks that asserted "a missing flag means locked" were inverted.
+- **Fixed-width boxes can't centre.** Three 3.1ch boxes (temp 4.6ch) with Temp at `margin-left:auto`
+  put "26 / 38" at the bar's left, and a one-digit Current sat a digit off centre (#113). The boxes are
+  sized to their content now, and the 220px threshold for moving Temp out is an estimate set by the
+  screenshot pass, not a measurement.
 - **The layout guards once encoded nesting.** `rules-data.js` sliced "to the next card" and "to the
   first `</div>`"; moving a block broke them for reasons unrelated to what they guarded. They now
   use a `block` helper that counts divs, and each was mutation-tested.
@@ -235,8 +316,20 @@ came back.
 |---|---|---|
 | Where HP's upper bound lives | `clampHP()`, run by every HP-changing path | A `max` argument on the parser: coins have no max, and the bound must also hold for ±, hit dice, rests and lowering Max |
 | How HP boxes commit | On `change`, outside `data-path` | `data-path`: commits every keystroke, storing a bare sign |
-| Where the lock flag lives | `hp.locked`, inside `hp` | A top-level `hpLocked`: `migrate()` already merges `hp` onto defaults, so every old sheet gains the field with no code |
-| Whether the padlock confirms | No confirm | Confirming like the manual Hit Dice switch: that is a mode change with consequences, this is undone by a second tap |
+| Where the lock lives (#115) | The Vitals pencil, `editHide.vitals`, read by `vitalsLocked()` | `hp.locked` behind a padlock beside "Max" (the 2026-08-14 answer): small, cluttered, and the one lock on the sheet that wasn't the cards' pencil |
+| Does Vitals start locked? (#115, Mike) | Unlocked, like every card's pencil | Locked, reusing `hp.locked`: keeps "Max locked by default" but hides Add portrait on a new character and makes Vitals the one card whose pencil works backwards |
+| What the pencil covers (#115) | The portrait's add and remove buttons, and Max HP | Hiding more: Current, Temp, −/+, death saves, hit dice, Size and the badges are play controls |
+| Existing sheets (#115) | All open unlocked; `hp.locked` is kept, unread | Carrying `hp.locked` over: every sheet would open locked, since that was the default |
+| Whether the lock confirms | No confirm | Confirming like the manual Hit Dice switch: that is a mode change with consequences, this is undone by a second tap |
+| How HP is typed on a touchscreen (#112, Mike) | Tapping the bar opens Hit points | Typing into the bar: three small boxes under a finger are the issue |
+| And on desktop (#112, Mike) | The bar keeps its type-in numbers, −7 and +4 included | The window everywhere: slower with a keyboard |
+| What "touchscreen" means (#112, Mike) | The primary pointer is coarse; a touchscreen laptop is desktop | The window's width: a landscape tablet is as wide as a laptop, and a narrowed laptop window has a mouse |
+| The − and + buttons (#112, Mike) | Stay, on every device | Dropping them for the window: ±1 is the quickest tap there is |
+| What the window holds (#112, Mike) | One amount, then Damage, Heal or Temp, with Set exactly in a fold | The bar's three boxes, bigger, signed: damage needs a minus, which phone keypads hide. Adjust coins' shape: also a minus, and setting an exact number means working out the difference |
+| What Temp does in the window (#112) | Replaces what you have | Adding: temp HP don't stack, and you choose which to keep |
+| Undo in the window (#112) | None; a mis-tap is fixed by reopening (a toast with Undo is #175) | — |
+| How the numbers centre (#113) | Three grid columns, the outer two equal, boxes sized to their content | Fixed-width boxes with Temp pushed right: the issue |
+| A Temp that doesn't fit (#113) | It moves beside the "Hit points" label at 220px or less, on touch and desktop | Shrinking the numbers further: unreadable at the table. Relaxing the centring while Temp shows: the issue |
 | CON in the level-1 seed | `modOf()` of the typed score | `abilFinal()`: effects change minutes later and the un-seed match would fail silently |
 | CON when spending a hit die | `abilFinal()` | Harmonising with the seed: the value is consumed at once and never re-derived |
 | Tracking CON edits after the seed | Stateless: recompute what the previous CON would have written and match it | A new character field: no migration surface, and an old sheet upgrades on its first CON edit |
@@ -266,6 +359,11 @@ came back.
   close this; not done.
 - On a phone the AC shield overlaps the small portrait's bottom edge; whether that reads well on a
   device is Mike's pass.
+- The 220px width at which Temp leaves the HP bar is estimated from the CSS and the glyph widths, not
+  measured; the screenshot pass (light and dark, both skins, one to three digits) sets it. A
+  real-phone pass of the Hit points window, keypad included, is Mike's.
+- The window has no Undo; a toast with Undo is #175. Coins could take the same "amount, then Gain or
+  Spend" shape (a 1.9.2 issue).
 - See [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -295,3 +393,7 @@ came back.
 - 2026-10-23 — The rest buttons read "Short rest" / "Long rest", icons with Icon tabs or on a narrow page. → ledger L6776, #103
 - 2026-10-24 — The level-up card's hit-points step copies this box's controls, order and wording. → ledger L6840, #101
 - 2026-10-24 — The sentence on what the card's Done does to the lock now parses. → ledger L6928, #101
+- 2026-11-06 — The Vitals pencil replaces the Max padlock (every sheet opens unlocked); on a
+  touchscreen the HP bar opens a Hit points window (an amount, then Damage, Heal or Temp; Set exactly);
+  the numbers and the − and + sit centred, Temp moving beside the label on a narrow rail.
+  → ledger L9101, #115, #112, #113

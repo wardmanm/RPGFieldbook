@@ -9,7 +9,7 @@ strip, and familiars, which open from the header.
 
 **Code:** `NOTE_SECTIONS`, `noteDef()`, `noteTitle()`, `renderNoteIcons()`, `noteGroupOpen()`,
 `EDIT_CARDS`, `editHidden()`, `setEditHidden()`, `editCardTitle()`, `editToggleHTML()`,
-`renderEditToggles()`, `toggleEditCard()` in `87-notes.js` · `combatSectionsOf()`,
+`renderEditToggles()`, `toggleEditCard()`, `vitalsLocked()`, `setVitalsLocked()` in `87-notes.js` · `combatSectionsOf()`,
 `renderCombatToggles()`, `combatCard()`, `combatAddable()` in `87-combat.js` ·
 `featGroups()`, `renderFeatures()`, `featCol()`, `invCol()`, `atkCol()`, `FEAT_FAV`, `ATK_FAV` in
 `20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()`, `renderSheetHead()`,
@@ -143,10 +143,12 @@ mis-tap from losing a feature, an item or a resistance — and leaves every play
 folds, Use, Fire, Throw, Cast, equip, On/Off, prepared pins, resource −/+/reset, the familiar's
 Summoned switch, + Add). One switch per card, per character, shown by default.
 
-`EDIT_CARDS` in `87-notes.js` lists the twelve keys: the ten `NOTE_SECTIONS` ids `statuses`,
+`EDIT_CARDS` in `87-notes.js` lists the thirteen keys: the eleven `NOTE_SECTIONS` ids `statuses`,
 `attacks`, `resources`, `features`, `spells`, `inventory`, `trackers`, `defences` and
 `proficiencies` (these two hide the chips' ×), plus `party` (#91; hides a roster row's edit and
-remove icons), plus
+remove icons), plus `vitals` (#115; hides the portrait's add and remove buttons **and locks Max HP**,
+the one pencil that also locks a number: `vitalsLocked()` reads it, `setVitalsLocked()` sets it from
+code, [Vitals & rest](../features/vitals-and-rest.md)), plus
 `journal` and `secnotes` — the two cards outside that registry, found by id (`#journalCard`,
 `#notesCard`, which the Section Notes card carries for this). A class's, species' or background's
 Remove sits behind the header's flyout or info window, with a confirm, so those carry `ed` but no
@@ -172,7 +174,7 @@ own button, never `label.innerHTML +=`. A tap (`toggleEditCard()`, wired in `90-
 rather than replacing it — so a keyboard Enter on the pencil keeps focus on it — and
 `scheduleSave()`s; no list re-renders. Hiding or showing Journal also re-runs `renderJournal()`,
 since a blank page's empty-state line names the Edit button and must read "Nothing written yet."
-with no "— tap Edit" once it's gone.
+with no "— tap Edit" once it's gone; Vitals re-runs `renderHP()`, so Max's `readOnly` follows.
 
 **Names.** The button class is `edbtn` and its hook is `data-edtoggle`, not `editbtn` /
 `data-edit`: those already name the Bio tab's rich-text "Edit" button (`buildBio()`,
@@ -183,7 +185,9 @@ click-delegation key.
 (an extra `<path>` from `editToggleSVG()`), in `--accent`, `aria-pressed="true"` — so a card in
 "locked" state is the one that stands out, matching the combat toggle's and note button's idiom.
 Title is the action ("Hide edit buttons" / "Show edit buttons"); the aria-label adds the card's
-title via `noteTitle()` — "Hide edit buttons — Features & Traits".
+title via `noteTitle()` — "Hide edit buttons — Features & Traits". Vitals says "Lock Vitals" /
+"Unlock Vitals" instead, and its aria-label says what that does ("Lock Vitals — hides the portrait
+buttons and locks Max HP"), since it locks a number too.
 
 ### Group headings: `.fgroup` / `.fghead` / `.fcaret`
 
@@ -476,3 +480,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-11-02 — Mike's decisions: the columns level only while within 240px (`SHEET_STRETCH_MAX`, measured by `sheetLevel()`), and Features is one card per row at every width. → ledger L8301, #155
 - 2026-11-02 — Mike's decisions ("option 2", then the review's risk 4): Statuses moves under Skills at three columns, so an everyday sheet levels, and at two, where the column now reads Skills, Statuses, Defences, Resources, the order Tab walks; one column is unchanged. → ledger L8339, #155
 - 2026-11-02 — Mike's decision: at three columns the columns always end on one line, in CSS alone; the 240px rule and its script (`SHEET_STRETCH_MAX`, `sheetLevel()`, the ResizeObserver, `.cols-even`) go; two columns and one are unchanged. → ledger L8408, #155
+- 2026-11-06 — Vitals joins `EDIT_CARDS` (thirteen): its pencil hides the portrait buttons and locks Max HP, reads "Lock Vitals" / "Unlock Vitals", and repaints Max. → ledger L9101, #115
