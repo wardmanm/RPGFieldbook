@@ -398,7 +398,6 @@ function wire(){
 
 /* ================= boot ================= */
 function boot(){
-  const noSettings=!localStorage.getItem(K_SET);
   try{const s=localStorage.getItem(K_SET);if(s)settings=Object.assign(settings,JSON.parse(s));}catch(e){}
   if(foldLegacySettings())saveSettings();
   /* localStorage first and synchronously, so the sheet draws with rules already
@@ -421,6 +420,10 @@ function boot(){
     character.glossary=seedGlossary();renderAll();
     showHome();
   }
+  /* #142: where the browser blocks storage, every read above failed quietly and
+     this is a first run that keeps nothing. Said out loud, as the move above is:
+     the save strip is for an open character, and the home screen covers it. */
+  {const why=storageBlockedWhy();if(why)alert("Fieldbook can't use this browser's storage — "+why+". Your characters and settings won't be kept when you close it: save each character to a file with Save before you leave, or allow this page to store data and open Fieldbook again.");}
   /* After the first paint, not before it: the rules cache lives in IndexedDB now
      and reading it is async. Everything above already drew with whatever
      localStorage had (usually nothing, once migrated), and this replaces it. */

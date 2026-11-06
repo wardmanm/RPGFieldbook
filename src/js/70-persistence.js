@@ -26,6 +26,18 @@ function storageWhy(e){
   if(/security|denied/i.test(n+" "+m))return "your browser is blocking storage for this page";
   return "your browser refused to save"+(n?" ("+n+")":"");
 }
+/* "" when this page may use localStorage, or why not (#142). A browser that
+   blocks storage for the page (cookies blocked for the site) throws at the
+   first touch, a read included; one with storage switched off has no
+   localStorage at all. Every read and write here catches its own failure, so
+   boot goes on either way; this is how boot() finds out to say so. */
+function storageBlockedWhy(){
+  try{
+    if(!localStorage)return "your browser has storage switched off for this page";
+    localStorage.getItem(K_SET);
+    return "";
+  }catch(e){return storageWhy(e);}
+}
 /* Save a snapshot of a character as a separate library entry, WITHOUT switching
    to it (that's the difference from finishImport).
 
@@ -126,7 +138,9 @@ function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings))
    SAYS SO — see rulesCacheError. */
 const IDB_NAME="hw-fb-cache", IDB_STORE="kv", IDB_KEY="rules", IDB_TIMEOUT=4000;
 let rulesCacheError="";
-function idbReady(){return typeof indexedDB!=="undefined"&&!!indexedDB;}
+/* A browser that blocks storage can throw at the mere mention of indexedDB
+   (#142), which would escape saveRulesCache() and loadRulesCacheAsync(). */
+function idbReady(){try{return typeof indexedDB!=="undefined"&&!!indexedDB;}catch(e){return false;}}
 /* A request that never fires an event is the third way IndexedDB fails, and the
    nastiest: absent and throwing both reject immediately, but a hang leaves the
    promise pending forever — so a failed save would go unreported and the boot

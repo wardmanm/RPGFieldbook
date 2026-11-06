@@ -9154,3 +9154,73 @@ async function t181AddClassUndo() {
 }
 
 t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(t168Ask).then(t181AddClassUndo).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+
+/* ---------- 1.9.1 Boot & storage: #142, #134, #135, #143
+   These run the real boot(): 90-boot.js, which the harness leaves out, is
+   evaluated in a FRESH loadApp() context per case, minus its closing boot()
+   call, after the case has set up storage. A fresh context per case keeps them
+   apart from the shared X/ctx above and from each other. The checks are
+   asynchronous (the IndexedDB hydration), so the block chains onto ck.done
+   rather than editing the chain line above. */
+const BS = (() => {
+  const fs = require('fs'), path = require('path'), vm = require('vm');
+  const js = n => fs.readFileSync(path.join(__dirname, '..', 'js', n), 'utf8');
+  const bootSrc = js('90-boot.js');
+  const bootDef = bootSrc.replace(/\nboot\(\);\s*$/, '\n');
+  const secErr = () => { const e = new Error('Access is denied for this document.'); e.name = 'SecurityError'; return e; };
+  /* a localStorage whose every call throws, as Chrome and Firefox do with
+     cookies blocked for the site */
+  const denied = () => ({getItem() { throw secErr(); }, setItem() { throw secErr(); }, removeItem() { throw secErr(); }});
+  const settle = () => new Promise(r => setImmediate(r));
+  /* store: localStorage contents to start from. opts.ls: null, an object, or
+     'getter' (the localStorage property itself throws). opts.idb: a fake
+     IndexedDB from fakeIDB(). opts.before(app): last setup before boot.
+     opts.noBoot: define boot() but don't call it. */
+  function app(store, opts) {
+    opts = opts || {};
+    const a = loadApp(['blankChar', 'mergeRules', 'resetRules', 'saveRulesCache', 'rulesCacheWarning',
+      'loadedRulesGroups', 'removeRulesGroup', 'clearAllRules', 'K_RULES', 'LZW_TAG', 'lzwCompress']);
+    if (a.bootError) throw a.bootError;
+    Object.assign(a.store, store || {});
+    if (opts.ls === 'getter') Object.defineProperty(a.ctx, 'localStorage', {configurable: true, get() { throw secErr(); }});
+    else if (opts.ls !== undefined) a.ctx.localStorage = opts.ls;
+    if (opts.idb) a.ctx.indexedDB = opts.idb.api;
+    a.alerts = []; a.ctx.alert = m => { a.alerts.push(String(m)); };
+    a.opened = []; a.ctx.openModal = t => { a.opened.push(String(t)); };
+    if (opts.before) opts.before(a);
+    vm.runInContext(bootDef + '\n;globalThis.__bsBoot=function(){try{boot();return null;}catch(e){return e;}};', a.ctx, {filename: '90-boot.js'});
+    a.bootThrew = opts.noBoot ? null : a.ctx.__bsBoot();
+    return a;
+  }
+  return {js, bootSrc, bootDef, secErr, denied, settle, app};
+})();
+
+async function tBootStorage142() {
+  ck('#142 setup: 90-boot.js still ends by calling boot()', BS.bootDef !== BS.bootSrc);
+  const cases = [['storage switched off (no localStorage)', null, /storage switched off for this page/],
+    ['every call throws SecurityError', BS.denied(), /your browser is blocking storage for this page/],
+    ['the localStorage property throws', 'getter', /./]];
+  for (const [what, ls, why] of cases) {
+    const a = BS.app({}, {ls});
+    ck('#142 ' + what + ': boot() runs to the end', a.bootThrew === null, a.bootThrew && String(a.bootThrew.stack || a.bootThrew));
+    ck('#142 ' + what + ': ...and says so, once, with why and what is lost',
+       a.alerts.length === 1 && why.test(a.alerts[0]) && /won't be kept/.test(a.alerts[0]) && /save each character to a file/i.test(a.alerts[0]), a.alerts);
+    let threw = null; try { a.ctx.renderHome(); } catch (e) { threw = e; }
+    ck('#142 ' + what + ': renderHome() draws without throwing', threw === null, threw && String(threw));
+  }
+  const ok = BS.app({});
+  ck('#142 with storage that works, boot says nothing', ok.bootThrew === null && ok.alerts.length === 0, ok.alerts);
+  ck('#142 storageBlockedWhy() is "" when storage works', typeof ok.ctx.storageBlockedWhy === 'function' && ok.ctx.storageBlockedWhy() === '');
+  /* The vm turns a throwing global getter into "not defined", so a browser
+     whose indexedDB property throws (Firefox with cookies blocked) can only be
+     guarded as text: idbReady() must answer false, not throw out of
+     saveRulesCache() and loadRulesCacheAsync(). */
+  ck('#142 idbReady() answers false rather than throwing',
+     /function idbReady\(\)\{try\{[^\n]*\}catch\(e\)\{return false;\}\}/.test(BS.js('70-persistence.js')));
+}
+
+{
+  const bsDone = ck.done;
+  const bsRun = tBootStorage142();
+  ck.done = () => bsRun.then(() => bsDone(), err => { ck('1.9.1 boot & storage block ran without throwing', false, String(err && err.stack || err)); bsDone(); });
+}
