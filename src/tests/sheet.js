@@ -8651,6 +8651,98 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = X.blankChar();
 }
 
+/* ---- #132 editing a feature keeps a use count that scales ----
+   The form fills "Limited uses" from usesMax() and saved that number, so any
+   edit froze a byLevel or formula maximum at today's value. */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const usesFromForm = fn('usesFromForm'), usesScaleHint = fn('usesScaleHint');
+  const fresh = lvl => { const c = X.blankChar(); X.character = c; c.level = lvl;
+    Object.assign(c.abilities, {str: 10, dex: 10, con: 10, int: 10, wis: 16, cha: 12}); return c; };
+  const um = max => ctx.usesMax({uses: {max}});
+  fresh(1);
+  ck('#132 usesMax: a number is itself', um(3) === 3);
+  const BL = {byLevel: [1, 1, 2, 2, 3]};
+  const atLv = [1, 3, 5, 9].map(l => { fresh(l); return um(BL); });
+  ck('#132 usesMax: byLevel reads the row for the level, the last row past the end (1, 3, 5, 9 -> 1, 2, 3, 3)', JSON.stringify(atLv) === '[1,2,3,3]', atLv);
+  fresh(4);
+  ck('#132 usesMax: {formula:"level"} is the level', um({formula: 'level'}) === 4, um({formula: 'level'}));
+  ck('#132 usesMax: an ability formula is its modifier (WIS 16: 3)', um({formula: 'wis'}) === 3);
+  ck('#132 usesMax: ...plus its modifier, bare string too (wis+1: 4)', um('wis+1') === 4);
+  ck('#132 usesMax: ...with a floor of 1 (CHA 12 - 1 = 0 -> 1)', um({formula: 'cha-1'}) === 1, um({formula: 'cha-1'}));
+  X.character.abilities.wis = 8;
+  ck('#132 usesMax: ...a negative modifier is 1 too (WIS 8)', um({formula: 'wis'}) === 1, um({formula: 'wis'}));
+
+  /* what a "Limited uses" box saves: usesFromForm(prev, shown, typed, per) */
+  fresh(3);
+  const prevBL = {max: BL, per: 'long', used: 1}, prevF = {max: {formula: 'wis'}, per: 'short', used: 3};
+  let u = usesFromForm(prevBL, 2, '2', 'long');
+  ck('#132 unchanged, a byLevel maximum is kept as it was', !!u && u.max === BL && u.per === 'long' && u.used === 1, u);
+  u = usesFromForm(prevBL, 2, '4', 'short');
+  ck('#132 a new number replaces it, and the reset is the form\'s', !!u && u.max === 4 && u.per === 'short' && u.used === 1, u);
+  u = usesFromForm(prevF, 3, '3', 'short');
+  ck('#132 unchanged, a formula is kept as it was', !!u && u.max === prevF.max && u.used === 3, u);
+  u = usesFromForm(prevF, 3, '2', 'short');
+  ck('#132 ...and used is clamped to a lower new number', !!u && u.max === 2 && u.used === 2, u);
+  u = usesFromForm({max: 3, per: 'long', used: 0}, 3, '3', 'long');
+  ck('#132 a plain number stays a plain number', !!u && u.max === 3, u);
+  ck('#132 a blank box with a plain number means no uses', usesFromForm({max: 3, per: 'long', used: 0}, 3, '', 'long') === null);
+  ck('#132 a new feature with a number gets uses', JSON.stringify(usesFromForm(undefined, 0, '2', 'long')) === '{"max":2,"per":"long","used":0}');
+  ck('#132 a new feature with none gets none', usesFromForm(undefined, 0, '', 'long') === null);
+  fresh(1);
+  const zeroNow = {max: {byLevel: [0, 0, 2]}, per: 'long', used: 0};
+  u = usesFromForm(zeroNow, 0, '', 'long');
+  ck('#132 a byLevel that is 0 at this level (its box opens blank) is kept, not dropped', !!u && u.max === zeroNow.max, u);
+
+  /* the hint under the box */
+  fresh(3);
+  ck('#132 the hint: byLevel', usesScaleHint({uses: {max: BL}}) === 'Grows with your level: 2 now. Typing a different number stops it growing.', usesScaleHint({uses: {max: BL}}));
+  ck('#132 the hint: the level', usesScaleHint({uses: {max: {formula: 'level'}}}) === 'Grows with your level: 3 now. Typing a different number stops it growing.');
+  ck('#132 the hint: an ability', usesScaleHint({uses: {max: {formula: 'wis'}}}) === 'From your WIS modifier: 3 now. Typing a different number stops it changing.', usesScaleHint({uses: {max: {formula: 'wis'}}}));
+  ck('#132 the hint: an ability and a modifier', usesScaleHint({uses: {max: 'wis+1'}}) === 'From your WIS modifier + 1: 4 now. Typing a different number stops it changing.'
+     && usesScaleHint({uses: {max: {formula: 'cha-1'}}}) === 'From your CHA modifier − 1: 1 now. Typing a different number stops it changing.',
+     [usesScaleHint({uses: {max: 'wis+1'}}), usesScaleHint({uses: {max: {formula: 'cha-1'}}})]);
+  ck('#132 no hint for a plain number, or no uses', usesScaleHint({uses: {max: 3}}) === '' && usesScaleHint({}) === '');
+
+  /* driven through the real form: open it, read its box, save */
+  const drive = (feat, typed) => {
+    const realB = ctx.document.getElementById, realO = ctx.openModal, els = {}, on = {};
+    const fake = id => ({id, _t: '', get textContent() { return this._t; }, set textContent(v) { this._t = String(v); }, innerHTML: '', value: '', style: {}, dataset: {}, children: [],
+      classList: {toggle() {}, add() {}, remove() {}, contains: () => false}, querySelector: () => null, querySelectorAll: () => [],
+      appendChild() {}, addEventListener(t, f) { on[id + ':' + t] = f; }, setAttribute() {}, removeAttribute() {}, insertAdjacentHTML() {}, focus() {}});
+    let body = '';
+    ctx.openModal = (t, b) => { body = String(b); };
+    ctx.document.getElementById = id => (els[id] = els[id] || fake(id));
+    ['fName', 'fSrc', 'fDesc', 'fUses', 'fUsesPer', 'fCost', 'fCostRes'].forEach(id => { els[id] = fake(id); });
+    try {
+      ctx.openFeatureForm(feat);
+      const shown = (/id="fUses"[^>]*value="(\d*)"/.exec(body) || [])[1];
+      els.fName.value = feat.name; els.fSrc.value = ''; els.fDesc.value = ''; els.fUses.value = typed == null ? shown : typed;
+      els.fUsesPer.value = (feat.uses && feat.uses.per) || 'long'; els.fCost.value = ''; els.fCostRes.value = '';
+      on['fSave:click']();
+      return {body, shown, saved: X.character.features.find(f => f.id === feat.id)};
+    } finally { ctx.document.getElementById = realB; ctx.openModal = realO; }
+  };
+  let c = fresh(3);
+  const ward = () => ({id: 'w', name: 'Ward', source: '', description: '', effects: [], enabled: true, uses: {max: {byLevel: [1, 1, 2, 2, 3]}, per: 'long', used: 1}});
+  c.features = [ward()];
+  let d = drive(c.features[0]);
+  ck('#132 the form opens on today\'s number, with the hint', d.shown === '2' && /id="fUsesHint"[^>]*>Grows with your level: 2 now/.test(d.body), [d.shown, (d.body.match(/fUsesHint[^<]*/) || [''])[0]]);
+  ck('#132 saving it unchanged keeps the byLevel', !!d.saved && JSON.stringify(d.saved.uses) === '{"max":{"byLevel":[1,1,2,2,3]},"per":"long","used":1}', d.saved && d.saved.uses);
+  c.level = 5;
+  ck('#132 ...so it still grows: 3 at level 5', ctx.usesMax(X.character.features[0]) === 3, ctx.usesMax(X.character.features[0]));
+  c.level = 3; c.features = [ward()];
+  d = drive(c.features[0], '5');
+  ck('#132 typing a different number makes it that number', !!d.saved && JSON.stringify(d.saved.uses) === '{"max":5,"per":"long","used":1}', d.saved && d.saved.uses);
+  c.features = [{id: 'n', name: 'Ward of Shadows', source: '', description: '', effects: [], enabled: true, uses: {max: {formula: 'wis'}, per: 'long', used: 0}}];
+  d = drive(c.features[0]);
+  ck('#132 a formula survives an unchanged save too', JSON.stringify(d.saved.uses.max) === '{"formula":"wis"}' && /From your WIS modifier: 3 now/.test(d.body), d.saved.uses);
+  c.features = [{id: 'p', name: 'Plain', source: '', description: '', effects: [], enabled: true, uses: {max: 2, per: 'short', used: 0}}];
+  d = drive(c.features[0]);
+  ck('#132 a plain number shows no hint and stays a number', !/fUsesHint/.test(d.body) && d.saved.uses.max === 2, d.saved.uses);
+  X.character = X.blankChar();
+}
+
 /* ---- end of the #130 · #129 · #132 block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window

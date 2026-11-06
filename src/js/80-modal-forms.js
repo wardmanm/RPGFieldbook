@@ -420,14 +420,17 @@ function openFeatureForm(existing){
      from — which the placeholder names. */
   const srcField=groupFieldHTML({id:"fSrc",list:"fSrcGroups",label:"Source",value:f.source,
     choices:(character.features||[]).map(featGroupLabel),placeholder:`Automatic (${featOriginLabel(f)})`});
+  /* the number the uses box opens on, and what it scales by (#132) */
+  const usesShown=num(f.uses&&usesMax(f)), usesHint=f.uses?usesScaleHint(f):"";
   openModal(existing?"Edit feature":"New feature",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="fLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="field"><label class="f">Name</label><input id="fName" value="${esc(f.name)}"></div>
     ${srcField}
     <div class="field"><label class="f">Description</label><textarea id="fDesc">${esc(f.description||"")}</textarea></div>
     <div class="field"><label class="f">Effects on stats</label><div id="fFx">${fxEditorRows(f.effects)}</div><button class="fx-add" id="fAddFx">+ Add effect</button></div>
-    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${esc(num(f.uses&&usesMax(f))||"")}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${esc(usesShown||"")}" placeholder="0"></div>
       <div class="field"><label class="f">Resets on</label><select id="fUsesPer"><option value="long"${(f.uses&&f.uses.per)!=="short"?" selected":""}>Long rest</option><option value="short"${(f.uses&&f.uses.per)==="short"?" selected":""}>Short rest</option></select></div></div>
+    ${usesHint?`<p class="hint" id="fUsesHint" style="margin:-6px 0 12px">${esc(usesHint)}</p>`:""}
     <div class="g2"><div class="field"><label class="f">Cost per use (0 = none)</label><input id="fCost" type="number" min="0" value="${esc(num(f.cost&&f.cost.amount)||"")}" placeholder="0"></div>
       <div class="field"><label class="f">From resource</label><input id="fCostRes" list="resNamesDL" value="${esc(f.cost&&f.cost.resource||"")}" placeholder="e.g. Scrap" autocomplete="off"></div></div>
     <datalist id="resNamesDL">${(character.resources||[]).map(r=>`<option value="${esc(r.name)}"></option>`).join("")}</datalist>
@@ -441,8 +444,9 @@ function openFeatureForm(existing){
   document.getElementById("fSave").addEventListener("click",()=>{
     if(groupFieldBlocked("fSrc"))return;
     const rec={id:f.id,name:document.getElementById("fName").value.trim()||"Feature",source:tagLabel(document.getElementById("fSrc").value),description:document.getElementById("fDesc").value,effects:collectFx(fxWrap),enabled:f.enabled!==false};
-    const um=Math.max(0,num(document.getElementById("fUses").value));
-    if(um>0)rec.uses={max:um,per:document.getElementById("fUsesPer").value,used:Math.min(num(f.uses&&f.uses.used),um)};
+    /* unchanged, a byLevel or formula maximum is kept; a new number replaces it (#132) */
+    const uses=usesFromForm(f.uses,usesShown,document.getElementById("fUses").value,document.getElementById("fUsesPer").value);
+    if(uses)rec.uses=uses;
     const cAmt=Math.max(0,num(document.getElementById("fCost").value)), cRes=document.getElementById("fCostRes").value.trim();
     if(cAmt>0&&cRes)rec.cost={resource:cRes,amount:cAmt};
     /* rec is rebuilt from the form, so anything the form doesn't ask about has to
