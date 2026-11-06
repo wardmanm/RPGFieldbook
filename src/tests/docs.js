@@ -375,6 +375,21 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   const notices = css.split('\n').filter(l => /^ {3}[^:\n]+: Copyright /.test(l));
   ck('no embedded family declares a Reserved Font Name',
      notices.length > 0 && notices.every(l => !/Reserved Font Name/i.test(l)));
+
+  // The credit, beside the emblems' CC BY one above: README §10 and Settings ->
+  // Credits name every family embedded and the licence, linked. The app's copy is
+  // the one that counts: fieldbook.html travels as a lone file.
+  const settings = read('src/js/88-settings.js');
+  const credits = (/const secCredits=`([\s\S]*?)`;/.exec(settings) || [, ''])[1];
+  ck('88-settings.js has its Credits page', credits.length > 0);
+  [...embedded].forEach(fam => {
+    ck('README credits the ' + fam + ' font', readme.includes(fam));
+    ck('the app credits the ' + fam + ' font', credits.includes(fam));
+  });
+  ck('README names the SIL Open Font License 1.1', readme.includes('SIL Open Font License 1.1'));
+  ck('README links the OFL', readme.includes('https://openfontlicense.org'));
+  ck('the app names the SIL Open Font License 1.1', credits.includes('SIL Open Font License 1.1'));
+  ck('the app links the OFL', credits.includes('<a href="https://openfontlicense.org"'));
 }
 
 // ---------- the wiki (src/docs/wiki/) — see src/docs/specs/1.7.2/2026-09-28-living-wiki-design.md §7
