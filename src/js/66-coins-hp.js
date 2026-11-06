@@ -200,6 +200,15 @@ function hpBand(){
   const pct=num(character.hp.cur)/mx*100;
   return (pct<=25)?"hp-danger":(pct<=50)?"hp-warn":"";
 }
+/* #113: a box as wide as what it holds, in `ch` (the width of a digit in its
+   own font), so "26 / 38" is as wide as its digits and the bar can centre
+   it. Blank, a box fits its placeholder ("0", or Temp's "temp"). */
+function hpBoxWidth(k,v){
+  const s=(v===null||v===undefined)?"":String(v);
+  return s===""?(k==="temp"?"4.6ch":"1.2ch"):(s.length+0.2)+"ch";
+}
+/* ...and as it is typed (wired in 90-boot.js), so "+12" never scrolls. */
+function hpFitBox(el){if(el&&el.style&&el.dataset)el.style.width=hpBoxWidth(el.dataset.hp,el.value);}
 function renderHP(){
   /* #112: on a touchscreen the bar is one button that opens the Hit points
      window, so its boxes take no typing at all: readOnly, no keyboard, out of
@@ -208,6 +217,7 @@ function renderHP(){
   ["cur","max","temp"].forEach(k=>{
     const el=document.getElementById("hp"+k[0].toUpperCase()+k.slice(1));
     if(el){const v=character.hp[k];el.value=(v===null||v===undefined)?"":v;
+      el.style.width=hpBoxWidth(k,el.value);   /* #113: sized to what it holds, so the group centres */
       el.inputMode=touch?"none":"tel";el.tabIndex=touch?-1:0;if(k!=="max")el.readOnly=touch;}
   });
   const bar=document.querySelector(".hp-bar");

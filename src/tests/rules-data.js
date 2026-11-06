@@ -1917,6 +1917,31 @@ function block(html, needle, tag) {
   ck('#112 on a touchscreen a tap on a number lands on the bar, not in a box',
      /@media \(pointer:coarse\)\{[^@]*\.hp-bar input\{pointer-events:none\}/.test(sheetCss));
   ck('#112 the window keeps out of the bar\'s hooks', !/data-hpq|id="hpq[A-Za-z]*" data-hp/.test(js));
+  // ---- #113: the numbers and the − and + glyphs sit centred
+  const barBlock = block(t, 'class="hp-bar"');
+  ck('#113 Current and Max sit together in one .hp-num, inside the bar, Temp after it',
+     /<span class="hp-num">\s*<input[^>]*id="hpCur"[^>]*>\s*<span class="hp-sl"[^>]*>\/<\/span>\s*<input[^>]*id="hpMax"[^>]*>\s*<\/span>/.test(barBlock) &&
+     barBlock.indexOf('class="hp-num"') < barBlock.indexOf('class="hp-tmp"'), barBlock);
+  // the declarations of a top-level rule whose selector is exactly `sel`
+  const rule = sel => (sheetCss.match(new RegExp('(?:^|[}\\s])' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}')) || [])[1] || '';
+  ck('#113 the bar is three columns whose outer two are equal, so the middle one is centred',
+     /display:grid/.test(rule('.hp-bar')) && /grid-template-columns:minmax\(0,1fr\) auto minmax\(min-content,1fr\)/.test(rule('.hp-bar')), rule('.hp-bar'));
+  ck('#113 ...the numbers in the middle column, Temp at the right of the third',
+     /grid-column:2/.test(rule('.hp-num')) && /grid-column:3/.test(rule('.hp-tmp')) && /justify-self:end/.test(rule('.hp-tmp')) && !/margin-left:auto/.test(rule('.hp-tmp')));
+  ck('#113 the fill spans the bar as a grid item, under the numbers',
+     /grid-column:1\/-1/.test(rule('.hp-fill')) && !/position:absolute/.test(rule('.hp-fill')) &&
+     /position:relative/.test(rule('.hp-num')) && /position:relative/.test(rule('.hp-tmp')));
+  ck('#113 the bar itself is not positioned, so a narrow Temp can leave it',
+     !/position:/.test(rule('.hp-bar')) && !/\.hp-bar\{position|\.hp-bar>\*:not\(\.hp-fill\)/.test(sheetCss));
+  ck('#113 where it would collide, Temp moves beside the Hit points label',
+     /position:relative/.test(rule('.rail-hp')) && /container:hp\/inline-size/.test(rule('.rail-hp')) &&
+     /@container hp \(max-width:220px\)\{[^@]*\.hp-tmp\{[^}]*position:absolute[^}]*top:0[^}]*right:0/.test(sheetCss));
+  ck('#113 no fixed-width number boxes left', !/width:3\.1ch/.test(sheetCss) && /el\.style\.width=hpBoxWidth\(k,/.test(js));
+  ck('#113 − and + are drawn strokes in flex-centred buttons, not font glyphs',
+     /<button class="hp-btn" id="hpMinus"[^>]*><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"\/><\/svg><\/button>/.test(t) &&
+     /<button class="hp-btn" id="hpPlus"[^>]*><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"\/><\/svg><\/button>/.test(t) &&
+     /display:flex/.test(rule('.hp-btn')) && /align-items:center/.test(rule('.hp-btn')) && /justify-content:center/.test(rule('.hp-btn')));
+  ck('#113 a box grows as it is typed', /closest\("\[data-hp\]"\);if\(h\)hpFitBox\(h\)/.test(bootSrc));
 
   // ---- current-HP colour bands
   ck('the warn colour is its own token, not --accent',

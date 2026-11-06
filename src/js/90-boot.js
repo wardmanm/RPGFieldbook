@@ -21,6 +21,8 @@ function wire(){
   });
   // slot totals
   document.addEventListener("input",e=>{const s=e.target.closest("[data-slot]");if(!s)return;if(slotsAuto)return;const lv=num(s.dataset.slot);character.slots[lv].total=Math.max(0,num(s.value));if(character.slots[lv].used>character.slots[lv].total)character.slots[lv].used=character.slots[lv].total;renderSlotBubbles();scheduleSave();});
+  /* #113: an HP box grows with what is typed into it (it commits on change) */
+  document.addEventListener("input",e=>{const h=e.target.closest&&e.target.closest("[data-hp]");if(h)hpFitBox(h);});
   /* the journal editor writes on every keystroke (87-journal.js) */
   document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-jnlfield]"))jnlInput();});
   /* every group field says at once when a reserved name is typed (#98) */

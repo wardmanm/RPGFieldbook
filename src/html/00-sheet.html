@@ -79,19 +79,26 @@
         </div>
         <!-- HP as a bar: the three data-hp boxes sit inside it (tapping the
              numbers edits them), renderHP() sets #hpFill's width and band.
-             Max is locked while Vitals is (its pencil, #115). -->
+             Max is locked while Vitals is (its pencil, #115). On a
+             touchscreen the bar is one button that opens Hit points (#112).
+             #113: Current / Max sit in .hp-num, the middle of three grid
+             columns whose outer two are equal, so they stay centred; where
+             Temp would collide (a narrow rail) it moves beside the label.
+             − and + are drawn strokes, which centre where font glyphs sit high. -->
         <div class="rail-hp">
           <div class="hp-lbl">Hit points</div>
           <div class="hp-row">
-            <button class="hp-btn" id="hpMinus" aria-label="Lose HP">−</button>
+            <button class="hp-btn" id="hpMinus" aria-label="Lose HP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></button>
             <div class="hp-bar">
               <i class="hp-fill" id="hpFill"></i>
-              <input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 to heal / -7 for damage, which spends temp HP first">
-              <span class="hp-sl" aria-hidden="true">/</span>
-              <input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — type a number, or +4 / -7 to adjust; locked while Vitals is locked">
-              <span class="hp-tmp"><span aria-hidden="true">+</span><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="temp" aria-label="Temp HP — type a number, or +4 to grant / -7 for damage, which spills into current HP"></span>
+              <span class="hp-num">
+                <input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 to heal / -7 for damage, which spends temp HP first">
+                <span class="hp-sl" aria-hidden="true">/</span>
+                <input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — type a number, or +4 / -7 to adjust; locked while Vitals is locked">
+              </span>
+              <span class="hp-tmp"><span aria-hidden="true">+</span><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="temp" aria-label="Temp HP — type a number, or +4 to grant / -7 for damage, which spills into current HP"><span class="hp-tmpw" aria-hidden="true">temp</span></span>
             </div>
-            <button class="hp-btn" id="hpPlus" aria-label="Gain HP">+</button>
+            <button class="hp-btn" id="hpPlus" aria-label="Gain HP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg></button>
           </div>
           <div class="hp-note" id="maxNote"></div>
         </div>

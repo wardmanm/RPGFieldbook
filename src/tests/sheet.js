@@ -45,7 +45,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
   'EDIT_CARDS', 'editHidden', 'setEditHidden', 'editCardTitle', 'editToggleText', 'editToggleHTML', 'vitalsLocked', 'setVitalsLocked',
   'hpTouch', 'hpAmount', 'hpQuick', 'hpQuickText', 'hpNowText', 'hpBarLabel', 'hpQuickApply', 'hpSetParse', 'hpSetApply',
-  'hpDialogHTML', 'openHPDialog',
+  'hpDialogHTML', 'openHPDialog', 'hpBoxWidth', 'hpFitBox',
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
@@ -8277,6 +8277,27 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       ctx.document.getElementById = kd.gid; ctx.document.querySelector = kd.qs; ctx.window.matchMedia = kd.mm;
       ctx.openModal = kd.om; ctx.closeModal = kd.cm;
     }
+  }
+  /* #113: the bar's numbers are sized to their content, so "26 / 38" can sit
+     in the middle of the bar (fixed 3.1ch boxes pushed one digit off centre) */
+  {
+    const W = X.hpBoxWidth;
+    ck('#113 a box is as wide as what it holds', W('cur', 26) === '2.2ch' && W('max', 138) === '3.2ch' && W('temp', 3) === '1.2ch' && W('cur', '-7') === '2.2ch',
+       [W('cur', 26), W('max', 138), W('temp', 3), W('cur', '-7')]);
+    ck('#113 ...a blank one fits its placeholder', W('cur', '') === '1.2ch' && W('max', null) === '1.2ch' && W('temp', '') === '4.6ch' && W('temp', undefined) === '4.6ch');
+    const el = {dataset: {hp: 'cur'}, value: '+12', style: {}};
+    X.hpFitBox(el);
+    ck('#113 hpFitBox sizes a box as it is typed', el.style.width === '3.2ch', el.style.width);
+    const kd = {gid: ctx.document.getElementById};
+    const box = () => ({value: '', style: {}, classList: {toggle() {}}});
+    const els = {hpCur: box(), hpMax: box(), hpTemp: box()};
+    ctx.document.getElementById = id => els[id] || kd.gid(id);
+    try {
+      const c = X.blankChar(); c.hp.cur = 9; c.hp.max = 138; c.hp.temp = ''; X.character = c;
+      X.renderHP();
+      ck('#113 renderHP sizes all three boxes', els.hpCur.style.width === '1.2ch' && els.hpMax.style.width === '3.2ch' && els.hpTemp.style.width === '4.6ch',
+         ['hpCur', 'hpMax', 'hpTemp'].map(k => els[k].style.width));
+    } finally { ctx.document.getElementById = kd.gid; }
   }
   X.character = keep.ch;
 }
