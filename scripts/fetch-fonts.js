@@ -13,18 +13,23 @@
  * copy of the fonts, so no font files are kept in the repo (#144).
  *
  * Latin only (Mike, 2026-11-06): Google's "latin" subset, with its own
- * unicode-range, so a letter outside it falls back to Georgia for that letter.
+ * unicode-range, so a letter outside it falls back to the next font in its
+ * stack (Times New Roman or Georgia) for that letter.
  * Subsetting counts as modifying a font under the OFL, and a Reserved Font Name
  * would then forbid keeping the name, so a family that declares one stops this.
  *
  * The parse is deliberately STRICT, like fetch-icons.js. Google's answer depends
  * on the User-Agent and changes over time; rather than half-handle a new shape
  * (static files per weight, a renamed subset, woff instead of woff2), this dies
- * naming what it got and writes nothing.
+ * naming what it got and writes nothing. One exception is retried: now and then
+ * Google answers with fonts.gstatic.com/l/font?kit=… addresses instead of
+ * /s/…woff2 files, and asking again gets the files. Never widen GSTATIC to
+ * take those addresses.
  */
 "use strict";
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const ROOT = path.resolve(__dirname, "..");
 const OUT = path.join(ROOT, "src/css/90-fonts.css");
@@ -42,8 +47,11 @@ const die = (m) => { console.error("fetch-fonts: " + m); process.exit(1); };
 
 /* The family names must match the tokens in src/css/00-tokens.css exactly
    (src/tests/docs.js checks both ways). The weights are the ones the template's
-   Google link asked for before #144; each @font-face gets their range, so a
-   weight the CSS asks for outside it (800, 900) clamps to the face it did online. */
+   Google link asked for before #144, and each @font-face gets their range. A
+   weight the CSS asks for beyond the range clamps to its end, as Google's faces
+   did; one between two requested weights renders as asked, where Google's
+   one-face-per-weight answer snapped it to the next requested one. docs.js checks
+   that every weight the CSS asks for lands where it did online. */
 const FAMILIES = [
   { family: "Grenze Gotisch", ofl: "grenzegotisch", faces: { normal: [500, 700, 900] } },
   { family: "Cinzel", ofl: "cinzel", faces: { normal: [500, 600, 700] } },
@@ -121,7 +129,10 @@ function licenceParts(text) {
   if (t < 1 || !/^-{20,}$/.test(lines[t - 1])) throw new Error("no \"" + OFL_TITLE + "\" title under a dashed rule");
   while (lines.length && lines[lines.length - 1] === "") lines.pop();
   const body = lines.slice(t - 1).join("\n");
-  if ((notice.join("\n") + body).includes("*/")) throw new Error("the text holds */, which would end the CSS comment");
+  const all = notice.join("\n") + body;
+  if (all.includes("*/")) throw new Error("the text holds */, which would end the CSS comment");
+  /* The comment sits inside the page's one <style>, so this would end that too. */
+  if (/<\/style/i.test(all)) throw new Error("the text holds </style, which would end the page's stylesheet");
   return { notice, body };
 }
 
@@ -137,15 +148,16 @@ function fragmentCSS(faces, notices, body) {
    The families the tokens in 00-tokens.css name, embedded so the page makes no
    font request at all (CLAUDE.md constraint 1) and looks the same offline as
    online (#144). Google's "latin" subset only, with its own unicode-range: a
-   letter outside it, such as "Ł", falls back to Georgia for that letter. Each
-   family is one variable woff2 per style, covering every weight listed.
+   letter outside it, such as "Ł", falls back to the next font in its stack
+   (Times New Roman or Georgia) for that letter. Each style is one woff2 file
+   covering every weight listed: a variable font where several are listed.
 
    Fonts and their copyright notices:
 ${notices.map(([fam, lines]) => lines.map((l, i) => "   " + (i ? " ".repeat(fam.length + 2) : fam + ": ") + l).join("\n")).join("\n")}
 
    No family declares a Reserved Font Name; fetch-fonts.js refuses one that does,
    since subsetting a font modifies it under the licence. The fonts are credited
-   in Settings -> Credits & licences and in README section 10.
+   in Settings -> Credits and in README section 10.
 
    This Font Software is licensed under the SIL Open Font License, Version 1.1.
    This license is copied below, and is also available with a FAQ at:
@@ -156,7 +168,8 @@ ${body}
 `;
   const face = (f, bytes) => {
     const w = f.weights[0] === f.weights[f.weights.length - 1] ? String(f.weights[0]) : f.weights[0] + " " + f.weights[f.weights.length - 1];
-    return `/* ${f.family}, ${f.style}, weights ${f.weights.join("/")}: latin, ${bytes.length} bytes, from ${f.url} */\n` +
+    const sha = crypto.createHash("sha256").update(bytes).digest("hex");
+    return `/* ${f.family}, ${f.style}, weights ${f.weights.join("/")}: latin, ${bytes.length} bytes, sha256 ${sha}, from ${f.url} */\n` +
       `@font-face{font-family:"${f.family}";font-style:${f.style};font-weight:${w};font-display:swap;\n` +
       `  unicode-range:${f.range};\n` +
       `  src:url("data:font/woff2;base64,${bytes.toString("base64")}") format("woff2")}\n`;
@@ -170,8 +183,16 @@ async function get(url, as) {
   return as === "bytes" ? Buffer.from(await res.arrayBuffer()) : res.text();
 }
 
-(async () => {
-  const faces = parseLatinFaces(await get(css2Url(), "text"));
+async function main() {
+  let css;
+  for (let tries = 1; ; tries++) {
+    css = await get(css2Url(), "text");
+    if (!/fonts\.gstatic\.com\/l\/font\?/.test(css)) break;
+    if (tries === 3) die("Google answered three times with fonts.gstatic.com/l/font?kit=… addresses, not /s/…woff2 files. " +
+                         "It does this now and then: re-run later. Never widen GSTATIC to take them.");
+    console.error("    Google answered with /l/font?kit=… addresses; asking again");
+  }
+  const faces = parseLatinFaces(css);
 
   let total = 0;
   for (const f of faces) {
@@ -203,4 +224,8 @@ async function get(url, as) {
   if (DRY) { console.error("    --dry-run: nothing written"); return; }
   fs.writeFileSync(OUT, out);            /* LF only, single trailing newline, no BOM */
   console.error(`    wrote ${path.relative(ROOT, OUT)}`);
-})().catch((e) => die(e.stack || e.message));
+}
+
+/* Required rather than run (a throwaway check), it fetches nothing. */
+if (require.main === module) main().catch((e) => die(e.stack || e.message));
+else module.exports = { css2Url, parseLatinFaces, licenceParts, fragmentCSS };

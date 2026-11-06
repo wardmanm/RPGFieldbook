@@ -339,10 +339,10 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   ck('the tokens name the three families', ['Grenze Gotisch', 'Cinzel', 'EB Garamond'].every(f => named.has(f)),
      [...named]);
   // Each face: its one-line comment, then the block itself.
-  const faces = [...css.matchAll(/\/\* ([^\n]*?): latin, (\d+) bytes[^\n]*\*\/\n@font-face\{([^}]*)\}/g)]
-    .map(m => ({ label: m[1], bytes: +m[2], body: m[3],
-                 family: (/font-family:"([^"]+)"/.exec(m[3]) || [])[1],
-                 style: (/font-style:(\w+)/.exec(m[3]) || [])[1] }));
+  const faces = [...css.matchAll(/\/\* ([^\n]*?): latin, (\d+) bytes([^\n]*)\*\/\n@font-face\{([^}]*)\}/g)]
+    .map(m => ({ label: m[1], bytes: +m[2], sha: (/, sha256 ([0-9a-f]{64})\b/.exec(m[3]) || [])[1], body: m[4],
+                 family: (/font-family:"([^"]+)"/.exec(m[4]) || [])[1],
+                 style: (/font-style:(\w+)/.exec(m[4]) || [])[1] }));
   ck('90-fonts.css holds every @font-face as a labelled block',
      faces.length > 0 && faces.length === (css.match(/@font-face\{/g) || []).length, faces.length);
   const embedded = new Set(faces.map(f => f.family));
@@ -364,6 +364,10 @@ if (packsReg && Array.isArray(packsReg.packs)) {
     const bytes = b64 ? Buffer.from(b64, 'base64') : Buffer.alloc(0);
     ck(f.label + ': a woff2 data: URL', bytes.subarray(0, 4).toString('latin1') === 'wOF2');
     ck(f.label + ': its blob is the ' + f.bytes + ' bytes its comment says', bytes.length === f.bytes, bytes.length);
+    // A same-length change (a search-and-replace that reaches the base64) keeps
+    // the size and the wOF2 header, and the font silently falls back.
+    ck(f.label + ': its blob has the sha256 its comment says',
+       !!f.sha && require('crypto').createHash('sha256').update(bytes).digest('hex') === f.sha, f.sha || 'no sha256');
   });
 
   // Same weights as online. Google served one @font-face per requested weight,
