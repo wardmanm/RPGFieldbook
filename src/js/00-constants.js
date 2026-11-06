@@ -109,6 +109,8 @@ function blankChar(){
        gave back during the current fight, per kind: kind -> {fired, back}, so
        End combat's log line counts it (#47); End combat clears it. */
     ammoSpent:{}, ammoRecovery:"half", ammoFight:{},
+    /* #130: AC is "calc" (worked out) or "flat" (typed: `ac` holds the number) */
+    acMode:"calc",
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);

@@ -172,6 +172,7 @@ function migrate(s){
   base.showFamiliars=typeof s.showFamiliars==="boolean"?s.showFamiliars:base.familiars.length>0;
   base.hiddenTabs=cleanHiddenTabs(s.hiddenTabs);   /* #52 */
   base.featsAllowed=typeof s.featsAllowed==="boolean"?s.featsAllowed:true;   /* #118 */
+  base.acMode=(s.acMode==="flat"&&acFlatValue(s.ac)!=null)?"flat":"calc";   /* #130: a Flat with no number is Calculated */
   /* #105: the End of combat window's settings, and "Show after combat" on
      trackers and pages, kept only when true — absent is off */
   base.xpSplit=s.xpSplit===true;

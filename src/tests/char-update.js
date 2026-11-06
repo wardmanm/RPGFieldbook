@@ -17,7 +17,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classFlyHTML','subSourceTag','runChoices',
   'syncResources','resolveResDie','openModal','dismissModal','skillKey','multiclassNote','casterLevel','autoSlots',
-  'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','spellDC','spellAtkBonus',
+  'attackNumbers','addLibraryItems','contributions','sumFx','armorAC','acTotal','spellDC','spellAtkBonus',
   'uid',
   'levelSnapshot','levelGains','luSummary','luHPCheck',
   'openLevelUp','luState','luSetHP','luRoll','luFinish','levelUpCardHTML','levelUpHPHTML','LU_HP_CLOSE',
@@ -521,12 +521,12 @@ ck('R7 ...and a stamped one round-trips',
    effect; a sheet holds a COPY, so it keeps the +5 until the rules-update tool
    rewrites it, never on load. The "new" entry is the shipped one, so this fails
    until the pack is fixed; the "old" one is that entry with the effect it used
-   to carry. AC is read the way recompute() paints it: armorAC() + `ac` effects. */
+   to carry. AC is read the way recompute() paints it: acTotal() (#130). */
 {
   const shipped=JSON.parse(fs.readFileSync(path.join(__dirname,'..','..','data','srd52','items-magic.json'),'utf8'))
     .items.find(x=>x.name==='Quarterstaff of the Acrobat');
   const oldDef=Object.assign(JSON.parse(JSON.stringify(shipped)),{effects:[{target:'ac',value:5}]});
-  const acNow=()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);};
+  const acNow=()=>X.acTotal();
   const oldSheet=()=>{
     X.resetRules(); X.mergeRules({system:'XPHB',items:[JSON.parse(JSON.stringify(oldDef))]},'5e.json');
     const ch=X.blankChar(); ch.appVersion='1.0.0'; ch.abilities.dex=14; ch.level=1;
@@ -631,7 +631,7 @@ ck('R7 ...and a stamped one round-trips',
   ck('#78 an old sheet shows the bug: the ring\'s text is the template tag',
      !!ring&&/\{#itemEntry Ring of Resistance\|XDMG\}$/.test(ring.description), ring&&ring.description);
   ring.equipped=true; ring.qty=2; ring.fav=true; dsm.equipped=true;
-  const acBefore=(()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);})();
+  const acBefore=X.acTotal();
   load(ringNew,dsmNew);
   const rows=X.diffCharacter().rows.filter(r=>r.name==='Ring of Acid Resistance'||r.name==='Black Dragon Scale Mail');
   ck('#78 the fixed pack offers both, each as one changed row: description, and nothing else',
@@ -645,7 +645,7 @@ ck('R7 ...and a stamped one round-trips',
   ck('#78 ...the Dragon Scale Mail\'s too, its +1 AC unchanged',
      /\nAC 14 \+ Dex modifier \(max 2\)[^\n]*Scale Mail\. Dragon Scale Mail is made of/.test(dsm.description)
      &&dsm.description.includes('Resistance to Acid damage')&&!dsm.description.includes('{#')
-     &&(()=>{const c=X.contributions();return X.armorAC(c).base+X.sumFx('ac',c);})()===acBefore, [dsm.description.slice(0,200),acBefore]);
+     &&X.acTotal()===acBefore, [dsm.description.slice(0,200),acBefore]);
   ck('#78 ...touches none of the player\'s numbers', ring.equipped===true&&ring.qty===2&&ring.fav===true, ring);
   ck('#78 ...and nothing is offered again', !X.diffCharacter().rows.some(r=>r.name==='Ring of Acid Resistance'),
      X.diffCharacter().rows.map(r=>r.name+':'+r.fields));

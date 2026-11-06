@@ -167,15 +167,33 @@ function attackVisible(a,inv){
   if(!it)return true;
   return !!it.equipped;
 }
-/* AC base from equipped armor (base + capped Dex) + shields; falls back to manual or 10+Dex */
+/* Calculated AC's base: the best equipped body armor (its base + capped Dex),
+   else 10 + Dex, plus the BEST equipped shield — the rules allow one, so two
+   never add up (#130). character.ac is never read here: it is the Flat number
+   only (acTotal(), below). The winning items' names are for the AC window. */
 function armorAC(c){
   const dex=Math.floor((abilFinal("dex",c)-10)/2);
-  const worn=(character.inventory||[]).filter(i=>i.equipped).map(itemArmor).filter(Boolean);
-  const body=worn.filter(a=>a.kind==="body").sort((a,b)=>b.base-a.base)[0];
-  let base;
-  if(body)base=body.base+((body.dexCap==null)?dex:Math.min(dex,body.dexCap));
-  else if(character.ac!==""&&character.ac!=null)base=num(character.ac);
-  else base=10+dex;
-  const shield=worn.filter(a=>a.kind==="shield").reduce((s,a)=>s+num(a.bonus||2),0);
-  return {base:base+shield, hasArmor:!!body, shield, body, dex};
+  const worn=(character.inventory||[]).filter(i=>i.equipped).map(it=>({it,a:itemArmor(it)})).filter(x=>x.a);
+  const top=worn.filter(x=>x.a.kind==="body").sort((p,q)=>q.a.base-p.a.base)[0];
+  const body=top?top.a:undefined;
+  const base=body?body.base+((body.dexCap==null)?dex:Math.min(dex,body.dexCap)):10+dex;
+  const shields=worn.filter(x=>x.a.kind==="shield").map(x=>({name:x.it.name||"Shield",bonus:num(x.a.bonus||2)})).sort((p,q)=>q.bonus-p.bonus);
+  const shield=shields.length?shields[0].bonus:0;
+  return {base:base+shield, hasArmor:!!body, shield, body, dex,
+          bodyName:top?(top.it.name||"Armor"):"", shieldName:shields.length?shields[0].name:"", shieldCount:shields.length};
 }
+/* ---- Calculated or Flat AC (#130) ----
+   character.acMode is "calc" or "flat"; character.ac is the Flat number only.
+   Flat is the AC from a paper sheet, so the armor, shields, items and features
+   it already counts add nothing; only what comes and goes — a status (the
+   Shield spell as one) and a summoned familiar — adds to it. A Flat mode with
+   no number reads as Calculated, so the mode and the number cannot disagree on
+   screen. acTotal() is the ONE place AC is added up: the rail (recompute()),
+   the initiative tracker (youAC()), the AC window and, through #acDisp, print. */
+function acFlatValue(v){const s=(typeof v==="number"||typeof v==="string")?String(v).trim():"";return /^\d+$/.test(s)?parseInt(s,10):null;}
+function acIsFlat(ch){return !!ch&&ch.acMode==="flat"&&acFlatValue(ch.ac)!=null;}
+function acEffects(c){const flat=acIsFlat(character);return c.filter(x=>x.target==="ac"&&(!flat||x.kind==="status"||x.kind==="familiar"));}
+function acTotal(c){c=c||contributions();return (acIsFlat(character)?acFlatValue(character.ac):armorAC(c).base)+acEffects(c).reduce((s,x)=>s+x.value,0);}
+/* What a blank Flat box starts at: the Calculated AC less what still adds in
+   Flat, so switching does not move the number */
+function acFlatSeed(c){return armorAC(c).base+c.filter(x=>x.target==="ac"&&(x.kind==="item"||x.kind==="feature")).reduce((s,x)=>s+x.value,0);}

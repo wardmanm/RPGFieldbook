@@ -97,7 +97,7 @@ function initModOf(){
   const c=contributions(),dex=Math.floor((abilFinal("dex",c)-10)/2);
   return (character.init===""?dex:num(character.init))+sumFx("init",c)+sumFx("check",c);
 }
-function youAC(){const c=contributions();return armorAC(c).base+sumFx("ac",c);}
+function youAC(){return acTotal();}
 /* you: {name, init}; party: [{id,name,ac,maxHp,init}]; foes: [{name,count,ac,init}] */
 function buildCombatants(you,party,foes){
   const rows=[{id:uid(),kind:"you",name:String(you.name||""),init:initInt(you.init),ac:"",track:"",band:null,hp:"",maxHp:"",dead:false,partyId:""}];

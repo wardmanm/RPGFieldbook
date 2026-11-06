@@ -24,8 +24,10 @@ function recompute(){
     const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!ckFx||!!grantedProf("skill",k),fxNeg(c,"skill."+k,"check"));}
     const d=document.querySelector(`.dot[data-skill="${k}"]`);if(d){d.dataset.lvl=lvl;d.dataset.granted=(!(character.skills[k]||0)&&grantedProf("skill",k))?1:0;}
   });
-  const acBase=armorAC(c).base, acFx=sumFx("ac",c);
-  const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx,fxNeg(c,"ac"));
+  /* acTotal() owns the sum, Calculated or Flat (#130); the marks follow the
+     effects it counted, so an item's penalty a Flat AC ignores is not red */
+  const acFx=acEffects(c);
+  const acEl=document.getElementById("acDisp");acEl.textContent=acTotal(c);mark(acEl,!!acFx.reduce((s,x)=>s+x.value,0),acFx.some(x=>x.value<0));
   const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c)+ckFx;
   const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx,fxNeg(c,"init","check"));
   const spFx=sumFx("speed",c), spBase=num(character.speed)+spFx;

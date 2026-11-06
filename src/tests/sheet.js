@@ -8319,6 +8319,78 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = X.blankChar();
 }
 
+/* ---- #130 one AC function: best shield, Calculated ignores the old value, Flat ---- */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const acTotal = fn('acTotal'), acFlatValue = fn('acFlatValue'), acFlatSeed = fn('acFlatSeed');
+  const fresh = () => { const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1; return c; };  /* 10 + DEX 2 */
+  const shield = (id, bonus, eq) => ({id, name: 'Shield ' + bonus, equipped: eq !== false, armor: {kind: 'shield', bonus}});
+  let c = fresh();
+  c.inventory = [shield('s2', 2), shield('s3', 3)];
+  let A = X.armorAC(X.contributions());
+  ck('#130 two equipped shields: only the best counts (+3, not +5)', A.shield === 3 && A.base === 15 && A.shieldCount === 2, A);
+  c.inventory = [shield('s3', 3), shield('s2', 2)];
+  A = X.armorAC(X.contributions());
+  ck('#130 ...whichever order they were equipped in', A.shield === 3 && A.base === 15, A);
+  ck('#130 ...and it names the shield that counts', A.shieldName === 'Shield 3', A.shieldName);
+  c.inventory = [shield('s3', 3, false), shield('s2', 2)];
+  A = X.armorAC(X.contributions());
+  ck('#130 an unequipped shield counts for nothing: the other one does', A.shield === 2 && A.base === 14 && A.shieldCount === 1, A);
+
+  for (const old of [14, '14', null]) {
+    c = fresh(); c.ac = old;
+    ck('#130 Calculated never reads character.ac (' + JSON.stringify(old) + '): 10 + DEX 2 = 12',
+       acTotal() === 12 && X.armorAC(X.contributions()).base === 12, [acTotal(), X.armorAC(X.contributions())]);
+  }
+
+  ck('#130 a Flat number is a whole number, from a number or digits',
+     acFlatValue(14) === 14 && acFlatValue('14') === 14 && acFlatValue(' 9 ') === 9 && acFlatValue(0) === 0,
+     [acFlatValue(14), acFlatValue('14'), acFlatValue(' 9 '), acFlatValue(0)]);
+  const junk = ['', null, undefined, 'abc', '15.5', 15.5, '-3', -3, '14 (with shield)', NaN];
+  ck('#130 ...and nothing else is one', junk.every(v => acFlatValue(v) === null), junk.map(v => [v, acFlatValue(v)]));
+
+  /* a fighter in chain mail with a shield, a Ring of Protection, the Defense
+     style, the Shield spell as a status, and a summoned familiar's +1 */
+  const kit = c => {
+    c.inventory = [{id: 'cm', name: 'Chain Mail', equipped: true, armor: {kind: 'body', base: 16, dexCap: 0}}, shield('sh', 2),
+                   {id: 'rp', name: 'Ring of Protection', equipped: true, effects: [{target: 'ac', value: 1}]}];
+    c.features = [{id: 'df', name: 'Defense', enabled: true, effects: [{target: 'ac', value: 1}]}];
+    c.statuses = [{id: 'sp', name: 'Shield (spell)', active: true, effects: [{target: 'ac', value: 5}]}];
+    c.familiars = [{id: 'ow', name: 'Owl', active: true, effects: [{target: 'ac', value: 1}]}];
+  };
+  c = fresh(); kit(c);
+  ck('#130 Calculated adds it all: 16 + 2 + 1 + 1 + 5 + 1 = 26', acTotal() === 26, acTotal());
+  ck('#130 the Flat seed is what Calculated gives less what still adds in Flat: 20', acFlatSeed(X.contributions()) === 20, acFlatSeed(X.contributions()));
+  c.acMode = 'flat'; c.ac = 16;
+  ck('#130 Flat 16 adds only the status and the familiar: 16 + 5 + 1 = 22', acTotal() === 22, acTotal());
+  let p = painted(['acDisp']);
+  ck('#130 every AC reader agrees in Flat: the shield, youAC() and acTotal()', p.acDisp === '22' && X.youAC() === 22, [p.acDisp, X.youAC()]);
+  c.acMode = 'calc';
+  p = painted(['acDisp']);
+  ck('#130 ...and in Calculated', p.acDisp === '26' && X.youAC() === 26 && acTotal() === 26, [p.acDisp, X.youAC()]);
+
+  /* the marks follow what counts: in Flat an item's penalty is not part of the number */
+  c = fresh(); c.acMode = 'flat'; c.ac = 15;
+  c.inventory = [{id: 'cr', name: 'Cursed Ring', equipped: true, effects: [{target: 'ac', value: -1}]}];
+  p = painted(['acDisp']);
+  ck('#130 Flat: an item\'s -1 neither moves the number nor marks it', p.acDisp === '15' && !painted.fx.acDisp && !painted.neg.acDisp, [p, painted.fx, painted.neg]);
+  c.statuses = [{id: 'st', name: 'Sundered', active: true, effects: [{target: 'ac', value: -2}]}];
+  p = painted(['acDisp']);
+  ck('#130 ...a status\'s -2 does both: 13, red', p.acDisp === '13' && painted.fx.acDisp && painted.neg.acDisp, [p, painted.neg]);
+
+  ck('#130 a new sheet is Calculated', X.blankChar().acMode === 'calc', X.blankChar().acMode);
+  const m = s => X.migrate(s);
+  ck('#130 a saved Flat with a number stays Flat', m({acMode: 'flat', ac: 15}).acMode === 'flat' && m({acMode: 'flat', ac: 15}).ac === 15);
+  ck('#130 a Flat with no number loads Calculated',
+     [{acMode: 'flat', ac: ''}, {acMode: 'flat', ac: null}, {acMode: 'flat'}, {acMode: 'flat', ac: 'abc'}].every(s => m(s).acMode === 'calc'),
+     [m({acMode: 'flat', ac: ''}).acMode, m({acMode: 'flat'}).acMode]);
+  ck('#130 any other mode loads Calculated, and the number stays', m({acMode: 'weird', ac: 12}).acMode === 'calc' && m({acMode: 'weird', ac: 12}).ac === 12);
+  ck('#130 a sheet from before the switch loads Calculated, its old number kept', m({ac: '14'}).acMode === 'calc' && m({ac: '14'}).ac === '14');
+  const rt = m(JSON.parse(JSON.stringify(m({acMode: 'flat', ac: 17}))));
+  ck('#130 Flat survives a save and a load', rt.acMode === 'flat' && rt.ac === 17, [rt.acMode, rt.ac]);
+  X.character = X.blankChar();
+}
+
 /* ---- end of the #130 · #129 · #132 block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
