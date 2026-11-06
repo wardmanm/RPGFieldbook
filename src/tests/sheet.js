@@ -9258,6 +9258,63 @@ async function t181AddClassUndo() {
     err = flow(() => { ctx.removeClass(0); });
     ck('#153 removing the class: the box shows what is left, GP 5, at once', !err && gp(5), why(err) || screen('coins'));
     ck('#153 ...and the Club leaves the inventory', !/Club/.test(screen('inventoryList')) && screen('inventoryList') !== '', screen('inventoryList').slice(0, 200));
+
+    /* #128: a weapon that arrives outside the finder (starting equipment, a
+       grant, a new item on the form) arrives the way the finder's does:
+       equipped, with its attack row showing. Weapons only (Mike): granted
+       armour and shields stay as they were, unequipped. */
+    const by = n => C().inventory.find(i => i.name === n);
+    const rows = it => C().attacks.filter(a => a.itemId === (it && it.id));
+    const shows = it => rows(it).length === 1 && X.attackVisible(rows(it)[0], C().inventory);
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    X.grantItemByName('Longsword', 1, 'class:Tester');
+    ck('#128 a granted Longsword arrives equipped, its attack row showing', by('Longsword').equipped === true && shows(by('Longsword')), [by('Longsword'), C().attacks]);
+    X.grantItemByName('Shield', 1, 'class:Tester'); X.grantItemByName('Chain Mail', 1, 'class:Tester');
+    ck('#128 ...a granted Shield and Chain Mail do not: weapons only', by('Shield').equipped === false && by('Chain Mail').equipped === false && rows(by('Shield')).length === 0);
+    let thrown = null;
+    try { X.grantItemByName('Imaginary Blade', 1, 'class:Tester'); } catch (e) { thrown = e; }
+    ck('#128 ...a granted name with no pack entry stays a plain, unequipped item with no row', !thrown && by('Imaginary Blade').equipped === false && rows(by('Imaginary Blade')).length === 0, why(thrown));
+    X.grantItemByName('Longsword', 1, 'class:Tester');
+    ck('#128 ...granted again by the same source it stacks: two Longswords, still one row', by('Longsword').qty === 2 && rows(by('Longsword')).length === 1, [by('Longsword'), rows(by('Longsword'))]);
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    X.addLibraryItems(X.rules.items.filter(x => x.name === 'Longsword' || x.name === 'Shield'), null, null, 1);
+    ck('#128 the finder, sharing the path: its Longsword equipped with one row, its Shield not',
+       by('Longsword').equipped === true && shows(by('Longsword')) && by('Shield').equipped === false, C().inventory);
+
+    // a class's starting weapon, through the picker's Done
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    err = flow(() => { equipPick = 0; ctx.addClass('Tester', 1); fire('xchDone', 'click'); });
+    equipPick = null;
+    ck('#128 a class\'s starting Club arrives equipped, its row showing, with no reload', !err && !!by('Club') && by('Club').equipped === true && shows(by('Club')), why(err) || by('Club'));
+
+    // the item form: a NEW item's Equipped follows its Weapon box until the player sets it
+    const at = n => String(X.rules.items.findIndex(x => x.name === n));
+    const last = () => C().inventory[C().inventory.length - 1] || {};
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    err = flow(() => { ctx.openItemForm(); el('iName').value = 'Rusty Pick'; fire('iIsWeapon', 'click'); el('iWDice').value = '1d6'; fire('iSave', 'click'); });
+    ck('#128 a new item ticked Weapon on the form arrives equipped, its row showing', !err && last().name === 'Rusty Pick' && last().equipped === true && shows(last()), why(err) || last());
+    err = flow(() => { ctx.openItemForm(); el('iName').value = 'Spare Pick'; fire('iIsWeapon', 'click'); el('iWDice').value = '1d6'; fire('iEquip', 'click'); fire('iSave', 'click'); });
+    ck('#128 ...unless the player unticks Equipped: then it is saved unequipped', !err && last().name === 'Spare Pick' && last().equipped === false, why(err) || last());
+    err = flow(() => { ctx.openItemForm(); el('iLib').value = at('Longsword'); fire('iLib', 'change'); el('iName').value = 'Longsword'; el('iWDice').value = '1d8'; fire('iSave', 'click'); });
+    ck('#128 a new item filled from the pack\'s Longsword arrives equipped', !err && last().name === 'Longsword' && last().equipped === true && shows(last()), why(err) || last());
+    err = flow(() => { ctx.openItemForm(); el('iLib').value = at('Shield'); fire('iLib', 'change'); el('iName').value = 'Shield'; fire('iSave', 'click'); });
+    ck('#128 ...one filled from the pack\'s Shield does not', !err && last().name === 'Shield' && last().equipped === false, why(err) || last());
+    const kept = {id: 'kp', name: 'Old Axe', qty: 1, description: '', effects: [], equipped: false, weapon: {kind: 'melee', ability: 'str', dice: '1d6', damageType: 'slashing', notes: ''}};
+    C().inventory.push(kept);
+    err = flow(() => {
+      ctx.openItemForm(kept);
+      [['iName', 'Old Axe'], ['iWKind', 'melee'], ['iWAbil', 'str'], ['iWDice', '1d6'], ['iWType', 'slashing']].forEach(([id, v]) => { el(id).value = v; });
+      fire('iSave', 'click');
+    });
+    ck('#128 ...and editing a weapon the player unequipped leaves it unequipped', !err && C().inventory.find(i => i.id === 'kp').equipped === false, why(err) || C().inventory.find(i => i.id === 'kp'));
+
+    // a new sheet: the one-time equip pass is already done, so a reload never re-equips
+    err = flow(() => { ctx.newCharacter('Fresh', 'dnd'); });
+    ck('#128 newCharacter() marks the one-time weapon pass done', !err && C().wpnEquipInit === 1, why(err) || C().wpnEquipInit);
+    X.grantItemByName('Longsword', 1, 'class:Tester'); by('Longsword').equipped = false;
+    const reloaded = X.migrate(JSON.parse(JSON.stringify(C())));
+    ck('#128 ...so a weapon the player unequipped is still unequipped after a reload',
+       reloaded.inventory.find(i => i.name === 'Longsword').equipped === false, reloaded.inventory);
   } catch (e) {
     ck('#153 the grants-redraw block ran without throwing', false, why(e));
   } finally {

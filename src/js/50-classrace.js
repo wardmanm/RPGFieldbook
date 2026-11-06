@@ -89,7 +89,7 @@ function grantItemByName(name,qty,sid){
   }
   if(def)stampSrc(it,def,"item","items");   /* no def = a named grant with no matching item entry */
   character.inventory.push(it);
-  if(it.weapon)addAttackForItem(it);
+  equipNewWeapon(it);   /* as the finder's: equipped, with its attack row (#128) */
   logGrant(sid,{dir:"+",text:`${name} ×${qty}`});
 }
 function addGrantGold(amt,sid){

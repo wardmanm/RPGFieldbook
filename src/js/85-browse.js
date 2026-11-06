@@ -126,7 +126,7 @@ function addLibraryItems(entries,og,costOverride,qty){
     const ex=character.inventory.find(i=>String(i.name||"").toLowerCase()===String(x.name||"").toLowerCase());
     if(ex){ex.qty=num(ex.qty)+add;out.push({id:ex.id,qty:add,created:false});return;}
     const m=itemMetaLine(x);
-    const it={id:uid(),name:x.name,qty:add,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:!!x.weapon};
+    const it={id:uid(),name:x.name,qty:add,description:(m?m+"\n":"")+(x.description||""),effects:Array.isArray(x.effects)?x.effects:[],equipped:false};
     if(og)it.origin=og;
     const c=(costOverride!=null?Math.round(costOverride/u.per*10000)/10000:costToGp(x.cost));if(c!=null)it.cost=c;
     const wg=fnum(x.weight);if(wg)it.weight=wg;
@@ -134,7 +134,7 @@ function addLibraryItems(entries,og,costOverride,qty){
     const am=itemAmmo(x);if(am)it.ammo=am.bonus?{kind:am.kind,bonus:am.bonus}:{kind:am.kind};
     stampSrc(it,x,"item","items","browse");
     character.inventory.push(it);
-    if(it.weapon)addAttackForItem(it);
+    equipNewWeapon(it);
     out.push({id:it.id,qty:add,created:true});
   });
   return out;
@@ -196,6 +196,17 @@ function browseItems(){
     originSelect:true,
     onAdd:(entries,og,costOverride,qty)=>{const did=addLibraryItems(entries,og,costOverride,qty);logFinderAdd(did);renderInventory();renderAttacks();recompute();scheduleSave();}
   }));
+}
+/* How a weapon arrives on the sheet, from the finder (addLibraryItems()) or
+   a grant (grantItemByName()): equipped, with its linked attack row, since
+   attackVisible() hides an unequipped weapon's row. Before #128 only the
+   finder equipped it, so starting weapons came with no row until a reload.
+   Weapons only (Mike, #128): armour and shields arrive unequipped. A new item
+   on the form gets the same through its Equipped box (openItemForm()). */
+function equipNewWeapon(it){
+  if(!it||!it.weapon)return;
+  it.equipped=true;
+  addAttackForItem(it);
 }
 /* create an Attacks & Weapons entry linked to a weapon inventory item */
 function addAttackForItem(item){

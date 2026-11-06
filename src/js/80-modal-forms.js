@@ -469,8 +469,14 @@ function openItemForm(existing){
     <p class="hint">A potion read from the rules pack fills these in for you. Anything with uses or an effect here gets a <b>Use</b> button in your inventory; healing asks whether you rolled it or the app should.</p>
     <div class="m-actions"><button class="tbtn" id="iCancel">Cancel</button><button class="tbtn primary" id="iSave">${existing?"Save":"Add"}</button></div>`);
   let equipped=!!it.equipped;
-  const eq=document.getElementById("iEquip");eq.addEventListener("click",()=>{equipped=!equipped;eq.classList.toggle("on",equipped)});
+  const eq=document.getElementById("iEquip");eq.addEventListener("click",()=>{equipped=!equipped;eqFollows=false;eq.classList.toggle("on",equipped)});
   let isWeapon=!!it.weapon;
+  /* #128: a NEW item's Equipped follows its Weapon box (ticked, or a pack
+     weapon inserted) until the player sets Equipped, so a weapon made here
+     arrives equipped with its row, as equipNewWeapon() gives the finder's and
+     a grant's. An item being edited keeps what it has. */
+  let eqFollows=!existing;
+  const eqFollow=()=>{if(eqFollows){equipped=isWeapon;eq.classList.toggle("on",equipped);}};
   /* The weapon the fields were last filled from: the pack entry just inserted,
      else the item being edited. The form asks only for kind, ability, dice and
      type, so the rest — its notes and its own magic bonus (atkMisc/dmgMisc, the
@@ -478,7 +484,7 @@ function openItemForm(existing){
      item alone gave an inserted +N weapon no bonus at all (#74). */
   let wFrom=it.weapon||null;
   const wtog=document.getElementById("iIsWeapon"), wfields=document.getElementById("iWeaponFields");
-  wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";syncRecover();});
+  wtog.addEventListener("click",()=>{isWeapon=!isWeapon;wtog.classList.toggle("on",isWeapon);wfields.style.display=isWeapon?"":"none";syncRecover();eqFollow();});
   /* "Other…" shows a box for a kind this sheet hasn't used yet */
   const otherBox=(selId,wrapId)=>{const s=document.getElementById(selId),w=document.getElementById(wrapId);
     const sync=()=>{w.style.display=s.value==="__other"?"":"none";};s.addEventListener("change",sync);return sync;};
@@ -534,7 +540,7 @@ function openItemForm(existing){
     if(u.per>1){document.getElementById("iQty").value=u.per;qtyFromBundle=true;}
     else if(qtyFromBundle){document.getElementById("iQty").value=1;qtyFromBundle=false;}
     document.getElementById("iName").value=x.name||"";document.getElementById("iDesc").value=x.description||"";const cg=costToGp(x.cost);if(cg!=null)document.getElementById("iCost").value=cg;const wg=fnum(x.weight);if(wg)document.getElementById("iWeight").value=wg;fxWrap.innerHTML=fxEditorRows(x.effects);
-    if(x.weapon){wFrom=x.weapon;isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";setKind("iWAmmo","iWAmmoOther",x.weapon.ammo||"",wAmmoSync);}
+    if(x.weapon){wFrom=x.weapon;isWeapon=true;wtog.classList.add("on");wfields.style.display="";document.getElementById("iWKind").value=x.weapon.kind==="ranged"?"ranged":"melee";document.getElementById("iWAbil").value=x.weapon.ability||"str";document.getElementById("iWDice").value=x.weapon.dice||"";document.getElementById("iWType").value=x.weapon.damageType||"";setKind("iWAmmo","iWAmmoOther",x.weapon.ammo||"",wAmmoSync);eqFollow();}
     /* Read the AC out of what was just inserted, exactly as the sheet would —
        pack armor states it in prose, so this is where that prose becomes fields. */
     const ax=itemArmor({name:x.name,description:x.description||"",category:x.category,type:x.type});
