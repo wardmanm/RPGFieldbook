@@ -110,6 +110,7 @@ scripts/
   data-release.js         prepares a data-only release: bumps changed packs to X.Y.Z-N (dev)
   data-release-notes.js   the rules-data part of a release body, from data/packs.json (dev)
   fetch-icons.js          vendors game-icons.net glyphs into js/05-icons.js (dev)
+  fetch-fonts.js          embeds the three web fonts, Latin only, into css/90-fonts.css (dev)
   playwright-mcp.js       cross-platform launcher for the screenshot MCP (dev)
   wt.sh                   add/list/rm parallel issue worktrees (dev)
 tools/data-kit/          the data kit (Python 3.8+, stdlib), shipped as its own zip:

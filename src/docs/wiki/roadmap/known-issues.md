@@ -329,9 +329,6 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 - **A stale rules cache can win.** (#134) If a save falls back to localStorage after IndexedDB once held the
   pool, the old IndexedDB copy is never cleared, and `loadRulesCacheAsync()` lays it over the newer
   copy on the next boot. → [Storage](../architecture/storage.md)
-- **Google Fonts in the template (constraint 1).** (#144) `src/fieldbook.template.html` links
-  `fonts.googleapis.com`. It has been there since the first commit, with no recorded decision. Offline,
-  the font stacks fall back to local serifs. → [Theming & icons](../ui/theming-and-icons.md)
 - `boot()` and `renderHome()` call `localStorage.getItem` outside a `try`, so a browser that throws on
   storage access would stop boot **(unverified)** (#142). → [Storage](../architecture/storage.md)
 - **Remove and Remove all still write a green status line synchronously.** (#143) When the rules cache

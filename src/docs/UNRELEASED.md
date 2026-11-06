@@ -31,3 +31,4 @@ Bullets below this line — leave the heading in place.
 - Extensions can install and update packs from a private GitHub repo, using a link and a token the repo's
   owner sends you; paste the link into Settings → Extensions → Sources. A new guide in the app's docs shows
   owners how to set one up for their table.
+- The app's lettering now looks the same offline as online: its fonts are built in.

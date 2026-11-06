@@ -6,16 +6,21 @@ character's system. All of it is driven by four attributes on `<html>` and the C
 properties in `00-tokens.css`. The same page covers the **emblems**, 79 glyphs from game-icons.net
 beside classes, ancestries and backgrounds and on the combat button. They come from a hand-authored
 map through a fetch script into a generated fragment, and they carry CC BY 3.0 obligations the app
-has to meet on its own.
+has to meet on its own. The **fonts** work the same way: three families, embedded in the stylesheet
+by a second fetch script so the page makes no font request, under the SIL Open Font License 1.1.
 
 **Code:** `applyTheme()`, `skinForSystem()`, `systemForSkin()` in `75-home-theme.js` · `raceTerm()`,
 `racesForCharacter()` in `52-race.js` · `iconSVG()`, `iconSlug()` in `50-classrace.js` ·
 `GAME_ICONS`, `ICON_MAP`, `ICON_ARTISTS` in `05-icons.js` (generated) · the credits in
-`88-settings.js` · `scripts/fetch-icons.js` · `00-tokens.css`, the `::before` frames in
-`20-cards.css` and `30-sheet.css` · **Data:** `src/icons/icons.json` ·
-**Tests:** `docs.js` (map against fragment, path-data charset, coverage of shipped names, CC BY),
+`88-settings.js` · `scripts/fetch-icons.js` · `css2Url()`, `parseLatinFaces()`, `licenceParts()`,
+`fragmentCSS()` in `scripts/fetch-fonts.js`, which writes `90-fonts.css` (generated) ·
+`00-tokens.css`, the `::before` frames in `20-cards.css` and `30-sheet.css` · **Data:**
+`src/icons/icons.json` ·
+**Tests:** `docs.js` (map against fragment, path-data charset, coverage of shipped names, CC BY;
+the tokens' families against `90-fonts.css`, each face, the OFL text and notices, the fonts' credit),
 `sheet.js` (`iconSVG()` lookups), `rules-data.js` (`--warn` in every palette, the `data-tabs`
-default) · **See also:** [Shell](shell.md), [Settings & updates](../features/settings-and-updates.md),
+default; the page loads nothing from a third-party address, and carries `90-fonts.css` byte for
+byte) · **See also:** [Shell](shell.md), [Settings & updates](../features/settings-and-updates.md),
 [README §10](../../../../README.md)
 
 ## How it works
@@ -81,8 +86,10 @@ orange/red/grey set on bare `:root`, shared by **every** skin and theme — a fi
 "Bloodied" always reads the same colour whichever palette is open, rather than following `--warn`/
 `--brick`'s per-palette drift. The fonts are `--display`
 (Grenze Gotisch; Cinzel on the classic skin), `--head`
-(Cinzel) and `--body` (EB Garamond). They load from Google Fonts through a `<link>` in the template,
-and each stack falls back to Georgia or Times New Roman, which is what renders offline. Text on an
+(Cinzel) and `--body` (EB Garamond). All three are **embedded** in the stylesheet by `90-fonts.css`
+(below), so they render the same online and off and the page makes no font request. Only Google's
+Latin subset is embedded: a letter outside its `unicode-range`, such as "Ł", falls back to the
+stack's next font, Georgia or Times New Roman, for that letter alone. Text on an
 `--accent` fill uses **`--on-accent`** (#47), set per palette for contrast: near-black on
 Humblewood's ochre and gold and on classic dark's bright red, cream on classic light's deep red
 (lowest 4.8:1, Humblewood light). The rail sets its own, since it swaps `--accent` for
@@ -144,10 +151,37 @@ passes as a literal (`"lg"`, `"cvicon"`), still go through `esc()`, where it is 
 attribute value in `src/js` is escaped, so the guard needs no list of exceptions (see
 [Rich text](../architecture/rich-text.md)).
 
+### The font pipeline
+
+```
+FAMILIES in scripts/fetch-fonts.js  --(node scripts/fetch-fonts.js, by hand)-->  src/css/90-fonts.css  --(build)-->  fieldbook.html
+```
+
+- **`FAMILIES`** names each family, its google/fonts `ofl/` folder and its weights per style:
+  Grenze Gotisch 500/700/900, Cinzel 500/600/700, EB Garamond 400/500/600 and italic 400 (the request
+  the template's Google link made before #144). The names must be the tokens' names exactly.
+- **`fetch-fonts.js`** sends that request to the Google Fonts css2 API (`css2Url()`) with a Chrome
+  User-Agent, since woff2 is served only to a browser it knows, and keeps the `/* latin */` faces
+  (`parseLatinFaces()`). Each family comes back as **one variable woff2 per style** covering every
+  weight, four files in all, about 135 KiB (184 KB as base64). It fetches each family's `OFL.txt`
+  and splits it into the copyright notice and the licence text (`licenceParts()`), then writes the
+  fragment (`fragmentCSS()`). It is strict like `fetch-icons.js`: an unexpected family, style,
+  weight, subset range or file, separate files per weight, a file that is not woff2, more than
+  256 KiB in all, a Reserved Font Name, licence texts that differ, or `*/` in them, and it dies
+  naming the problem and writes nothing. `--dry-run` fetches and checks without writing.
+- **`90-fonts.css` is committed and is the vendored copy of the fonts.** No font files are kept. It
+  is last in `manifest.css` (an `@font-face` works anywhere in a sheet, and the readable CSS stays
+  first). Its header says GENERATED, DO NOT EDIT; then come the notices and the full OFL text in one
+  comment, then one `@font-face` per file: `font-weight` as the range of the requested weights
+  (`500 900`, `500 700`, `400 600`, `400`), Google's latin `unicode-range`, `font-display:swap`, and a
+  `data:font/woff2;base64,` URL, each line of base64 one file. A weight the CSS asks for beyond a
+  range (800 and 900 on `--head` and `--body`) clamps to its end, the face the Google link gave.
+
 ### The licence
 
-CC BY 3.0 asks for three things: name the artists, name and link the licence, and say the work was
-changed. Removing the background square and the fill is the change. All three appear in two places:
+**The emblems.** CC BY 3.0 asks for three things: name the artists, name and link the licence, and
+say the work was changed. Removing the background square and the fill is the change. All three
+appear in two places:
 
 - **In the app**, Settings → Credits, built from `ICON_ARTISTS`, so
   the credit cannot drift from what is vendored.
@@ -157,14 +191,33 @@ changed. Removing the background square and the fill is the change. All three ap
 square was removed", and `88-settings.js` for `ICON_ARTISTS`, "CC BY 3.0" and "background square was
 removed".
 
+**The fonts.** The SIL Open Font License 1.1 asks that each copy carry the copyright notice and the
+licence. `90-fonts.css`'s comment holds both, and the build keeps comments (it is plain
+concatenation), so they travel inside `fieldbook.html` itself. Subsetting to Latin modifies the fonts
+under the OFL, so a Reserved Font Name would forbid keeping the name: none of the three declares one,
+and the fetcher refuses a family that does. The notices are Copyright 2020 The Grenze Gotisch Project
+Authors, Copyright 2020 The Cinzel Project Authors and Copyright 2017 The EB Garamond Project
+Authors. Settings → Credits and README §10 name the three families and the SIL Open Font License 1.1,
+linked to openfontlicense.org; `docs.js` checks both name every family the fragment embeds.
+
 ## Rules that must hold
 
 - **Never hand-edit `05-icons.js`.** Edit `icons.json`, run `node scripts/fetch-icons.js`, and
   commit both. `docs.js` fails if the slugs in the map and the fragment differ in either direction,
   and its message names the command.
 - **The fetch is never part of the build or CI.** CI asserts that a build changes no tracked file,
-  and a network fetch would make that depend on GitHub. `build.sh` also bans `fetch-icons.js` from
-  the zip.
+  and a network fetch would make that depend on GitHub. That goes for both fetchers; the app zip's
+  guard bans every `scripts/` path.
+- **Never hand-edit `90-fonts.css`.** Edit `FAMILIES` in `fetch-fonts.js`, re-run it, and commit
+  both. `docs.js` fails if a family the tokens name is not embedded, or one is embedded that no token
+  names, and its message names the command.
+- **The page loads no font, or anything else, from a third-party address** (CLAUDE.md constraint 1).
+  `rules-data.js` checks the built page and its sources.
+- **Latin only** (Mike, 2026-11-06). Each face keeps Google's latin `unicode-range`; `docs.js`
+  checks it, and that no `U+0100` (Latin Extended) is in it.
+- **The fonts' notices and licence stay in the file,** in `90-fonts.css`'s comment: a minifier or a
+  build step that dropped comments would break the OFL. `rules-data.js` checks the built page holds
+  the fragment byte for byte.
 - **Emblems are keyed by name, lower-cased, never by `_id`.** This is the "keep working with no pack"
   property.
 - **Subclasses get no emblem** (`docs.js` asserts `icons.json` has no `subclasses` block).
@@ -178,8 +231,8 @@ removed".
   argument of `iconSVG()`.
 - **The path-data charset check stays strict.** Widening it moves the proof of safety onto every
   call site.
-- **The credits stay in the app**, because `fieldbook.html` is shared as a lone file that no README
-  follows.
+- **The credits stay in the app**, emblems and fonts both, because `fieldbook.html` is shared as a
+  lone file that no README follows.
 - **Every palette defines every token.** `rules-data.js` asserts that `--warn` appears as often as
   `--brick`. A token missing from a classic block would quietly fall back to the Humblewood value.
   The two deliberate exceptions, each defined once rather than per palette and asserted as such,
@@ -229,12 +282,10 @@ removed".
 | Where the credit appears | Settings (folded) and README §10, both generated or asserted | README only: `fieldbook.html` travels as a lone file |
 | Text on an accent fill | `--on-accent`, chosen per palette | A fixed dark brown: 2:1 on classic light's red. `--paper`: 3.6:1 on Humblewood light's ochre |
 | The mid-band HP colour | Its own `--warn` token in all four palettes | Reusing `--accent`: on the classic skin it is `--brick`, so two bands would be one colour |
+| The web fonts (#144) | Embedded: the three families as base64 woff2 in a generated fragment, `90-fonts.css`, Latin only (Mike, 2026-11-06) | The Google Fonts `<link>`: a third-party URL against constraint 1, and offline the lettering was lost. Latin Extended as well: a second file per family; a letter outside Latin falls back to Georgia for that letter instead (L9101) |
 
 ## Open
 
-- The template's Google Fonts `<link>` is a third-party URL in the shipped file, which CLAUDE.md's
-  constraint 1 forbids adding. It has been there since the first commit, and offline the font
-  stacks fall back to local serifs.
 - The comment in `fetch-icons.js` points at `src/icons/README.md`, which does not exist; the
   `_readme` key in `icons.json` carries that note.
 - `settings.skin` is global while `system` is per character, so the skin control in Settings is also
@@ -260,3 +311,4 @@ removed".
 - 2026-10-25 — `--on-accent` joins every palette and the rail; every rule with text on an accent fill uses it. → ledger L7401, #47
 - 2026-10-28 — The emblem coverage check walks `srd52` alone; homebrew's moves to the private suite with the pack. → ledger L7858, #125
 - 2026-11-04 — `--sheet`, `--sheet-edge`, `--sheet-lift`, `--sheet-gutter` and `--parch` join every palette, and the parchment ink each skin, for the journal's page styles. → ledger L8699, #167
+- 2026-11-06 — The fonts are embedded, Latin only: `scripts/fetch-fonts.js` writes `90-fonts.css` with the OFL notices and text; the Google Fonts link is gone, and a guard checks the page loads nothing from a third-party address. → ledger L9101, #144
