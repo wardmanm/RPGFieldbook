@@ -8293,6 +8293,34 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = keep.ch;
 }
 
+/* ====== #130 · #129 · #132: Flat AC, "Include spells", scaling uses =========
+   One block for the Armour & attack numbers branch (spec 2026-11-06). Placed
+   at the end of the synchronous checks: the async chain below swaps ctx
+   globals before its first await, so a synchronous block after the file's last
+   line would run inside that setup. */
+
+/* ---- #129 contributions carry their kind and the spells flag ---- */
+{
+  const SIX = ['attack', 'attack.melee', 'attack.ranged', 'damage', 'damage.melee', 'damage.ranged'];
+  const fxS = t => typeof ctx.fxSpellable === 'function' ? ctx.fxSpellable(t) : undefined;
+  ck('#129 the six generic to-hit and damage targets can count for spells',
+     SIX.every(t => fxS(t) === true), SIX.map(t => [t, fxS(t)]));
+  ck('#129 ...and no other target can', ['ac', 'spell.attack', 'spell.dc', 'check', 'init', 'save.dex'].every(t => fxS(t) === false));
+  const c = X.blankChar(); X.character = c;
+  c.features.push({id: 'f', name: 'Feat', enabled: true, effects: [{target: 'attack', value: 1, spells: true}]});
+  c.inventory.push({id: 'i', name: 'Ring', equipped: true, effects: [{target: 'damage', value: 1}]});
+  c.statuses.push({id: 's', name: 'Blessed-ish', active: true, effects: [{target: 'attack.melee', value: 1, spells: 'yes'}]});
+  c.familiars.push({id: 'm', name: 'Owl', active: true, effects: [{target: 'ac', value: 1}]});
+  const list = X.contributions();
+  ck('#129 each contribution says where it came from',
+     JSON.stringify(list.map(x => x.kind)) === '["feature","item","status","familiar"]', list);
+  ck('#129 ...and carries the tick: true only for spells:true',
+     JSON.stringify(list.map(x => x.spells)) === '[true,false,false,false]', list);
+  X.character = X.blankChar();
+}
+
+/* ---- end of the #130 · #129 · #132 block ---- */
+
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
    A real timer (Node's), borrowed for this block only: the harness's setTimeout
    never fires, and settling is a setTimeout(0). The modal's open state is
