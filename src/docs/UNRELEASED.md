@@ -52,3 +52,10 @@ Bullets below this line — leave the heading in place.
 - Removing a pack, or Remove all, now says on its status line when the change couldn't be saved, and
   that what you removed may come back next time.
 - The app's lettering now looks the same offline as online: its fonts are built in.
+- Vitals has an edit pencil like the other cards. Tap it to lock Vitals: the portrait buttons hide and
+  Max HP can't be changed. The small padlock is gone, and Max HP can be typed into again until you lock
+  Vitals.
+- On a phone or tablet, tapping the HP bar opens a Hit points window: type how much, then tap Damage,
+  Heal or Temp. No minus sign needed. "Set exactly" underneath types the numbers straight in.
+- The hit-point numbers and the − and + signs now sit in the middle of the bar and their buttons. When
+  there isn't room beside the numbers, your temporary hit points show beside the Hit points label instead.

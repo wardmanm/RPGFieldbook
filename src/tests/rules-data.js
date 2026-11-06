@@ -1395,8 +1395,12 @@ function block(html, needle, tag) {
       // nothing may come back to toggle a class on the grid.
       const allJs = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8')).js
         .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
+      // #113's observer is the one exception, matched exactly: it watches only
+      // the HP bar and its numbers to place Temp (hpPlaceTemp), measures no
+      // column and marks nothing on the grid. Any other ResizeObserver fails.
+      const hpRo = '{const w=document.querySelector(".rail-hp");if(w&&window.ResizeObserver){const ro=new ResizeObserver(()=>hpPlaceTemp());[".hp-bar",".hp-num"].forEach(q=>{const e=w.querySelector(q);if(e)ro.observe(e);});}}';
       ck('#155 the levelling is CSS alone: no script measures the columns or marks the grid',
-         !/SHEET_STRETCH_MAX|sheetShouldStretch|sheetLevel|SheetLevel|cols-even|ResizeObserver/.test(allJs));
+         !/SHEET_STRETCH_MAX|sheetShouldStretch|sheetLevel|SheetLevel|cols-even|ResizeObserver/.test(allJs.split(hpRo).join('')));
     }
     ck('#155 Features is one card per row at every width (Mike, 2026-11-02): no .fgroup grid anywhere, scoped or not',
        !/\.fgroup\{[^}]*display:grid/.test(all.replace(/\/\*[\s\S]*?\*\//g, '')));
@@ -1905,13 +1909,14 @@ function block(html, needle, tag) {
     })());
   }
 
-  // #103: the rail owns the hit points, the death saves, the padlock AND the
-  // hit-dice bar (spec §6.2). They sat in two cards — Vitals and Rest &
-  // Recovery — until the rail; Rest & Recovery is gone, its rest buttons in the
-  // header (asserted there). The hit-dice input and the mode pill live in the
-  // spend box (hdSpendHTML in 65-resources.js), not the static template.
-  const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'data-hplock', 'id="hdWrap"'];
-  ck('#103 the rail owns HP, the death saves, the padlock and the hit-dice bar',
+  // #103: the rail owns the hit points, the death saves AND the hit-dice bar
+  // (spec §6.2). They sat in two cards — Vitals and Rest & Recovery — until
+  // the rail; Rest & Recovery is gone, its rest buttons in the header (asserted
+  // there). The hit-dice input and the mode pill live in the spend box
+  // (hdSpendHTML in 65-resources.js), not the static template. #115: the
+  // padlock that sat beside "Max" is gone; the Vitals pencil is the lock.
+  const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'id="hdWrap"'];
+  ck('#103 the rail owns HP, the death saves and the hit-dice bar',
      owned.every(s => vitals.includes(s)), owned.filter(s => !vitals.includes(s)));
   ck('#103 ...with the hit dice under the hit points', vitals.indexOf('id="hpCur"') < vitals.indexOf('id="hdWrap"'));
   ck('the hit-dice bar is written once',
@@ -1927,45 +1932,105 @@ function block(html, needle, tag) {
   ck('#103 the auto/manual pill sits in the spend box\'s foot',
      /<div class="hd-foot">Hit dice <button class="hd-mode" data-hdmode/.test(js));
   ck('#103 the old HP and hit-dice panels are gone', !/class="hpwrap"|class="hd-box"|class="hd-title"|class="hp-title"/.test(t));
-  // ---- the Max HP lock
-  ck('exactly one padlock, and it is beside the Max label',
-     (t.match(/data-hplock/g) || []).length === 1 && /Max <button class="hp-lock" data-hplock/.test(t),
-     (t.match(/<div class="n">Max[\s\S]{0,60}/) || [''])[0]);
-  // U+1F512 has no text-presentation variant, so the &#65038; trick that tames
-  // the skull does not exist for it — it would render as a colour emoji
-  ck('the padlock is an icon button, not an emoji',
-     /data-hplock[\s\S]{0,200}<svg/.test(t) && !/🔒|&#128274;/.test(t));
-  ck('the padlock announces its state to a screen reader',
-     /data-hplock[\s\S]{0,160}aria-pressed=/.test(t));
-  ck('the padlock shares the hit-dice pill', /\.hd-mode,\.hp-lock\{/.test(cardsCss));
+  // ---- the Max HP lock: the Vitals pencil (#115)
+  // The padlock went: the pencil every list card has is the lock, stored as
+  // character.editHide.vitals. One helper reads it, one sets it from code.
+  ck('#115 no padlock is left anywhere: markup, CSS or code',
+     !/data-hplock|hp-lock|hp-maxlbl/.test(t + sheetCss + cardsCss + js) && !/🔒|&#128274;/.test(t));
+  ck('#115 the Vitals card is an edit-toggle card', X.EDIT_CARDS.includes('vitals'));
+  const btnClass = id => ((t.match(new RegExp('<button [^>]*id="' + id + '"[^>]*>')) || [''])[0].match(/class="([^"]*)"/) || ['', ''])[1];
+  ck('#115 both portrait buttons carry ed, so the pencil hides them',
+     ['btnPortrait', 'btnPortraitDel'].every(id => btnClass(id).split(/\s+/).includes('ed')), ['btnPortrait', 'btnPortraitDel'].map(btnClass));
+  ck('#115 one helper reads the lock, one sets it',
+     /function vitalsLocked\(c\)\{return editHidden\(c,"vitals"\);\}/.test(js) &&
+     /function setVitalsLocked\(locked\)\{[\s\S]*?setEditHidden\(character,"vitals",[\s\S]*?paintEditToggle\("vitals"[\s\S]*?renderHP\(\)/.test(js));
+  ck('#115 a pencil tap on Vitals repaints Max',
+     /function toggleEditCard\(k\)\{[\s\S]*?if\(k==="vitals"\)renderHP\(\)/.test(js));
   // two layers: readOnly is only a hint, so applyHPInput refuses it a second time
-  ck('renderHP drives the Max box readOnly from the lock',
-     /function renderHP\(\)\{[\s\S]*?getElementById\("hpMax"\)[\s\S]{0,60}readOnly=/.test(js));
-  ck('...and repaints the padlock itself', /function renderHP\(\)\{[\s\S]*?data-hplock/.test(js));
-  ck('applyHPInput refuses a locked Max before it writes anything',
-     /k==="max"&&character\.hp\.locked!==false\)\{renderHP\(\);return false;\}/.test(js));
-  ck('the data-hp guard no longer admits the new non-numeric key',
-     !/inp\.dataset\.hp;if\(!k\|\|!\(k in character\.hp\)\)/.test(js));
-  ck('the padlock is wired and toggles the lock',
-     /closest\("\[data-hplock\]"\)/.test(js) && /character\.hp\.locked=character\.hp\.locked===false/.test(js));
-  ck('unlocking focuses the Max box',
-     /data-hplock[\s\S]{0,340}getElementById\("hpMax"\)[\s\S]{0,90}focus\(\)/.test(js));
-  ck('the padlock does not ask for confirmation', !/data-hplock[\s\S]{0,340}confirm\(/.test(js));
+  ck('#115 renderHP drives the Max box readOnly from the Vitals lock',
+     /function renderHP\(\)\{[\s\S]*?getElementById\("hpMax"\)[\s\S]{0,200}readOnly=[^;]*vitalsLocked\(character\)/.test(js));
+  ck('#115 applyHPInput refuses a locked Max before it writes anything',
+     /k==="max"&&vitalsLocked\(character\)\)\{renderHP\(\);return false;\}/.test(js));
+  ck('the data-hp guard admits only cur, max and temp',
+     !/inp\.dataset\.hp;if\(!k\|\|!\(k in character\.hp\)\)/.test(js) && /if\(k!=="cur"&&k!=="max"&&k!=="temp"\)return true;/.test(js));
+  ck('#115 nothing reads or writes hp.locked any more', !/hp\.locked/.test(js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')));
   // the automatic writers go to the model, not through the box, and never touch
-  // the flag. Gaining levels clears it (the fallback for a dismissed HP step);
-  // the HP step alone may set it again, and only to restore what it found (#58).
+  // the lock. Gaining levels unlocks Vitals (the fallback for a dismissed HP
+  // step); the HP step alone may lock it again, and only to restore what it
+  // found (#58).
   const cls = fs.readFileSync(path.join(ROOT, 'src/js/56-class.js'), 'utf8');
   const fnBody = n => (cls.match(new RegExp('function ' + n + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
   ck('the seed, re-sync and un-seed never touch the lock',
-     ['seedLevel1HP', 'resyncLevel1HP', 'removeClass'].every(n => fnBody(n) && !/hp\.locked/.test(fnBody(n))));
-  ck('doLevelUp clears the lock',
-     /function doLevelUp\(idx\)\{[\s\S]*?character\.hp\.locked=false;renderHP\(\)/.test(cls));
-  ck('...and reads it for the HP step BEFORE clearing it',
-     /const hp=hpChoice\([^)]*\);[\s\S]{0,800}character\.hp\.locked=false/.test(fnBody('doLevelUp')));
+     ['seedLevel1HP', 'resyncLevel1HP', 'removeClass'].every(n => fnBody(n) && !/vitalsLocked|setVitalsLocked|editHide/.test(fnBody(n))));
+  ck('#115 hpChoice remembers the lock through vitalsLocked()',
+     /_wasLocked:vitalsLocked\(character\)/.test(fnBody('hpChoice')));
+  ck('#115 doLevelUp unlocks Vitals',
+     /setVitalsLocked\(false\)/.test(fnBody('doLevelUp')));
+  ck('...and reads it for the HP step BEFORE unlocking',
+     /const hp=hpChoice\([^)]*\);[\s\S]{0,800}setVitalsLocked\(false\)/.test(fnBody('doLevelUp')));
+  ck('#115 addClass unlocks Vitals for a second class and for a first class above level 1, after hpChoice',
+     (fnBody('addClass').match(/setVitalsLocked\(false\)/g) || []).length === 2 &&
+     /hp=hpChoice\([^)]*\);setVitalsLocked\(false\)/.test(fnBody('addClass')));
   ck('the only re-lock is the HP step restoring what it found',
-     (cls.match(/hp\.locked=true/g) || []).length === 1 && /if\(ch\._wasLocked\)character\.hp\.locked=true/.test(fnBody('commitHPChoice')));
+     (cls.match(/setVitalsLocked\(true\)/g) || []).length === 1 && /if\(ch\._wasLocked\)setVitalsLocked\(true\)/.test(fnBody('commitHPChoice')));
   ck('the seed and the un-seed still write hp.max directly (they bypass the lock)',
      /character\.hp\.max=hp;/.test(cls) && /character\.hp\.max=now;/.test(cls) && /character\.hp\.max="";/.test(cls));
+  // ---- #112: on a touchscreen the HP bar opens the Hit points window.
+  // 90-boot.js is dropped from the harness, so its wiring is checked here.
+  const bootSrc = fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8');
+  ck('#112 hpTouch() reads the primary pointer, not the width',
+     /function hpTouch\(\)\{return !!\(window\.matchMedia&&window\.matchMedia\("\(pointer:coarse\)"\)\.matches\);\}/.test(js));
+  ck('#112 a touchscreen tap on the bar opens Hit points, read at tap time',
+     /if\(\(m=t\.closest\("\.hp-bar"\)\)&&hpTouch\(\)\)\{openHPDialog\(\);return;\}/.test(bootSrc));
+  ck('#112 ...and so do Enter and Space on the bar',
+     /e\.target\.classList\.contains\("hp-bar"\)&&hpTouch\(\)\)\{e\.preventDefault\(\);openHPDialog\(\);return;\}/.test(bootSrc));
+  ck('#112 a change of pointer repaints the bar',
+     /matchMedia\("\(pointer:coarse\)"\)[\s\S]{0,80}addEventListener\("change",renderHP\)/.test(bootSrc));
+  ck('#112 on a touchscreen a tap on a number lands on the bar, not in a box',
+     /@media \(pointer:coarse\)\{[^@]*\.hp-bar input\{pointer-events:none\}/.test(sheetCss));
+  ck('#112 the window keeps out of the bar\'s hooks', !/data-hpq|id="hpq[A-Za-z]*" data-hp/.test(js));
+  // ---- #113: the numbers and the − and + glyphs sit centred
+  const barBlock = block(t, 'class="hp-bar"');
+  ck('#113 Current and Max sit together in one .hp-num, inside the bar, Temp after it',
+     /<span class="hp-num">\s*<input[^>]*id="hpCur"[^>]*>\s*<span class="hp-sl"[^>]*>\/<\/span>\s*<input[^>]*id="hpMax"[^>]*>\s*<\/span>/.test(barBlock) &&
+     barBlock.indexOf('class="hp-num"') < barBlock.indexOf('class="hp-tmp"'), barBlock);
+  // the declarations of a top-level rule whose selector is exactly `sel`
+  const rule = sel => (sheetCss.match(new RegExp('(?:^|[}\\s])' + sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}')) || [])[1] || '';
+  // QA (2026-11-06): the third column was minmax(min-content,1fr), so a blank
+  // Temp's 4.6ch placeholder floored it wider than its half and pushed
+  // "126 / 138" up to 23px left. The two outer columns must be identical.
+  const cols = (rule('.hp-bar').match(/grid-template-columns:([^;]*)/) || ['', ''])[1].trim().split(/\s+/);
+  ck('#113 the bar is three columns whose outer two are identical, so the middle one is always centred',
+     /display:grid/.test(rule('.hp-bar')) && cols.length === 3 && cols[1] === 'auto' && cols[0] === cols[2] && cols[0] === 'minmax(0,1fr)', cols);
+  ck('#113 ...and nothing in the bar sizes a column from its content', !/min-content|max-content|fit-content/.test(rule('.hp-bar')));
+  ck('#113 ...the numbers in the middle column, Temp at the right of the third',
+     /grid-column:2/.test(rule('.hp-num')) && /grid-column:3/.test(rule('.hp-tmp')) && /justify-self:end/.test(rule('.hp-tmp')) && !/margin-left:auto/.test(rule('.hp-tmp')));
+  ck('#113 the fill spans the bar as a grid item, under the numbers',
+     /grid-column:1\/-1/.test(rule('.hp-fill')) && !/position:absolute/.test(rule('.hp-fill')) &&
+     /position:relative/.test(rule('.hp-num')) && /position:relative/.test(rule('.hp-tmp')));
+  ck('#113 the bar itself is not positioned, so a narrow Temp can leave it',
+     !/position:/.test(rule('.hp-bar')) && !/\.hp-bar\{position|\.hp-bar>\*:not\(\.hp-fill\)/.test(sheetCss));
+  // Temp's place follows what has to fit (hpTempFits, measured), not a guessed
+  // width: the 220px container query missed Combat at 375 (221px) by 1px.
+  ck('#113 where Temp can\'t fit beside centred numbers it moves beside the Hit points label, by class',
+     /position:relative/.test(rule('.rail-hp')) &&
+     /\.rail-hp\.hp-out \.hp-tmp\{[^}]*position:absolute[^}]*top:0[^}]*right:0/.test(sheetCss));
+  ck('#113 ...decided by a fit check, not a width threshold', !/@container/.test(sheetCss.slice(sheetCss.indexOf('.hp-row{'), sheetCss.indexOf('.hp-note{'))) &&
+     /function hpPlaceTemp\(\)\{[\s\S]*?hpTempFits\(/.test(js) &&
+     /hpPlaceTemp\(\)/.test((js.match(/function renderHP\(\)\{[\s\S]*?\n\}/) || [''])[0]) &&
+     /hpPlaceTemp\(\)/.test((js.match(/function hpFitBox\(el\)\{[^\n]*\}/) || [''])[0]));
+  ck('#113 the fit check knows the margin CSS gives Temp',
+     /const HP_TMP_EDGE=6;/.test(js) && /margin-right:6px/.test(rule('.hp-tmp')));
+  ck('#113 ...and re-runs when the bar or the numbers change size, when fonts arrive, and when Temp loses focus',
+     /new ResizeObserver\(\(\)=>hpPlaceTemp\(\)\)/.test(bootSrc) && /\["\.hp-bar","\.hp-num"\]\.forEach/.test(bootSrc) &&
+     /document\.fonts\.ready\.then\(hpPlaceTemp\)/.test(bootSrc) && /focusout[\s\S]{0,120}hpTemp[\s\S]{0,60}hpPlaceTemp/.test(bootSrc));
+  ck('#113 Temp\'s "+" can be measured on its own', /<span class="hp-tmp"><span class="hp-tplus" aria-hidden="true">\+<\/span>/.test(t));
+  ck('#113 no fixed-width number boxes left', !/width:3\.1ch/.test(sheetCss) && /el\.style\.width=hpBoxWidth\(k,/.test(js));
+  ck('#113 − and + are drawn strokes in flex-centred buttons, not font glyphs',
+     /<button class="hp-btn" id="hpMinus"[^>]*><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"\/><\/svg><\/button>/.test(t) &&
+     /<button class="hp-btn" id="hpPlus"[^>]*><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"\/><\/svg><\/button>/.test(t) &&
+     /display:flex/.test(rule('.hp-btn')) && /align-items:center/.test(rule('.hp-btn')) && /justify-content:center/.test(rule('.hp-btn')));
+  ck('#113 a box grows as it is typed', /closest\("\[data-hp\]"\);if\(h\)hpFitBox\(h\)/.test(bootSrc));
 
   // ---- current-HP colour bands
   ck('the warn colour is its own token, not --accent',

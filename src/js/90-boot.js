@@ -21,6 +21,8 @@ function wire(){
   });
   // slot totals
   document.addEventListener("input",e=>{const s=e.target.closest("[data-slot]");if(!s)return;if(slotsAuto)return;const lv=num(s.dataset.slot);character.slots[lv].total=Math.max(0,num(s.value));if(character.slots[lv].used>character.slots[lv].total)character.slots[lv].used=character.slots[lv].total;renderSlotBubbles();scheduleSave();});
+  /* #113: an HP box grows with what is typed into it (it commits on change) */
+  document.addEventListener("input",e=>{const h=e.target.closest&&e.target.closest("[data-hp]");if(h)hpFitBox(h);});
   /* the journal editor writes on every keystroke (87-journal.js) */
   document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("[data-jnlfield]"))jnlInput();});
   /* every group field says at once when a reserved name is typed (#98) */
@@ -82,17 +84,9 @@ function wire(){
     if(t.closest("[data-trkcompleted]"))return toggleTrkCompleted();
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
-    /* Max HP padlock — mirrors [data-hdmode] below, minus the confirm: switching
-       to manual hit dice is a mode change with consequences at level-up, while
-       this is undone by a second tap. Written as `===false` rather than `!`, so
-       an object whose flag is undefined locks explicitly instead of reading the
-       absence as unlocked. */
-    if(t.closest("[data-hplock]")){
-      character.hp.locked=character.hp.locked===false;
-      renderHP();
-      if(character.hp.locked===false){const i=document.getElementById("hpMax");if(i){i.focus();i.select();}}
-      scheduleSave();return;
-    }
+    /* #112: on a touchscreen the HP bar opens the Hit points window (the
+       primary pointer, read at tap time); with a mouse its numbers type. */
+    if((m=t.closest(".hp-bar"))&&hpTouch()){openHPDialog();return;}
     // slot bubbles
     if((m=t.closest(".slot .b"))){const lv=num(m.dataset.slot),i=num(m.dataset.i);const s=character.slots[lv];s.used=(s.used===i)?i-1:i;renderSlotBubbles();scheduleSave();return;}
     // features
@@ -250,6 +244,8 @@ function wire(){
     if(!(e.key==="Enter"||e.key===" ")||!e.target.classList)return;
     if(e.target.classList.contains("kw")){e.preventDefault();const g=allGlossary().find(x=>x.id===e.target.dataset.gid);if(g)openGlossView(g);return;}
     if(e.target.classList.contains("tblref")){e.preventDefault();openTableByName(e.target.dataset.tbl);}
+    /* #112: on a touchscreen the HP bar is role="button" tabindex="0" */
+    if(e.target.classList.contains("hp-bar")&&hpTouch()){e.preventDefault();openHPDialog();return;}
     /* the notes-tab group headers are role="button" tabindex="0", so they owe
        the keyboard the same behaviour the Settings sections give it */
     {const g=e.target.closest&&e.target.closest("[data-notegroup]");if(g){e.preventDefault();toggleNoteGroup(g.dataset.notegroup);return;}}
@@ -285,6 +281,17 @@ function wire(){
   on("starBtn","click",toggleInspiration);
   on("hpPlus","click",()=>bumpHP(1));
   on("hpMinus","click",()=>bumpHP(-1));
+  /* #112: a device whose primary pointer changes (a tablet docked to a
+     keyboard and trackpad) repaints the bar as a button or as boxes */
+  {const mq=window.matchMedia&&window.matchMedia("(pointer:coarse)");if(mq&&mq.addEventListener)mq.addEventListener("change",renderHP);}
+  /* #113: Temp sits in the bar only where it fits beside the centred numbers
+     (hpPlaceTemp). That changes with the bar's width (a resize, the combat
+     view, a layout) and the numbers' (digits, a skin, the fonts arriving), and
+     a Temp box that left the bar while typed in comes back once it loses
+     focus. Temp itself isn't observed: its own size changes with its place. */
+  {const w=document.querySelector(".rail-hp");if(w&&window.ResizeObserver){const ro=new ResizeObserver(()=>hpPlaceTemp());[".hp-bar",".hp-num"].forEach(q=>{const e=w.querySelector(q);if(e)ro.observe(e);});}}
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(hpPlaceTemp);
+  document.addEventListener("focusout",e=>{if(e.target&&e.target.id==="hpTemp")setTimeout(hpPlaceTemp,0);});
   on("btnLongRest","click",longRest);
   on("btnShortRest","click",shortRest);
   /* the refused-write strip (#81) */

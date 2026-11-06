@@ -9437,3 +9437,99 @@ Credits; the source split has 56 fragments, 39 of them JS. The four font files a
 the built page is 1,588,419 B.
 
 Pages: [theming & icons](../wiki/ui/theming-and-icons.md), [build & source split](../wiki/architecture/build-and-source-split.md).
+
+## #115 #112 #113: the Vitals pencil, the Hit points window, centring (Mike's spec, 2026-11-06)
+
+Wave 1 of 1.9.1, the Vitals & HP worktree, built from
+[the spec](../specs/2026-11-06-vitals-hp-design.md) and
+[its plan](../plans/2026-11-06-vitals-hp.md).
+
+**#115.** The Vitals rail joins `EDIT_CARDS` (thirteen keys): its pencil hides the portrait's add and
+remove buttons (`#btnPortrait`, `#btnPortraitDel` gain `ed`) and locks Max HP. The lock is
+`character.editHide.vitals`; `vitalsLocked(c)` (`= editHidden(c,"vitals")`) is the one reader
+(`renderHP()`'s readOnly, `applyHPInput()`'s second layer, the Hit points window's Max row,
+`hpChoice()`'s `_wasLocked`), and `setVitalsLocked(locked)` the one writer from code (it sets the flag,
+`ed-off`, repaints the pencil and calls `renderHP()`): `addClass()` (a second class, and a first
+class above level 1) and `doLevelUp()` unlock, `commitHPChoice()` relocks only what it found locked.
+A tap goes through `toggleEditCard()`, which now repaints Max for `vitals`. The pencil says "Lock
+Vitals" / "Unlock Vitals" (`editToggleText()`). `hp.locked` is retired: gone from `blankChar()`, read
+and written nowhere; an old save's value survives `migrate()` (which keeps every field) unread, so
+**every sheet opens unlocked** (decision 3: the old default can't be told from a deliberate lock).
+The padlock's markup, CSS and click handler went; `LU_HP_CLOSE` says "Vitals is unlocked".
+
+**#112.** On a touchscreen (`hpTouch()`, `(pointer:coarse)` read at tap time) a tap on `.hp-bar`, or
+Enter/Space on it, opens Hit points (`openHPDialog()`): an amount box (`inputmode="numeric"`,
+focused on open), then Damage, Heal and Temp, greyed until `hpAmount()` reads a whole number ≥ 1,
+each showing `hpQuickText()`'s line; one tap applies (`hpQuickApply()`: `adjustHP(∓n)`, or Temp
+replaces) and closes, with no toast. Set exactly, a `<details>` opened by hand inside the tap, holds
+Current, Max (only while Vitals is unlocked) and Temp, parsed by `hpSetParse()` and written by
+`hpSetApply()`. `hpQuick()` is the pure preview; the suite holds it equal to what each tap leaves.
+On touch `renderHP()` makes the bar a button (`role`, `tabindex`, `hpBarLabel()`) and its boxes
+readOnly with `inputmode="none"`, and CSS gives them `pointer-events:none`; with a mouse nothing
+changed. A `(pointer:coarse)` change listener repaints.
+
+**#113.** The bar is three grid columns, the outer two equal (the third floored at Temp's width), with
+Current / Max in `.hp-num` in the middle; `hpBoxWidth()` sizes each box to what it holds, from
+`renderHP()` and as it is typed (`hpFitBox()`). The fill is a grid item, so the bar isn't positioned
+and a container query (`.rail-hp`, `container:hp/inline-size`, ≤220px) can move Temp beside the
+"Hit points" label ("+3 temp") with the numbers a size smaller. − and + are SVG strokes in
+flex-centred buttons.
+
+Ruling: the 220px threshold is estimated (CSS arithmetic and the spec's glyph widths), not measured:
+there was no browser in this run. It sends Temp out at phone widths and in the two-column layout
+(216px); the screenshot pass sets it. Ruling: Set exactly takes a blank Current or Max as "not set",
+as the bar's blank does. Tests: `sheet.js` (the rewritten lock checks; a new block above the async
+chain), `char-update.js` (the level-up checks on `editHide.vitals`; Add class unlocks),
+`rules-data.js` (the padlock block rewritten; the wiring and CSS of #112 and #113).
+
+Pages: [vitals & rest](../wiki/features/vitals-and-rest.md),
+[character building](../wiki/features/character-building.md),
+[sections & layout](../wiki/ui/sections-and-layout.md),
+[character model](../wiki/architecture/character-model.md), [decisions](../wiki/decisions.md).
+
+**Final review (a fresh reviewer, "with fixes"; no Critical).** Two re-graded fixes: Set exactly's Max
+box reads "Base max", with the effective maximum on a line under it, when an effect makes the two
+differ (the header shows the effective one, so its number typed in would count the effect twice); and
+Enter in the amount box (a phone keypad's Done) blurs it, putting the keypad away. A player note now
+says "a narrow screen", since the two-column layout moves Temp out too. Deferred: the Temp tap's
+preview doesn't show the clamp a Current above the maximum gets; a hand-edited negative Temp
+previews wrongly; the blank Temp's width at desktop on the Classic skin is for the screenshot pass.
+**Waiting on Mike:** `src/docs/qa/smoke.md` line 23 ("the Max padlock stops Max from moving") is his
+file (#150); the proposed line is "locking Vitals stops Max from moving; on a touchscreen the HP bar
+opens Hit points".
+
+## #113: centring fixed for a blank Temp: symmetric columns, Temp placed by a measured fit (QA, 2026-11-06)
+
+Browser QA of the Vitals & HP branch measured the numbers' centre against the bar's: within ±0.4px
+with Temp typed or beside the label, but with **Temp blank and inside the bar** "126 / 138" sat up to
+15.5px left on the Sheet at 1280 and 23px left in the combat view at 375 (Classic; Humblewood 6.8 and
+14.3), the "+TEMP" placeholder 2.5–5px from the digits.
+
+**Cause.** Two of my own choices from L9441. The bar's third column was `minmax(min-content,1fr)`, a
+floor meant as a safety net. A blank Temp draws its placeholder at a fixed 4.6ch, wider than its half of
+the leftover space, so the floor won and the middle column slid left by the excess: the offset was
+(W − N)/2 − Temp's column, which is why three digits doubled it on Classic (12.4px per digit pair).
+And Temp only left the bar below a guessed 220px container width; the combat view at 375 is 221px.
+
+**Fix.** The two outer columns are identical, `minmax(0,1fr) auto minmax(0,1fr)`, so the numbers are
+exactly centred in every state. Where Temp goes is measured: `hpTempFits(barW, numW, tmpW)` is true when
+half the space beside the numbers holds Temp (its "+", `.hp-tplus`, and its box), its 6px margin
+(`HP_TMP_EDGE`) and a 6px gap (`HP_TMP_GAP`); `hpPlaceTemp()` sets `.rail-hp.hp-out` otherwise, which
+puts Temp beside the "Hit points" label. It runs from `renderHP()` and `hpFitBox()`, and from
+`90-boot.js` on a `ResizeObserver` over `.hp-bar` and `.hp-num` (a resize, the combat view, a skin,
+digits), on `document.fonts.ready`, and when Temp loses focus. A Temp box being typed in moves out the
+moment it stops fitting and comes back only on blur. Temp keeps its sizes in both places, so the
+measurement doesn't depend on where it is. The container query, and with it the 17px step for the
+numbers at narrow widths, are gone: with Temp out of the way, "126 / 138" at 19px fits the 360px
+Sheet's bar.
+
+Ruling: the #155 guard ("the levelling is CSS alone"), which banned the word `ResizeObserver`, now
+exempts exactly this one observer line; any other observer still fails it (checked by planting one on
+the grid). Mike's #155 decision is that nothing measures the Sheet's columns, which this observer
+does not. Tests: `rules-data.js` (the outer columns identical and nothing content-sized in the bar —
+the check that fails on the old template; placement by class, by the fit check; the wiring; the
+margin constant), `sheet.js` (`hpTempFits()` on QA's widths, `hpPlaceTemp()` on recorded elements,
+the focus rule).
+
+Pages: [vitals & rest](../wiki/features/vitals-and-rest.md), [decisions](../wiki/decisions.md),
+[known issues](../wiki/roadmap/known-issues.md), [sections & layout](../wiki/ui/sections-and-layout.md).

@@ -156,7 +156,7 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 
 /* ---- the rail (#103, spec §6.2; card `vitals`) ----
    Dark by its own tokens (00-tokens.css): the everyday tokens are re-pointed
-   here, so every control inside — inputs, the death-save circles, the padlock,
+   here, so every control inside — inputs, the death-save circles, the pencil,
    the hit-dice bar, the note and combat buttons — draws in the rail's palette
    with no rules of its own. Top to bottom: portrait with the AC shield over
    its bottom edge; death saves; Init · Speed · Prof; HP; hit dice; Size and
@@ -204,7 +204,7 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
    the shape of the HP bar — a fill <i> sibling whose width is the
    one inline style renderHitDice() sets, with the text drawn over it. */
 /* One label rule for the HP bar and the hit-dice bar, so the two read as a
-   pair: the name at the left, CON (or the Max padlock) at the right. */
+   pair: the name at the left, CON at the right. */
 .hp-lbl,.hd-lbl{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;gap:7px}
 .hd-con{font-weight:700;color:var(--accent-2)}
 .hd-bar{position:relative;display:block;width:100%;overflow:hidden;border-radius:8px;border:1.5px solid var(--line);background:var(--field);cursor:pointer;padding:9px 10px;text-align:center}
@@ -255,47 +255,80 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 .hcard-star.on{color:var(--accent)}
 /* .icon has a fixed height, so the row's align-items:stretch leaves it at the top; center it like the star */
 .hcard>.icon{align-self:center}
-/* ---- the HP bar (#103) ----
+/* ---- the HP bar (#103; centred, #113) ----
    − · bar · +. The three data-hp boxes sit IN the bar, borderless, so tapping
    the numbers edits them; #hpFill under them is renderHP()'s width and band.
    Bands colour the fill, not the text (text over a band-coloured fill would
    vanish): amber at half, brick at a quarter. --warn is its own token rather
-   than --accent because on the classic skin --accent IS --brick. */
-.hp-lbl .grow{flex:1}
-.hp-maxlbl{display:inline-flex;align-items:center}
+   than --accent because on the classic skin --accent IS --brick.
+   #113: the bar is three grid columns, the outer two IDENTICAL, so "26 / 38"
+   is exactly centred whatever Temp shows; renderHP() sizes each box to what
+   it holds. (The third column once had a min-content floor: a blank Temp's
+   placeholder floored it past its half and pushed three digits up to 23px
+   left.) Temp sits at the right of the third column only when hpTempFits()
+   says it fits there with a gap; otherwise hpPlaceTemp() sets .hp-out and it
+   moves beside the label. The fill is a grid item spanning all three, not
+   absolute, so the bar itself is not positioned: Temp can then leave it
+   without being clipped by its overflow. */
 .hp-row{display:flex;align-items:center;gap:6px}
-.hp-btn{flex:none;width:30px;height:34px;border-radius:7px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);font-size:18px;font-weight:700;cursor:pointer;padding:0}
+.hp-btn{flex:none;width:30px;height:34px;border-radius:7px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer;padding:0;
+  display:flex;align-items:center;justify-content:center}
+.hp-btn svg{display:block;width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.6;stroke-linecap:round}
 .hp-btn:hover{border-color:var(--accent)}
-.hp-bar{position:relative;flex:1;min-width:0;height:38px;display:flex;align-items:center;gap:1px;padding:0 6px;overflow:hidden;
-  border:1.5px solid var(--line);border-radius:7px;background:var(--field)}
-.hp-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent-2);opacity:.5;transition:width .15s}
+.rail-hp{position:relative}
+.hp-bar{flex:1;min-width:0;height:38px;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-rows:minmax(0,1fr);
+  align-items:center;overflow:hidden;border:1.5px solid var(--line);border-radius:7px;background:var(--field)}
+.hp-fill{grid-row:1;grid-column:1/-1;justify-self:start;align-self:stretch;width:0;background:var(--accent-2);opacity:.5;transition:width .15s}
 .hp-fill.hp-warn{background:var(--warn)}
 .hp-fill.hp-danger{background:var(--brick)}
-.hp-bar>*:not(.hp-fill){position:relative}
-.hp-bar input{width:3.1ch;min-width:0;min-height:0;padding:2px 0;border:0;background:transparent;box-shadow:none;text-align:center;
+/* positioned, so they paint over the half-opaque fill (opacity makes it a
+   layer of its own) */
+.hp-num{grid-row:1;grid-column:2;position:relative;display:flex;align-items:center;justify-content:center;gap:2px}
+.hp-bar input{width:1.2ch;min-width:0;min-height:0;height:auto;padding:0;border:0;background:transparent;box-shadow:none;text-align:center;line-height:1.2;
   font-family:var(--display);font-weight:900;font-size:19px;color:var(--ink);text-shadow:0 1px 2px rgba(0,0,0,.45)}
 .hp-bar input:focus{background:var(--field-focus);outline-offset:0}
-.hp-bar #hpCur{text-align:right}
-.hp-bar #hpMax{text-align:left}
 .hp-bar input[readonly]{cursor:default}
-.hp-sl{font-family:var(--display);font-weight:900;font-size:17px;color:var(--ink-soft)}
-.hp-tmp{margin-left:auto;display:inline-flex;align-items:center;font-family:var(--head);font-size:12px;color:var(--ink-soft)}
+.hp-sl{font-family:var(--display);font-weight:900;font-size:17px;line-height:1;color:var(--ink-soft)}
+.hp-tmp{grid-row:1;grid-column:3;justify-self:end;position:relative;display:inline-flex;align-items:center;margin-right:6px;
+  font-family:var(--head);font-size:12px;color:var(--ink-soft)}
 .hp-tmp input{width:4.6ch;font-family:var(--head);font-size:13px;font-weight:700;text-align:left}
 .hp-tmp input::placeholder{color:var(--ink-soft);opacity:.8;font-weight:400}
+.hp-tmpw{display:none}
+/* Where Temp doesn't fit beside the centred numbers (hpTempFits), it sits to
+   the right of the "Hit points" label, reading "+3 TEMP". The same on touch
+   and desktop. Its "+" and box keep their sizes here, so what hpPlaceTemp()
+   measures is the same in both places and the class can't flip-flop. */
+.rail-hp.hp-out .hp-tmp{position:absolute;top:0;right:0;margin:0;line-height:1}
+.rail-hp.hp-out .hp-tmp input{line-height:1}
+.rail-hp.hp-out .hp-tmpw{display:inline;margin-left:3px;font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.rail-hp.hp-out .hp-tmp input:placeholder-shown~.hp-tmpw{display:none}
 .hp-note{text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px}
 .hp-note:empty{display:none}
-/* The padlock rides inside the Max label. An icon, not a word, so the label
-   stays narrower than the 66px input below it and the three HP columns keep the
-   widths they have. Pill shape comes from .hd-mode in 20-cards.css — the sheet
-   has one pill and it is now used twice. */
-.hp-lock{margin-left:4px;padding:1px 5px;line-height:0;vertical-align:-2px}
-.hp-lock svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2;display:block}
-/* Unlocked is the state worth noticing, so it borrows the brick treatment
-   .hd-mode.manual uses for "you have left the automatic path". */
-.hp-lock.open{color:var(--brick);border-color:var(--brick)}
-.hp-lock .sh-open{display:none}
-.hp-lock.open .sh-shut{display:none}
-.hp-lock.open .sh-open{display:inline}
+/* #112: on a touchscreen the bar is one button that opens Hit points
+   (renderHP() gives it role="button"); a tap on a number lands on the bar,
+   never in a box, so no keyboard comes up under it. */
+@media (pointer:coarse){.hp-bar{cursor:pointer}.hp-bar input{pointer-events:none}}
+.hp-bar:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* ---- the Hit points window (#112, mockup C) ----
+   An amount, then three buttons that each say what they would do; Set exactly
+   folded under them. Drawn in the modal, so the page's own tokens apply. */
+.hpq-now{margin:0 0 10px;text-align:right;font-family:var(--head);font-weight:700;font-size:14px;letter-spacing:.03em;color:var(--ink-soft)}
+.hpq-amt{width:100%;min-height:50px;font-family:var(--display);font-weight:900;font-size:26px;text-align:center}
+.hpq-amt::placeholder{font-family:var(--head);font-weight:400;font-size:16px}
+.hpq-acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.hpq-btn{min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 4px;text-align:center}
+.hpq-btn b{font-weight:700}
+.hpq-dmg b{color:var(--brick)}
+.hpq-heal b{color:var(--accent-2)}
+.hpq-res{font-family:var(--body);font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--ink)}
+.hpq-res:empty{display:none}
+.hpq-set{margin-top:14px;border-top:1px solid var(--hair);padding-top:10px}
+.hpq-set summary{cursor:pointer;font-family:var(--head);font-weight:600;font-size:13px;letter-spacing:.04em;color:var(--accent-2);padding:6px 0}
+.hpq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:8px}
+.hpq-grid label{display:flex;flex-direction:column;gap:4px;font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+.hpq-grid input{min-height:42px;text-align:center;font-weight:700}
+.hpq-msg{color:var(--brick)}
+.hpq-msg:empty{display:none}
 /* ✓ ○○○ ☠ ○○○ ✗ (#103, decision 6), under the shield. */
 .death{display:flex;align-items:center;gap:7px;justify-content:center}
 .death .set{display:flex;gap:5px}

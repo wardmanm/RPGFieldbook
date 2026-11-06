@@ -566,7 +566,7 @@ function armChoiceDismissGuard(pending){
     const picked=blocks.reduce((a,b)=>a+num(b.picked),0);
     const short=choiceShortfall(blocks);
     const hp=hpPending();
-    /* Hit points alone are not lost for good — addClass() left Max unlocked
+    /* Hit points alone are not lost for good — addClass() left Vitals unlocked
        (this block is creation's: a first class added above level 1; a
        level-up's HP is on the level card, #101) — so they get their own,
        milder question rather than "no way to reopen". */

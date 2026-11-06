@@ -20,7 +20,7 @@ them. The first version was written from the wiki's feature pages (#127).
 - Add an ancestry, a background and a class from the Sheet header: each choice window opens, and what it grants lands on the sheet.
 - Remove that ancestry: everything it granted goes with it.
 - Level up: the hit points step and any choices open; Undo level-up puts the sheet back as it was.
-- Hit points: − and + change Current; a signed number typed into Current (−7, +4) applies; Temp HP takes damage first; the Max padlock stops Max from moving.
+- Hit points: − and + change Current; a signed number typed into Current (−7, +4) applies; Temp HP takes damage first; locking Vitals with its pencil stops Max from moving; on a touchscreen, tapping the bar opens Hit points, and Damage, Heal and Temp do what their preview says.
 - Short Rest restores Warlock pact slots and short-rest uses, offering to spend a Hit Die while any remain; Long Rest restores hit points to full, refills every spell slot, and returns half your Hit Dice.
 - Death saves: tick successes and failures; only a Long Rest clears them.
 - Add a condition in Statuses & Conditions: it shows with its notes, and removing it takes its effects away.

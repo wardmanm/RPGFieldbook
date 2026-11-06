@@ -12,7 +12,7 @@ const {X, ctx, state, store, bootError, fragments} = loadApp([
   'atkGenFp','stampAtkGen','updAtkEdited','ATK_GEN_FIELDS',
   'diffCharacter','applyUpdateRow','applyUpdates','charNeedsUpdate','updResolve','updChangedFields',
   'backupCharacter','libLoad','charKey','mergeRules','resetRules','addFeatureFromDef',
-  'addClass','removeClass','doLevelUp','hitDieMax','level1HP','resyncLevel1HP','modOf',
+  'addClass','removeClass','doLevelUp','vitalsLocked','setEditHidden','hitDieMax','level1HP','resyncLevel1HP','modOf',
   'totalLevel','num','fnum','UPD_FIELDS','updBannerHTML',
   'grantItemByName',
   'hpFixed','hpGain','hpGainText','choiceFieldHTML','commitChoices','classFlyHTML','subSourceTag','runChoices',
@@ -954,26 +954,30 @@ ck('...and the next keystroke recovers the right number', X.num(X.character.hp.m
 ck('...with current HP still tracking it', X.num(X.character.hp.cur)===13, X.character.hp.cur);
 
 // ---------- the Max HP lock never gets in the automatic writers' way
-// They write character.hp.max directly; only a PLAYER typing into the box goes
-// through applyHPInput, which is where the lock lives. If someone ever routes
+// The lock is the Vitals pencil (#115, editHide.vitals). The writers set
+// character.hp.max directly; only a PLAYER typing into the box goes through
+// applyHPInput, which is where the lock is enforced. If someone ever routes
 // them through the box "for consistency", a locked level-1 character silently
 // ends up with no hit points at all.
-hpSetup(CLS); X.character.hp.locked=true; X.addClass('Rogue',1);
+hpSetup(CLS); X.setEditHidden(X.character,'vitals',true); X.addClass('Rogue',1);
 ck('a locked box does not block the level-1 seed', X.num(X.character.hp.max)===8, X.character.hp.max);
-ck('...and the lock is still on afterwards', X.character.hp.locked===true);
+ck('...and the lock is still on afterwards', X.vitalsLocked(X.character)===true);
 
-hpSetup(CLS); X.character.hp.locked=true; X.addClass('Rogue',1);
+hpSetup(CLS); X.setEditHidden(X.character,'vitals',true); X.addClass('Rogue',1);
 X.character.abilities.con=16; X.resyncLevel1HP(10);
 ck('a locked box does not block the CON re-sync', X.num(X.character.hp.max)===11, X.character.hp.max);
 
-hpSetup(CLS); X.character.hp.locked=true; X.addClass('Rogue',1); X.removeClass(0);
+hpSetup(CLS); X.setEditHidden(X.character,'vitals',true); X.addClass('Rogue',1); X.removeClass(0);
 ck('a locked box does not block the clean un-seed', X.character.hp.max==='', X.character.hp.max);
 
 // Levelling is the one moment Max HP legitimately changes and the app cannot
-// compute it, so it hands the box back rather than making you fight a padlock.
-hpSetup(CLS); X.addClass('Rogue',1); X.character.hp.locked=true; X.doLevelUp();
-ck('levelling up unlocks Max HP so the new total can be typed', X.character.hp.locked===false);
+// compute it, so it unlocks Vitals rather than making you find the pencil.
+hpSetup(CLS); X.addClass('Rogue',1); X.setEditHidden(X.character,'vitals',true); X.doLevelUp();
+ck('levelling up unlocks Max HP so the new total can be typed', X.vitalsLocked(X.character)===false);
 ck('...and actually levelled', X.num(X.character.classes[0].level)===2);
+// #115: adding a second class is levels gained too, so it unlocks the same way
+hpSetup(CLS); X.addClass('Rogue',1); X.setEditHidden(X.character,'vitals',true); X.addClass('Wizard',1);
+ck('#115 adding a second class unlocks Vitals so its hit points can be typed', X.vitalsLocked(X.character)===false);
 
 // ---------- the hit-point step on every level-up (#58)
 // There was never an HP prompt: levelling only unlocked the box, so the choice
@@ -1014,19 +1018,19 @@ ck('several levels show CON per level',
 
 // Taking the average: max AND current go up, and the lock is put back the way
 // the player had it — the unlock is only the fallback for a dismissed prompt.
-hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=true; X.doLevelUp();
+hpSetup(CLS); X.addClass('Fighter',1); X.setEditHidden(X.character,'vitals',true); X.doLevelUp();
 X.luSetHP(null); X.luFinish();
 ck('the average lands on max HP', X.num(X.character.hp.max)===16, X.character.hp.max);
 ck('...and on current HP', X.num(X.character.hp.cur)===16, X.character.hp.cur);
-ck('...and the box is locked again, as it was before levelling', X.character.hp.locked===true);
+ck('...and the box is locked again, as it was before levelling', X.vitalsLocked(X.character)===true);
 
 hpSetup(CLS,14); X.addClass('Fighter',1); X.doLevelUp();
 X.luSetHP('3'); X.luFinish();
 ck('a typed roll adds CON once', X.num(X.character.hp.max)===12+5, X.character.hp.max);
 
-hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=false; X.doLevelUp();
+hpSetup(CLS); X.addClass('Fighter',1); X.setEditHidden(X.character,'vitals',false); X.doLevelUp();
 X.luSetHP(null); X.luFinish();
-ck('a box the player had unlocked stays unlocked', X.character.hp.locked===false);
+ck('a box the player had unlocked stays unlocked', X.vitalsLocked(X.character)===false);
 
 hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.cur=3; X.doLevelUp();
 X.luSetHP(null); X.luFinish();
@@ -1035,10 +1039,10 @@ ck('a hurt character gains the same hit points on top', X.num(X.character.hp.cur
 // A custom class has no die: nothing typed means "I'll type it", a number is the total.
 // #101: with nothing typed the card's Done stays disabled, so closing it is the way out.
 hpSetup(CLS); X.addClass('Homebrewer',1); X.character.hp.max=12; X.character.hp.cur=12;
-X.character.hp.locked=true; X.doLevelUp();
+X.setEditHidden(X.character,'vitals',true); X.doLevelUp();
 state.confirm=true; X.dismissModal();
 ck('no die and nothing typed changes nothing', X.num(X.character.hp.max)===12, X.character.hp.max);
-ck('...and leaves the box unlocked to type into', X.character.hp.locked===false);
+ck('...and leaves the box unlocked to type into', X.vitalsLocked(X.character)===false);
 X.doLevelUp(); X.luSetHP('7'); X.luFinish();
 ck('no die and a number typed adds exactly that', X.num(X.character.hp.max)===19, X.character.hp.max);
 
@@ -1495,7 +1499,7 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
     ck('#66 ...which then revert with it', !X.character.grants.some(g=>g.type==='save'), X.character.grants);
 
     /* ---- the first class above level 1 gets every level's hit points */
-    mcSetup(); reset(); X.character.hp.locked=true; X.addClass('Fighter',3);
+    mcSetup(); reset(); X.setEditHidden(X.character,'vitals',true); X.addClass('Fighter',3);
     const hp=choicesOf()[0]||{};
     ck('#66 a first class at level 3 seeds level 1', X.num(X.character.hp.max)===10, X.character.hp.max);
     ck('#66 ...and asks for levels 2-3 in its window', hp.type==='hp'&&hp.die===10&&hp.levels===2, hp);
@@ -1503,7 +1507,7 @@ ck('multiclassing asks for the new class\'s hit points', X.num(X.character.hp.ma
     X.commitChoices('Fighter',[{type:'hp',ci:0,dice:''}]);
     ck('#66 ...taking the average: 10 + 2×6 = 22', X.num(X.character.hp.max)===22&&X.num(X.character.hp.cur)===22,
        X.character.hp.max+'/'+X.character.hp.cur);
-    ck('#66 ...and the box is locked again, as it was', X.character.hp.locked===true);
+    ck('#66 ...and the box is locked again, as it was', X.vitalsLocked(X.character)===true);
     mcSetup(14); reset(); X.addClass('Fighter',3); X.commitChoices('Fighter',[{type:'hp',ci:0,dice:'9'}]);
     ck('#66 ...a typed roll adds CON per level: 12 + 9 + 2×2 = 25', X.num(X.character.hp.max)===25, X.character.hp.max);
     mcSetup(); X.character.hp.max=30; reset(); X.addClass('Fighter',3);
@@ -1871,7 +1875,7 @@ ck('itemMetaLine still ends with the weight',
   const F0=[{name:'Fighter',hitDie:'d10',levels:{'2':{choices:[{type:'asi',label:'Ability Score Improvement'}]}}}];
   try{
     /* a quiet level: no choices */
-    hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=true; reset(); X.doLevelUp();
+    hpSetup(CLS); X.addClass('Fighter',1); X.setEditHidden(X.character,'vitals',true); reset(); X.doLevelUp();
     ck('#101 a level-up opens the level card, not the choice window', card()&&rc.length===0, [om.map(o=>o.t),rc.length]);
     ck('#101 ...titled "Level up", with a LEVEL N banner', card().t==='Level up'&&/LEVEL 2/.test(card().h), card()&&card().t);
     ck('#101 ...says what was reached', /Fighter 1 → 2 · character level 2/.test(card().h), card().h);
@@ -1880,13 +1884,13 @@ ck('itemMetaLine still ends with the weight',
     ck('#101 Done does nothing before HP is set', X.luFinish()===false&&X.luState()!==null);
     ck('#101 a bad typed value sets nothing and says why', X.luSetHP('11')==='A d10 rolls 1 to 10.'&&X.luState().set===false);
     ck('#101 a good one is accepted', X.luSetHP('7')===''&&X.luState().set===true&&X.luState().raw==='7');
-    ck('#101 Done closes, applies 7 + CON 0, and relocks', X.luFinish()===true&&X.num(X.character.hp.max)===17&&X.character.hp.locked===true&&X.luState()===null,
-       [X.character.hp.max,X.character.hp.locked]);
+    ck('#101 Done closes, applies 7 + CON 0, and relocks', X.luFinish()===true&&X.num(X.character.hp.max)===17&&X.vitalsLocked(X.character)===true&&X.luState()===null,
+       [X.character.hp.max,X.vitalsLocked(X.character)]);
     ck('#101 ...and a level with nothing to choose opens no choice window', rc.length===1&&rc[0][1].length===0, rc);
 
     /* final review I2: a bad Apply after a good one takes the good one back,
        so Done can never commit a number the card no longer shows */
-    hpSetup(CLS); X.addClass('Fighter',1); X.character.hp.locked=true; reset(); X.doLevelUp();
+    hpSetup(CLS); X.addClass('Fighter',1); X.setEditHidden(X.character,'vitals',true); reset(); X.doLevelUp();
     X.luSetHP('7');
     ck('#101 a bad Apply after a good one clears the earlier value', X.luSetHP('11')==='A d10 rolls 1 to 10.'&&
        X.luState().set===false&&X.luState().raw===null, X.luState());
@@ -1894,7 +1898,7 @@ ck('itemMetaLine still ends with the weight',
     state.confirm=false; state.lastConfirm=null; X.dismissModal();
     ck('#101 ...and closing asks again, in the HP words', state.lastConfirm===X.LU_HP_CLOSE&&X.luState()!==null, state.lastConfirm);
     state.confirm=true; X.dismissModal();
-    ck('#101 ...and closing anyway adds nothing', X.num(X.character.hp.max)===10&&X.character.hp.locked===false, [X.character.hp.max,X.character.hp.locked]);
+    ck('#101 ...and closing anyway adds nothing', X.num(X.character.hp.max)===10&&X.vitalsLocked(X.character)===false, [X.character.hp.max,X.vitalsLocked(X.character)]);
 
     /* final review M1: a level-up belongs to the character it started on */
     hpSetup(CLS); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luSetHP('7');
@@ -1932,7 +1936,7 @@ ck('itemMetaLine still ends with the weight',
     ck('#101 closing early asks first, in the HP words', state.lastConfirm===X.LU_HP_CLOSE&&X.luState()!==null, state.lastConfirm);
     state.confirm=true; X.dismissModal();
     ck('#101 closing early still opens the choices', rc.length===1&&rc[0][1][0].type==='asi', rc);
-    ck('#101 ...applies no HP and leaves Max unlocked', X.num(X.character.hp.max)===10&&X.character.hp.locked===false, [X.character.hp.max,X.character.hp.locked]);
+    ck('#101 ...applies no HP and leaves Max unlocked', X.num(X.character.hp.max)===10&&X.vitalsLocked(X.character)===false, [X.character.hp.max,X.vitalsLocked(X.character)]);
     hpSetup(CLS); X.addClass('Fighter',1); reset(); X.doLevelUp(); X.luSetHP('5'); state.lastConfirm=null; X.dismissModal();
     ck('#101 closing after setting HP keeps it, without asking', state.lastConfirm===null&&X.num(X.character.hp.max)===15, X.character.hp.max);
 

@@ -200,11 +200,63 @@ function hpBand(){
   const pct=num(character.hp.cur)/mx*100;
   return (pct<=25)?"hp-danger":(pct<=50)?"hp-warn":"";
 }
+/* #113: a box as wide as what it holds, in `ch` (the width of a digit in its
+   own font), so "26 / 38" is as wide as its digits and the bar can centre
+   it. Blank, a box fits its placeholder ("0", or Temp's "temp"). */
+function hpBoxWidth(k,v){
+  const s=(v===null||v===undefined)?"":String(v);
+  return s===""?(k==="temp"?"4.6ch":"1.2ch"):(s.length+0.2)+"ch";
+}
+/* ...and as it is typed (wired in 90-boot.js), so "+12" never scrolls. */
+function hpFitBox(el){if(el&&el.style&&el.dataset){el.style.width=hpBoxWidth(el.dataset.hp,el.value);hpPlaceTemp();}}
+/* #113: where Temp goes. The bar's two outer columns are identical, so the
+   numbers are always exactly centred; Temp sits at the right of the third only
+   if it fits there with its margin and a clear gap before the numbers, and
+   otherwise moves beside the "Hit points" label (.rail-hp.hp-out). What has to
+   fit is measured — fonts, skins, digits and a blank Temp's "+temp" all vary —
+   rather than guessed from the rail's width: a fixed 220px threshold missed
+   the combat view at 375px (221px) by a pixel. HP_TMP_EDGE is .hp-tmp's
+   margin-right in 30-sheet.css. */
+const HP_TMP_EDGE=6;
+const HP_TMP_GAP=6;
+/* The bar's inner width, the numbers' width, Temp's width ("+" and its box,
+   which are the same in both places): true if Temp fits beside the centred
+   numbers, null for a bar that isn't laid out (a hidden tab). Pure. */
+function hpTempFits(barW,numW,tmpW){
+  if(!(barW>0))return null;
+  return (barW-numW)/2-tmpW-HP_TMP_EDGE>=HP_TMP_GAP;
+}
+/* Run by renderHP(), hpFitBox(), and from 90-boot.js when the bar or the
+   numbers change size, when the fonts arrive, and when Temp loses focus. A
+   Temp box being typed in moves OUT the moment it stops fitting (it must never
+   touch the numbers) but is not pulled back IN under the caret; that waits for
+   the blur. The measurements don't depend on where Temp is, so the class can't
+   flip back and forth. */
+function hpPlaceTemp(){
+  const wrap=document.querySelector(".rail-hp");if(!wrap)return;
+  const bar=wrap.querySelector(".hp-bar"),num=wrap.querySelector(".hp-num"),plus=wrap.querySelector(".hp-tplus"),inp=document.getElementById("hpTemp");
+  if(!bar||!num||!plus||!inp||!inp.getBoundingClientRect)return;
+  const fits=hpTempFits(bar.clientWidth,num.getBoundingClientRect().width,plus.getBoundingClientRect().width+inp.getBoundingClientRect().width);
+  if(fits===null)return;
+  const out=wrap.classList.contains("hp-out"),next=!fits||(out&&document.activeElement===inp);
+  if(next!==out)wrap.classList.toggle("hp-out",next);
+}
 function renderHP(){
+  /* #112: on a touchscreen the bar is one button that opens the Hit points
+     window, so its boxes take no typing at all: readOnly, no keyboard, out of
+     the tab order. With a mouse they type exactly as before. */
+  const touch=hpTouch();
   ["cur","max","temp"].forEach(k=>{
     const el=document.getElementById("hp"+k[0].toUpperCase()+k.slice(1));
-    if(el){const v=character.hp[k];el.value=(v===null||v===undefined)?"":v;}
+    if(el){const v=character.hp[k];el.value=(v===null||v===undefined)?"":v;
+      el.style.width=hpBoxWidth(k,el.value);   /* #113: sized to what it holds, so the group centres */
+      el.inputMode=touch?"none":"tel";el.tabIndex=touch?-1:0;if(k!=="max")el.readOnly=touch;}
   });
+  const bar=document.querySelector(".hp-bar");
+  if(bar){
+    if(touch){bar.setAttribute("role","button");bar.setAttribute("tabindex","0");bar.setAttribute("aria-label",hpBarLabel(character.hp,effMaxHP()));}
+    else ["role","tabindex","aria-label"].forEach(a=>bar.removeAttribute(a));
+  }
   const cur=document.getElementById("hpCur"),band=hpBand();
   if(cur){cur.classList.toggle("hp-warn",band==="hp-warn");cur.classList.toggle("hp-danger",band==="hp-danger");}
   /* #103: the rail's HP bar. Its fill is cur over the EFFECTIVE max (as
@@ -219,32 +271,26 @@ function renderHP(){
   /* Two layers, the same shape the auto spell-slot fields use: readOnly so the
      browser refuses the edit, AND a refusal in applyHPInput, because readOnly
      is only a hint — paste, autofill and any programmatic caller go straight
-     past it. `!==false` rather than a truth test, so an object that never went
-     through migrate() reads as locked rather than silently editable. */
-  const locked=character.hp.locked!==false;
-  const mx=document.getElementById("hpMax");if(mx)mx.readOnly=locked;
-  const lk=document.querySelector("[data-hplock]");
-  if(lk){
-    lk.classList.toggle("open",!locked);
-    lk.setAttribute("aria-pressed",locked?"true":"false");
-    lk.title=locked?"Max HP is locked — tap to edit it":"Max HP is unlocked — tap to lock it";
-  }
+     past it. The lock is the Vitals pencil (#115), read by vitalsLocked(). */
+  const mx=document.getElementById("hpMax");if(mx)mx.readOnly=touch||vitalsLocked(character);
+  hpPlaceTemp();   /* #113: the values (and so the widths) may have changed */
   /* #91: your chip and row in the initiative tracker read this HP live */
   renderInitStrip();
 }
 /* Commit one HP box. Returns false if the entry was refused. */
 function applyHPInput(inp){
   const k=inp.dataset.hp;
-  /* An explicit list, not `k in character.hp`: `locked` is a key on that object
-     now, and a data-hp hook must never be able to write a boolean field. */
+  /* An explicit list, not `k in character.hp`: a sheet saved before #115 still
+     carries the old `locked` key on that object, and a data-hp hook must never
+     be able to write a boolean field. */
   if(k!=="cur"&&k!=="max"&&k!=="temp")return true;
-  /* Max is locked by default, and the padlock is the only way a PLAYER changes
-     it. renderHP has already made the box readOnly; this is the second layer,
+  /* While Vitals is locked (its pencil, #115) a PLAYER can't change Max.
+     renderHP has already made the box readOnly; this is the second layer,
      because readOnly does not stop a paste. The automatic writers
      (seedLevel1HP, resyncLevel1HP, removeClass's un-seed — all 56-class.js) go
      to the model directly and BYPASS this on purpose: routing them through here
      would leave a locked level-1 character with no hit points at all. */
-  if(k==="max"&&character.hp.locked!==false){renderHP();return false;}
+  if(k==="max"&&vitalsLocked(character)){renderHP();return false;}
   /* A negative typed into Current OR Temp IS damage, and goes through the one
      damage path: temp first, then the overflow into current. Typing -5 against
      3 temp has to leave you 2 down on current, not throw the extra away, and it
@@ -261,6 +307,158 @@ function applyHPInput(inp){
   if(k==="max")recompute();   /* what data-recompute did; nothing is derived from cur/temp */
   scheduleSave();
   return true;
+}
+/* ================= the Hit points window (#112) =================
+   On a touchscreen a tap on the HP bar opens it: type an amount, then Damage,
+   Heal or Temp. A phone's keypad hides the minus sign behind other keyboards,
+   so nothing here needs one; Set exactly, folded underneath, types the numbers
+   straight in. The logic is here, pure where it can be, because the harness
+   drops 90-boot.js, which only wires the tap. adjustHP() stays the one damage
+   path: the preview (hpQuick) works out what each tap would leave, and the tap
+   itself goes through adjustHP/clampHP, the suite holding the two equal. */
+/* "Touchscreen" is the device's PRIMARY pointer (spec decision 8): phones and
+   tablets, not a narrowed laptop window, and a touchscreen laptop counts as
+   desktop. Read at tap time. */
+function hpTouch(){return !!(window.matchMedia&&window.matchMedia("(pointer:coarse)").matches);}
+/* A whole number from 1, or null. Spaces and commas are stripped, as Adjust
+   coins does; a sign, a fraction or anything else is refused. */
+function hpAmount(raw){
+  const s=String(raw==null?"":raw).replace(/[\s,]/g,"");
+  if(!/^\d+$/.test(s))return null;
+  const n=parseInt(s,10);return n>=1?n:null;
+}
+/* What each tap would leave, as the model would store it — adjustHP's rules
+   and clampHP's bounds, mirrored. Pure. */
+function hpQuick(hp,effMax,n){
+  const mx=num(effMax),t0=num(hp.temp),cap=v=>(mx>0&&num(v)>mx)?mx:v;
+  const soak=Math.min(t0,n),over=n-soak;
+  return {
+    damage:{cur:cap(over?Math.max(0,num(hp.cur)-over):hp.cur),temp:soak>0?((t0-soak)||""):hp.temp},
+    heal:{cur:cap(num(hp.cur)+n)},
+    temp:{temp:n}
+  };
+}
+/* The line under each button. Damage says what Current becomes, and what is
+   left of temp ("→ 22, no temp"), or just the temp when it soaks the lot and
+   Current doesn't move ("temp 3 → 1"). */
+function hpQuickText(hp,effMax,n){
+  const q=hpQuick(hp,effMax,n),t0=num(hp.temp),t1=num(q.damage.temp);
+  const damage=(num(q.damage.cur)===num(hp.cur)&&t0>0)?`temp ${t0} → ${t1}`
+    :`→ ${num(q.damage.cur)}`+(t0>0?(t1>0?`, temp ${t1}`:", no temp"):"");
+  return {damage,heal:`→ ${num(q.heal.cur)}`,temp:t0>0?`${t0} → ${n}`:`→ ${n}`};
+}
+/* The window's header: Current / the EFFECTIVE maximum (#maxNote explains it
+   when an effect applies) · temp. */
+function hpNowText(hp,effMax){
+  const t=num(hp.temp);
+  return `${num(hp.cur)} / ${num(effMax)>0?num(effMax):"—"}`+(t>0?` · temp ${t}`:"");
+}
+/* The bar's accessible name while it is a button (touch). */
+function hpBarLabel(hp,effMax){
+  const t=num(hp.temp);
+  return `Hit points ${num(hp.cur)}`+(num(effMax)>0?` of ${num(effMax)}`:"")+(t>0?`, temp ${t}`:"")+" — change";
+}
+/* One tap, on the model. Temp REPLACES what is there (decision 11): temp HP
+   don't stack, and the one you keep is your choice. Callers repaint and save. */
+function hpQuickApply(kind,n){
+  const a=hpAmount(n);if(a===null)return false;
+  if(kind==="damage")adjustHP(-a);
+  else if(kind==="heal")adjustHP(a);
+  else if(kind==="temp"){character.hp.temp=a;clampHP();}
+  else return false;
+  return true;
+}
+/* Set exactly's boxes: plain whole numbers from 0 (one grammar per box: the
+   bar's signed entry on desktop, this one on touch), blank meaning "not set",
+   and a Temp of 0 meaning none. Max only while Vitals is unlocked. */
+function hpSetParse(vals,withMax){
+  const bad=[],one=(raw,label)=>{
+    const s=String(raw==null?"":raw).replace(/[\s,]/g,"");
+    if(s==="")return "";
+    if(!/^\d+$/.test(s)){bad.push(label);return null;}
+    return parseInt(s,10);
+  };
+  const hp={cur:one(vals.cur,"Current")};
+  if(withMax)hp.max=one(vals.max,"Max");
+  hp.temp=one(vals.temp,"Temp");if(hp.temp===0)hp.temp="";
+  return {hp,bad};
+}
+/* Writes what Set exactly parsed, then clampHP(). Returns whether Max moved,
+   so the caller knows to recompute(). A Max is refused while Vitals is locked
+   even when one is passed: the same second layer applyHPInput() keeps. */
+function hpSetApply(hp){
+  if(["cur","max","temp"].some(k=>hp[k]===null))return false;
+  let moved=false;
+  if("max" in hp&&!vitalsLocked(character)){moved=String(hp.max)!==String(character.hp.max);character.hp.max=hp.max;}
+  character.hp.cur=hp.cur;character.hp.temp=hp.temp;
+  clampHP();
+  return moved;
+}
+function hpDialogHTML(hp,effMax,withMax){
+  const v=x=>(x===null||x===undefined)?"":String(x);
+  /* The header shows the EFFECTIVE maximum; Set exactly's box holds the base,
+     so when an effect makes them differ the box says so (typing the header's
+     number would count the effect twice). */
+  const fx=num(effMax)!==num(hp.max);
+  const box=(id,label,val,ph)=>`<label>${esc(label)}<input type="text" inputmode="numeric" id="${esc(id)}" value="${esc(val)}"${ph?` placeholder="${esc(ph)}"`:""} autocomplete="off"></label>`;
+  const btn=(id,cls,verb)=>`<button type="button" class="tbtn hpq-btn ${esc(cls)}" id="${esc(id)}" disabled><b>${esc(verb)}</b><span class="hpq-res" id="${esc(id+"Res")}"></span></button>`;
+  return `<div class="hpq">
+    <p class="hpq-now">${esc(hpNowText(hp,effMax))}</p>
+    <input type="text" inputmode="numeric" class="hpq-amt" id="hpqAmt" placeholder="How much?" aria-label="How much?" autocomplete="off" enterkeyhint="done">
+    <div class="hpq-acts">${btn("hpqDmg","hpq-dmg","Damage")}${btn("hpqHeal","hpq-heal","Heal")}${btn("hpqTemp","hpq-temp","Temp")}</div>
+    <details class="hpq-set" id="hpqSet"><summary>Set exactly</summary>
+      <div class="hpq-grid">${box("hpqCur","Current",v(hp.cur))}${withMax?box("hpqMax",fx?"Base max":"Max",v(hp.max)):""}${box("hpqTmp","Temp",num(hp.temp)>0?v(hp.temp):"","none")}</div>
+      ${!withMax?`<p class="hint">Max HP is locked. Unlock Vitals with its pencil to change it.</p>`
+        :fx?`<p class="hint">Your maximum is ${esc(num(effMax))} with effects; this box is the base.</p>`:""}
+      <p class="hint hpq-msg" id="hpqMsg" role="status"></p>
+      <div class="m-actions"><button class="tbtn" id="hpqCancel" type="button">Cancel</button><button class="tbtn primary" id="hpqApply" type="button">Apply</button></div>
+    </details>
+  </div>`;
+}
+/* Its listeners bind to elements in its own HTML, which die with it (never to
+   #mBody, which outlives every window). */
+function openHPDialog(){
+  const withMax=!vitalsLocked(character);
+  openModal("Hit points",hpDialogHTML(character.hp,effMaxHP(),withMax));
+  const $=id=>document.getElementById(id),val=id=>{const e=$(id);return e?e.value:"";};
+  const amt=$("hpqAmt"),kinds={damage:"hpqDmg",heal:"hpqHeal",temp:"hpqTemp"};
+  const sync=()=>{
+    const n=hpAmount(amt&&amt.value),txt=n===null?null:hpQuickText(character.hp,effMaxHP(),n);
+    Object.keys(kinds).forEach(k=>{const b=$(kinds[k]),r=$(kinds[k]+"Res");if(b)b.disabled=n===null;if(r)r.textContent=txt?txt[k]:"";});
+  };
+  if(amt){amt.addEventListener("input",sync);
+    /* the keypad's Done is an Enter: put the keypad away so the three buttons
+       show, and apply nothing (which one is the player's tap) */
+    amt.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();amt.blur();}});}
+  Object.keys(kinds).forEach(k=>{const b=$(kinds[k]);if(b)b.addEventListener("click",()=>{
+    if(!hpQuickApply(k,amt&&amt.value))return;
+    renderHP();scheduleSave();closeModal();   /* no toast: the bar shows the result */
+  });});
+  const set=$("hpqSet"),sum=set&&set.querySelector("summary"),msg=$("hpqMsg"),go=$("hpqApply");
+  const check=()=>{
+    const p=hpSetParse({cur:val("hpqCur"),max:val("hpqMax"),temp:val("hpqTmp")},withMax);
+    if(go)go.disabled=p.bad.length>0;
+    if(msg)msg.textContent=p.bad.length?"Not a whole number: "+p.bad.join(", "):"";
+    return p;
+  };
+  ["hpqCur","hpqMax","hpqTmp"].forEach(id=>{const e=$(id);if(!e)return;
+    e.addEventListener("input",check);
+    e.addEventListener("keydown",ev=>{if(ev.key==="Enter"){ev.preventDefault();if(go&&!go.disabled)go.click();}});});
+  /* Opened by hand, inside the tap, so focusing Current can still bring up the
+     keypad (a focus after the <details> toggles itself is outside the gesture). */
+  if(sum)sum.addEventListener("click",e=>{e.preventDefault();set.open=!set.open;
+    if(set.open){const c=$("hpqCur");if(c){c.focus();c.select();}}});
+  const cancel=$("hpqCancel");if(cancel)cancel.addEventListener("click",closeModal);
+  if(go)go.addEventListener("click",()=>{
+    const p=check();if(p.bad.length)return;
+    const moved=hpSetApply(p.hp);
+    renderHP();if(moved)recompute();scheduleSave();closeModal();
+  });
+  sync();check();
+  /* On touch modalTakeFocus() focuses the dialog box; the amount box is what
+     the player came to type in, and focusing it inside the tap brings up the
+     digits-only keypad. */
+  if(amt)amt.focus();
 }
 function renderAll(){
   /* FIRST, before the [data-path] loop below: rebuilding blanks the six score

@@ -47,14 +47,15 @@
     <div class="sheet-grid">
       <!-- The rail: Vitals, dark by its own tokens (.rail in 30-sheet.css).
            The portrait came from the old Portrait card (that section is the
-           header now); the AC shield hangs off its bottom edge. -->
+           header now); the AC shield hangs off its bottom edge. Its two
+           buttons carry `ed`, so the Vitals pencil hides them (#115). -->
       <div class="card rail" data-note="vitals">
         <div class="label">Vitals <span class="grow"></span></div>
         <div class="rail-pic">
           <div class="portrait" id="portrait"><div class="ph">No portrait yet</div></div>
           <div class="rail-picbtns">
-            <button class="mini" id="btnPortrait" title="Add image" aria-label="Add a portrait image"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-            <button class="mini danger" id="btnPortraitDel" title="Remove image" aria-label="Remove the portrait image"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+            <button class="mini ed" id="btnPortrait" title="Add image" aria-label="Add a portrait image"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+            <button class="mini danger ed" id="btnPortraitDel" title="Remove image" aria-label="Remove the portrait image"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
           </div>
           <input type="file" id="filePortrait" accept="image/*" class="hidefile">
           <div class="rail-ac" title="Armor Class"><div class="big" data-stat="ac" id="acDisp">10</div><div class="n">AC</div></div>
@@ -78,22 +79,27 @@
         </div>
         <!-- HP as a bar: the three data-hp boxes sit inside it (tapping the
              numbers edits them), renderHP() sets #hpFill's width and band.
-             The padlock is an inline SVG, not U+1F512: that codepoint has no
-             text-presentation variant, so it would render as a colour emoji.
-             Both shackle paths ship here and CSS toggles them off
-             .hp-lock.open, so renderHP only does a classList.toggle. -->
+             Max is locked while Vitals is (its pencil, #115). On a
+             touchscreen the bar is one button that opens Hit points (#112).
+             #113: Current / Max sit in .hp-num, the middle of three grid
+             columns whose outer two are identical, so they stay centred;
+             where Temp can't fit beside them it moves beside the label
+             (hpPlaceTemp() measures; .hp-tplus is its "+").
+             − and + are drawn strokes, which centre where font glyphs sit high. -->
         <div class="rail-hp">
-          <div class="hp-lbl">Hit points <span class="grow"></span><span class="hp-maxlbl">Max <button class="hp-lock" data-hplock aria-pressed="true" aria-label="Lock or unlock Max HP" title="Max HP is locked — tap to edit it"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path class="sh-shut" d="M8.5 10.5V7a3.5 3.5 0 0 1 7 0v3.5"/><path class="sh-open" d="M8.5 10.5V7a3.5 3.5 0 0 1 6.9-.9"/></svg></button></span></div>
+          <div class="hp-lbl">Hit points</div>
           <div class="hp-row">
-            <button class="hp-btn" id="hpMinus" aria-label="Lose HP">−</button>
+            <button class="hp-btn" id="hpMinus" aria-label="Lose HP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></button>
             <div class="hp-bar">
               <i class="hp-fill" id="hpFill"></i>
-              <input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 to heal / -7 for damage, which spends temp HP first">
-              <span class="hp-sl" aria-hidden="true">/</span>
-              <input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — locked by default; unlock with the padlock beside the Max label, then type a number or +4 / -7 to adjust">
-              <span class="hp-tmp"><span aria-hidden="true">+</span><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="temp" aria-label="Temp HP — type a number, or +4 to grant / -7 for damage, which spills into current HP"></span>
+              <span class="hp-num">
+                <input type="text" inputmode="tel" data-hp="cur" id="hpCur" placeholder="0" aria-label="Current HP — type a number, or +4 to heal / -7 for damage, which spends temp HP first">
+                <span class="hp-sl" aria-hidden="true">/</span>
+                <input type="text" inputmode="tel" data-hp="max" id="hpMax" placeholder="0" aria-label="Base max HP — type a number, or +4 / -7 to adjust; locked while Vitals is locked">
+              </span>
+              <span class="hp-tmp"><span class="hp-tplus" aria-hidden="true">+</span><input type="text" inputmode="tel" data-hp="temp" id="hpTemp" placeholder="temp" aria-label="Temp HP — type a number, or +4 to grant / -7 for damage, which spills into current HP"><span class="hp-tmpw" aria-hidden="true">temp</span></span>
             </div>
-            <button class="hp-btn" id="hpPlus" aria-label="Gain HP">+</button>
+            <button class="hp-btn" id="hpPlus" aria-label="Gain HP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg></button>
           </div>
           <div class="hp-note" id="maxNote"></div>
         </div>

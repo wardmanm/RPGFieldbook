@@ -291,8 +291,11 @@ function renderNoteIcons(){
    Not `familiars` (#103 final review I-3): its card is hidden on the Sheet, so
    its pencil was out of reach, and the familiar's own window, where Edit and
    Delete now live, is not a list in play. A stored editHide.familiars is left
-   and ignored, as class and origin's are. */
-const EDIT_CARDS=["statuses","attacks","resources","features","spells","inventory","trackers","journal","secnotes","defences","proficiencies","party"];
+   and ignored, as class and origin's are.
+   `vitals` (#115) is the rail: its pencil hides the portrait's add and remove
+   buttons AND locks Max HP, so it is the one card whose pencil also locks a
+   number. vitalsLocked() reads it and setVitalsLocked() sets it from code. */
+const EDIT_CARDS=["statuses","attacks","resources","features","spells","inventory","trackers","journal","secnotes","defences","proficiencies","party","vitals"];
 function editHideMap(c){const m=c&&c.editHide;return (m&&typeof m==="object"&&!Array.isArray(m))?m:{};}
 /* `=== true`, so anything else a hand-edited file holds reads as shown. */
 function editHidden(c,k){return EDIT_CARDS.includes(k)&&editHideMap(c)[k]===true;}
@@ -302,8 +305,15 @@ function setEditHidden(c,k,hidden){
   if(hidden)c.editHide[k]=true;else delete c.editHide[k];
 }
 function editCardTitle(k){return k==="journal"?"Journal":k==="secnotes"?"Section Notes":noteTitle(noteDef(k));}
-/* The title is the action; the aria-label adds the card, as the combat toggle's does. */
-function editToggleText(k,hidden){const title=hidden?"Show edit buttons":"Hide edit buttons";return {title,label:title+" — "+editCardTitle(k)};}
+/* The title is the action; the aria-label adds the card, as the combat toggle's does.
+   Vitals says Lock/Unlock (#115), because it also locks Max HP, and its label
+   says what that does rather than naming the card. */
+function editToggleText(k,hidden){
+  if(k==="vitals")return hidden
+    ?{title:"Unlock Vitals",label:"Unlock Vitals — shows the portrait buttons and unlocks Max HP"}
+    :{title:"Lock Vitals",label:"Lock Vitals — hides the portrait buttons and locks Max HP"};
+  const title=hidden?"Show edit buttons":"Hide edit buttons";return {title,label:title+" — "+editCardTitle(k)};
+}
 function editToggleSVG(hidden){
   return `<svg class="edicon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>`+
     (hidden?`<path d="M3 3l18 18"/>`:"")+`</svg>`;
@@ -350,7 +360,21 @@ function toggleEditCard(k){
   const card=editCard(k);if(card)card.classList.toggle("ed-off",hidden);
   paintEditToggle(k,hidden);
   if(k==="journal")renderJournal();   // a blank page's line names the Edit button
+  if(k==="vitals")renderHP();         // #115: the Max box's readOnly follows the lock
   scheduleSave();
+}
+/* #115: the Max HP lock is the Vitals pencil. ONE place reads it — renderHP()'s
+   readOnly, applyHPInput()'s second layer, the Hit points window's Max row, the
+   level-up's memory of it (hpChoice) — and one place sets it from code: the
+   level-up and Add class unlock it so a new total can be typed, and the HP
+   step's Done puts it back as it was. A player's tap goes through
+   toggleEditCard() like any card's. */
+function vitalsLocked(c){return editHidden(c,"vitals");}
+function setVitalsLocked(locked){
+  setEditHidden(character,"vitals",!!locked);
+  const card=editCard("vitals");if(card)card.classList.toggle("ed-off",!!locked);
+  paintEditToggle("vitals",!!locked);
+  renderHP();
 }
 
 /* ================= the Section Notes card ================= */

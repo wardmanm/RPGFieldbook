@@ -227,6 +227,8 @@ Wanted, not yet done. Each needs work, not a source.
 - **Quivers and other ammunition containers have no capacity.** (#145) → [Ammunition](../features/ammunition.md)
 - **Rests do not move condition or spell clocks.** (#145) → [Conditions & concentration](../features/conditions-and-concentration.md)
 - **An item's Use cannot apply a timed condition.** (#147) → [Conditions & concentration](../features/conditions-and-concentration.md)
+- **The Hit points window has no Undo** (#175, a toast with Undo), and Coins don't have its "amount,
+  then Gain or Spend" shape yet (a 1.9.2 issue). → ledger L9441, and [Vitals & rest](../features/vitals-and-rest.md)
 - **What the level-up fanfare's final review left (#101).** None blocks a level-up:
   - A long level card at phone width (a multiclass add with a long note) puts the HP step and Done
     below the fold, so the player scrolls (#146). Pinning them to the card's foot is Mike's call, after his
@@ -495,3 +497,5 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — Removed: the glossary editor's Save replacing the whole entry; it keeps the fields it doesn't show. → ledger L9219, #136
 - 2026-11-06 — Removed four fixed in 1.9.1's Boot & storage branch: boot stopping where storage is blocked, a stale rules cache winning, no prompt for the boot autoload, and Remove's green line over a refused save. → ledger L9281, #142, #134, #135, #143
 - 2026-11-06 — Google Fonts in the template (#144) is fixed: the fonts are embedded. → ledger L9357, #144
+- 2026-11-06 — The Hit points window's deferrals: no Undo (#175), Coins' version for 1.9.2, the estimated 220px threshold. → ledger L9441, #112, #113
+- 2026-11-06 — The estimated 220px threshold went: Temp's place is a measured fit now. → ledger L9501, #113

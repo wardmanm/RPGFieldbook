@@ -122,8 +122,8 @@ marker, nothing from `character.classes`; a subclass link inside such a window c
 **Level up (#101).** From the class menu, or the level ring's "Level up ready"
 ([Vitals & rest](vitals-and-rest.md)). `doLevelUp(idx)` levels class `idx` when the menu passes
 one; with none (Level up ready) it asks which class when there are several. It takes a
-`levelSnapshot()`, runs `applyClassLevel()` for the new level (class and subclass) and the Max HP
-unlock exactly as before, then calls `openLevelUp(info)` in place of `runChoices()` — and so does
+`levelSnapshot()`, runs `applyClassLevel()` for the new level (class and subclass) and unlocks
+Vitals (`setVitalsLocked(false)`, so Max HP can be typed; #115) exactly as before, then calls `openLevelUp(info)` in place of `runChoices()` — and so does
 `addClass()` when the new class is a second class (not creation; see below). `openLevelUp` plays
 the scene (a rune circle draws itself, the level ring glows and ticks old → new, a flash, a LEVEL N
 banner with sparks — skipped under `prefers-reduced-motion`, or by a click, tap or Esc/Enter/Space,
@@ -139,7 +139,7 @@ plus Apply (live-checked by `luHPCheck()`, n dice for a second class arriving ab
 Take the average. **Done** (nothing left to choose) or **Continue to your choice ▸** both stay
 disabled until HP is set (`luSetHP()`); a value that fails takes back any earlier one and disables
 them again, so the card never commits a number it no longer shows. Either commits it (`commitHPChoice()`, which raises Max and
-Current and puts the lock back only if it was locked) and Continue then opens the usual choice
+Current and locks Vitals again only if it was locked) and Continue then opens the usual choice
 window, `runChoices(cls, choices, [], pending)` — no `notes`, since the card already showed them,
 and no `hp` block, since the card already asked for it. **Closing the card early** (`luDismissed()`,
 wired through `setDismissGuard()` directly in `showLevelUpCard()`, with `LU_HP_CLOSE`; the choice
@@ -358,7 +358,7 @@ picks) passes the queue straight on.
 **Dismissing.** Closing wipes `#mBody` and a chooser cannot be reopened. `armChoiceDismissGuard()`
 registers a guard (via `setDismissGuard()`) that ✕, Escape and a backdrop click (only when
 Settings → Appearance allows it, #106) all consult through `dismissModal()`: it warns that picks will be discarded, or asks a milder question when only hit
-points are at stake (`hpPending()`), since Max is unlocked. The guard also carries the window's
+points are at stake (`hpPending()`), since Vitals, and so Max, is unlocked. The guard also carries the window's
 `pending` as `then`, so a dismissed window still opens the ones queued behind it: dismissing costs
 that window's own picks, never the starting equipment of a class already on the sheet.
 `openModal()` and `closeModal()` clear the guard and `then`, so an ordinary form's Escape stays
@@ -396,8 +396,9 @@ they are built: [Converter](../data/converter.md).
 - **Every way on from a level-up checks its character.** `showLevelUpCard()`, `luFinish()` and
   `luDismissed()` go through `_lu.id`, and a new path that replaces `character` calls
   `luAbandon()` first, as `loadCharById()`, `newCharacter()`, `finishImport()` and `showHome()` do.
-- **`hpChoice()` before the unlock.** `_wasLocked` is read when the choice is built; `doLevelUp()`
-  then clears `hp.locked` as the fallback for a dismissed modal.
+- **`hpChoice()` before the unlock.** `_wasLocked` is read (`vitalsLocked()`) when the choice is
+  built; `doLevelUp()` and `addClass()` then unlock Vitals through `setVitalsLocked(false)` as the
+  fallback for a dismissed modal, and `commitHPChoice()` is the only relock.
 - **`commitChoices()` passes `cost` into `addFeatureFromDef()`.** A picked maneuver's Use button
   spends a Superiority Die only because the cost survives this hop.
 - **One choice window at a time, and the queue travels with it** (`runChoices(…, pending)` →
@@ -608,3 +609,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-10-30 — Corrected: `NO_RULES_HINT` points to Settings → Extensions, not Settings → Rules (pre-release 1.9.0, step 1).
 - 2026-11-04 — A background with no ability scores or feat (seven Humblewood ones) previews and adds without empty pickers, and Add no longer refuses it; its info card drops the empty lines. → ledger L8474, #159
 - 2026-11-04 — Undo on a second class's level-up card restores the sheet from before Add class: `addClass()` takes the Undo copy, as `doLevelUp()` does. → ledger L8893, #181
+- 2026-11-06 — A level-up and Add class unlock Vitals (its pencil is the Max HP lock now) and the HP step puts it back as it was, through `setVitalsLocked()`; `LU_HP_CLOSE` says Vitals is unlocked. → ledger L9441, #115

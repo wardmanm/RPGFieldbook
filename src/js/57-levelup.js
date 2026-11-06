@@ -88,7 +88,7 @@ function luHPCheck(ch,raw){
    nothing to choose falls through to runExtraChoices(pending) as before. */
 let _lu=null;
 function luState(){return _lu;}
-const LU_HP_CLOSE="Close without adding this level's hit points?\n\nMax HP is unlocked, so you can type the new total yourself.";
+const LU_HP_CLOSE="Close without adding this level's hit points?\n\nVitals is unlocked, so you can type the new Max HP yourself.";
 const LU_ICON={feature:"✦",choice:"✧",resource:"◆",slot:"◇",pb:"↑",note:"✎"};
 /* A level-up's notes are all one class's. A second class added above level 1
    brings every level's spell note, and each later one supersedes the one

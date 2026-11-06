@@ -89,17 +89,18 @@ function hpGainText(ch,raw,conMod,maxNow,note){
    rollHitDie(), not level1HP()'s bare score: this number is spent the moment it
    is computed and never re-derived, and an ASI lives in an effect, not the score. */
 function conModNow(){return Math.floor((abilFinal("con",contributions())-10)/2);}
-/* Called BEFORE the level-up unlocks the box, so it can remember whether to
-   lock it again once the app has written the new total. */
+/* Called BEFORE the level-up unlocks Vitals, so it can remember whether to
+   lock it again once the app has written the new total (#115: the lock is the
+   Vitals pencil). */
 function hpChoice(d,levels,L,cls,hint){
-  const ch={type:"hp",die:hitDieMax(d),levels:Math.max(1,num(levels)||1),cls,_level:L,_wasLocked:character.hp.locked!==false};
+  const ch={type:"hp",die:hitDieMax(d),levels:Math.max(1,num(levels)||1),cls,_level:L,_wasLocked:vitalsLocked(character)};
   if(hint)ch.hint=hint;
   return ch;
 }
 /* Returns the hit points added, 0 if none. A class with no hit die in the
    loaded rules has no fixed value to fall back on, so blank there means "I'll
-   type it into Max myself" — and the box the level-up unlocked stays unlocked
-   for exactly that. */
+   type it into Max myself" — and the Vitals the level-up unlocked stays
+   unlocked for exactly that. */
 function commitHPChoice(ch,raw){
   const die=num(ch.die),blank=String(raw==null?"":raw).trim()==="";
   if(!die&&blank)return 0;
@@ -108,7 +109,7 @@ function commitHPChoice(ch,raw){
   const was=num(character.hp.max);
   character.hp.max=was+gain;
   character.hp.cur=num(character.hp.cur)+gain;
-  if(ch._wasLocked)character.hp.locked=true;
+  if(ch._wasLocked)setVitalsLocked(true);
   clampHP();renderHP();
   toast(`Max HP ${was} → ${was+gain} (+${gain})`);
   return gain;
@@ -227,12 +228,12 @@ function addClass(name,lvl){
      level 1 is seeded (the full die + CON), and a first class that starts above
      level 1 then asks for levels 2..N the same way — but only on top of a seed,
      never on a Max the player already typed. hpChoice() before the unlock: it
-     remembers the lock. */
+     remembers the lock (the Vitals pencil, #115). */
   let hp=null;
-  if(!first){hp=hpChoice(d,lvl,lvl,name);character.hp.locked=false;renderHP();}
+  if(!first){hp=hpChoice(d,lvl,lvl,name);setVitalsLocked(false);}
   else if(seedLevel1HP(d)&&lvl>1){
     choices=[hpChoice(d,lvl-1,lvl,name,`Level 1 is already in Max HP: the full ${d.hitDie} plus CON. This is levels 2–${lvl}.`)].concat(choices);
-    character.hp.locked=false;renderHP();
+    setVitalsLocked(false);
   }
   const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
@@ -290,11 +291,11 @@ function doLevelUp(idx){
     const res=applyClassLevel(entry,d,newL);
     const hp=hpChoice(d,1,newL,entry.name);   /* before the unlock below: it remembers the lock */
     /* Levelling is the one moment Max HP legitimately changes. The HP step in
-       the modal writes the new total and puts the lock back as it was; the box
-       is opened here anyway as the fallback, so a player who dismisses the
-       modal can still type it rather than fighting a padlock.
-       renderHP explicitly, because recompute() does not call it. */
-    character.hp.locked=false;renderHP();
+       the modal writes the new total and puts the lock back as it was; Vitals
+       is unlocked here anyway as the fallback, so a player who dismisses the
+       modal can still type it rather than hunting for the pencil.
+       setVitalsLocked() calls renderHP, which recompute() does not. */
+    setVitalsLocked(false);
     character.level=totalLevel();const li=document.querySelector('[data-path="character.level"]');if(li)li.value=character.level;
     renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
     openLevelUp({cls:entry.name,from:newL-1,to:newL,charLevel:character.level,before,after:levelSnapshot(),
