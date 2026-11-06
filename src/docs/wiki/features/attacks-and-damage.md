@@ -35,7 +35,8 @@ ranged. Which effects (`atkList`, `dmgList`, returned beside the sums):
 - **A spell's row**: `spellFxList()`, the same set the Spellcasting card and the cast window take
   ([Spells](spells.md)): `spell.attack`, plus the generic effects ticked Include spells
   (`spells:true`), `.melee`/`.ranged` ones only on an attack spell of that range. A save row has no
-  range, so only the "all attacks" damage ones. An unticked generic effect is for weapons only.
+  range, so only the "all attacks" damage ones; a spell with no main damage dice takes no damage
+  bonus, having nothing to add it to. An unticked generic effect is for weapons only.
   The row keeps its own ability part, so a row whose `ability` is set shows it even with no
   spellcasting ability chosen (#74).
 

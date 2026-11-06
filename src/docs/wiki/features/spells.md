@@ -82,7 +82,8 @@ whose to-hit and DC come from `spellAtkBonus(c, kind)` and `spellDC()`, and whos
 effect editor's tick): "all attacks", and the spell's own range when `kind` is known. Damage: the
 ticked generic damage effects, likewise. The card has no range, so it takes only the "all attacks"
 ones; the cast window and the spell's attack row know the range and take the melee- or ranged-only
-ones too. A save spell has no range. An unticked generic effect is for weapons only, so Archery
+ones too. A save spell has no range, and a spell with no main damage dice (Charm Person) takes no
+damage bonus, on its row or in the cast window. An unticked generic effect is for weapons only, so Archery
 (`attack.ranged` +2, ranged weapon attacks) reaches a bow and not Fire Bolt. `spellAtkFx()` and
 `spellDmgFx()` are the sums; the card's mark and breakdown, the cast window, a spell's row, its
 breakdown and print all read the list.

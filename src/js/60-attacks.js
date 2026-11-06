@@ -12,7 +12,9 @@ function attackNumbers(a){
      melee/ranged-only effect. The row keeps its own ability part (#74). */
   const isSpell=a.source==="spell", sk=a.save?null:kind;
   const atkList=isSpell?spellFxList(c,"attack",sk):c.filter(x=>x.target==="attack"||x.target==="attack."+kind);
-  const dmgList=isSpell?spellFxList(c,"damage",sk):c.filter(x=>x.target==="damage"||x.target==="damage."+kind);
+  /* a spell's damage bonus goes on its main dice; a spell with none deals no
+     damage to add it to (Charm Person), so it takes none */
+  const dmgList=isSpell?(String(a.damageDice||"").trim()?spellFxList(c,"damage",sk):[]):c.filter(x=>x.target==="damage"||x.target==="damage."+kind);
   const sum=l=>l.reduce((t,x)=>t+x.value,0);
   const atkFx=sum(atkList), dmgFx=sum(dmgList);
   /* any one penalty among them marks the cell red (#89) */
@@ -241,7 +243,7 @@ function promptSpellAttack(sp,atLevel){
   else if(sp.atkType==="save"){const dc=spellDC(c);body=`<p><b>Save DC:</b> ${dc!=null?dc:"—"} ${esc((sp.saveAbility||"").toUpperCase())}</p>`;}
   /* the same line the attack row shows, extras and all — one formatter, so the
      dialog cannot promise different damage from the sheet behind it */
-  const dmg=attackDamageStr({damageDice:sp.dice,damageType:sp.damageType,extraDamage:sp.extraDamage},spellDmgFx(c,isAtk?kind:null));
+  const dmg=attackDamageStr({damageDice:sp.dice,damageType:sp.damageType,extraDamage:sp.extraDamage},String(sp.dice||"").trim()?spellDmgFx(c,isAtk?kind:null):0);
   if(dmg)body+=`<p><b>Damage:</b> ${esc(dmg)}</p>`;
   body+=`<p class="hint">Cast at level ${esc(atLevel||sp.level)}. Roll the dice at your table.</p><div class="m-actions"><button class="tbtn primary" id="okAtk">OK</button></div>`;
   openModal("Cast "+sp.name,body);const b=document.getElementById("okAtk");if(b)b.addEventListener("click",closeModal);

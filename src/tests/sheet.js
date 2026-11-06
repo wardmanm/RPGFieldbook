@@ -8743,6 +8743,29 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = X.blankChar();
 }
 
+/* ---- #129 final review: a spell that deals no damage takes no damage bonus ----
+   A ticked damage effect counts for "every spell that deals damage" (spec
+   decision 12). Charm Person deals none, so its cast window must not read
+   "Damage: +2"; nor may an attack spell row with no damage dice read "+2". */
+{
+  const c = X.blankChar(); X.character = c; c.level = 1; c.spellAbility = 'int';
+  Object.assign(c.abilities, {str: 10, dex: 10, con: 10, int: 16, wis: 10, cha: 10});
+  c.inventory.push({id: 'dc', name: 'Searing Charm', equipped: true, effects: [{target: 'damage', value: 2, spells: true}]});
+  const charm = {id: 'scp', name: 'Charm Person', level: 1, atkType: 'save', saveAbility: 'wis', dice: '', damageType: ''};
+  const b = shownModal(() => X.promptSpellAttack(charm, 1)).b;
+  ck('#129 a save spell that deals no damage: no Damage line in the cast window', /Save DC:/.test(b) && !/Damage:/.test(b), b.slice(0, 200));
+  const touch = {id: 'stt', name: 'Pointing Touch', level: 0, atkType: 'attack', atkKind: 'melee', dice: '', damageType: ''};
+  const t = shownModal(() => X.promptSpellAttack(touch, 0)).b;
+  ck('#129 ...nor for an attack spell with no damage dice', /Spell attack:/.test(t) && !/Damage:/.test(t), t.slice(0, 200));
+  c.attacks.push({id: 'pt', name: 'Pointing Touch', kind: 'melee', ability: 'int', proficient: true, addAbilityDamage: false, atkMisc: '', dmgMisc: '',
+                  damageDice: '', damageType: '', notes: '', spellId: 'stt', source: 'spell'});
+  const n = X.attackNumbers(c.attacks[0]);
+  ck('#129 ...and its attack row takes no damage bonus: nothing to add it to', n.dmgFx === 0 && n.dmgBonus === 0 && X.attackDamageStr(c.attacks[0], n.dmgBonus) === '', n);
+  c.attacks[0].damageDice = '1d4';
+  ck('#129 ...give it dice and the ticked +2 is back', X.attackNumbers(c.attacks[0]).dmgBonus === 2, X.attackNumbers(c.attacks[0]));
+  X.character = X.blankChar();
+}
+
 /* ---- end of the #130 · #129 · #132 block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window

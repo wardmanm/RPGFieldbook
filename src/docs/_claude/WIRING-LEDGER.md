@@ -9561,7 +9561,9 @@ damage takes: `spell.attack`, plus the six generic targets' effects ticked Inclu
 (`spells:true`; melee- or ranged-only ones where the spell's range is known). The Spellcasting
 card, `promptSpellAttack()`, a spell's row in `attackNumbers()` (which keeps its own ability part,
 #74), print, the marks and both breakdowns read it, so they agree. A weapon row is unchanged. A
-save spell's row and cast window now show its ticked damage, marked. The editors' rows get the
+save spell's row and cast window now show its ticked damage, marked; a spell with no main damage
+dice takes no damage bonus (the final review caught Charm Person's cast window reading "Damage:
++2" with a ticked damage effect). The editors' rows get the
 tick (`fxRow()`), shown only for the six targets through one delegated `change` listener on the
 modal (`fxRowSync()`); `collectFx()` writes `spells:true` only for a ticked one. The copy paths
 already carried the flag (effect objects copied whole); checks pin each. Pack data is unchanged:
@@ -9577,7 +9579,9 @@ is the fix: Archery is ranged weapon attacks.
 after the async chain, whose first function swaps `ctx` globals before its first `await`. The
 spec's link to the Vitals spec is a backticked name until that branch merges (the docs suite
 checks dated links). The window is titled "Armor Class". `--rail-flat`: default light `#d8a544`,
-default dark `#efe6d0` (its rail line is already gold), classic `#dcae4e`.
+default dark `#efe6d0` (its rail line is already gold), classic `#dcae4e`. The whole-branch
+review's screenshot finding stands open: this run had no browser by instruction, so the shots and
+drives are listed for the owner's pass and nobody claims the UI works until they are taken.
 
 **Phase 2, after rebasing on Vitals & HP and Grants redraw:** the AC window's switch and box
 follow `vitalsLocked()` (the Vitals pencil's label and the Vitals wiki and smoke line with it), and
