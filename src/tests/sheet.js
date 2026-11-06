@@ -8425,13 +8425,13 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#130 Flat: the switch on Flat, and Your AC in a box', /data-acmode="flat"[^>]*class="on"/.test(m.b) && /Your AC/.test(m.b)
      && /<input id="acFlat"[^>]*inputmode="numeric"[^>]*value="16"/.test(m.b), m.b.slice(0, 900));
   const struck = (/<s>([^<]*)<\/s>/.exec(m.b) || [])[1] || '';
-  ck('#130 ...a struck line naming what no longer adds', struck === 'Chain Mail, Shield, Ring of Protection', struck);
+  ck('#130 ...a struck line naming what no longer adds', struck === 'Chain Mail, Shield, Ring of Protection' && /<\/s> don't add: your AC already counts them\./.test(m.b), struck);
   ck('#130 ...the status that still adds', rowRe('Shield (spell)', '+5').test(m.b), m.b);
   ck('#130 ...no line for the ring outside the struck one', !/Ring of Protection/.test(m.b.replace(/<s>[^<]*<\/s>/, '')), m.b);
   ck('#130 ...and the total: 16 + 5 = 21', totalOf(m.b) === 21 && painted(['acDisp']).acDisp === '21', totalOf(m.b));
   c.inventory = []; c.statuses = [];
   m = shownModal(() => X.openStatBreakdown('ac'));
-  ck('#130 Flat with nothing worn: the struck line names the kinds', /<s>Armour, shields, items and features<\/s>/.test(m.b), m.b);
+  ck('#130 Flat with nothing worn: the struck line names the kinds, in the app\'s spelling', /<s>Armor, shields, items and features<\/s> don't add/.test(m.b), m.b);
 
   c = fresh(); armour(c); spell(c);
   ck('#130 switching to Flat with a blank box fills it with what the sheet showed, less what still adds: 19',
@@ -8836,6 +8836,67 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   c.inventory = [{id: 'pl', name: 'Pouch', qty: 1, description: '', effects: [], equipped: false, uses: {max: 2, per: 'none', used: 0}}];
   d = drive(c.inventory[0], '2');
   ck('#132 a plain number: no hint, still a number, its reset kept', !/iUsesHint/.test(d.body) && !!d.saved && JSON.stringify(d.saved.uses) === '{"max":2,"per":"none","used":0}', d.saved && d.saved.uses);
+  X.character = X.blankChar();
+}
+
+/* ---- #130 · #129 final-review minors, fixed before merge ---- */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const setACMode = fn('setACMode'), acFlatValue = fn('acFlatValue'), acFlatSeed = fn('acFlatSeed');
+  const fresh = () => { const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1; return c; };
+
+  /* the AC window's own wiring, driven: the switch's click, the box's change
+     (refused: the last number back; taken: the total repainted), and Escape */
+  const win = () => {
+    const realB = ctx.document.getElementById, realO = ctx.openModal, on = {}, bodies = [];
+    const els = {acTotal: {textContent: ''}, acFlat: {value: ''}, acMode: {}};
+    Object.keys(els).forEach(id => { els[id].addEventListener = (t, f) => { on[id + ':' + t] = f; }; });
+    ctx.openModal = (t, b) => { bodies.push(String(b)); const v = /<input id="acFlat"[^>]*value="(\d*)"/.exec(b); els.acFlat.value = v ? v[1] : ''; };
+    ctx.document.getElementById = id => els[id] || realB(id);
+    return {on, els, bodies, done: () => { ctx.document.getElementById = realB; ctx.openModal = realO; }};
+  };
+  let c = fresh(); c.acMode = 'calc'; c.ac = '';
+  let w = win();
+  try {
+    ctx.openACWindow();
+    w.on['acMode:click']({target: {closest: () => ({dataset: {acmode: 'flat'}})}});
+    ck('#130 driven: tapping Flat switches and redraws the window on Flat',
+       c.acMode === 'flat' && w.bodies.length === 2 && /data-acmode="flat"[^>]*class="on"/.test(w.bodies[1]) && w.els.acFlat.value === '12', [c.acMode, w.bodies.length, w.els.acFlat.value]);
+    w.els.acFlat.value = 'abc'; w.on['acFlat:change']();
+    ck('#130 driven: junk in the box is refused and the last number comes back', c.ac === 12 && w.els.acFlat.value === '12', [c.ac, w.els.acFlat.value]);
+    w.els.acFlat.value = '17'; w.on['acFlat:change']();
+    ck('#130 driven: a whole number is taken and the total repainted', c.ac === 17 && w.els.acTotal.textContent === '17', [c.ac, w.els.acTotal.textContent]);
+    w.els.acFlat.value = '19';                     /* typed, not yet committed by change */
+    ctx.dismissModal();                            /* Escape, x and the backdrop all come here */
+    ck('#130 driven: Escape keeps a number typed but not yet committed', c.ac === 19 && painted(['acDisp']).acDisp === '19', c.ac);
+  } finally { w.done(); }
+  w = win();
+  try {
+    ctx.openACWindow(); w.els.acFlat.value = 'xyz'; ctx.dismissModal();
+    ck('#130 driven: Escape with junk in the box closes and keeps the last number', c.ac === 19, c.ac);
+    X.setVitalsLocked(true);
+    ctx.openACWindow(); w.els.acFlat.value = '25'; ctx.dismissModal();
+    ck('#130 driven: Escape while Vitals is locked changes nothing', c.ac === 19, c.ac);
+    X.setVitalsLocked(false);
+  } finally { w.done(); X.setVitalsLocked(false); }
+
+  /* a Flat seed never goes below 0, so switching to Flat always takes */
+  c = fresh();
+  c.inventory = [{id: 'cr', name: 'Cursed Plate', equipped: true, effects: [{target: 'ac', value: -20}]}];
+  ck('#130 the Flat seed is never negative: 12 - 20 gives 0', acFlatSeed(X.contributions()) === 0, acFlatSeed(X.contributions()));
+  ck('#130 ...so Flat takes, with a number to change', setACMode('flat') === true && ctx.acIsFlat(c) === true && acFlatValue(c.ac) === 0, [c.acMode, c.ac]);
+
+  /* the struck line's words */
+  c = fresh(); c.acMode = 'flat'; c.ac = 14;
+  c.inventory = [{id: 'sh', name: 'Shield', equipped: true, armor: {kind: 'shield', bonus: 2}}];
+  let m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 one name: "doesn\'t add"', /<s>Shield<\/s> doesn't add: your AC already counts it\./.test(m.b), (m.b.match(/<s>.*?<\/p>/) || [''])[0]);
+
+  /* a ticked effect's chip says it counts for spells */
+  const chip = e => ctx.fxChips([e]);
+  ck('#129 a ticked effect\'s chip says it includes spells', /To-hit \(all attacks\) \+1 · includes spells</.test(chip({target: 'attack', value: 1, spells: true})), chip({target: 'attack', value: 1, spells: true}));
+  ck('#129 ...an unticked one does not', !/spells/.test(chip({target: 'attack', value: 1})) && !/spells/.test(chip({target: 'ac', value: 1, spells: true})),
+     [chip({target: 'attack', value: 1}), chip({target: 'ac', value: 1, spells: true})]);
   X.character = X.blankChar();
 }
 

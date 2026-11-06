@@ -309,7 +309,7 @@ function acWindowHTML(c){
     b+=`<div class="field"><label class="f" for="acFlat">Your AC</label><input id="acFlat" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${esc(acFlatValue(character.ac))}"${dis}></div>`;
     const gone=[];const put=n=>{if(n&&!gone.includes(n))gone.push(n);};
     put(AB.bodyName);put(AB.shieldName);c.filter(x=>x.target==="ac"&&(x.kind==="item"||x.kind==="feature")).forEach(x=>put(x.source));
-    b+=`<p class="hint" style="margin:0 0 6px"><s>${esc(gone.length?gone.join(", "):"Armour, shields, items and features")}</s> don't add: your AC already counts them.</p>`;
+    b+=`<p class="hint" style="margin:0 0 6px"><s>${esc(gone.length?gone.join(", "):"Armor, shields, items and features")}</s> ${gone.length===1?"doesn't add: your AC already counts it.":"don't add: your AC already counts them."}</p>`;
   }else{
     const cap=AB.hasArmor?((AB.body.dexCap==null)?AB.dex:Math.min(AB.dex,AB.body.dexCap)):AB.dex;
     b+=`<p style="margin-bottom:6px">${esc(AB.hasArmor?`Armor ${AB.body.base} + DEX ${fmt(cap)}`:`10 + DEX ${fmt(AB.dex)}`)}</p>`;
@@ -322,6 +322,9 @@ function acWindowHTML(c){
 }
 function openACWindow(){
   openModal("Armor Class",acWindowHTML(contributions()));
+  /* Escape (and ×) closes before the box's change fires, so a number typed but
+     not yet committed is committed here; anything else closes as it is */
+  setDismissGuard(()=>{const b=document.getElementById("acFlat");if(b&&acFlatValue(b.value)!=null&&acFlatValue(b.value)!==acFlatValue(character.ac))setACFlat(b.value);return null;});
   const seg=document.getElementById("acMode");
   if(seg)seg.addEventListener("click",e=>{const t=e.target.closest("[data-acmode]");if(t&&setACMode(t.dataset.acmode))openACWindow();});
   const box=document.getElementById("acFlat");

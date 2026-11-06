@@ -195,5 +195,6 @@ function acIsFlat(ch){return !!ch&&ch.acMode==="flat"&&acFlatValue(ch.ac)!=null;
 function acEffects(c){const flat=acIsFlat(character);return c.filter(x=>x.target==="ac"&&(!flat||x.kind==="status"||x.kind==="familiar"));}
 function acTotal(c){c=c||contributions();return (acIsFlat(character)?acFlatValue(character.ac):armorAC(c).base)+acEffects(c).reduce((s,x)=>s+x.value,0);}
 /* What a blank Flat box starts at: the Calculated AC less what still adds in
-   Flat, so switching does not move the number */
-function acFlatSeed(c){return armorAC(c).base+c.filter(x=>x.target==="ac"&&(x.kind==="item"||x.kind==="feature")).reduce((s,x)=>s+x.value,0);}
+   Flat, so switching does not move the number. Never below 0, which
+   acFlatValue() would refuse, leaving the switch on Flat with no Flat AC. */
+function acFlatSeed(c){return Math.max(0,armorAC(c).base+c.filter(x=>x.target==="ac"&&(x.kind==="item"||x.kind==="feature")).reduce((s,x)=>s+x.value,0));}

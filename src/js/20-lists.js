@@ -1,7 +1,9 @@
 /* ================= structured lists ================= */
 function fxChips(effects){
   if(!effects||!effects.length)return "";
-  return `<div class="fx">`+effects.map(e=>`<span class="chip">${esc(FX_LABEL[e.target]||e.target)} ${fmt(num(e.value))}</span>`).join("")+`</div>`;
+  /* a to-hit or damage effect ticked Include spells says so (#129): otherwise
+     "To-hit (all attacks)" reads the same counted for spells or not */
+  return `<div class="fx">`+effects.map(e=>`<span class="chip">${esc(FX_LABEL[e.target]||e.target)} ${fmt(num(e.value))}${e.spells===true&&fxSpellable(e.target)?" · includes spells":""}</span>`).join("")+`</div>`;
 }
 /* The group a feature files under is its SOURCE (#98) — the label on its row,
    which the player can edit — and only when it has none, where it came from.

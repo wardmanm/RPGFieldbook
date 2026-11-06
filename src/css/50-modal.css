@@ -50,9 +50,9 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .fxrow{display:grid;grid-template-columns:1fr 74px 34px;gap:7px;margin-bottom:7px;align-items:center}
 .fxrow select,.fxrow input{min-height:38px;padding:6px 8px;font-size:14px}
 /* #129: the "Include spells" tick, on its own line under a to-hit or damage row */
-.fxrow .fx-sp{grid-column:1/-1;display:flex;align-items:center;gap:6px;margin:-2px 0 2px;font-family:var(--head);font-size:12px;letter-spacing:.03em;color:var(--ink-soft);cursor:pointer}
+.fxrow .fx-sp{grid-column:1/-1;display:flex;align-items:center;gap:8px;min-height:32px;margin:-4px 0 0;font-family:var(--head);font-size:12px;letter-spacing:.03em;color:var(--ink-soft);cursor:pointer}
 .fxrow .fx-sp[hidden]{display:none}
-.fxrow .fx-sp input{width:auto;min-height:auto;margin:0;padding:0;flex:none;accent-color:var(--accent)}
+.fxrow .fx-sp input{width:18px;height:18px;min-height:auto;margin:0;padding:0;flex:none;accent-color:var(--accent)}
 .fx-add{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
   color:var(--accent-2);background:none;border:2px dashed var(--hair);border-radius:7px;padding:8px;cursor:pointer;width:100%}
 .fx-add:hover{border-color:var(--accent-2)}
