@@ -9133,7 +9133,7 @@ tracker form already reads its stored copy for the same reason.
 **Tests.** `sheet.js` 2726 → 2749: `t136GlossSave()` (23 checks), with a pack keyword copied into
 the character, a hand-made entry with unknown fields, an image entry switched to Text and back, an
 aliased entry, a save→load round trip, an Undo swap while the form is open, a refused blank term
-and Add. 9 failed before the fix, all on dropped fields; the other 14 guard what must not change.
+and Add. 8 failed before the fix, all on dropped fields; the other 15 guard what must not change.
 It is a function at the end of the file, added to the closing `.then()` chain. A synchronous
 block after that line would run while `t118EndToEnd()` is suspended with `openModal`, the timers
 and the character swapped, and Save's `scheduleSave()` calls `luMaybeSettle()`.
