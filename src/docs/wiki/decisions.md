@@ -255,6 +255,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How a weapon finds its ammo** — By kind, the player picks the stack
 - **Recovery** — One of four rules the player chooses per character (#104); End combat recovers on its own, with an Undo, plus a Recover button on the row
 - **Counts that give nothing back at End combat (#104)** — Retired with the rest, never kept for a later change of rule
+- **What End combat's Undo recovery means (#170)** — The table says that ammunition is gone: what came back goes, the fired ammunition stays spent, nothing back on record
 - **Bundles** — Unpack on arrival
 - **A stack at 0** — Removed, like a potion; recovery recreates it from a copy
 - **The 2014 duplicates (Crossbow Bolt, Blowgun Needle, their bundles, the 2014 Net)** — Stop shipping them

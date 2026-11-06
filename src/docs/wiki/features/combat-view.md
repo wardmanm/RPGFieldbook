@@ -280,9 +280,11 @@ in `endCombatOpen`; the first time every row is folded.
 - **Ammunition** (when anything was fired since Start): per kind, `ammoLogTitle()`'s own words,
   "Arrows: 9 fired, 4 recovered", read from the log line's `meta` so an Undo shows at once; under
   None, "Arrows: 9 fired, none come back (recovery: None)". **Undo recovery** (`endFightUndoAmmo()`)
-  runs the quiet `undoRecoveryTap()` that `applyAmmoRecovery()` handed back — the same reversal the
-  toast's Undo did, log lines corrected — once, then reads "Recovery undone". Offered only while the
-  window is open, and only when something came back.
+  runs the quiet `undoRecoveryTap()` that `applyAmmoRecovery()` handed back once, then reads
+  "Recovery undone": what came back goes, the fired ammunition stays spent, and nothing goes back on
+  record (`undoEndCombatRecovery()`, #170), so the next fight starts from nothing fired; the line is
+  corrected ("Arrows: 9 fired, 0 recovered"). Offered only while the window is open, and only when
+  something came back.
 - **Experience** (only when `advancementOf(c)==="xp"`): status "XP 6,350 / 6,500", or "+112 XP" once
   something is typed. The sheet's XP is read with its own `xpNumber()` (`endFightXpBase()`, Ruling 21):
   blank is 0, and text it can't read ("6350 xp", "lots") is never overwritten — the row shows "Your
@@ -441,6 +443,10 @@ XP; the fight itself had already ended and saved.
   toast. With no toast of its own any more, the Fire toast stayed up over the End of combat window and
   its Undo took a shot back into an ended fight: 8 spent shots came back on record, to be recovered a
   second time. Fixed at both ends (above, and [Ammunition](ammunition.md)). → L7921
+- **Undo recovery brought the fight back next time (#170).** The window's Undo put every shot End
+  combat had settled back on record, so the next End combat, with nothing fired, reported "Arrows:
+  4 fired, 2 recovered" and added the arrows again. It leaves them spent now
+  ([Ammunition](ammunition.md)). → L9101
 
 ## Decisions
 
@@ -537,3 +543,4 @@ Settled in the [End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-d
 - 2026-11-04 — The strip keeps the actor centred, with who has acted on its left and who is to come on its right, no sideways scroll, the overflow under +N at each end, and ◂ Prev to step back a turn. → ledger L8554, #165
 - 2026-11-04 — The fight header is three rows: the title and round centred between the arrows, the strip, and Combatants ▾ with End combat centred at the foot; the +N never shrinks to a sliver on a phone; the open table matches the header's width. → ledger L8605, #165
 - 2026-11-04 — Loot opens the trade window as Loot, You get alone (no You give, no switches), with Take loot; the row reads "Open loot…", then "Looted from …". → ledger L8645, #166
+- 2026-11-06 — The window's Undo recovery takes back what came back and leaves the fired ammunition spent, so the next fight starts from nothing fired. → ledger L9101, #170

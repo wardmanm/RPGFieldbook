@@ -31,3 +31,6 @@ Bullets below this line — leave the heading in place.
 - Extensions can install and update packs from a private GitHub repo, using a link and a token the repo's
   owner sends you; paste the link into Settings → Extensions → Sources. A new guide in the app's docs shows
   owners how to set one up for their table.
+- Undo recovery in the End of combat window no longer brings your ammunition back in the next fight. It
+  takes back the arrows that came back and leaves the ones you fired spent, so the next fight starts with
+  nothing fired. If your DM lets you find some, add them to the stack by hand.

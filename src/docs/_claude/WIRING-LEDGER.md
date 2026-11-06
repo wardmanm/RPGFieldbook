@@ -9097,3 +9097,44 @@ and into waves by dependency. Mike's decisions on it: **1.9.1 is cut after wave 
 moves to 1.9.2**, not yet scoped. The 22 issues of waves 4–5 were relabelled `1.9.1` → `1.9.2`
 (a new label); all stay on the v1.9.0 milestone, which holds every 1.9.x issue. 1.9.1 is now 32
 issues: the 24 P1s and 8 P2s that ride along in the same functions.
+
+## #170: End combat's Undo recovery leaves the fired ammunition spent (Mike, 2026-11-06)
+
+**The bug.** End combat recovers ammunition and the End of combat window offers **Undo recovery**.
+It took the recovered arrows back off the stack, but `undoRecoveryTap()` ran `undoRecovery()`,
+whose last step puts every `ammoSpent` entry the recovery cleared back on record. End combat had
+settled those shots, so the next fight's End combat, with nothing fired, logged "Arrows: 4 fired, 2
+recovered" and added arrows the character never had. Confirmed with a throwaway run of the real
+source before the fix (fire 4 of 20, End combat 18, Undo 16 with `ammoSpent.s1 = {n:4}`, the next
+End combat 18).
+
+**Mike's call:** Undo recovery means the table says those arrows are gone. Undo takes back what came
+back, as before, and the fired arrows stay spent: nothing goes back on record, so the next fight
+starts from nothing fired and the row's Recover has nothing to pick up. A find the DM allows is
+added by hand. The fight's log line is corrected as before ("Arrows: 4 fired, 0 recovered").
+
+**The fix** (`62-ammo.js`). `undoRecovery()`'s stock half (take back what was added or rebuilt,
+point repointed weapons back) moved verbatim into `undoRecoveryStock()`, which returns each
+shortfall by entry id (`short`, as before) and by the item it was taken from (`at`); its record check
+is `recoveryUndoable()`. `undoRecovery()` is otherwise unchanged and still restores the cleared
+entries. End combat's Undo, `undoRecoveryTap()`, now runs `undoEndCombatRecovery()`: the stock half
+and nothing back on record. A shot fired since from what Undo takes away (unreachable: the window
+keeps the page inert) was of ammunition that never came back, so the shortfall comes off that item's
+own entry, hits kept first, and an entry left with nothing goes; a shot of ammunition still there
+stays on record.
+
+**What the brief assumed and the code does not have.** A weapon row's **Recover** toasts with no
+Undo, and never had one (`git log -S`); End combat's Undo was the only caller of `undoRecovery()`,
+which now has none in the app (its tests stay, unchanged). The row's Recover is untouched: it
+recovers mid-fight, keeps its count in `ammoFight` for the fight's line, and End combat's Undo
+takes back only End combat's own part of that line.
+
+**Tests** (`sheet.js`, a `#170` block just above the closing promise chain: a synchronous block
+below that line runs while `t118EndToEnd()` has `openModal`, `toast` and the character patched).
+The issue's case and the fight after it; a row's Recover then End combat's Undo; `undoRecovery()`
+unchanged (seen failing under a mutation); a rebuilt stack; a thrown Dagger left at ×0; zero-back
+entries; three shot-since cases. Three older checks that asserted the old restoring now assert the
+shots stay spent.
+
+Pages: [ammunition](../wiki/features/ammunition.md), [combat view](../wiki/features/combat-view.md),
+[known issues](../wiki/roadmap/known-issues.md). Plan: `src/docs/plans/2026-11-06-ammo-undo.md`.
