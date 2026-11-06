@@ -219,32 +219,25 @@ function renderHP(){
   /* Two layers, the same shape the auto spell-slot fields use: readOnly so the
      browser refuses the edit, AND a refusal in applyHPInput, because readOnly
      is only a hint — paste, autofill and any programmatic caller go straight
-     past it. `!==false` rather than a truth test, so an object that never went
-     through migrate() reads as locked rather than silently editable. */
-  const locked=character.hp.locked!==false;
-  const mx=document.getElementById("hpMax");if(mx)mx.readOnly=locked;
-  const lk=document.querySelector("[data-hplock]");
-  if(lk){
-    lk.classList.toggle("open",!locked);
-    lk.setAttribute("aria-pressed",locked?"true":"false");
-    lk.title=locked?"Max HP is locked — tap to edit it":"Max HP is unlocked — tap to lock it";
-  }
+     past it. The lock is the Vitals pencil (#115), read by vitalsLocked(). */
+  const mx=document.getElementById("hpMax");if(mx)mx.readOnly=vitalsLocked(character);
   /* #91: your chip and row in the initiative tracker read this HP live */
   renderInitStrip();
 }
 /* Commit one HP box. Returns false if the entry was refused. */
 function applyHPInput(inp){
   const k=inp.dataset.hp;
-  /* An explicit list, not `k in character.hp`: `locked` is a key on that object
-     now, and a data-hp hook must never be able to write a boolean field. */
+  /* An explicit list, not `k in character.hp`: a sheet saved before #115 still
+     carries the old `locked` key on that object, and a data-hp hook must never
+     be able to write a boolean field. */
   if(k!=="cur"&&k!=="max"&&k!=="temp")return true;
-  /* Max is locked by default, and the padlock is the only way a PLAYER changes
-     it. renderHP has already made the box readOnly; this is the second layer,
+  /* While Vitals is locked (its pencil, #115) a PLAYER can't change Max.
+     renderHP has already made the box readOnly; this is the second layer,
      because readOnly does not stop a paste. The automatic writers
      (seedLevel1HP, resyncLevel1HP, removeClass's un-seed — all 56-class.js) go
      to the model directly and BYPASS this on purpose: routing them through here
      would leave a locked level-1 character with no hit points at all. */
-  if(k==="max"&&character.hp.locked!==false){renderHP();return false;}
+  if(k==="max"&&vitalsLocked(character)){renderHP();return false;}
   /* A negative typed into Current OR Temp IS damage, and goes through the one
      damage path: temp first, then the overflow into current. Typing -5 against
      3 temp has to leave you 2 down on current, not throw the extra away, and it

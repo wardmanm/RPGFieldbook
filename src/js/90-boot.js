@@ -82,17 +82,6 @@ function wire(){
     if(t.closest("[data-trkcompleted]"))return toggleTrkCompleted();
     // death saves
     if((m=t.closest(".death .c"))){const kind=m.dataset.kind,i=num(m.dataset.i);character.death[kind]=(character.death[kind]===i)?i-1:i;renderDeath();scheduleSave();return;}
-    /* Max HP padlock — mirrors [data-hdmode] below, minus the confirm: switching
-       to manual hit dice is a mode change with consequences at level-up, while
-       this is undone by a second tap. Written as `===false` rather than `!`, so
-       an object whose flag is undefined locks explicitly instead of reading the
-       absence as unlocked. */
-    if(t.closest("[data-hplock]")){
-      character.hp.locked=character.hp.locked===false;
-      renderHP();
-      if(character.hp.locked===false){const i=document.getElementById("hpMax");if(i){i.focus();i.select();}}
-      scheduleSave();return;
-    }
     // slot bubbles
     if((m=t.closest(".slot .b"))){const lv=num(m.dataset.slot),i=num(m.dataset.i);const s=character.slots[lv];s.used=(s.used===i)?i-1:i;renderSlotBubbles();scheduleSave();return;}
     // features

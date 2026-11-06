@@ -139,9 +139,9 @@ input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
 /* the hit-dice bar's home in the rail (#103; its Rest & Recovery panel went with the card) */
 .hd-wrap{margin:0}
 .hd-none{margin:0}
-/* One pill, used twice: the hit-dice auto/manual toggle (now in the spend
-   box's foot, #103) and the Max HP padlock. */
-.hd-mode,.hp-lock{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px;border-radius:999px;border:1px solid var(--line);background:var(--field);color:var(--ink-soft);cursor:pointer}
+/* The hit-dice auto/manual pill (in the spend box's foot, #103). It once
+   shaped the Max HP padlock too, which the Vitals pencil replaced (#115). */
+.hd-mode{font-family:var(--head);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:0 6px;border-radius:999px;border:1px solid var(--line);background:var(--field);color:var(--ink-soft);cursor:pointer}
 .hd-mode.manual{color:var(--brick);border-color:var(--brick)}
 .hd-warn{font-family:var(--head);font-size:10px;color:var(--brick);text-align:center;margin-bottom:8px;line-height:1.5}
 .linkbtn{background:none;border:0;color:var(--accent-2);text-decoration:underline;cursor:pointer;font:inherit;padding:0}

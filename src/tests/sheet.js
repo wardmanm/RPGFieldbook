@@ -43,7 +43,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'COMBAT_DEFAULTS', 'inCombat', 'combatSectionsOf', 'withCombatSection', 'moveCombatSection',
   'combatStart', 'combatEnd', 'combatElapsedSec', 'fmtCombatTime', 'advanceRound', 'combatButtonHTML',
   'combatToggleHTML', 'combatToggleText', 'combatHeaderHTML', 'startCombatNow', 'endCombatAsk',
-  'EDIT_CARDS', 'editHidden', 'setEditHidden', 'editCardTitle', 'editToggleText', 'editToggleHTML',
+  'EDIT_CARDS', 'editHidden', 'setEditHidden', 'editCardTitle', 'editToggleText', 'editToggleHTML', 'vitalsLocked', 'setVitalsLocked',
   'combatGripHTML', 'moveCombatCard',
   'insertCombatSection', 'toggleCombatSection', 'undoCombatRemove', 'stepCombatSection',
   'MODAL_FOCUS_FIELDS', 'openerSelector', 'cvNeighbours',
@@ -286,19 +286,24 @@ typeHP('temp', '-3');
 ck('...and stops at Temp when it covers the hit',
    X.character.hp.temp === 2 && X.character.hp.cur === 10);
 
-/* ---- the Max HP lock ----
+/* ---- the Max HP lock: the Vitals pencil (#115) ----
    Max is the one number that barely moves after character creation and is
    catastrophic to fat-finger: a stray digit drags Current down through clampHP()
-   and there is no undo. Asserted against the REAL applyHPInput, not the
+   and there is no undo. Since #115 the lock is the Vitals card's pencil,
+   character.editHide.vitals, read by vitalsLocked() (it was hp.locked, locked by
+   default, behind a padlock). Asserted against the REAL applyHPInput, not the
    composition helper above — the harness's DOM stub swallows renderHP's writes,
    returns null from querySelector and no-ops setTimeout, so it is safe to call. */
 const box = (k, v) => X.applyHPInput({dataset: {hp: k}, value: v});
+const lockVitals = on => X.setEditHidden(X.character, 'vitals', on);
 
-ck('a new character starts with Max HP locked', X.blankChar().hp.locked === true);
+ck('#115 a new character starts with Vitals unlocked, and hp carries no lock flag',
+   !X.vitalsLocked(X.blankChar()) && !('locked' in X.blankChar().hp));
 
 // temp deliberately empty here, so damage to Current is unambiguous — with temp
 // set it would be soaked first, which the block above already covers
 hpOf({cur: 8, max: 12, temp: ''});
+lockVitals(true);
 ck('a locked Max box refuses a typed number', box('max', '40') === false);
 ck('...and the model is untouched', X.character.hp.max === 12);
 ck('a locked Max box refuses a typed delta too',
@@ -307,7 +312,7 @@ ck('the lock is only on Max — Current still takes damage',
    box('cur', '-3') === true && X.character.hp.cur === 5);
 ck('...and Temp still takes a grant', box('temp', '+4') === true && X.character.hp.temp === 4);
 
-X.character.hp.locked = false;
+lockVitals(false);
 ck('unlocked, Max takes the number', box('max', '40') === true && X.character.hp.max === 40);
 ck('...and a negative in Max is still a plain edit, not damage',
    box('max', '-30') === true && X.character.hp.max === 10 && X.character.hp.temp === 4);
@@ -316,32 +321,35 @@ X.character.hp.cur = 30;
 ck('...which still drags Current down with it',
    box('max', '-2') === true && X.character.hp.max === 8 && X.character.hp.cur === 8);
 
-// A character object that never went through migrate() must read as LOCKED, not
-// as unlocked-by-absence: `!==false`, not a truth test.
-hpOf({cur: 8, max: 12, temp: ''});
-delete X.character.hp.locked;
-ck('a missing lock flag means locked', box('max', '99') === false && X.character.hp.max === 12);
+// #115: an object with no editHide at all (one that never went through
+// migrate()) reads as unlocked, as every card's pencil does, and so does a
+// stale hp.locked:true, which nothing reads any more.
+hpOf({cur: 8, max: 12, temp: '', locked: true});
+delete X.character.editHide;
+ck('#115 a sheet with no editHide, and a stale hp.locked, reads as unlocked',
+   !X.vitalsLocked(X.character) && box('max', '99') === true && X.character.hp.max === 99);
 
-// `locked` is a key on character.hp now, so the old `k in character.hp` guard
-// would have let a data-hp="locked" hook write a boolean field.
-hpOf({cur: 8, max: 12, temp: ''});
-ck('no data-hp hook can reach the lock flag',
+// An old sheet still carries `locked` on character.hp, so the old `k in
+// character.hp` guard would have let a data-hp="locked" hook write it.
+hpOf({cur: 8, max: 12, temp: '', locked: true});
+ck('no data-hp hook can reach an old lock flag',
    box('locked', 'false') === true && X.character.hp.locked === true);
 
-// The lock is a new sub-key of character.hp. migrate() normalizes hp onto
-// blankChar()'s defaults, so this needs no new code — which is exactly why it
-// needs a test, or the next person to tidy that Object.assign silently unlocks
-// every sheet in the world.
-const preLock = X.migrate({id: 'old', name: 'Before the lock', hp: {cur: 12, max: 24, temp: ''}});
-ck('a sheet saved before the lock comes back locked', preLock.hp.locked === true);
+// #115 decision 3: today every sheet's Max is locked because that was the
+// default, so a deliberate lock can't be told from it and the padlock's state
+// is not carried over. migrate() keeps the old key (it keeps every field) and
+// nothing reads it.
+const preLock = X.migrate({id: 'old', name: 'Before the pencil', hp: {cur: 12, max: 24, temp: '', locked: true}});
+ck('#115 a sheet saved before the pencil comes back unlocked', !X.vitalsLocked(preLock));
 ck('...with its HP numbers untouched', preLock.hp.max === 24 && preLock.hp.cur === 12);
-const unlocked = X.migrate({id: 'u', hp: {cur: 30, max: 30, temp: '', locked: false}});
-ck('a deliberately unlocked sheet survives a round-trip', unlocked.hp.locked === false);
-ck('...and a second one', X.migrate(JSON.parse(JSON.stringify(unlocked))).hp.locked === false);
+ck('#115 ...and its old hp.locked kept through a save → load, unread',
+   X.migrate(JSON.parse(JSON.stringify(preLock))).hp.locked === true);
+const before = X.migrate({id: 'b', hp: {cur: 30, max: 30, temp: ''}});
+ck('#115 a sheet from before the padlock gains no lock flag', !('locked' in before.hp) && !X.vitalsLocked(before));
 // migrate's Object.assign only runs when s.hp is a non-array object, so a sheet
 // with no hp at all is a separate branch
-ck('a sheet with no hp object at all still comes back locked',
-   X.migrate({id: 'bare'}).hp.locked === true);
+ck('#115 a sheet with no hp object at all comes back unlocked',
+   !X.vitalsLocked(X.migrate({id: 'bare'})) && !('locked' in X.migrate({id: 'bare'}).hp));
 
 /* ---- current HP colours by how much of your maximum is left ----
    Measured against the EFFECTIVE max so an item that raises it moves the bands,
@@ -430,7 +438,7 @@ ck('...and for a sheet saved before the setting existed',
   X.character = X.migrate({
     classes: [{name: 'Fighter', level: 1}],
     abilities: Object.assign(X.blankChar().abilities, {con: 14}),
-    hp: {cur: 5, max: 20, temp: '', locked: false},
+    hp: {cur: 5, max: 20, temp: ''},
   });
 
   // a minimal per-id element: enough for openHdSpend()'s own wiring to find
@@ -2368,8 +2376,9 @@ ck('the combat button has its crossed swords', X.iconSVG('ui', 'Combat').include
   // and window, with a confirm); defences and proficiencies joined in Task 4
   // #103 final review I-3: familiars leaves (its card is hidden on the Sheet)
   // #91: the Party card joins (eleven → twelve)
-  ck('#97 the twelve cards', JSON.stringify(X.EDIT_CARDS) ===
-     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies', 'party']));
+  // #115: Vitals joins (twelve → thirteen): its pencil hides the portrait buttons and locks Max HP
+  ck('#97 the thirteen cards', JSON.stringify(X.EDIT_CARDS) ===
+     JSON.stringify(['statuses', 'attacks', 'resources', 'features', 'spells', 'inventory', 'trackers', 'journal', 'secnotes', 'defences', 'proficiencies', 'party', 'vitals']));
   ck('#97 a sheet from before, and junk, read as {}',
      JSON.stringify(X.migrate({abilities: {}}).editHide) === '{}' &&
      ['x', [], null, 7].every(v => JSON.stringify(X.migrate({abilities: {}, editHide: v}).editHide) === '{}'));
@@ -8078,6 +8087,40 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#105 the quiet undo belongs to its own sheet', (() => { const k = mk(); const r = ctx.applyAmmoRecovery({quiet: true});
      X.character = X.blankChar(); return r.undo() === false && k.inventory[0].qty === 13; })());
   ctx.toast = keep.toast; X.character = keep.ch;
+}
+
+/* ---------- #115 #112 #113 Vitals: the pencil, the Hit points window, centring
+   Synchronous, so it sits here, above the async chain: the file ends in that
+   chain, and a block after it would run while t118EndToEnd() holds its mocks. */
+{
+  const keep = {ch: X.character};
+  /* #115: the Vitals pencil is the Max HP lock */
+  {
+    const old = {id: 'p115', name: 'Old sheet', hp: {cur: 12, max: 24, temp: 3, locked: true}};
+    const m = X.migrate(JSON.parse(JSON.stringify(old)));
+    ck('#115 an old save with hp.locked:true opens unlocked', X.vitalsLocked(m) === false && m.hp.max === 24 && m.hp.temp === 3);
+    ck('#115 ...and keeps hp.locked through a save → load, unread', X.migrate(JSON.parse(JSON.stringify(m))).hp.locked === true);
+    ck('#115 a junk editHide.vitals reads as unlocked', X.vitalsLocked(X.migrate({id: 'j', editHide: {vitals: 'yes'}})) === false);
+    const c = X.blankChar(); c.hp.cur = 8; c.hp.max = 12; X.character = c;
+    X.setVitalsLocked(true);
+    ck('#115 setVitalsLocked(true) writes the flag', c.editHide.vitals === true && X.vitalsLocked(c) === true);
+    ck('#115 applyHPInput refuses Max while Vitals is locked',
+       X.applyHPInput({dataset: {hp: 'max'}, value: '30'}) === false && c.hp.max === 12);
+    X.setVitalsLocked(false);
+    ck('#115 setVitalsLocked(false) removes it', !('vitals' in c.editHide) && X.vitalsLocked(c) === false);
+    ck('#115 ...and applyHPInput takes Max while unlocked',
+       X.applyHPInput({dataset: {hp: 'max'}, value: '30'}) === true && c.hp.max === 30);
+    const u = X.editToggleText('vitals', false), l = X.editToggleText('vitals', true);
+    ck('#115 the pencil says Lock Vitals, and what that does',
+       u.title === 'Lock Vitals' && u.label === 'Lock Vitals — hides the portrait buttons and locks Max HP', u);
+    ck('#115 ...and Unlock Vitals while locked',
+       l.title === 'Unlock Vitals' && l.label === 'Unlock Vitals — shows the portrait buttons and unlocks Max HP', l);
+    ck('#115 ...while every other card keeps its words',
+       X.editToggleText('features', false).title === 'Hide edit buttons' && X.editToggleText('features', true).title === 'Show edit buttons');
+    ck('#115 the toggle HTML carries the Vitals words',
+       X.editToggleHTML('vitals', true).includes('title="Unlock Vitals"') && X.editToggleHTML('vitals', true).includes('aria-pressed="true"'));
+  }
+  X.character = keep.ch;
 }
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window

@@ -156,7 +156,7 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 
 /* ---- the rail (#103, spec §6.2; card `vitals`) ----
    Dark by its own tokens (00-tokens.css): the everyday tokens are re-pointed
-   here, so every control inside — inputs, the death-save circles, the padlock,
+   here, so every control inside — inputs, the death-save circles, the pencil,
    the hit-dice bar, the note and combat buttons — draws in the rail's palette
    with no rules of its own. Top to bottom: portrait with the AC shield over
    its bottom edge; death saves; Init · Speed · Prof; HP; hit dice; Size and
@@ -204,7 +204,7 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
    the shape of the HP bar — a fill <i> sibling whose width is the
    one inline style renderHitDice() sets, with the text drawn over it. */
 /* One label rule for the HP bar and the hit-dice bar, so the two read as a
-   pair: the name at the left, CON (or the Max padlock) at the right. */
+   pair: the name at the left, CON at the right. */
 .hp-lbl,.hd-lbl{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;gap:7px}
 .hd-con{font-weight:700;color:var(--accent-2)}
 .hd-bar{position:relative;display:block;width:100%;overflow:hidden;border-radius:8px;border:1.5px solid var(--line);background:var(--field);cursor:pointer;padding:9px 10px;text-align:center}
@@ -259,8 +259,6 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
    Bands colour the fill, not the text (text over a band-coloured fill would
    vanish): amber at half, brick at a quarter. --warn is its own token rather
    than --accent because on the classic skin --accent IS --brick. */
-.hp-lbl .grow{flex:1}
-.hp-maxlbl{display:inline-flex;align-items:center}
 .hp-row{display:flex;align-items:center;gap:6px}
 .hp-btn{flex:none;width:30px;height:34px;border-radius:7px;border:1.5px solid var(--line);background:var(--field);color:var(--ink);font-size:18px;font-weight:700;cursor:pointer;padding:0}
 .hp-btn:hover{border-color:var(--accent)}
@@ -282,18 +280,6 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 .hp-tmp input::placeholder{color:var(--ink-soft);opacity:.8;font-weight:400}
 .hp-note{text-align:center;font-family:var(--head);font-size:10px;color:var(--ink-soft);margin-top:4px}
 .hp-note:empty{display:none}
-/* The padlock rides inside the Max label. An icon, not a word, so the label
-   stays narrower than the 66px input below it and the three HP columns keep the
-   widths they have. Pill shape comes from .hd-mode in 20-cards.css — the sheet
-   has one pill and it is now used twice. */
-.hp-lock{margin-left:4px;padding:1px 5px;line-height:0;vertical-align:-2px}
-.hp-lock svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2;display:block}
-/* Unlocked is the state worth noticing, so it borrows the brick treatment
-   .hd-mode.manual uses for "you have left the automatic path". */
-.hp-lock.open{color:var(--brick);border-color:var(--brick)}
-.hp-lock .sh-open{display:none}
-.hp-lock.open .sh-shut{display:none}
-.hp-lock.open .sh-open{display:inline}
 /* ✓ ○○○ ☠ ○○○ ✗ (#103, decision 6), under the shield. */
 .death{display:flex;align-items:center;gap:7px;justify-content:center}
 .death .set{display:flex;gap:5px}

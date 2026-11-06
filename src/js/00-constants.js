@@ -53,14 +53,7 @@ const SRD_ADVANCEMENT=[[0,1],[300,2],[900,3],[2700,4],[6500,5],[14000,6],[23000,
 function blankChar(){
   const c={id:uid(),appVersion:"",system:"humblewood",name:"",class:"",ancestry:"",background:"",alignment:"",xp:"",level:1,
     ac:"",init:"",speed:"",hitdice:"",hdManual:false,inspiration:false,
-    /* `locked` guards the Max box, and lives INSIDE hp on purpose: migrate()
-       normalizes hp onto blankChar's defaults, so every existing sheet gains it
-       with no migration code, and one that deliberately saved false keeps it.
-       Locked by default — Max is the one number that barely moves after
-       character creation, and a stray digit in it drags Current down through
-       clampHP() with no undo. The automatic writers in 56-class.js set the
-       model directly and are deliberately not subject to it. */
-    hp:{cur:"",max:"",temp:"",locked:true}, death:{succ:0,fail:0},
+    hp:{cur:"",max:"",temp:""}, death:{succ:0,fail:0},
     coins:{cp:"",sp:"",ep:"",gp:"",pp:""},
     abilities:{},saves:{},skills:{},
     spellAbility:"", slots:{}, spells:[], attacks:[], race:null, bg:null, classes:[], grants:[],

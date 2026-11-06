@@ -1837,13 +1837,14 @@ function block(html, needle, tag) {
     })());
   }
 
-  // #103: the rail owns the hit points, the death saves, the padlock AND the
-  // hit-dice bar (spec §6.2). They sat in two cards — Vitals and Rest &
-  // Recovery — until the rail; Rest & Recovery is gone, its rest buttons in the
-  // header (asserted there). The hit-dice input and the mode pill live in the
-  // spend box (hdSpendHTML in 65-resources.js), not the static template.
-  const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'data-hplock', 'id="hdWrap"'];
-  ck('#103 the rail owns HP, the death saves, the padlock and the hit-dice bar',
+  // #103: the rail owns the hit points, the death saves AND the hit-dice bar
+  // (spec §6.2). They sat in two cards — Vitals and Rest & Recovery — until
+  // the rail; Rest & Recovery is gone, its rest buttons in the header (asserted
+  // there). The hit-dice input and the mode pill live in the spend box
+  // (hdSpendHTML in 65-resources.js), not the static template. #115: the
+  // padlock that sat beside "Max" is gone; the Vitals pencil is the lock.
+  const owned = ['data-hp="cur"', 'data-hp="max"', 'data-hp="temp"', 'id="deathFail"', 'id="hdWrap"'];
+  ck('#103 the rail owns HP, the death saves and the hit-dice bar',
      owned.every(s => vitals.includes(s)), owned.filter(s => !vitals.includes(s)));
   ck('#103 ...with the hit dice under the hit points', vitals.indexOf('id="hpCur"') < vitals.indexOf('id="hdWrap"'));
   ck('the hit-dice bar is written once',
@@ -1859,43 +1860,47 @@ function block(html, needle, tag) {
   ck('#103 the auto/manual pill sits in the spend box\'s foot',
      /<div class="hd-foot">Hit dice <button class="hd-mode" data-hdmode/.test(js));
   ck('#103 the old HP and hit-dice panels are gone', !/class="hpwrap"|class="hd-box"|class="hd-title"|class="hp-title"/.test(t));
-  // ---- the Max HP lock
-  ck('exactly one padlock, and it is beside the Max label',
-     (t.match(/data-hplock/g) || []).length === 1 && /Max <button class="hp-lock" data-hplock/.test(t),
-     (t.match(/<div class="n">Max[\s\S]{0,60}/) || [''])[0]);
-  // U+1F512 has no text-presentation variant, so the &#65038; trick that tames
-  // the skull does not exist for it — it would render as a colour emoji
-  ck('the padlock is an icon button, not an emoji',
-     /data-hplock[\s\S]{0,200}<svg/.test(t) && !/🔒|&#128274;/.test(t));
-  ck('the padlock announces its state to a screen reader',
-     /data-hplock[\s\S]{0,160}aria-pressed=/.test(t));
-  ck('the padlock shares the hit-dice pill', /\.hd-mode,\.hp-lock\{/.test(cardsCss));
+  // ---- the Max HP lock: the Vitals pencil (#115)
+  // The padlock went: the pencil every list card has is the lock, stored as
+  // character.editHide.vitals. One helper reads it, one sets it from code.
+  ck('#115 no padlock is left anywhere: markup, CSS or code',
+     !/data-hplock|hp-lock|hp-maxlbl/.test(t + sheetCss + cardsCss + js) && !/🔒|&#128274;/.test(t));
+  ck('#115 the Vitals card is an edit-toggle card', X.EDIT_CARDS.includes('vitals'));
+  const btnClass = id => ((t.match(new RegExp('<button [^>]*id="' + id + '"[^>]*>')) || [''])[0].match(/class="([^"]*)"/) || ['', ''])[1];
+  ck('#115 both portrait buttons carry ed, so the pencil hides them',
+     ['btnPortrait', 'btnPortraitDel'].every(id => btnClass(id).split(/\s+/).includes('ed')), ['btnPortrait', 'btnPortraitDel'].map(btnClass));
+  ck('#115 one helper reads the lock, one sets it',
+     /function vitalsLocked\(c\)\{return editHidden\(c,"vitals"\);\}/.test(js) &&
+     /function setVitalsLocked\(locked\)\{[\s\S]*?setEditHidden\(character,"vitals",[\s\S]*?paintEditToggle\("vitals"[\s\S]*?renderHP\(\)/.test(js));
+  ck('#115 a pencil tap on Vitals repaints Max',
+     /function toggleEditCard\(k\)\{[\s\S]*?if\(k==="vitals"\)renderHP\(\)/.test(js));
   // two layers: readOnly is only a hint, so applyHPInput refuses it a second time
-  ck('renderHP drives the Max box readOnly from the lock',
-     /function renderHP\(\)\{[\s\S]*?getElementById\("hpMax"\)[\s\S]{0,60}readOnly=/.test(js));
-  ck('...and repaints the padlock itself', /function renderHP\(\)\{[\s\S]*?data-hplock/.test(js));
-  ck('applyHPInput refuses a locked Max before it writes anything',
-     /k==="max"&&character\.hp\.locked!==false\)\{renderHP\(\);return false;\}/.test(js));
-  ck('the data-hp guard no longer admits the new non-numeric key',
-     !/inp\.dataset\.hp;if\(!k\|\|!\(k in character\.hp\)\)/.test(js));
-  ck('the padlock is wired and toggles the lock',
-     /closest\("\[data-hplock\]"\)/.test(js) && /character\.hp\.locked=character\.hp\.locked===false/.test(js));
-  ck('unlocking focuses the Max box',
-     /data-hplock[\s\S]{0,340}getElementById\("hpMax"\)[\s\S]{0,90}focus\(\)/.test(js));
-  ck('the padlock does not ask for confirmation', !/data-hplock[\s\S]{0,340}confirm\(/.test(js));
+  ck('#115 renderHP drives the Max box readOnly from the Vitals lock',
+     /function renderHP\(\)\{[\s\S]*?getElementById\("hpMax"\)[\s\S]{0,200}readOnly=[^;]*vitalsLocked\(character\)/.test(js));
+  ck('#115 applyHPInput refuses a locked Max before it writes anything',
+     /k==="max"&&vitalsLocked\(character\)\)\{renderHP\(\);return false;\}/.test(js));
+  ck('the data-hp guard admits only cur, max and temp',
+     !/inp\.dataset\.hp;if\(!k\|\|!\(k in character\.hp\)\)/.test(js) && /if\(k!=="cur"&&k!=="max"&&k!=="temp"\)return true;/.test(js));
+  ck('#115 nothing reads or writes hp.locked any more', !/hp\.locked/.test(js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')));
   // the automatic writers go to the model, not through the box, and never touch
-  // the flag. Gaining levels clears it (the fallback for a dismissed HP step);
-  // the HP step alone may set it again, and only to restore what it found (#58).
+  // the lock. Gaining levels unlocks Vitals (the fallback for a dismissed HP
+  // step); the HP step alone may lock it again, and only to restore what it
+  // found (#58).
   const cls = fs.readFileSync(path.join(ROOT, 'src/js/56-class.js'), 'utf8');
   const fnBody = n => (cls.match(new RegExp('function ' + n + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
   ck('the seed, re-sync and un-seed never touch the lock',
-     ['seedLevel1HP', 'resyncLevel1HP', 'removeClass'].every(n => fnBody(n) && !/hp\.locked/.test(fnBody(n))));
-  ck('doLevelUp clears the lock',
-     /function doLevelUp\(idx\)\{[\s\S]*?character\.hp\.locked=false;renderHP\(\)/.test(cls));
-  ck('...and reads it for the HP step BEFORE clearing it',
-     /const hp=hpChoice\([^)]*\);[\s\S]{0,800}character\.hp\.locked=false/.test(fnBody('doLevelUp')));
+     ['seedLevel1HP', 'resyncLevel1HP', 'removeClass'].every(n => fnBody(n) && !/vitalsLocked|setVitalsLocked|editHide/.test(fnBody(n))));
+  ck('#115 hpChoice remembers the lock through vitalsLocked()',
+     /_wasLocked:vitalsLocked\(character\)/.test(fnBody('hpChoice')));
+  ck('#115 doLevelUp unlocks Vitals',
+     /setVitalsLocked\(false\)/.test(fnBody('doLevelUp')));
+  ck('...and reads it for the HP step BEFORE unlocking',
+     /const hp=hpChoice\([^)]*\);[\s\S]{0,800}setVitalsLocked\(false\)/.test(fnBody('doLevelUp')));
+  ck('#115 addClass unlocks Vitals for a second class and for a first class above level 1, after hpChoice',
+     (fnBody('addClass').match(/setVitalsLocked\(false\)/g) || []).length === 2 &&
+     /hp=hpChoice\([^)]*\);setVitalsLocked\(false\)/.test(fnBody('addClass')));
   ck('the only re-lock is the HP step restoring what it found',
-     (cls.match(/hp\.locked=true/g) || []).length === 1 && /if\(ch\._wasLocked\)character\.hp\.locked=true/.test(fnBody('commitHPChoice')));
+     (cls.match(/setVitalsLocked\(true\)/g) || []).length === 1 && /if\(ch\._wasLocked\)setVitalsLocked\(true\)/.test(fnBody('commitHPChoice')));
   ck('the seed and the un-seed still write hp.max directly (they bypass the lock)',
      /character\.hp\.max=hp;/.test(cls) && /character\.hp\.max=now;/.test(cls) && /character\.hp\.max="";/.test(cls));
 
