@@ -9371,10 +9371,57 @@ async function tBootStorage135() {
   }
 }
 
+/* #143: Remove and Remove all say so on their own status line, Settings' and
+   the home screen's, when the cache write behind them didn't land, and what
+   they say is true for a removal. */
+async function tBootStorage143() {
+  const lines = a => {
+    const el = {rulesStatus: {textContent: '', className: ''}, homeRulesStatus: {textContent: '', className: ''}};
+    const g = a.ctx.document.getElementById; a.ctx.document.getElementById = id => el[id] || g(id);
+    return el;
+  };
+  const two = a => { a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}]}, 'a.json'); a.X.mergeRules({system: 'BBB', spells: [{name: 'Beta'}]}, 'b.json'); };
+  const removal = /what you removed may be back/;
+  for (const [how, idb] of [['no IndexedDB', null], ['IndexedDB refusing too', true]]) {
+    const db = idb && BS.fakeIDB({});
+    if (db) db.st.failPut = true;
+    const a = BS.app({}, {noBoot: true, idb: db || undefined});
+    const el = lines(a); two(a);
+    a.state.quotaFull = true;
+    a.X.removeRulesGroup(a.X.loadedRulesGroups()[0].key);
+    await BS.settle();
+    const w = a.X.rulesCacheWarning();
+    ck('#143 ' + how + ': a refused Remove turns its status line red', /\berr\b/.test(el.rulesStatus.className), el.rulesStatus);
+    ck('#143 ' + how + ': ...the line says the change wasn\'t saved, after what is loaded',
+       removal.test(el.rulesStatus.textContent) && /^Loaded/.test(el.rulesStatus.textContent), el.rulesStatus.textContent);
+    ck('#143 ' + how + ': ...and so does the home screen\'s line', removal.test(el.homeRulesStatus.textContent), el.homeRulesStatus.textContent);
+    ck('#143 ' + how + ': ...and the red line above the list is the same sentence, true for a removal',
+       removal.test(w) && !/\bKB\b|\bMB\b/.test(w) && !/Remove a pack you're not using/.test(w), w);
+    const cleared = a.X.clearAllRules();
+    await BS.settle();
+    ck('#143 ' + how + ': a refused Remove all says so too, in red', cleared === true &&
+       /^Rules cleared\. /.test(el.rulesStatus.textContent) && removal.test(el.rulesStatus.textContent) && /\berr\b/.test(el.rulesStatus.className),
+       [cleared, el.rulesStatus]);
+    ck('#143 ' + how + ': ...on the home screen\'s line as well', removal.test(el.homeRulesStatus.textContent), el.homeRulesStatus.textContent);
+    // an added pack that can't be saved still says what it always said
+    a.X.mergeRules({system: 'CCC', spells: [{name: 'Gamma'}]}, 'c.json');
+    const err = await a.X.saveRulesCache();
+    ck('#143 ' + how + ': an add refused keeps its own sentence', /won't be there next time/.test(err) && !removal.test(err), err);
+  }
+  {
+    const a = BS.app({}, {noBoot: true});
+    const el = lines(a); two(a);
+    a.X.removeRulesGroup(a.X.loadedRulesGroups()[0].key);
+    await BS.settle();
+    ck('#143 a Remove that lands stays green, with no warning',
+       el.rulesStatus.className === 'status ok' && /^Loaded/.test(el.rulesStatus.textContent) && a.X.rulesCacheWarning() === '', [el.rulesStatus, a.X.rulesCacheWarning()]);
+  }
+}
+
 {
   const bsDone = ck.done;
   /* caught at once: a rejection nobody is listening to yet ends the process */
-  const bsRun = tBootStorage142().then(tBootStorage134).then(tBootStorage135)
+  const bsRun = tBootStorage142().then(tBootStorage134).then(tBootStorage135).then(tBootStorage143)
     .catch(err => { ck('1.9.1 boot & storage block ran without throwing', false, String(err && err.stack || err)); });
   ck.done = () => bsRun.then(() => bsDone());
 }

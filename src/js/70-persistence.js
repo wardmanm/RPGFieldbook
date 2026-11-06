@@ -312,7 +312,10 @@ function cacheBytes(n){
   const mb=n*2/1048576;
   return (mb>=1?mb.toFixed(1)+" MB":Math.round(n*2/1024)+" KB");
 }
-function saveRulesCache(){
+/* `change` is "remove" when the pool shrank (Remove, Remove all): then what a
+   refused save means is the other way round — the next boot loads the copy
+   that last landed, so what was removed may be back (#143). */
+function saveRulesCache(change){
   const json=JSON.stringify(rules);
   const toLocal=()=>{
     try{
@@ -327,7 +330,9 @@ function saveRulesCache(){
       /* Both stores refused. The pool is still loaded and usable THIS session —
          it just won't survive a reload, which is precisely the failure that
          used to be invisible. */
-      rulesCacheError="Your browser wouldn't save the "+cacheBytes(json.length)+
+      rulesCacheError=change==="remove"
+        ? "Your browser wouldn't save that change, so next time you open Fieldbook it will load the rules data it last saved, and what you removed may be back."
+        : "Your browser wouldn't save the "+cacheBytes(json.length)+
         " of rules data you have loaded, so it won't be there next time you open Fieldbook. "+
         "Remove a pack you're not using in Settings → Extensions, or install them again after each reload.";
     }
