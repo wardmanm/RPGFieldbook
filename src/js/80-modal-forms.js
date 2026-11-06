@@ -255,7 +255,9 @@ function openStatBreakdown(target){
      plain check with that ability adds, listed apart from the score */
   const onCheck=target.startsWith("skill.")||target==="init";
   const ckRows=c.filter(x=>x.target==="check").map(x=>({source:x.source+" (ability checks)",value:x.value}));
-  const contr=c.filter(x=>x.target===target).concat(onCheck?ckRows:[]);
+  /* the card's spell attack lists what spellAtkBonus() adds: spell.attack and
+     the ticked "all attacks" effects (#129) */
+  const contr=(target==="spell.attack"?spellFxList(c,"attack"):c.filter(x=>x.target===target)).concat(onCheck?ckRows:[]);
   let base="", label=FX_LABEL[target]||target, grantLines="";
   const mods={};ABIL.forEach(([k])=>mods[k]=Math.floor((abilFinal(k,c)-10)/2));const pb=pbValue(c);
   if(target.startsWith("ability.")){const k=target.split(".")[1];base=`Base score ${num(character.abilities[k])}`;}

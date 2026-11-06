@@ -59,7 +59,8 @@ function recompute(){
      card cannot read differently from the cast dialog or a save row */
   const sa=character.spellAbility;
   const dcEl=document.getElementById("dcDisp");dcEl.textContent=sa?String(spellDC(c)):"—";mark(dcEl,!!sa&&!!sumFx("spell.dc",c),!!sa&&fxNeg(c,"spell.dc"));
-  const satkEl=document.getElementById("satkDisp");satkEl.textContent=sa?fmt(spellAtkBonus(c)):"—";mark(satkEl,!!sa&&!!sumFx("spell.attack",c),!!sa&&fxNeg(c,"spell.attack"));
+  const satkFx=spellFxList(c,"attack");   /* spell.attack and the ticked "all attacks" effects (#129) */
+  const satkEl=document.getElementById("satkDisp");satkEl.textContent=sa?fmt(spellAtkBonus(c)):"—";mark(satkEl,!!sa&&!!satkFx.reduce((t,x)=>t+x.value,0),!!sa&&satkFx.some(x=>x.value<0));
   renderEncPill(encSt);
   renderDeath();autoSlots();renderSlotBubbles();renderHitDice();syncResources();renderResources();
   (character.attacks||[]).forEach(a=>{if(a.source==="spell"&&!a.save)a.ability=character.spellAbility||"none";});

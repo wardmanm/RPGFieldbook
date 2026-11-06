@@ -8480,6 +8480,125 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = X.blankChar();
 }
 
+/* ---- #129 a spell's numbers: spell.attack plus the ticked effects, the same everywhere ----
+   The Spellcasting card, the cast window and a spell's row in Attacks agree; an
+   unticked to-hit or damage effect counts for weapons only. INT 16 (+3), level
+   1 (PB 2): spell attack +5. */
+{
+  const fresh = () => {
+    const c = X.blankChar(); X.character = c; c.level = 1; c.spellAbility = 'int';
+    Object.assign(c.abilities, {str: 10, dex: 14, con: 10, int: 16, wis: 10, cha: 10});
+    c.attacks = [
+      {id: 'ls', name: 'Longsword', kind: 'melee', ability: 'str', proficient: true, addAbilityDamage: true, atkMisc: '', dmgMisc: '', damageDice: '1d8', damageType: 'slashing', notes: ''},
+      {id: 'fb', name: 'Fire Bolt', kind: 'ranged', ability: 'int', proficient: true, addAbilityDamage: false, atkMisc: '', dmgMisc: '', damageDice: '1d10', damageType: 'fire', notes: '', spellId: 'sfb', source: 'spell'},
+      {id: 'sg', name: 'Shocking Grasp', kind: 'melee', ability: 'int', proficient: true, addAbilityDamage: false, atkMisc: '', dmgMisc: '', damageDice: '1d8', damageType: 'lightning', notes: '', spellId: 'ssg', source: 'spell'},
+      {id: 'sf', name: 'Sacred Flame', save: {ability: 'dex'}, damageDice: '1d8', damageType: 'radiant', notes: '', spellId: 'ssf', source: 'spell'}];
+    return c;
+  };
+  const SP = {
+    fb: {id: 'sfb', name: 'Fire Bolt', level: 0, atkType: 'attack', atkKind: 'ranged', dice: '1d10', damageType: 'fire'},
+    sg: {id: 'ssg', name: 'Shocking Grasp', level: 0, atkType: 'attack', atkKind: 'melee', dice: '1d8', damageType: 'lightning'},
+    sf: {id: 'ssf', name: 'Sacred Flame', level: 0, atkType: 'save', saveAbility: 'dex', dice: '1d8', damageType: 'radiant'}};
+  const worn = (effects) => ({id: X.uid(), name: 'Charm', category: 'Wondrous item', qty: 1, equipped: true, effects});
+  const row = id => X.character.attacks.find(a => a.id === id);
+  const hit = id => X.attackNumbers(row(id)).toHit;
+  const cast = k => shownModal(() => X.promptSpellAttack(SP[k], 0)).b;
+  const castHit = k => { const m = /Spell attack:<\/b> ([+-]\d+) to hit/.exec(cast(k)); return m ? m[1] : null; };
+  const castDmg = k => { const m = /Damage:<\/b> ([^<]*)<\/p>/.exec(cast(k)); return m ? m[1] : null; };
+  /* the damage cell each row renders, and whether it is marked */
+  const rendered = () => {
+    const realC = ctx.document.createElement, realB = ctx.document.getElementById, made = [];
+    ctx.document.createElement = () => { const e = {style: {}, dataset: {}, classList: {toggle() {}, add() {}, remove() {}}}; made.push(e); return e; };
+    ctx.document.getElementById = id => id === 'attackList' ? {innerHTML: '', appendChild() {}, style: {}} : realB(id);
+    try { X.renderAttacks(); } finally { ctx.document.createElement = realC; ctx.document.getElementById = realB; }
+    const out = {};
+    made.forEach(e => { const h = String(e.innerHTML || ''); const nm = (/<span class="nm">([^<]*)</.exec(h) || [])[1];
+      const d = /Damage <b class="([^"]*)"[^>]*>([^<]*)<\/b>/.exec(h); if (nm && d) out[nm] = {cls: d[1], dmg: d[2]}; });
+    return out;
+  };
+
+  let c = fresh();
+  c.inventory.push(worn([{target: 'attack', value: 1}]));
+  ck('#129 an unticked "all attacks" +1 moves a weapon: Longsword +2 -> +3', hit('ls') === 3, hit('ls'));
+  ck('#129 ...and no spell number: the Fire Bolt row stays +5, unmarked', hit('fb') === 5 && X.attackNumbers(row('fb')).atkFx === 0, X.attackNumbers(row('fb')));
+  let p = painted(['satkDisp']);
+  ck('#129 ...the Spellcasting card stays +5', X.spellAtkBonus() === 5 && p.satkDisp === '+5' && !painted.fx.satkDisp, [X.spellAtkBonus(), p]);
+  ck('#129 ...and so does the cast window', castHit('fb') === '+5', cast('fb').slice(0, 160));
+  c.inventory[0].effects[0].spells = true;
+  p = painted(['satkDisp']);
+  ck('#129 ticked, all three move together: row +6, card +6 marked, cast window +6',
+     hit('fb') === 6 && X.attackNumbers(row('fb')).atkFx === 1 && X.spellAtkBonus() === 6 && p.satkDisp === '+6' && painted.fx.satkDisp && castHit('fb') === '+6',
+     [hit('fb'), X.spellAtkBonus(), p, castHit('fb')]);
+  ck('#129 ...and the weapon still takes it once: Longsword +3', hit('ls') === 3, hit('ls'));
+
+  c = fresh();
+  c.inventory.push(worn([{target: 'attack.melee', value: 1, spells: true}]));
+  ck('#129 a ticked melee +1 reaches a melee spell\'s row and its cast window: +6',
+     hit('sg') === 6 && castHit('sg') === '+6', [hit('sg'), castHit('sg')]);
+  ck('#129 ...not the card, which has no range: +5', X.spellAtkBonus() === 5 && painted(['satkDisp']).satkDisp === '+5', X.spellAtkBonus());
+  ck('#129 ...nor a ranged spell: Fire Bolt +5', hit('fb') === 5 && castHit('fb') === '+5', [hit('fb'), castHit('fb')]);
+
+  c = fresh();
+  c.inventory.push(worn([{target: 'damage', value: 2, spells: true}]));
+  let r = rendered();
+  ck('#129 ticked damage +2 reaches a save spell\'s row, marked: 1d8 +2 radiant',
+     r['Sacred Flame'] && r['Sacred Flame'].dmg === '1d8 +2 radiant' && /fx-on/.test(r['Sacred Flame'].cls), r['Sacred Flame']);
+  ck('#129 ...and its cast window', castDmg('sf') === '1d8 +2 radiant', cast('sf'));
+  ck('#129 ...and an attack spell\'s row and cast window: 1d10 +2 fire',
+     r['Fire Bolt'] && r['Fire Bolt'].dmg === '1d10 +2 fire' && castDmg('fb') === '1d10 +2 fire', [r['Fire Bolt'], castDmg('fb')]);
+  {
+    const realB = ctx.document.getElementById, pa = {innerHTML: ''}, els = {};
+    const fake = () => ({_t: '', get textContent() { return this._t; }, set textContent(v) { this._t = String(v); }, innerHTML: '', value: '', style: {}, dataset: {}, children: [],
+      classList: {toggle() {}, add() {}, remove() {}, contains: () => false}, querySelector: () => null, querySelectorAll: () => [],
+      appendChild() {}, addEventListener() {}, setAttribute() {}, removeAttribute() {}, insertAdjacentHTML() {}});
+    ctx.document.getElementById = id => id === 'printArea' ? pa : (els[id] = els[id] || fake());
+    try { ctx.printSheet(); } finally { ctx.document.getElementById = realB; }
+    ck('#129 ...and the print sheet prints the save spell\'s damage with it', /<td>Sacred Flame<\/td><td>Spell save<\/td><td>DC \d+ DEX<\/td><td>1d8 \+2 radiant<\/td>/.test(pa.innerHTML),
+       (pa.innerHTML.match(/<td>Sacred Flame<\/td>.{0,120}/) || [''])[0]);
+  }
+  c.inventory[0].effects[0].spells = false;
+  r = rendered();
+  ck('#129 unticked, the spells lose it: 1d8 radiant, unmarked; the Longsword keeps it',
+     r['Sacred Flame'].dmg === '1d8 radiant' && !/fx-on/.test(r['Sacred Flame'].cls) && castDmg('sf') === '1d8 radiant'
+     && r['Fire Bolt'].dmg === '1d10 fire' && r['Longsword'].dmg === '1d8 +2 slashing', r);
+
+  c = fresh();
+  c.inventory.push(worn([{target: 'damage.ranged', value: 1, spells: true}]));
+  r = rendered();
+  ck('#129 ticked ranged damage +1: a ranged attack spell takes it, a save spell (no range) does not',
+     r['Fire Bolt'].dmg === '1d10 +1 fire' && r['Sacred Flame'].dmg === '1d8 radiant' && castDmg('sf') === '1d8 radiant', r);
+
+  /* the shipped Archery: ranged WEAPON attacks, so unticked, and a bow's row only */
+  const featsJ = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'feats.json'), 'utf8'));
+  const archery = (featsJ.feats || featsJ).find(f => f.name === 'Archery');
+  ck('#129 the shipped Archery is attack.ranged +2, unticked', !!archery && JSON.stringify(archery.effects) === '[{"target":"attack.ranged","value":2}]', archery && archery.effects);
+  c = fresh();
+  c.attacks.push({id: 'lb', name: 'Longbow', kind: 'ranged', ability: 'dex', proficient: true, addAbilityDamage: true, atkMisc: '', dmgMisc: '', damageDice: '1d8', damageType: 'piercing', notes: ''});
+  ck('#129 the base: Longbow +4, Fire Bolt +5', hit('lb') === 4 && hit('fb') === 5, [hit('lb'), hit('fb')]);
+  ctx.addFeatureFromDef({name: 'Feat: Archery', description: archery.description, effects: archery.effects}, null);
+  ck('#129 Archery: the Longbow +6', hit('lb') === 6, hit('lb'));
+  ck('#129 ...and Fire Bolt stays +5, unmarked: Archery is for ranged weapons', hit('fb') === 5 && X.attackNumbers(row('fb')).atkFx === 0 && castHit('fb') === '+5', [hit('fb'), castHit('fb')]);
+
+  c = fresh(); c.spellAbility = '';
+  ck('#129 a spell row with no spellcasting ability still shows its own (#74): INT 3 + PB 2 = +5', hit('fb') === 5, X.attackNumbers(row('fb')));
+
+  c = fresh();
+  c.inventory.push({id: X.uid(), name: 'Bright Lens', equipped: true, effects: [{target: 'attack', value: 1, spells: true}]});
+  c.inventory.push({id: X.uid(), name: 'Sword Knot', equipped: true, effects: [{target: 'attack', value: 1}]});
+  let m = shownModal(() => X.openAttackBreakdown('fb'));
+  ck('#129 the spell row\'s breakdown names the ticked effect and leaves out the unticked one',
+     /<span>Bright Lens<\/span><b>\+1<\/b>/.test(m.b) && !/Sword Knot/.test(m.b), m.b);
+  m = shownModal(() => X.openAttackBreakdown('ls'));
+  ck('#129 ...a weapon\'s breakdown names both', /Bright Lens/.test(m.b) && /Sword Knot/.test(m.b), m.b);
+  m = shownModal(() => X.openStatBreakdown('spell.attack'));
+  ck('#129 the card\'s spell attack breakdown names the ticked effect too', /<span>Bright Lens<\/span><b>\+1<\/b>/.test(m.b) && !/Sword Knot/.test(m.b), m.b);
+  c.inventory[0].effects[0].value = -1;
+  ck('#129 a ticked penalty marks the spell row red, and the card', X.attackNumbers(row('fb')).atkNeg === true && (painted(['satkDisp']), painted.neg.satkDisp),
+     [X.attackNumbers(row('fb')).atkNeg, painted.neg]);
+  ck('#129 ...an unticked one does not', (c.inventory[0].effects[0].spells = false, X.attackNumbers(row('fb')).atkNeg === false && (painted(['satkDisp']), !painted.neg.satkDisp)));
+  X.character = X.blankChar();
+}
+
 /* ---- end of the #130 · #129 · #132 block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window

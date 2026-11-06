@@ -5,18 +5,23 @@ function attackNumbers(a){
   if(a.ability==="finesse"){const s=Math.floor((abilFinal("str",c)-10)/2), dx=Math.floor((abilFinal("dex",c)-10)/2);abil=Math.max(s,dx);abilName=dx>=s?"DEX":"STR";}
   else if(a.ability&&a.ability!=="none"){abil=Math.floor((abilFinal(a.ability,c)-10)/2);abilName=a.ability.toUpperCase();}
   const kind=a.kind==="ranged"?"ranged":"melee";
-  /* a spell attack row also takes the spell attack bonus (spell.attack), as
-     spellAtkBonus() does; a weapon's row never does (#77) */
-  const atkFx=sumFx("attack",c)+sumFx("attack."+kind,c)+(a.source==="spell"&&!a.save?sumFx("spell.attack",c):0);
-  const dmgFx=sumFx("damage",c)+sumFx("damage."+kind,c);
+  /* A weapon's row takes every to-hit and damage effect, ticked or not. A
+     spell's row takes what the Spellcasting card and the cast window take, from
+     the one list spellFxList() makes: spell.attack and the effects ticked
+     "Include spells" (#129, #77). A save spell has no range, so no
+     melee/ranged-only effect. The row keeps its own ability part (#74). */
+  const isSpell=a.source==="spell", sk=a.save?null:kind;
+  const atkList=isSpell?spellFxList(c,"attack",sk):c.filter(x=>x.target==="attack"||x.target==="attack."+kind);
+  const dmgList=isSpell?spellFxList(c,"damage",sk):c.filter(x=>x.target==="damage"||x.target==="damage."+kind);
+  const sum=l=>l.reduce((t,x)=>t+x.value,0);
+  const atkFx=sum(atkList), dmgFx=sum(dmgList);
   /* any one penalty among them marks the cell red (#89) */
-  const atkNeg=fxNeg(c,"attack","attack."+kind,...(a.source==="spell"&&!a.save?["spell.attack"]:[]));
-  const dmgNeg=fxNeg(c,"damage","damage."+kind);
+  const atkNeg=atkList.some(x=>x.value<0), dmgNeg=dmgList.some(x=>x.value<0);
   /* the stack a launcher is loaded with adds its +N to attack AND damage (#6) */
   const ammo=attackAmmo(a);
   const toHit=abil+(a.proficient?pb:0)+num(a.atkMisc)+atkFx+ammo.bonus;
   const dmgBonus=(a.addAbilityDamage?abil:0)+num(a.dmgMisc)+dmgFx+ammo.bonus;
-  return {toHit,dmgBonus,atkFx,dmgFx,atkNeg,dmgNeg,abilName,kind,pb,abil,ammoBonus:ammo.bonus,ammoName:ammo.name};
+  return {toHit,dmgBonus,atkFx,dmgFx,atkNeg,dmgNeg,atkList,dmgList,abilName,kind,pb,abil,ammoBonus:ammo.bonus,ammoName:ammo.name};
 }
 /* ---- damage lines ----
    An attack's damage is one main die expression plus any number of ADDITIONAL
@@ -64,7 +69,22 @@ function carryAttackLinks(prev,rec){
    that shows either reads these: the Spellcasting card (recompute()), save rows,
    the cast dialog and the print sheet. `c` is optional, as for effMaxHP(). */
 function spellDC(c){c=c||contributions();const sa=character.spellAbility;if(!sa)return null;return 8+pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2)+sumFx("spell.dc",c);}
-function spellAtkBonus(c){c=c||contributions();const sa=character.spellAbility;if(!sa)return null;return pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2)+sumFx("spell.attack",c);}
+/* `kind` ("melee"/"ranged") is the spell's range when it is known — the cast
+   window and a spell's row. The card has none, so it takes no melee- or
+   ranged-only effect. */
+function spellAtkBonus(c,kind){c=c||contributions();const sa=character.spellAbility;if(!sa)return null;return pbValue(c)+Math.floor((abilFinal(sa,c)-10)/2)+spellAtkFx(c,kind);}
+/* The effects a spell's to-hit or damage takes (#129), in ONE list, so the
+   card, the cast window, a spell's row, their marks and their breakdowns can
+   never count different sets. To-hit: spell.attack, plus each generic to-hit
+   effect ticked "Include spells" (`spells:true`) — "all attacks", and the
+   spell's own range when `kind` is given. Damage: the ticked generic damage
+   effects, likewise. An unticked generic effect is for weapons only: Archery's
+   attack.ranged +2 is ranged WEAPON attacks. */
+function spellFxList(c,part,kind){
+  return c.filter(x=>(part==="attack"&&x.target==="spell.attack")||(x.spells===true&&(x.target===part||(!!kind&&x.target===part+"."+kind))));
+}
+function spellAtkFx(c,kind){return spellFxList(c,"attack",kind).reduce((t,x)=>t+x.value,0);}
+function spellDmgFx(c,kind){return spellFxList(c,"damage",kind).reduce((t,x)=>t+x.value,0);}
 function parseDurationSec(str){
   if(!str)return null;const s=String(str).toLowerCase();let m;
   if(/instant/.test(s))return 0;
@@ -214,11 +234,14 @@ function syncSpellAttack(sp){
 }
 function promptSpellAttack(sp,atLevel){
   let body="";
-  if(sp.atkType==="attack"){const b=spellAtkBonus();body=`<p><b>Spell attack:</b> ${b!=null?fmt(b):"—"} to hit (${sp.atkKind==="melee"?"melee":"ranged"})</p>`;}
-  else if(sp.atkType==="save"){const dc=spellDC();body=`<p><b>Save DC:</b> ${dc!=null?dc:"—"} ${esc((sp.saveAbility||"").toUpperCase())}</p>`;}
+  /* the spell's range is known here, as on its row: both take the ticked
+     melee- or ranged-only effects as well as the card's (#129) */
+  const c=contributions(), kind=sp.atkKind==="melee"?"melee":"ranged", isAtk=sp.atkType==="attack";
+  if(isAtk){const b=spellAtkBonus(c,kind);body=`<p><b>Spell attack:</b> ${b!=null?fmt(b):"—"} to hit (${kind})</p>`;}
+  else if(sp.atkType==="save"){const dc=spellDC(c);body=`<p><b>Save DC:</b> ${dc!=null?dc:"—"} ${esc((sp.saveAbility||"").toUpperCase())}</p>`;}
   /* the same line the attack row shows, extras and all — one formatter, so the
      dialog cannot promise different damage from the sheet behind it */
-  const dmg=attackDamageStr({damageDice:sp.dice,damageType:sp.damageType,extraDamage:sp.extraDamage},0);
+  const dmg=attackDamageStr({damageDice:sp.dice,damageType:sp.damageType,extraDamage:sp.extraDamage},spellDmgFx(c,isAtk?kind:null));
   if(dmg)body+=`<p><b>Damage:</b> ${esc(dmg)}</p>`;
   body+=`<p class="hint">Cast at level ${esc(atLevel||sp.level)}. Roll the dice at your table.</p><div class="m-actions"><button class="tbtn primary" id="okAtk">OK</button></div>`;
   openModal("Cast "+sp.name,body);const b=document.getElementById("okAtk");if(b)b.addEventListener("click",closeModal);
@@ -368,12 +391,13 @@ function renderAttacks(){
   const rows=(list)=>list.forEach(a=>{
     const ic=!!atkCol().items[a.id], isSpell=a.source==="spell", save=a.save;
     const n=attackNumbers(a);
-    const dmg=attackDamageStr(a,save?0:n.dmgBonus);
+    /* a save spell adds no ability to damage, only its ticked effects (#129) */
+    const dmg=attackDamageStr(a,save?n.dmgFx:n.dmgBonus);
     const typeLabel=save?"Spell save":(isSpell?`Spell · ${n.kind==="ranged"?"Ranged":"Melee"}`:(n.kind==="ranged"?"Ranged":"Melee"));
     const dc=spellDC();
     const hitCell=save?`<span class="atk-hit${dcFx||dcNeg?" fx-on":""}${dcNeg?" fx-neg":""}">DC ${dc!=null?dc:"—"} ${esc((save.ability||"").toUpperCase())}</span>`
                        :`<span class="atk-hit ${n.atkFx||n.atkNeg?"fx-on":""}${n.atkNeg?" fx-neg":""}" data-atk-info="${esc(a.id)}">${fmt(n.toHit)} to hit</span>`;
-    const dmgOn=!save&&(n.dmgFx||n.dmgNeg), dmgNeg=!save&&n.dmgNeg;
+    const dmgOn=n.dmgFx||n.dmgNeg, dmgNeg=n.dmgNeg;
     const d=document.createElement("div");d.className="item fitem";
     d.innerHTML=`<div class="top split">
         <button class="fitoggle" data-atkitem="${esc(a.id)}" aria-label="Collapse"><svg class="fcaret ${ic?"c":""}" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
@@ -481,11 +505,11 @@ function openAttackBreakdown(id){
   if(a.proficient)b+=row("Proficiency bonus",pb);
   if(num(a.atkMisc))b+=row("Extra to-hit (manual)",num(a.atkMisc));
   if(n.ammoBonus)b+=row(n.ammoName+" (loaded)",n.ammoBonus);
-  const spellAtk=a.source==="spell"&&!a.save;
-  c.filter(x=>x.target==="attack"||x.target==="attack."+n.kind||(spellAtk&&x.target==="spell.attack")).forEach(x=>b+=row(x.source,x.value,true));
+  /* the effects attackNumbers() counted, so the lines always add up to the row */
+  n.atkList.forEach(x=>b+=row(x.source,x.value,true));
   b+=`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--line);margin-top:6px;padding-top:6px"><b>To hit</b><b>${fmt(n.toHit)}</b></div>`;
   b+=`<p style="margin:12px 0 4px"><b>Damage:</b> ${esc(attackDamageStr(a,n.dmgBonus)||"—")}</p>`;
-  const dc=c.filter(x=>x.target==="damage"||x.target==="damage."+n.kind);
+  const dc=n.dmgList;
   if(a.addAbilityDamage&&n.abilName)b+=row(n.abilName+" modifier",n.abil);
   if(num(a.dmgMisc))b+=row("Extra damage (manual)",num(a.dmgMisc));
   if(n.ammoBonus)b+=row(n.ammoName+" (loaded)",n.ammoBonus);
