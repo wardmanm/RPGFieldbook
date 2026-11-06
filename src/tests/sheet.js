@@ -9305,8 +9305,76 @@ async function tBootStorage134() {
   }
 }
 
+/* #135: a character that autoloads at boot is asked about rules updates once
+   the packs are back, whichever store they come from, and only then. Tess was
+   last checked against 1.0.0 and carries a copy of Zap whose text the pack has
+   since changed, so a check finds a row. */
+async function tBootStorage135() {
+  const pool = JSON.stringify({name: '', version: 1, keywords: [], items: [], features: [], races: [], classes: [], feats: [], tables: [],
+    spells: [{name: 'Zap', level: 1, text: 'The new text.', _source: 'ZZZ'}]});
+  const tess = (() => {
+    const c = BS.app({}, {noBoot: true}).X.blankChar();
+    c.id = 'tess'; c.name = 'Tess'; c.system = 'dnd'; c.appVersion = '1.0.0';
+    c.spells = [{id: 'z1', name: 'Zap', level: 1, text: 'The old text.'}];
+    return JSON.stringify(c);
+  })();
+  const lib = autoload => JSON.stringify({autoload, index: [{id: 'tess', name: 'Tess', system: 'dnd', appVersion: '1.0.0', updated: 1}]});
+  const store = autoload => ({'hw-fb-c-tess': tess, 'hw-fb-library': lib(autoload), 'hw-fb-settings': '{}'});
+  const asked = a => a.opened.filter(t => t === 'Rules updates available').length;
+  const zap = a => (a.X.rules.spells || []).some(x => x.name === 'Zap');
+  // the packs only in IndexedDB: the autoload sees none
+  {
+    const a = BS.app(store('tess'), {idb: BS.fakeIDB({rules: pool})});
+    ck('#135 setup: Tess opened at boot, with no packs yet', a.X.activeId === 'tess' && asked(a) === 0, [a.X.activeId, a.opened]);
+    await BS.settle();
+    ck('#135 once the IndexedDB packs are back, Tess is asked, once', asked(a) === 1, a.opened);
+  }
+  // the packs in localStorage: asked at the autoload, and not again
+  {
+    const a = BS.app(Object.assign(store('tess'), {'hw-fb-rules': pool}), {idb: BS.fakeIDB({rules: pool})});
+    ck('#135 with a localStorage copy, Tess is asked as she opens', asked(a) === 1, a.opened);
+    await BS.settle();
+    ck('#135 ...and not asked a second time', asked(a) === 1, a.opened);
+  }
+  // no autoload: the home screen is up, with an unsaved stand-in sheet behind it
+  {
+    const a = BS.app(store(null), {idb: BS.fakeIDB({rules: pool})});
+    await BS.settle();
+    /* the harness's home screen never reads as shown, so this is activeId's
+       guard alone: the stand-in sheet would be quietly marked checked */
+    ck('#135 with nothing opened at boot, nobody is asked, and the stand-in sheet is left alone',
+       a.X.activeId == null && asked(a) === 0 && a.X.character.appVersion === '', [a.X.activeId, a.opened, a.X.character.appVersion]);
+  }
+  // the player went Home before the packs came back
+  {
+    const home = {style: {}};
+    const a = BS.app(store('tess'), {idb: BS.fakeIDB({rules: pool}), before: x => {
+      const g = x.ctx.document.getElementById; x.ctx.document.getElementById = id => id === 'home' ? home : g(id);
+    }});
+    a.ctx.showHome();
+    await BS.settle();
+    ck('#135 the home screen in front: the packs come back, and no prompt lands on it', zap(a) && home.style.display === 'flex' && asked(a) === 0, [zap(a), home.style.display, a.opened]);
+    ck('#135 ...promptAfterRulesRestored() says it asked nothing, with home in front', typeof a.ctx.promptAfterRulesRestored === 'function' && a.ctx.promptAfterRulesRestored() === false && asked(a) === 0);
+  }
+  // a dialog open when the packs come back
+  {
+    /* the stub element, open: a bare object here made the hydration itself
+       throw (renderRulesData() wires the modal), which also asks nothing */
+    const a = BS.app(store('tess'), {idb: BS.fakeIDB({rules: pool}), before: x => {
+      const g = x.ctx.document.getElementById, stub = g('modal');
+      const dlg = new Proxy({}, {get: (t, k) => k === 'classList' ? {contains: c => c === 'open', add() {}, remove() {}, toggle() {}} : stub[k], set: () => true});
+      x.ctx.document.getElementById = id => id === 'modal' ? dlg : g(id);
+    }});
+    await BS.settle();
+    ck('#135 a dialog open: the packs come back, and the prompt does not replace it', zap(a) && asked(a) === 0, [zap(a), a.opened]);
+    ck('#135 ...promptAfterRulesRestored() says it asked nothing, with a dialog open', typeof a.ctx.promptAfterRulesRestored === 'function' && a.ctx.promptAfterRulesRestored() === false);
+  }
+}
+
 {
   const bsDone = ck.done;
-  const bsRun = tBootStorage142().then(tBootStorage134);
-  ck.done = () => bsRun.then(() => bsDone(), err => { ck('1.9.1 boot & storage block ran without throwing', false, String(err && err.stack || err)); bsDone(); });
+  /* caught at once: a rejection nobody is listening to yet ends the process */
+  const bsRun = tBootStorage142().then(tBootStorage134).then(tBootStorage135)
+    .catch(err => { ck('1.9.1 boot & storage block ran without throwing', false, String(err && err.stack || err)); });
+  ck.done = () => bsRun.then(() => bsDone());
 }

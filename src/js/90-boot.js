@@ -426,8 +426,9 @@ function boot(){
   {const why=storageBlockedWhy();if(why)alert("Fieldbook can't use this browser's storage — "+why+". Your characters and settings won't be kept when you close it: save each character to a file with Save before you leave, or allow this page to store data and open Fieldbook again.");}
   /* After the first paint, not before it: the rules cache lives in IndexedDB now
      and reading it is async. Everything above drew with what localStorage had;
-     when it had nothing, this brings the IndexedDB copy and redraws. */
-  loadRulesCacheAsync(haveLocal);
+     when it had nothing, this brings the IndexedDB copy and redraws. A sheet
+     the autoload opened saw no packs, so it is asked about updates then (#135). */
+  loadRulesCacheAsync(haveLocal).then(got=>{if(got)promptAfterRulesRestored();});
   checkForUpdate();checkForDataUpdate();checkSources({boot:true}).catch(()=>false);
 }
 boot();

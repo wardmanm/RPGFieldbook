@@ -136,3 +136,16 @@ function maybePromptUpdate(){
   document.getElementById("updNever").addEventListener("click",()=>{character.skipUpdate=APP_VERSION;scheduleSave();closeModal();});
   document.getElementById("updReview").addEventListener("click",()=>{closeModal();openUpdateReview();});
 }
+/* #135: a character that autoloads at boot opens before the IndexedDB copy of
+   the packs is back, so its maybePromptUpdate() sees none and says nothing.
+   boot() calls this once loadRulesCacheAsync() has restored them, to ask about
+   the sheet that is open then. Never over the home screen or a dialog: the
+   player has moved on, and Settings → Extensions → This sheet can still check.
+   true when it asked. */
+function promptAfterRulesRestored(){
+  if(!activeId)return false;
+  const h=document.getElementById("home");if(h&&h.style&&h.style.display==="flex")return false;
+  const m=document.getElementById("modal");if(m&&m.classList&&m.classList.contains("open"))return false;
+  maybePromptUpdate();
+  return true;
+}
