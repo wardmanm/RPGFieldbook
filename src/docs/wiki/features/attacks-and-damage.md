@@ -76,8 +76,9 @@ always show, and so does an orphan (its item was deleted, so nothing could ever 
 hidden, never removed. **A weapon arrives equipped, with its row showing** (#128): the finder
 (`addLibraryItems()`) and a grant (`grantItemByName()`, starting equipment) share one path,
 `equipNewWeapon()`, which equips it and calls `addAttackForItem()`. On the item form a new item's
-Equipped box follows its Weapon box (ticked, or a pack weapon inserted) until the player sets
-Equipped; an item being edited keeps what it has. Armour and shields arrive unequipped (Mike: #130
+Equipped box follows its Weapon box and Insert from rules pack (on for a weapon, off for anything
+else, so a shield inserted after a sword stays unequipped) until the player sets Equipped; an item
+being edited keeps what it has. Armour and shields arrive unequipped (Mike: #130
 changes shield stacking first). `migrateWeaponEquip()`, run at the end of `migrate()`, equips every
 weapon once and records `wpnEquipInit` — pre-existing weapons were all `equipped:false` because no
 control existed. `newCharacter()` sets `wpnEquipInit` on the sheet it creates, so the pass never

@@ -9124,8 +9124,12 @@ pass then also re-equipped any weapon the player had unequipped before the reloa
 
 **Fix.** The finder's path is one function, `equipNewWeapon(it)` in `85-browse.js` (equip a
 weapon and add its row), called by `addLibraryItems()` and `grantItemByName()`. In
-`openItemForm()` a new item's Equipped box follows its Weapon box (ticked, or a pack weapon
-inserted) until the player sets Equipped; an item being edited keeps what it has. `newCharacter()`
+`openItemForm()` a new item's Equipped box follows its Weapon box and Insert from rules pack (on
+for a weapon, off for anything else) until the player sets Equipped; an item being edited keeps
+what it has. The branch's review caught the first version following only a weapon insert: a
+Longsword inserted and then a Shield saved the shield equipped, moving AC against the
+weapons-only rule. Insert's older habit of keeping the weapon fields after a non-weapon is
+inserted is unchanged (outside this branch). `newCharacter()`
 sets `wpnEquipInit`, as it sets `ammoInit` and `langLifted`. **Weapons only (Mike):** granted armour
 and shields stay unequipped, because #130 changes shield stacking and must not go live first.
 

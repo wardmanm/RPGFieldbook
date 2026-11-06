@@ -9258,6 +9258,11 @@ async function t181AddClassUndo() {
     err = flow(() => { ctx.removeClass(0); });
     ck('#153 removing the class: the box shows what is left, GP 5, at once', !err && gp(5), why(err) || screen('coins'));
     ck('#153 ...and the Club leaves the inventory', !/Club/.test(screen('inventoryList')) && screen('inventoryList') !== '', screen('inventoryList').slice(0, 200));
+    // ...and when the player has spent some of it, the revert stops at 0 and the box says so
+    err = flow(() => { equipPick = 0; ctx.addClass('Tester', 1); fire('xchDone', 'click'); });
+    equipPick = null; C().coins.gp = 5;
+    err = err || flow(() => { ctx.removeClass(0); });
+    ck('#153 removing it after 10 of its 15 gp were spent: GP 0 on screen, never below', !err && gp(0) && C().coins.gp === 0, why(err) || [screen('coins'), C().coins.gp]);
 
     /* #128: a weapon that arrives outside the finder (starting equipment, a
        grant, a new item on the form) arrives the way the finder's does:
@@ -9299,6 +9304,10 @@ async function t181AddClassUndo() {
     ck('#128 a new item filled from the pack\'s Longsword arrives equipped', !err && last().name === 'Longsword' && last().equipped === true && shows(last()), why(err) || last());
     err = flow(() => { ctx.openItemForm(); el('iLib').value = at('Shield'); fire('iLib', 'change'); el('iName').value = 'Shield'; fire('iSave', 'click'); });
     ck('#128 ...one filled from the pack\'s Shield does not', !err && last().name === 'Shield' && last().equipped === false, why(err) || last());
+    /* final review: a mis-pick, a Longsword inserted and then a Shield, must
+       not save the shield equipped (weapons only, until #130) */
+    err = flow(() => { ctx.openItemForm(); el('iLib').value = at('Longsword'); fire('iLib', 'change'); el('iLib').value = at('Shield'); fire('iLib', 'change'); el('iName').value = 'Shield'; el('iWDice').value = '1d8'; fire('iSave', 'click'); });
+    ck('#128 ...nor one filled from a Longsword and then a Shield: it is saved unequipped', !err && last().name === 'Shield' && last().equipped === false, why(err) || last());
     const kept = {id: 'kp', name: 'Old Axe', qty: 1, description: '', effects: [], equipped: false, weapon: {kind: 'melee', ability: 'str', dice: '1d6', damageType: 'slashing', notes: ''}};
     C().inventory.push(kept);
     err = flow(() => {

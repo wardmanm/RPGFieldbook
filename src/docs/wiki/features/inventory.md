@@ -105,7 +105,8 @@ as the finder's is (#128; armour and shields arrive unequipped), and removed aga
 goes — see [Grants & provenance](../architecture/grants-and-provenance.md). What a species,
 background or class adds or takes back, items and gold alike, shows at once: every such change
 ends in `renderClassRace()`, which redraws the inventory and the coin boxes (#153). On the item
-form, a new item's Equipped box follows its Weapon box until the player sets it (#128).
+form, a new item's Equipped box follows its Weapon box and Insert from rules pack (on for a weapon,
+off for anything else) until the player sets it (#128).
 
 **The inventory log (#47).** Every change to items and coins writes one line to `character.invLog`
 through `logInv()`, which stamps `id` and `at`, puts the line first and trims the log to
