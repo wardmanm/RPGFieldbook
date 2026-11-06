@@ -266,8 +266,6 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 - **A subclass's own window shares the title of the window before it** (#146), so "Fighter — Level 3" can
   appear twice in a row (class choices, then Battle Master's). → ledger L4086, and
   [Character building](../features/character-building.md)
-- **The glossary editor's Save replaces the whole entry** (#136), so fields it doesn't show are dropped when
-  a player edits an entry that has them. → ledger L4206
 - **The Gadgeteer's level-1 "Proficiencies" trait** (#149) still arrives on a multiclass add and lists saving
   throws as text, so it can read as if it grants them (Humblewood publishes no multiclass rules).
   → ledger L3886
@@ -510,3 +508,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — Removed: weapons granted outside the item finder arrive unequipped; #128 fixes it. → ledger L9101, #128
 - 2026-11-06 — A settled shot is put back by hand, not by Undo recovery, which now leaves the shots spent; added: a row's Recover has no Undo. → ledger L9155, #170
 - 2026-11-06 — Closed: Undo recovery dropping a home-joined entry's remainder, and its grant check reading "live now" rather than "revoked since": the full reversal they described is removed (#145's two entries). → ledger L9196, #170
+- 2026-11-06 — Removed: the glossary editor's Save replacing the whole entry; it keeps the fields it doesn't show. → ledger L9219, #136

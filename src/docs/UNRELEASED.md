@@ -40,3 +40,6 @@ Bullets below this line — leave the heading in place.
 - Undo recovery in the End of combat window no longer brings your ammunition back in the next fight. It
   takes back the arrows that came back and leaves the ones you fired spent, so the next fight starts with
   nothing fired. If your DM lets you find some, add them to the stack by hand.
+- Editing one of your own glossary entries no longer throws away what the editor doesn't show. An entry
+  marked as a condition stays among the status suggestions after you reword it, and anything else your
+  character file kept with the entry stays too.

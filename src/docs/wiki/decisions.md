@@ -389,6 +389,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How the Rules tab is structured (#99)** — [A new fragment, one generic table driven by a config per category](../specs/1.9.0/2026-10-19-rules-browser-design.md); the pickers' filter definitions move into shared builders
 - **The pack, on the Rules tab (#99)** — [A Source column everywhere](../specs/1.9.0/2026-10-19-rules-browser-design.md), and a Pack filter only when more than one pack is loaded
 - **Conditions on the Rules tab (#99)** — [Their own category](../specs/1.9.0/2026-10-19-rules-browser-design.md): glossary terms marked `cond`
+- **What the glossary editor's Save writes (#136)** — The form's four fields, merged onto the entry as stored at Save time
 
 ### [Combat view](features/combat-view.md)
 

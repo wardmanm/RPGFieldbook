@@ -9379,4 +9379,150 @@ async function t181AddClassUndo() {
   }
 }
 
-t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(t168Ask).then(t181AddClassUndo).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(t168Ask).then(t181AddClassUndo).then(t136GlossSave).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });
+
+/* ---------- #136 the glossary editor's Save keeps what its form does not show
+   Save used to put a fresh {id, term, type, text, image} in the entry's place,
+   so everything else the entry carried was lost on the first edit: `cond`
+   (which offers the term in the Status editor), the {name, description}
+   aliases glossRepair() keeps, a pack copy's stamps, and any field a character
+   file brought. Only the player's own entries are editable (a pack keyword is
+   read-only), so these are all entries in character.glossary.
+   A function at the end of the chain, not a block after it: the async blocks
+   above swap openModal, the timers and the character while they wait, and a
+   synchronous block here would run in the middle of the first one. The
+   recorder DOM hands the form's boxes back by id; the form's own prefill is
+   mirrored by fillGloss(), since a recorder does not parse the markup. */
+function t136GlossSave() {
+  const keep = {ch: X.character, rules: X.rules, gid: ctx.document.getElementById, ce: ctx.document.createElement,
+    qs: ctx.document.querySelector, alert: ctx.alert};
+  const noop = () => {};
+  let byId = {}, alerts = [];
+  function rec(id) {
+    const t = {id: id || '', value: '', checked: false, style: {}, dataset: {}, files: [], options: [], _on: {},
+      classList: {toggle: noop, add: noop, remove: noop, contains: () => false},
+      addEventListener: (type, fn) => { (t._on[type] = t._on[type] || []).push(fn); },
+      appendChild: c => c, insertAdjacentHTML: noop, querySelector: () => null, querySelectorAll: () => [], closest: () => null,
+      setAttribute: noop, removeAttribute: noop, focus: noop, click: noop, contains: () => false};
+    return new Proxy(t, {get: (o, k) => k in o ? o[k] : noop});
+  }
+  const el = id => byId[id] || (byId[id] = rec(id));
+  const fire = (id, type) => (el(id)._on[type] || []).forEach(fn => fn({target: el(id)}));
+  /* key order and whitespace aside, the same value */
+  const canon = v => Array.isArray(v) ? v.map(canon) : (v && typeof v === 'object'
+    ? Object.keys(v).sort().reduce((o, k) => (o[k] = canon(v[k]), o), {}) : v);
+  const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+  const minus = (o, ks) => { const c = Object.assign({}, o); ks.forEach(k => delete c[k]); return c; };
+  const copy = v => JSON.parse(JSON.stringify(v));
+  /* what the form shows when it opens on `g` (openGlossForm's prefill), then the edits */
+  const fillGloss = (g, edits) => {
+    const e = edits || {};
+    el('gTerm').value = 'term' in e ? e.term : ctx.glossTerm(g);
+    el('gType').value = 'type' in e ? e.type : (g && g.type === 'image' ? 'image' : 'text');
+    el('gText').value = 'text' in e ? e.text : ((g && g.text) || '');
+  };
+  /* open the editor on the stored entry with this id, change the boxes, Save */
+  const edit = (id, edits) => {
+    byId = {};
+    const g = X.character.glossary.find(x => x && x.id === id);
+    ctx.openGlossForm(g); fillGloss(g, edits); fire('gSave', 'click');
+    return X.character.glossary.find(x => x && x.id === id);
+  };
+  try {
+    ctx.document.getElementById = el; ctx.document.createElement = () => rec(); ctx.document.querySelector = () => rec();
+    ctx.alert = m => { alerts.push(String(m)); };
+    const packKw = {term: 'Soaked', type: 'text', text: 'The pack\'s own wording.', cond: true, id: 'k1', _source: 'Homebrew'};
+    X.rules = {name: '', keywords: [copy(packKw)], items: [], features: [], spells: [], races: [], classes: [], feats: [], tables: []};
+    /* the character file: a pack keyword copied into it, a hand-made entry with
+       fields this app has never heard of, an image entry, and one written the
+       way the other categories are */
+    const pk = {id: 'p1', term: 'Soaked', type: 'text', text: 'Wet.', image: null, cond: true,
+                _source: 'Homebrew', _rulebook: 'HB', _dataVersion: '1.0.0-1'};
+    const hb = {id: 'h1', term: 'Flanking', type: 'text', text: 'Old.', image: null,
+                source: 'House rules', tags: ['combat'], meta: {page: 12, by: 'DM'}};
+    const im = {id: 'i1', term: 'Cover', type: 'image', text: 'Half and three-quarters.', image: 'data:image/png;base64,iVBORw0KGgo=',
+                cond: false, tags: ['map']};
+    const al = {id: 'a1', name: 'Lucky Break', description: 'Old text.'};
+    X.character = ctx.migrate(Object.assign(X.blankChar(), {glossary: copy([pk, hb, im, al])}));
+    const list0 = X.character.glossary.slice();
+    ck('#136 setup: migrate() keeps every field of every entry (the loss is at Save, not load)',
+       same(X.character.glossary[0], pk) && same(X.character.glossary[1], hb) && same(X.character.glossary[2], im)
+       && X.character.glossary[3].name === 'Lucky Break' && X.character.glossary[3].term === 'Lucky Break', X.character.glossary);
+    ck('#136 setup: the player\'s Soaked is offered as a status', ctx.statusTermList().includes('Soaked'));
+
+    // ---- a pack keyword copied into the character file
+    const p = edit('p1', {text: 'Drenched through.'});
+    ck('#136 a pack-shaped entry keeps cond and its pack stamps through an edit',
+       p.cond === true && p._source === 'Homebrew' && p._rulebook === 'HB' && p._dataVersion === '1.0.0-1', p);
+    ck('#136 ...and takes the edit, keeping its term and id', p.text === 'Drenched through.' && p.term === 'Soaked' && p.id === 'p1', p);
+    X.rules.keywords = [];
+    ck('#136 ...and is still offered as a status on its own (cond survived, not the pack\'s twin)', ctx.statusTermList().includes('Soaked'), ctx.statusTermList());
+    X.rules.keywords = [copy(packKw)];
+    ck('#136 the pack\'s own keyword is never written by an edit of the player\'s twin', same(X.rules.keywords[0], packKw), X.rules.keywords[0]);
+
+    // ---- a hand-made (homebrew) entry
+    const h = edit('h1', {term: '  Flanked  ', text: 'New.'});
+    ck('#136 a homebrew entry keeps every field the form does not show', same(minus(h, ['term', 'text']), minus(hb, ['term', 'text'])), h);
+    ck('#136 ...takes the trimmed term and the new text', h.term === 'Flanked' && h.text === 'New.', h);
+    ck('#136 ...in its own place, with no entry added or lost', X.character.glossary.length === list0.length && X.character.glossary[1] === h
+       && X.character.glossary[0] === p && X.character.glossary[2] === list0[2] && X.character.glossary[3] === list0[3]);
+
+    // ---- an image entry switched to text and back
+    let i = edit('i1', {type: 'text'});
+    ck('#136 switching an image entry to Text keeps its image, its text and its other fields',
+       i.type === 'text' && i.image === im.image && i.text === im.text && i.cond === false && same(i.tags, ['map']), i);
+    i = edit('i1', {type: 'image'});
+    ck('#136 ...and back to Rules image, the same entry it was', same(i, im), i);
+
+    // ---- an entry written {name, description}: aliases kept, the edit wins after a reload
+    const a = edit('a1', {term: 'Lucky Breaks', text: 'New text.'});
+    ck('#136 an aliased entry keeps its name and description', a.name === 'Lucky Break' && a.description === 'Old text.', a);
+    ck('#136 ...and takes the edit', a.term === 'Lucky Breaks' && a.text === 'New text.', a);
+
+    // ---- save → load
+    const back = ctx.migrate(copy(X.character));
+    const bg = id => back.glossary.find(x => x && x.id === id);
+    ck('#136 save→load keeps the kept fields: cond, pack stamps, tags, meta, image',
+       bg('p1').cond === true && bg('p1')._rulebook === 'HB' && same(bg('h1').tags, ['combat']) && same(bg('h1').meta, {page: 12, by: 'DM'})
+       && bg('i1').image === im.image && same(bg('i1').tags, ['map']), back.glossary);
+    ck('#136 save→load keeps the edits: the kept aliases do not win back the term or text',
+       bg('a1').term === 'Lucky Breaks' && bg('a1').text === 'New text.' && bg('h1').term === 'Flanked' && bg('p1').text === 'Drenched through.', bg('a1'));
+    ck('#136 save→load changes nothing else', same(back.glossary, X.character.glossary), back.glossary);
+
+    // ---- Undo swaps the character while the form is open: Save lands on the entry as stored now
+    byId = {};
+    ctx.openGlossForm(X.character.glossary.find(x => x.id === 'h1'));
+    X.character = copy(X.character);   /* what an Undo on a toast does: a whole new character, same ids */
+    X.character.glossary.find(x => x.id === 'h1').tags = ['restored'];
+    fillGloss(X.character.glossary.find(x => x.id === 'h1'), {text: 'After the undo.'});
+    fire('gSave', 'click');
+    const u = X.character.glossary.find(x => x.id === 'h1');
+    ck('#136 Save merges onto the entry as stored at Save, not the copy the form opened on',
+       u.text === 'After the undo.' && same(u.tags, ['restored']) && same(u.meta, {page: 12, by: 'DM'}) && u.source === 'House rules', u);
+    ck('#136 ...without adding a second one', X.character.glossary.filter(x => x.id === 'h1').length === 1);
+
+    // ---- a blank term is refused, and refusing writes nothing
+    const before = copy(X.character.glossary);
+    alerts = [];
+    edit('p1', {term: '   ', text: 'Should not land.'});
+    ck('#136 a blank term still refuses Save', alerts.length === 1 && alerts[0] === 'Give the entry a term.', alerts);
+    ck('#136 ...and leaves every entry exactly as it was', same(X.character.glossary, before), X.character.glossary);
+
+    // ---- Add: a new entry is the form's fields and nothing else
+    byId = {};
+    const n0 = X.character.glossary.length, others = copy(X.character.glossary);
+    ctx.openGlossForm(); fillGloss(null, {term: 'Hex Hunter', text: 'A house rule.'}); fire('gSave', 'click');
+    const added = X.character.glossary[X.character.glossary.length - 1];
+    ck('#136 Add pushes one entry of exactly the form\'s fields',
+       X.character.glossary.length === n0 + 1 && same(Object.keys(added).sort(), ['id', 'image', 'term', 'text', 'type'])
+       && typeof added.id === 'string' && added.id !== '' && added.term === 'Hex Hunter' && added.type === 'text'
+       && added.text === 'A house rule.' && added.image === null, added);
+    ck('#136 ...and leaves the others alone', same(X.character.glossary.slice(0, n0), others));
+    ck('#136 ...with an id no other entry has', X.character.glossary.filter(x => x.id === added.id).length === 1);
+  } catch (err) {
+    ck('#136 t136GlossSave ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    ctx.document.getElementById = keep.gid; ctx.document.createElement = keep.ce; ctx.document.querySelector = keep.qs;
+    ctx.alert = keep.alert; X.character = keep.ch; X.rules = keep.rules;
+  }
+}

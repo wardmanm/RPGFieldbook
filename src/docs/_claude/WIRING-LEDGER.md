@@ -9215,3 +9215,65 @@ the #170 "unchanged" check) are gone.
 
 Pages: [ammunition](../wiki/features/ammunition.md), [known issues](../wiki/roadmap/known-issues.md),
 [1.9.1](../wiki/roadmap/1.9.1.md).
+
+## The glossary editor keeps what it doesn't show (#136, 2026-11-06)
+
+**The bug.** The glossary editor's Save (`openGlossForm()`, `85-browse.js`) put a fresh
+`{id, term, type, text, image}` in the entry's place, so the first edit dropped everything else the
+entry carried. Noticed in L4206 and left; filed from the 1.9.0 pre-release. Reproduced in the
+harness before the fix: `migrate()` keeps every field of a loaded entry, and Save alone loses them.
+Page: [Rules & tables](../wiki/features/rules-and-tables.md).
+
+**What an entry can carry.** Only the player's own entries are editable. The Rules tab gives Edit
+only to "Yours" rows, and `90-boot.js` looks the id up in `character.glossary` alone. A pack
+keyword is read-only (`allGlossary()` marks its copy `_locked`), and there is no override or
+library copy: Save writes into `character.glossary`, which saves with the character. An own entry
+holds the form's five fields; `cond` (rules-schema §6.1), which `statusTermList()` reads to offer
+the term in the Status editor, so losing it took a player's own condition out of those
+suggestions; the `{name, description}` aliases, which `glossRepair()` copies into `term`/`text`
+and keeps; a pack copy's stamps (`_source`, `_rulebook`, `_dataVersion`); and anything else a
+character file brought, which `migrate()` keeps by default. The shipped packs' keywords carry
+`term`, `type`, `text` and `cond` only.
+
+**Fix.** Save copies the entry as stored at Save time (found by id; for Add, the new blank) and
+overwrites the four fields the form shows: `term` (trimmed), `type`, `text` and `image`. `text`
+and `image` are both kept whichever type is chosen, as before. The stored copy and not the opened
+one, because an Undo on a toast can swap the whole character while the form is open; the
+tracker form already reads its stored copy for the same reason.
+
+- Ruling: an edit whose entry is gone by Save time (only an Undo while the form is open) is still
+  pushed, as before, now with its fields. That keeps the old behaviour rather than adding the
+  tracker form's refusal. Cost if wrong: an undone entry can come back on Save.
+- Ruling: the aliases are kept as they were, neither updated nor dropped. They are inert once
+  `term` and `text` are set (`glossRepair()` fills only a blank term and an absent text), and
+  keeping them is the literal fix. Cost if wrong: a stale alias in an exported file.
+
+**Tests.** `sheet.js` 2726 → 2749: `t136GlossSave()` (23 checks), with a pack keyword copied into
+the character, a hand-made entry with unknown fields, an image entry switched to Text and back, an
+aliased entry, a save→load round trip, an Undo swap while the form is open, a refused blank term
+and Add. 8 failed before the fix, all on dropped fields; the other 15 guard what must not change.
+It is a function at the end of the file, added to the closing `.then()` chain. A synchronous
+block after that line would run while `t118EndToEnd()` is suspended with `openModal`, the timers
+and the character swapped, and Save's `scheduleSave()` calls `luMaybeSettle()`.
+
+**The same pattern in other editors** (listed for filing, not changed). Each Save builds its record
+from the form and carries a named list of other fields, so any field not on the list goes:
+- `openAttackForm()` (`60-attacks.js`): carries `ATTACK_LINK_FIELDS` and `genFp`, but **not
+  `fav`**, so editing a starred attack unstars it (checked in the harness). Not on file.
+- `openResourceForm()` (`65-resources.js`): rebuilds a manual resource; drops `die` and any other
+  field.
+- `openFeatureForm()` (`80-modal-forms.js`): carries `fav`, `origin` and `src`; a scaling use
+  count is frozen to a number (#132).
+- `openItemForm()`: carries `category`, `type`, `grant`, `attackId`, `fav`, `src`, `armor`,
+  `ammoStack` and `pack`; drops anything else.
+- `openStatusForm()`: carries `concId` (its timing is on the form); drops anything else.
+- `openFamiliarForm()`: carries nothing beyond the form.
+- `openSpellForm()`: carries `src`; drops anything else.
+- `savePartyMember()` (`87-initiative.js`): `cleanParty()` rebuilds every row as
+  `{id, name, ac, maxHp}`, a closed shape by design.
+Two editors already merge: `openTrackerForm()` (`trkFromForm()` onto the stored tracker) and
+`jnlSavePage()` (edits the page in place).
+
+**Noticed, not changed.** `migrate()` gives a glossary entry an id only when it has none, so two
+entries sharing an id (a hand-edited file) stay that way, and Edit and Delete on either act on the
+first. Journal pages and trackers go through `repairIds()`; the glossary does not.
