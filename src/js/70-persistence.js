@@ -26,6 +26,18 @@ function storageWhy(e){
   if(/security|denied/i.test(n+" "+m))return "your browser is blocking storage for this page";
   return "your browser refused to save"+(n?" ("+n+")":"");
 }
+/* "" when this page may use localStorage, or why not (#142). A browser that
+   blocks storage for the page (cookies blocked for the site) throws at the
+   first touch, a read included; one with storage switched off has no
+   localStorage at all. Every read and write here catches its own failure, so
+   boot goes on either way; this is how boot() finds out to say so. */
+function storageBlockedWhy(){
+  try{
+    if(!localStorage)return "your browser has storage switched off for this page";
+    localStorage.getItem(K_SET);
+    return "";
+  }catch(e){return storageWhy(e);}
+}
 /* Save a snapshot of a character as a separate library entry, WITHOUT switching
    to it (that's the difference from finishImport).
 
@@ -126,7 +138,9 @@ function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings))
    SAYS SO — see rulesCacheError. */
 const IDB_NAME="hw-fb-cache", IDB_STORE="kv", IDB_KEY="rules", IDB_TIMEOUT=4000;
 let rulesCacheError="";
-function idbReady(){return typeof indexedDB!=="undefined"&&!!indexedDB;}
+/* A browser that blocks storage can throw at the mere mention of indexedDB
+   (#142), which would escape saveRulesCache() and loadRulesCacheAsync(). */
+function idbReady(){try{return typeof indexedDB!=="undefined"&&!!indexedDB;}catch(e){return false;}}
 /* A request that never fires an event is the third way IndexedDB fails, and the
    nastiest: absent and throwing both reject immediately, but a hang leaves the
    promise pending forever — so a failed save would go unreported and the boot
@@ -298,7 +312,10 @@ function cacheBytes(n){
   const mb=n*2/1048576;
   return (mb>=1?mb.toFixed(1)+" MB":Math.round(n*2/1024)+" KB");
 }
-function saveRulesCache(){
+/* `change` is "remove" when the pool shrank (Remove, Remove all): then what a
+   refused save means is the other way round — the next boot loads the copy
+   that last landed, so what was removed may be back (#143). */
+function saveRulesCache(change){
   const json=JSON.stringify(rules);
   const toLocal=()=>{
     try{
@@ -313,7 +330,9 @@ function saveRulesCache(){
       /* Both stores refused. The pool is still loaded and usable THIS session —
          it just won't survive a reload, which is precisely the failure that
          used to be invisible. */
-      rulesCacheError="Your browser wouldn't save the "+cacheBytes(json.length)+
+      rulesCacheError=change==="remove"
+        ? "Your browser wouldn't save that change, so next time you open Fieldbook it will load the rules data it last saved, and what you removed may be back."
+        : "Your browser wouldn't save the "+cacheBytes(json.length)+
         " of rules data you have loaded, so it won't be there next time you open Fieldbook. "+
         "Remove a pack you're not using in Settings → Extensions, or install them again after each reload.";
     }
@@ -324,7 +343,9 @@ function saveRulesCache(){
     .then(()=>{
       rulesCacheError="";
       /* Migrated: free the megabytes the old key was holding, which is also what
-         was starving character autosave and the update-tool backups. */
+         was starving character autosave and the update-tool backups. And it is
+         what makes a localStorage copy, whenever there is one, the newest: boot
+         keeps it over IndexedDB's on exactly that rule (#134). */
       try{localStorage.removeItem(K_RULES);}catch(e){}
       return "";
     })

@@ -9526,3 +9526,291 @@ function t136GlossSave() {
     ctx.alert = keep.alert; X.character = keep.ch; X.rules = keep.rules;
   }
 }
+
+/* ---------- 1.9.1 Boot & storage: #142, #134, #135, #143
+   These run the real boot(): 90-boot.js, which the harness leaves out, is
+   evaluated in a FRESH loadApp() context per case, minus its closing boot()
+   call, after the case has set up storage. A fresh context per case keeps them
+   apart from the shared X/ctx above and from each other. The checks are
+   asynchronous (the IndexedDB hydration), so the block chains onto ck.done
+   rather than editing the chain line above. */
+const BS = (() => {
+  const fs = require('fs'), path = require('path'), vm = require('vm');
+  const js = n => fs.readFileSync(path.join(__dirname, '..', 'js', n), 'utf8');
+  const bootSrc = js('90-boot.js');
+  const bootDef = bootSrc.replace(/\nboot\(\);\s*$/, '\n');
+  const secErr = () => { const e = new Error('Access is denied for this document.'); e.name = 'SecurityError'; return e; };
+  /* a localStorage whose every call throws, as Chrome and Firefox do with
+     cookies blocked for the site */
+  const denied = () => ({getItem() { throw secErr(); }, setItem() { throw secErr(); }, removeItem() { throw secErr(); }});
+  const settle = () => new Promise(r => setImmediate(r));
+  /* A small IndexedDB: open, one store, put and get, each firing its event a
+     microtask later, as the real one fires them after the call returns. `data`
+     is the store's contents, shared across boots like the disk; st.failPut
+     makes every put abort, the way a full or broken IndexedDB refuses. */
+  function fakeIDB(data) {
+    const st = {failPut: false};
+    const later = f => Promise.resolve().then(f);
+    const db = {objectStoreNames: {contains: () => true}, createObjectStore() {}, close() {},
+      transaction() {
+        const tx = {};
+        const os = {
+          put(v, k) {
+            const rq = {};
+            if (st.failPut) later(() => { tx.error = new Error('QuotaExceededError'); if (tx.onabort) tx.onabort(); });
+            else { data[k] = v; later(() => { if (tx.oncomplete) tx.oncomplete(); }); }
+            return rq;
+          },
+          get(k) { const rq = {result: data[k]}; later(() => { if (tx.oncomplete) tx.oncomplete(); }); return rq; },
+        };
+        tx.objectStore = () => os;
+        return tx;
+      }};
+    return {api: {open() { const rq = {result: db}; later(() => { if (rq.onsuccess) rq.onsuccess(); }); return rq; }}, data, st};
+  }
+  /* store: localStorage contents to start from. opts.ls: null, an object, or
+     'getter' (the localStorage property itself throws). opts.idb: a fake
+     IndexedDB from fakeIDB(). opts.before(app): last setup before boot.
+     opts.noBoot: define boot() but don't call it. */
+  function app(store, opts) {
+    opts = opts || {};
+    const a = loadApp(['blankChar', 'mergeRules', 'resetRules', 'saveRulesCache', 'rulesCacheWarning',
+      'loadedRulesGroups', 'removeRulesGroup', 'clearAllRules', 'K_RULES', 'LZW_TAG', 'lzwCompress']);
+    if (a.bootError) throw a.bootError;
+    Object.assign(a.store, store || {});
+    if (opts.ls === 'getter') Object.defineProperty(a.ctx, 'localStorage', {configurable: true, get() { throw secErr(); }});
+    else if (opts.ls !== undefined) a.ctx.localStorage = opts.ls;
+    if (opts.idb) a.ctx.indexedDB = opts.idb.api;
+    a.alerts = []; a.ctx.alert = m => { a.alerts.push(String(m)); };
+    a.opened = []; a.ctx.openModal = t => { a.opened.push(String(t)); };
+    if (opts.before) opts.before(a);
+    vm.runInContext(bootDef + '\n;globalThis.__bsBoot=function(){try{boot();return null;}catch(e){return e;}};', a.ctx, {filename: '90-boot.js'});
+    a.bootThrew = opts.noBoot ? null : a.ctx.__bsBoot();
+    return a;
+  }
+  return {js, bootSrc, bootDef, secErr, denied, settle, fakeIDB, app};
+})();
+
+async function tBootStorage142() {
+  ck('#142 setup: 90-boot.js still ends by calling boot()', BS.bootDef !== BS.bootSrc);
+  const cases = [['storage switched off (no localStorage)', null, /storage switched off for this page/],
+    ['every call throws SecurityError', BS.denied(), /your browser is blocking storage for this page/],
+    ['the localStorage property throws', 'getter', /./]];
+  for (const [what, ls, why] of cases) {
+    const a = BS.app({}, {ls});
+    ck('#142 ' + what + ': boot() runs to the end', a.bootThrew === null, a.bootThrew && String(a.bootThrew.stack || a.bootThrew));
+    ck('#142 ' + what + ': ...and says so, once, with why and what is lost',
+       a.alerts.length === 1 && why.test(a.alerts[0]) && /won't be kept/.test(a.alerts[0]) && /save each character to a file/i.test(a.alerts[0]), a.alerts);
+    let threw = null; try { a.ctx.renderHome(); } catch (e) { threw = e; }
+    ck('#142 ' + what + ': renderHome() draws without throwing', threw === null, threw && String(threw));
+  }
+  const ok = BS.app({});
+  ck('#142 with storage that works, boot says nothing', ok.bootThrew === null && ok.alerts.length === 0, ok.alerts);
+  ck('#142 storageBlockedWhy() is "" when storage works', typeof ok.ctx.storageBlockedWhy === 'function' && ok.ctx.storageBlockedWhy() === '');
+  /* The vm turns a throwing global getter into "not defined", so a browser
+     whose indexedDB property throws (Firefox with cookies blocked) can only be
+     guarded as text: idbReady() must answer false, not throw out of
+     saveRulesCache() and loadRulesCacheAsync(). */
+  ck('#142 idbReady() answers false rather than throwing',
+     /function idbReady\(\)\{try\{[^\n]*\}catch\(e\)\{return false;\}\}/.test(BS.js('70-persistence.js')));
+}
+
+/* #134: the newest copy of the rules cache is the one a boot keeps. Every
+   case saves through the real saveRulesCache() and boots the real boot() over
+   what it left, the store and the IndexedDB carried across like the disk. */
+async function tBootStorage134() {
+  const names = a => (a.X.rules.spells || []).map(s => s.name).sort().join();
+  const reboot = (from, idb) => BS.app(from.store, {idb: BS.fakeIDB(idb.data)});
+  // IndexedDB takes pack A; then refuses, and pack B falls back to localStorage
+  {
+    const idb = BS.fakeIDB({});
+    const a = BS.app({}, {idb, noBoot: true});
+    a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}]}, 'a.json');
+    await a.X.saveRulesCache();
+    ck('#134 setup: IndexedDB holds the first save, localStorage nothing', !!idb.data.rules && !(a.X.K_RULES in a.store));
+    idb.st.failPut = true;
+    a.X.mergeRules({system: 'BBB', spells: [{name: 'Beta'}]}, 'b.json');
+    const err = await a.X.saveRulesCache();
+    ck('#134 setup: the second save falls back to localStorage and lands', err === '' && (a.X.K_RULES in a.store), err);
+    const b = reboot(a, idb);
+    ck('#134 the next boot paints the newer localStorage copy', names(b) === 'Alpha,Beta', names(b));
+    await BS.settle();
+    ck('#134 ...and the older IndexedDB copy is not laid over it', names(b) === 'Alpha,Beta', names(b));
+  }
+  // the usual path: IndexedDB holds the pool and localStorage has no copy
+  {
+    const idb = BS.fakeIDB({});
+    const a = BS.app({}, {idb, noBoot: true});
+    a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}, {name: 'Beta'}]}, 'a.json');
+    await a.X.saveRulesCache();
+    const b = reboot(a, idb);
+    ck('#134 with only an IndexedDB copy, the first paint has no packs', names(b) === '', names(b));
+    await BS.settle();
+    ck('#134 ...and the IndexedDB copy arrives a moment later', names(b) === 'Alpha,Beta', names(b));
+  }
+  // an old build's plain-JSON localStorage copy, IndexedDB empty: the migration source
+  {
+    const b = BS.app({'hw-fb-rules': JSON.stringify({name: '', version: 1, spells: [{name: 'Gamma'}]})}, {idb: BS.fakeIDB({})});
+    await BS.settle();
+    ck('#134 an old build\'s localStorage copy is kept when IndexedDB has none', names(b) === 'Gamma', names(b));
+  }
+  // a localStorage copy that can't be read, beside an IndexedDB copy
+  {
+    const idb = BS.fakeIDB({rules: JSON.stringify({name: '', version: 1, spells: [{name: 'Delta'}]})});
+    const b = BS.app({'hw-fb-rules': '{not json'}, {idb});
+    await BS.settle();
+    ck('#134 an unreadable localStorage copy gives way to the IndexedDB one', names(b) === 'Delta', names(b));
+  }
+  /* the other half of the rule: a save IndexedDB takes deletes the localStorage
+     copy, or a fallback copy left behind would outrank every later save */
+  {
+    const idb = BS.fakeIDB({});
+    const a = BS.app({}, {idb, noBoot: true});
+    idb.st.failPut = true;
+    a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}]}, 'a.json');
+    await a.X.saveRulesCache();
+    ck('#134 setup: a fallback save leaves a localStorage copy', a.X.K_RULES in a.store);
+    idb.st.failPut = false;
+    a.X.mergeRules({system: 'BBB', spells: [{name: 'Beta'}]}, 'b.json');
+    await a.X.saveRulesCache();
+    ck('#134 a later save IndexedDB takes deletes the localStorage copy', !(a.X.K_RULES in a.store));
+    const b = reboot(a, idb);
+    await BS.settle();
+    ck('#134 ...so the next boot has that later save, not the fallback copy', names(b) === 'Alpha,Beta', names(b));
+  }
+  // both refused after an IndexedDB save: the next boot has what last landed, as the warning said
+  {
+    const idb = BS.fakeIDB({});
+    const a = BS.app({}, {idb, noBoot: true});
+    a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}]}, 'a.json');
+    await a.X.saveRulesCache();
+    idb.st.failPut = true; a.state.quotaFull = true;
+    a.X.mergeRules({system: 'BBB', spells: [{name: 'Beta'}]}, 'b.json');
+    const err = await a.X.saveRulesCache();
+    ck('#134 setup: both stores refuse, and it says so', /won't be there next time/.test(err), err);
+    const b = reboot(a, idb);
+    await BS.settle();
+    ck('#134 ...and the next boot has the copy that landed last', names(b) === 'Alpha', names(b));
+  }
+}
+
+/* #135: a character that autoloads at boot is asked about rules updates once
+   the packs are back, whichever store they come from, and only then. Tess was
+   last checked against 1.0.0 and carries a copy of Zap whose text the pack has
+   since changed, so a check finds a row. */
+async function tBootStorage135() {
+  const pool = JSON.stringify({name: '', version: 1, keywords: [], items: [], features: [], races: [], classes: [], feats: [], tables: [],
+    spells: [{name: 'Zap', level: 1, text: 'The new text.', _source: 'ZZZ'}]});
+  const tess = (() => {
+    const c = BS.app({}, {noBoot: true}).X.blankChar();
+    c.id = 'tess'; c.name = 'Tess'; c.system = 'dnd'; c.appVersion = '1.0.0';
+    c.spells = [{id: 'z1', name: 'Zap', level: 1, text: 'The old text.'}];
+    return JSON.stringify(c);
+  })();
+  const lib = autoload => JSON.stringify({autoload, index: [{id: 'tess', name: 'Tess', system: 'dnd', appVersion: '1.0.0', updated: 1}]});
+  const store = autoload => ({'hw-fb-c-tess': tess, 'hw-fb-library': lib(autoload), 'hw-fb-settings': '{}'});
+  const asked = a => a.opened.filter(t => t === 'Rules updates available').length;
+  const zap = a => (a.X.rules.spells || []).some(x => x.name === 'Zap');
+  // the packs only in IndexedDB: the autoload sees none
+  {
+    const a = BS.app(store('tess'), {idb: BS.fakeIDB({rules: pool})});
+    ck('#135 setup: Tess opened at boot, with no packs yet', a.X.activeId === 'tess' && asked(a) === 0, [a.X.activeId, a.opened]);
+    await BS.settle();
+    ck('#135 once the IndexedDB packs are back, Tess is asked, once', asked(a) === 1, a.opened);
+  }
+  // the packs in localStorage: asked at the autoload, and not again
+  {
+    const a = BS.app(Object.assign(store('tess'), {'hw-fb-rules': pool}), {idb: BS.fakeIDB({rules: pool})});
+    ck('#135 with a localStorage copy, Tess is asked as she opens', asked(a) === 1, a.opened);
+    await BS.settle();
+    ck('#135 ...and not asked a second time', asked(a) === 1, a.opened);
+  }
+  // no autoload: the home screen is up, with an unsaved stand-in sheet behind it
+  {
+    const a = BS.app(store(null), {idb: BS.fakeIDB({rules: pool})});
+    await BS.settle();
+    /* the harness's home screen never reads as shown, so this is activeId's
+       guard alone: the stand-in sheet would be quietly marked checked */
+    ck('#135 with nothing opened at boot, nobody is asked, and the stand-in sheet is left alone',
+       a.X.activeId == null && asked(a) === 0 && a.X.character.appVersion === '', [a.X.activeId, a.opened, a.X.character.appVersion]);
+  }
+  // the player went Home before the packs came back
+  {
+    const home = {style: {}};
+    const a = BS.app(store('tess'), {idb: BS.fakeIDB({rules: pool}), before: x => {
+      const g = x.ctx.document.getElementById; x.ctx.document.getElementById = id => id === 'home' ? home : g(id);
+    }});
+    a.ctx.showHome();
+    await BS.settle();
+    ck('#135 the home screen in front: the packs come back, and no prompt lands on it', zap(a) && home.style.display === 'flex' && asked(a) === 0, [zap(a), home.style.display, a.opened]);
+    ck('#135 ...promptAfterRulesRestored() says it asked nothing, with home in front', typeof a.ctx.promptAfterRulesRestored === 'function' && a.ctx.promptAfterRulesRestored() === false && asked(a) === 0);
+  }
+  // a dialog open when the packs come back
+  {
+    /* the stub element, open: a bare object here made the hydration itself
+       throw (renderRulesData() wires the modal), which also asks nothing */
+    const a = BS.app(store('tess'), {idb: BS.fakeIDB({rules: pool}), before: x => {
+      const g = x.ctx.document.getElementById, stub = g('modal');
+      const dlg = new Proxy({}, {get: (t, k) => k === 'classList' ? {contains: c => c === 'open', add() {}, remove() {}, toggle() {}} : stub[k], set: () => true});
+      x.ctx.document.getElementById = id => id === 'modal' ? dlg : g(id);
+    }});
+    await BS.settle();
+    ck('#135 a dialog open: the packs come back, and the prompt does not replace it', zap(a) && asked(a) === 0, [zap(a), a.opened]);
+    ck('#135 ...promptAfterRulesRestored() says it asked nothing, with a dialog open', typeof a.ctx.promptAfterRulesRestored === 'function' && a.ctx.promptAfterRulesRestored() === false);
+  }
+}
+
+/* #143: Remove and Remove all say so on their own status line, Settings' and
+   the home screen's, when the cache write behind them didn't land, and what
+   they say is true for a removal. */
+async function tBootStorage143() {
+  const lines = a => {
+    const el = {rulesStatus: {textContent: '', className: ''}, homeRulesStatus: {textContent: '', className: ''}};
+    const g = a.ctx.document.getElementById; a.ctx.document.getElementById = id => el[id] || g(id);
+    return el;
+  };
+  const two = a => { a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}]}, 'a.json'); a.X.mergeRules({system: 'BBB', spells: [{name: 'Beta'}]}, 'b.json'); };
+  const removal = /what you removed may be back/;
+  for (const [how, idb] of [['no IndexedDB', null], ['IndexedDB refusing too', true]]) {
+    const db = idb && BS.fakeIDB({});
+    if (db) db.st.failPut = true;
+    const a = BS.app({}, {noBoot: true, idb: db || undefined});
+    const el = lines(a); two(a);
+    a.state.quotaFull = true;
+    a.X.removeRulesGroup(a.X.loadedRulesGroups()[0].key);
+    await BS.settle();
+    const w = a.X.rulesCacheWarning();
+    ck('#143 ' + how + ': a refused Remove turns its status line red', /\berr\b/.test(el.rulesStatus.className), el.rulesStatus);
+    ck('#143 ' + how + ': ...the line says the change wasn\'t saved, after what is loaded',
+       removal.test(el.rulesStatus.textContent) && /^Loaded/.test(el.rulesStatus.textContent), el.rulesStatus.textContent);
+    ck('#143 ' + how + ': ...and so does the home screen\'s line', removal.test(el.homeRulesStatus.textContent), el.homeRulesStatus.textContent);
+    ck('#143 ' + how + ': ...and the red line above the list is the same sentence, true for a removal',
+       removal.test(w) && !/\bKB\b|\bMB\b/.test(w) && !/Remove a pack you're not using/.test(w), w);
+    const cleared = a.X.clearAllRules();
+    await BS.settle();
+    ck('#143 ' + how + ': a refused Remove all says so too, in red', cleared === true &&
+       /^Rules cleared\. /.test(el.rulesStatus.textContent) && removal.test(el.rulesStatus.textContent) && /\berr\b/.test(el.rulesStatus.className),
+       [cleared, el.rulesStatus]);
+    ck('#143 ' + how + ': ...on the home screen\'s line as well', removal.test(el.homeRulesStatus.textContent), el.homeRulesStatus.textContent);
+    // an added pack that can't be saved still says what it always said
+    a.X.mergeRules({system: 'CCC', spells: [{name: 'Gamma'}]}, 'c.json');
+    const err = await a.X.saveRulesCache();
+    ck('#143 ' + how + ': an add refused keeps its own sentence', /won't be there next time/.test(err) && !removal.test(err), err);
+  }
+  {
+    const a = BS.app({}, {noBoot: true});
+    const el = lines(a); two(a);
+    a.X.removeRulesGroup(a.X.loadedRulesGroups()[0].key);
+    await BS.settle();
+    ck('#143 a Remove that lands stays green, with no warning',
+       el.rulesStatus.className === 'status ok' && /^Loaded/.test(el.rulesStatus.textContent) && a.X.rulesCacheWarning() === '', [el.rulesStatus, a.X.rulesCacheWarning()]);
+  }
+}
+
+{
+  const bsDone = ck.done;
+  /* caught at once: a rejection nobody is listening to yet ends the process */
+  const bsRun = tBootStorage142().then(tBootStorage134).then(tBootStorage135).then(tBootStorage143)
+    .catch(err => { ck('1.9.1 boot & storage block ran without throwing', false, String(err && err.stack || err)); });
+  ck.done = () => bsRun.then(() => bsDone());
+}

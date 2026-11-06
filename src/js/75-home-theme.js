@@ -72,7 +72,8 @@ function hideHome(){const h=document.getElementById("home");if(h)h.style.display
 function fmtWhen(ts){if(!ts)return "";const d=new Date(ts),now=Date.now(),diff=(now-ts)/1000;if(diff<60)return "just now";if(diff<3600)return Math.floor(diff/60)+"m ago";if(diff<86400)return Math.floor(diff/3600)+"h ago";return d.toLocaleDateString();}
 function renderHome(){
   const lib=libLoad();
-  const noSettings=!localStorage.getItem(K_SET);
+  /* a read can throw too, where the browser blocks storage (#142): that is a first run */
+  let noSettings=true;try{noSettings=!localStorage.getItem(K_SET);}catch(e){}
   const firstRun=noSettings||!lib.index.length;
   const showSetup=firstRun||homeForceSetup;
   // setup controls reflect current settings

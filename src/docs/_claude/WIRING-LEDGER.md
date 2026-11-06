@@ -9277,3 +9277,79 @@ Two editors already merge: `openTrackerForm()` (`trkFromForm()` onto the stored 
 **Noticed, not changed.** `migrate()` gives a glossary entry an id only when it has none, so two
 entries sharing an id (a hand-edited file) stay that way, and Edit and Delete on either act on the
 first. Journal pages and trackers go through `repairIds()`; the glossary does not.
+
+## 1.9.1 Boot & storage: #142, #134, #135, #143 (2026-11-06)
+
+Wave 1's first branch: four boot and rules-cache bugs from the 1.9.0 pre-release (S2-103, S2-58,
+S2-59, S2-104). No design call. Each cause was reproduced first by running the **real** `boot()` in
+the harness: `sheet.js`'s new boot & storage block evaluates `90-boot.js` (minus its closing
+`boot();`) in a fresh `loadApp()` context per case, with a fake IndexedDB that fires its events a
+microtask later. Before this, `boot()` had never run under test.
+
+**#142, boot stopped where storage is blocked.** Verified, not just read: with `localStorage`
+null, every call throwing `SecurityError`, or the property itself throwing, `boot()` threw at its
+first line (`const noSettings=!localStorage.getItem(K_SET)`, a dead read nothing used), and once that
+was guarded, at `renderHome()`'s identical read. With both guarded, boot finished, and said nothing.
+Now: boot's read is gone, `renderHome()`'s is in a `try` (a throw reads as a first run),
+`idbReady()` answers false rather than throwing (Firefox can throw at the mention of `indexedDB`;
+the vm turns a throwing global getter into "not defined", so that one is a source guard), and boot
+alerts once, after the home screen is up: "Fieldbook can't use this browser's storage — *why*. Your
+characters and settings won't be kept…", *why* from the new `storageBlockedWhy()`. An alert, as
+`migrateOldChar()`'s failure is, because no character is open for the save strip and the home
+screen covers it.
+
+**#134, a stale IndexedDB copy won.** Reproduced through the real save path: IndexedDB takes pack
+A, then refuses, and A+B falls back to `localStorage`; the next boot painted A+B and then
+`loadRulesCacheAsync()` laid the old A over it. The save path already keeps the rule that settles
+it: a save IndexedDB takes deletes the `localStorage` copy, so a `localStorage` copy that is there
+is never older. Boot now reads it through `loadRulesCacheLocal()` (true when it held a pool) and
+`loadRulesCacheAsync(haveLocal)` leaves IndexedDB alone when it did. An unreadable `localStorage`
+copy counts as none, so IndexedDB's comes back rather than nothing. This also ends the "migrating
+boot flickers once" trap: IndexedDB no longer replaces a painted `localStorage` copy.
+Ruling: presence, not timestamps on both copies — stamps would change both stored formats and the
+`localStorage` one can't be written atomically with its copy; the one case presence gets wrong is an
+IndexedDB save whose `removeItem()` then failed, which only happens where storage is blocked.
+Ruling: the stale IndexedDB copy is left, not deleted on fallback — a delete whose open is slow can
+be created after a later save's put and remove the newest copy; under presence it is never read.
+
+**#135, no prompt for the boot autoload.** With the packs only in IndexedDB, the autoload opened
+with none, `charNeedsUpdate()` said no, and the hydration never asked. `boot()` now chains
+`promptAfterRulesRestored()` (`73-char-update-ui.js`) onto the hydration when it restores the
+packs: it asks about the open sheet, but not with no character open, the home screen up, or a
+dialog open (looked up by id, as level-up does). With a `localStorage` copy the autoload asks as it
+opens and (#134) there is no hydration, so a sheet is asked once either way.
+Ruling: skipped, not deferred, when something is in front — the window is the IndexedDB read, and
+Settings → Extensions → This sheet → Check for rules updates is still there.
+Test trap worth keeping: the first fake dialog was a bare object, so the hydration itself threw in
+`renderRulesData()` and "no prompt" passed for the wrong reason. Removing each guard and watching
+its check fail caught it; the guard cases now also assert the packs arrived.
+
+**#143, Remove and Remove all stayed green.** Without IndexedDB, `removeRulesGroup()` drew "ok" and
+`clearAllRules()` "Rules cleared." over a refused save, and the refusal showed only in the red line
+above the list; with IndexedDB it replaced the line with the bare sentence. Both now pass the write
+to `rulesSaveReport()` (`88-settings.js`), which says the refusal after their own line, on Settings'
+status line and the home screen's (`rulesImportStatus()`), once it settles, as Fetch does. And the
+sentence was false for a removal ("the 0 KB of rules data you have loaded… won't be there next
+time… Remove a pack you're not using"), so `saveRulesCache("remove")` gives one that is true: "…it
+will load the rules data it last saved, and what you removed may be back." `clearAllRules()` still
+returns true/false. The home screen's own handlers in `wire()` still write the bare count right
+after the call; the refusal lands after them, so it is what stays.
+
+Tests: `sheet.js`, the boot & storage block (50 checks): three blocked-storage shapes through the
+real `boot()` and `renderHome()`; six cache cases through the real save path; five prompt cases;
+the refused removals with and without IndexedDB. Each fix's tests were seen to fail first; each
+#135 guard was removed and seen to fail. Plan: `src/docs/plans/2026-11-06-boot-storage.md`.
+
+Pages: [storage](../wiki/architecture/storage.md), [rules-update tool](../wiki/features/rules-update-tool.md),
+[settings & updates](../wiki/features/settings-and-updates.md), [home & characters](../wiki/features/home-and-characters.md),
+[shell](../wiki/ui/shell.md), [testing](../wiki/process/testing.md), [known issues](../wiki/roadmap/known-issues.md).
+
+**Final review (a fresh reviewer, 11 mutations).** It found the half of #134's rule the fix leans
+on untested: deleting `saveRulesCache()`'s `localStorage.removeItem(K_RULES)` left every check
+green, and a fallback copy would then outrank every later IndexedDB save. Added: a fallback save,
+then a save IndexedDB takes, then a boot, which has the later save (seen to fail with the line
+removed); the line's comment now says it carries the rule. Two wiki sentences were wrong and are
+fixed: the home screen's status line shows the refusal as plain hint text, not in red, and it is
+`boot()`, not `loadRulesCacheAsync()`, that calls `promptAfterRulesRestored()`. Deferred:
+`loadRulesCacheLocal()` accepts any parsed object (an array would end the IndexedDB read), and two
+promise chains (`boot()`'s prompt, `clearAllRules()`'s report) have no `catch`.

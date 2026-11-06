@@ -9,7 +9,7 @@ backup of settings and rules, and the credits that the icons and the loaded pack
 
 **Code:** `SET_PAGES`, `setPageOf()`, `setNavHTML()`, `setPageHTML()`, `setRowHTML()`, `tabsGroupHTML()` (#52), `rulesNavBadgeHTML()`, `openSettings()`, `encSettingsHint()`,
 `rulesStatusText()`, `updateRulesStatus()`, `refreshRulesUI()`, `loadedRulesGroups()`,
-`removeRulesGroup()`, `clearAllRules()`, `dataStatus()`, `dataUpdateFor()`, `dataStatusHTML()`,
+`removeRulesGroup()`, `clearAllRules()`, `rulesSaveReport()`, `dataStatus()`, `dataUpdateFor()`, `dataStatusHTML()`,
 `rulesCacheWarning()`, `rulesBadge()`, `rulesCreditsHTML()`, `SETTINGS_KEYS`, `foldLegacySettings()`, `readSettingsFile()`, `importSettings()`,
 `rulesPackSummary()`, `settingsImportQuestionHTML()`, `askSettingsImport()`,
 `finishSettingsImport()`, `settingsImportStatus()` in `88-settings.js` ·
@@ -109,7 +109,11 @@ binds one delegated click listener to each fresh `#extPage`. From the top:
   installed"), and on an update offered by a source that didn't install the pack, "· update from
   *source*"; its chips (below); its version, or "*have* → **new**"; **Update** or **Install**; and
   a delete button for a loaded pack, which confirms with the entry count. The header's **Remove
-  all** is the old Clear all (`clearAllRules()`), shown while anything is loaded.
+  all** is the old Clear all (`clearAllRules()`), shown while anything is loaded. Both draw the
+  status line at once; if the cache write behind them is refused, `rulesSaveReport()` then adds the
+  refusal to that line, in red, and to the home screen's: "Your browser wouldn't save that change, so
+  next time you open Fieldbook it will load the rules data it last saved, and what you removed may
+  be back." (#143; see [Storage](../architecture/storage.md))
 - **Unsupported**, only when a source offers a pack of a category this app doesn't install: listed,
   never installable.
 - **Sources**, with a count: Fieldbook public data, "built in · checked *time*", with its switch
@@ -471,3 +475,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-11-05 — A `github` source kind: a source link or `owner/repo` in the URL box, tags and packs read through `api.github.com` with a per-device token, the row, Change token, the wordings for each failure, and a Settings export that never carries the token. → ledger L8943, #182
 - 2026-11-05 — A real token read a private repo from `file://` and the app added it; the final review's fixes: an imported source without its token asks for it at once, a malformed token is never echoed, 429 reads as the rate limit, one source per repo. → ledger L9016, #182
 - 2026-11-05 — A link holding a token is refused unfetched; a source whose token is refused offers nothing. → ledger L9046, #182
+- 2026-11-06 — Remove and Remove all say on their status line, and the home screen's, when the change couldn't be saved. → ledger L9281, #143

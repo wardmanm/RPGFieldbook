@@ -8,14 +8,17 @@ page exists for: **a write that does not land must say so.** An empty `catch` ar
 write is how five loaded packs quietly came back as two.
 
 **Code:** `scheduleSave()`, `saveNow()`, `showSaveResult()`, `retrySave()`, `leaveCharacterOk()`,
-`libLoad()`, `libSave()`, `libTouch()`, `backupCharacter()`, `storageWhy()`, `saveSettings()`, `saveRulesCache()`, `idbOpen()`, `idbTx()`, `idbTimeout()`,
+`libLoad()`, `libSave()`, `libTouch()`, `backupCharacter()`, `storageWhy()`, `storageBlockedWhy()`, `saveSettings()`, `saveRulesCache()`, `idbReady()`, `idbOpen()`, `idbTx()`, `idbTimeout()`,
 `lzwCompress()`, `lzwDecompress()`, `readRulesCacheString()`, `cacheBytes()` in
-`70-persistence.js`; `loadRulesCacheAsync()`, `finishImport()` in `71-char-io.js`;
-`loadCharById()`, `newCharacter()`, `deleteCharacter()`, `setAutoload()`, `migrateOldChar()` in
+`70-persistence.js`; `loadRulesCacheLocal()`, `loadRulesCacheAsync()`, `finishImport()` in `71-char-io.js`;
+`promptAfterRulesRestored()` in `73-char-update-ui.js`;
+`loadCharById()`, `newCharacter()`, `deleteCharacter()`, `setAutoload()`, `migrateOldChar()`, `renderHome()` in
 `75-home-theme.js`;
-`rulesCacheWarning()`, `finishSettingsImport()` in `88-settings.js`; `convertSources()`, `extSaveErrorText()`, `runInstall()` in `89-extensions.js`; `boot()` in `90-boot.js` · **Tests:** `rules-data.js`
+`rulesCacheWarning()`, `removeRulesGroup()`, `clearAllRules()`, `rulesSaveReport()`, `finishSettingsImport()` in `88-settings.js`; `convertSources()`, `extSaveErrorText()`, `runInstall()` in `89-extensions.js`; `boot()` in `90-boot.js` · **Tests:** `rules-data.js`
 (the fallback, the loud path, the LZW round trips), `char-update.js` (backup semantics, the index
-read-back, the refused-write paths and leaving a character) · **See also:** [Character model](character-model.md), [Rules packs](rules-packs.md),
+read-back, the refused-write paths and leaving a character), `sheet.js`'s boot & storage block (the
+real `boot()` with storage blocked, which cache copy boot keeps, the boot autoload's prompt, a
+refused removal) · **See also:** [Character model](character-model.md), [Rules packs](rules-packs.md),
 [Home & characters](../features/home-and-characters.md),
 [Rules-update tool](../features/rules-update-tool.md)
 
@@ -75,15 +78,23 @@ offer it as a download. A dropped index write removes the orphaned blob.
    and write to `localStorage`;
 4. if that throws too, it sets `rulesCacheError` to a sentence that gives the size in **bytes**
    (`cacheBytes()`: UTF-16, two per character), says the packs will not be there next time, and
-   says what to do. The pool stays loaded and usable for this session.
+   says what to do. The pool stays loaded and usable for this session. After a removal
+   (`saveRulesCache("remove")`, from Remove and Remove all) that sentence would be false, since the
+   next boot loads the copy that last landed, which may hold what was removed, so it says that
+   instead: "Your browser wouldn't save that change, so next time you open Fieldbook it will load
+   the rules data it last saved, and what you removed may be back."
 
-It returns a promise of the error string. When the promise settles it reports through
-`updateRulesStatus()` and re-renders the loaded-data list, where `rulesCacheWarning()` puts the
-message in red above the list (on the Extensions page, above its sections). The callers have
-usually drawn their status line already by then, which is why the report is asynchronous.
+It returns a promise of the error string. On the IndexedDB path, when the promise settles it
+reports through `updateRulesStatus()` and re-renders the loaded-data list, where
+`rulesCacheWarning()` puts the message in red above the list (on the Extensions page, above its
+sections). The callers have usually drawn their status line already by then, which is why the
+report is asynchronous. With no IndexedDB the fallback runs at once, so `rulesCacheError` is set
+when the call returns and the caller's own render shows the red line.
 `fetchAllRules()` waits for that promise and writes the error into its own status line,
-`finishSettingsImport()` does the same on the Import settings line, and `runInstall()` puts it in
-the install's toast, which then stays as an error. A fetch that brought nothing does not save at all: the pool did not
+`finishSettingsImport()` does the same on the Import settings line, `runInstall()` puts it in
+the install's toast, which then stays as an error, and Remove and Remove all hand it to
+`rulesSaveReport()`, which writes their line plus the error on Settings' status line, in red, and
+on the home screen's, as plain hint text like every message there (#143). A fetch that brought nothing does not save at all: the pool did not
 change, so the cache already matches it, and overwriting it is how an offline Fetch all used to
 leave the next launch with no rules (see [Rules packs](rules-packs.md)). An install that fails
 changes nothing, so it saves nothing either.
@@ -103,11 +114,36 @@ request that **hangs** and never fires success or error would leave the save unr
 hydration unfinished forever, and that is how flaky WebKit on `file://` misbehaves.
 
 **Boot order** (`boot()`): settings first, then the `localStorage` rules copy, read
-**synchronously** through `readRulesCacheString()` so the first paint already has rules in hand.
-Then `reindexRules()`/`recomputeDups()`, the static builders, `wire()`, `migrateOldChar()` and the
-autoload. Only after that paint does `loadRulesCacheAsync()` read the IndexedDB copy,
-`Object.assign` it over `rules`, re-index, and re-render every surface that shows rules. Finally,
-`checkForUpdate()` runs.
+**synchronously** through `loadRulesCacheLocal()` (which uses `readRulesCacheString()`) so the
+first paint already has rules in hand. Then `reindexRules()`/`recomputeDups()`, the static
+builders, `wire()`, `migrateOldChar()`, the autoload or the home screen, and the blocked-storage
+check (below). Only after that paint does `loadRulesCacheAsync(haveLocal)` read the IndexedDB copy,
+`Object.assign` it over `rules`, re-index, and re-render every surface that shows rules, and then
+only when boot found no `localStorage` copy. When it restores the packs, `boot()` calls
+`promptAfterRulesRestored()`, so a sheet the autoload opened with no packs yet is asked about
+rules updates then (see [Rules-update tool](../features/rules-update-tool.md)). Finally, the network
+checks run, `checkForUpdate()` first.
+
+**Which rules copy boot keeps (#134).** The newest. A save IndexedDB takes deletes the
+`localStorage` copy, so a `localStorage` copy that exists is the last save that landed (a fallback
+save, or an old build's), never older than what IndexedDB holds. So when `loadRulesCacheLocal()`
+read one, IndexedDB is not read at all; when there is none, or it can't be read (corrupt, not
+JSON), the IndexedDB copy is used. A stale IndexedDB copy left behind by a fallback save stays on
+disk unread until the next save IndexedDB takes overwrites it.
+
+**Storage the browser blocks (#142).** A browser that blocks storage for the page (cookies blocked
+for the site) throws at the first touch of `localStorage`, a read included; one with storage
+switched off has no `localStorage` at all; and some throw at the mention of `indexedDB`. Every
+read is in a `try`: `libLoad()`, `renderHome()`'s first-run test (a throw counts as a first run),
+`loadRulesCacheLocal()`, `idbReady()` (false). So boot runs to the end as a first run, and then,
+with the home screen up, says so once, with an alert like `migrateOldChar()`'s:
+"Fieldbook can't use this browser's storage — *why*. Your characters and settings won't be kept
+when you close it: save each character to a file with Save before you leave, or allow this page to
+store data and open Fieldbook again." *Why* is `storageBlockedWhy()`: `""` when `localStorage` can
+be read, "your browser has storage switched off for this page" when it is missing, else
+`storageWhy()` of the throw ("your browser is blocking storage for this page" for a
+`SecurityError`). From there each write reports itself as usual: a new character raises the save
+strip.
 
 `migrateOldChar()` returns "" or why the move failed (`storageWhy()`); the legacy `K_CHAR` key goes
 only once the copy **and** its index entry have landed, so a refusal keeps the only copy where it
@@ -131,7 +167,11 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
   `showSaveResult()`), leaving a character (`leaveCharacterOk()`), moving a pre-library save
   (`migrateOldChar()`), deleting a character and changing the autoload star (`deleteCharacter()`,
   `setAutoload()`, which alert, since the home screen covers the strip), `backupCharacter()`,
-  `saveRulesCache()`, and Import settings for both of its writes.
+  `saveRulesCache()`, Remove and Remove all (`rulesSaveReport()`), and Import settings for both of
+  its writes.
+- **A storage read can throw too.** Every `localStorage` and `indexedDB` touch on the boot path is
+  in a `try`; a browser that blocks storage throws on `getItem`, and once that stopped boot at its
+  first line (#142). Where storage can't be used at all, boot says so (`storageBlockedWhy()`).
 - **Nothing replaces the open character without `leaveCharacterOk()`.** A new path that sets
   `character` must call it first and stop when it says no, or an unsaved edit is lost without a
   word.
@@ -143,6 +183,10 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 - **Every IndexedDB request goes through `idbOpen()`/`idbTx()`,** so the timeout covers it.
 - **Boot reads the `localStorage` rules copy synchronously, before first paint.** Browsers that
   refuse IndexedDB have no other copy.
+- **A save IndexedDB takes deletes the `localStorage` copy, and boot keeps a `localStorage` copy
+  over IndexedDB's.** The two go together: the first is what makes a `localStorage` copy the newest
+  whenever it exists, and the second relies on it. Weakening either lets an older pool win at boot
+  (#134).
 - **`rules` must stay plain JSON.** It is persisted whole. `rules._dups` holds `Set`s, which
   serialise to `{}`, so `recomputeDups()` rebuilds it after every restore. `rules.requires` is kept
   as plain arrays for exactly this round trip. `_id` is reassigned by `reindexRules()` on every
@@ -166,12 +210,20 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 - **The fallback first existed but could not hold the data.** Uncompressed, five packs do not fit
   in `localStorage`, so "fall back to localStorage" was a promise it could not keep until the
   compressor went in.
-- **The migrating boot flickers once.** A stale `localStorage` copy paints first and IndexedDB
-  replaces it a tick later. It heals itself after the first successful save, which deletes the old
-  key.
-- **The harness has no `indexedDB`,** so the suite exercises only the fallback and, through its
-  `quotaFull` switch, the loud path. The IndexedDB path and the timeout were verified in a browser
-  (a stub `indexedDB.open` that never fires settles in 4003 ms and falls back), not by the suite.
+- **A stale IndexedDB copy won (#134).** Boot used to treat IndexedDB as always authoritative and
+  lay it over whatever `localStorage` had painted. After a save fell back to `localStorage`, that put
+  the older pool back a moment after the first paint, the "five packs became two" bug by another
+  road. It was found by reading the code and reproduced only once the real `boot()` ran under test.
+- **Boot stopped at a dead read (#142).** `boot()` opened with `!localStorage.getItem(K_SET)`, outside
+  a `try`, into a constant nothing used; `renderHome()` had the same read. A browser that throws on
+  storage access stopped there, before anything was wired.
+- **The harness's own `indexedDB` is `undefined`,** so most suites exercise only the fallback and,
+  through its `quotaFull` switch, the loud path. `sheet.js`'s boot & storage block adds a small fake
+  (open, put, get, each event a microtask later, and a switch that aborts every put) and runs the
+  real `boot()` over it. The timeout is still verified only in a browser (a stub `indexedDB.open`
+  that never fires settles in 4003 ms and falls back): the harness's `setTimeout` does nothing. A
+  throwing `indexedDB` getter can't be reproduced in the harness at all (the vm reports a throwing
+  global getter as "not defined"), so `idbReady()`'s `try` has a source guard instead.
 
 ## Decisions
 
@@ -183,17 +235,16 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 | What happens when the LZW dictionary is full | Stop growing | Resetting: the decoder's dictionary lags one step, a classic off-by-one that shows only on huge inputs (L1993) |
 | A hanging IndexedDB request | Time out at 4 s and fall back | — (L1993) |
 | What a failed backup returns | `{error, copy}`, so the caller can offer a download | Returning `null`: every failure looked the same and dead-ended the update tool (L1116) |
+| Which rules copy boot keeps (#134) | The `localStorage` copy whenever there is a readable one, since a save IndexedDB takes deletes it; IndexedDB's only otherwise | A saved-at stamp on both copies: both stored formats change, and the `localStorage` stamp can't be written atomically with its copy. Deleting the IndexedDB copy when a save falls back: a delete whose open is slow can land after a later save and remove the newest copy (L9281) |
+| How boot reports storage it can't use (#142) | One alert once the home screen is up, as `migrateOldChar()`'s failure does | The save strip: no character is open for it to be about, and the home screen covers it (L9281) |
 
 ## Open
 
 - **`saveSettings()` returns why it was refused, but only Import settings reports it.** The toggles
   re-save at their next change.
-- **A stale IndexedDB copy can win.** If IndexedDB held the pool once and a later save fails over to
-  `localStorage`, the older IndexedDB copy is left in place, and `loadRulesCacheAsync()` lays it
-  over the newer fallback copy on the next boot. Found by reading the code, not reproduced.
-- `boot()` and `renderHome()` call `localStorage.getItem` outside a `try`. A browser that throws on
-  storage access (a blocked origin) would stop boot there. **(unverified)**: no such browser has
-  been tested.
+- **Blocked storage is verified in the harness, not yet in a browser.** The three shapes (no
+  `localStorage`, every call throwing `SecurityError`, the property throwing) run the real `boot()`;
+  no browser with cookies blocked for the page has been opened.
 - **iOS is untested.** Every iOS browser is WebKit, which has historically refused IndexedDB on
   `file://`. The compressed fallback is what makes that case safe, but no iOS device has been
   tried.
@@ -215,3 +266,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-16 — `settings.setPage` replaces the Settings fold state (`setCollapse`, no longer read). → ledger L5930, #107
 - 2026-10-26 — `settings.sources`, `packOrigin` and `dismissedUpdates` replace `rulesSources`; the Extensions page's folds are `setCollapse` `ext:` keys; a source save refused at the boot check is kept and shown on the page. → ledger L7428, #102
 - 2026-11-05 — `settings.sources` holds a private GitHub source's token, on this device only; `extSettingsForExport()` blanks it in the Settings export and `extKeepTokens()` keeps the device's own on import. → ledger L8943, #182
+- 2026-11-06 — A storage read can no longer stop boot, and storage the browser blocks is said at boot; boot keeps the newest rules copy, not IndexedDB's always; Remove and Remove all report a refused save on their line, in words true for a removal. → ledger L9281, #142, #134, #143

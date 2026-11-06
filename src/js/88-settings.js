@@ -402,7 +402,9 @@ function removeRulesGroup(key){
   const g=loadedRulesGroups().find(x=>x.key===key);if(!g)return;
   RULE_CATS.forEach(cat=>{if(!rules[cat])return;rules[cat]=rules[cat].filter(e=> g.isFile ? e._file!==g.label : (e._file?true:(e._source||"Unknown")!==g.label));});
   prunePackMeta();
-  reindexRules();recomputeDups();saveRulesCache();refreshRulesUI();renderAll();renderRulesData();updateRulesStatus(rulesStatusText(),"ok");
+  reindexRules();recomputeDups();const saving=saveRulesCache("remove");refreshRulesUI();renderAll();renderRulesData();
+  const msg=rulesStatusText();updateRulesStatus(msg,"ok");
+  return rulesSaveReport(saving,msg);
 }
 /* drop a source's `requires` and credits once none of its entries are left,
    so the persisted pool doesn't accumulate them for packs that are gone */
@@ -421,9 +423,20 @@ function clearAllRules(){
   if(!packs){updateRulesStatus("Nothing loaded to clear.","");return false;}
   const what=RULE_CATS.map(c=>{const n=(rules[c]||[]).length;return n?`${n} ${catName(c).toLowerCase()}`:null;}).filter(Boolean).join(", ");
   if(!confirm(`Unload all rules data?\n\nThis removes ${packs} pack${packs===1?"":"s"} — ${what}.\n\nYour characters are NOT affected, but anything they reference from these packs will stop auto-filling until you import again.`))return false;
-  resetRules();saveRulesCache();refreshRulesUI();renderRulesData();renderAll();
+  resetRules();const saving=saveRulesCache("remove");refreshRulesUI();renderRulesData();renderAll();
   updateRulesStatus("Rules cleared.","");
+  rulesSaveReport(saving,"Rules cleared.");
   return true;
+}
+/* Remove and Remove all draw their line before the cache write behind them
+   settles, so a refusal is said afterwards, on the same line and the home
+   screen's, as Fetch does (#143): the red line above the list alone was easy
+   to miss under a line saying all was well. "" or the error. */
+function rulesSaveReport(saving,msg){
+  return saving.then(err=>{
+    if(err){renderRulesData();rulesImportStatus(msg+" "+err,"err");}
+    return err||"";
+  });
 }
 /* Is a loaded pack's content older than the build expects?
 

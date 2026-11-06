@@ -276,10 +276,6 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
   seeded `speed` and `size`, `spellAbility`, and the legacy `ancestry`/`background` strings. Because
   `applyRace()` fills speed and size only when they are empty, *swapping* ancestry keeps the old ones.
   This goes against the provenance invariant. → [Grants & provenance](../architecture/grants-and-provenance.md)
-- **No rules-update prompt for a character that autoloads at boot.** (#135) Since the IndexedDB move,
-  `boot()` autoloads the character before `loadRulesCacheAsync()` has restored the packs, so
-  `charNeedsUpdate()` sees none, and nothing asks again when they arrive. Ledger L702 describes the old
-  order. → [Rules-update tool](../features/rules-update-tool.md)
 - **Editing a feature freezes a scaling use count.** (#132) `openFeatureForm()` saves `usesMax()` as a plain
   number, replacing a by-level or formula maximum. → [Features & traits](../features/features-and-traits.md)
 - **The Size box shows as "set by hand" whenever the ancestry has a size** (#146), because `recompute()`
@@ -313,18 +309,9 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
   a refused write (#81): autosave (`saveNow()`), `newCharacter()`, `finishImport()`,
   `migrateOldChar()`, `deleteCharacter()` and `setAutoload()`. `saveSettings()` still returns why it
   was refused, but most of its callers ignore that. → [Storage](../architecture/storage.md)
-- **A stale rules cache can win.** (#134) If a save falls back to localStorage after IndexedDB once held the
-  pool, the old IndexedDB copy is never cleared, and `loadRulesCacheAsync()` lays it over the newer
-  copy on the next boot. → [Storage](../architecture/storage.md)
 - **Google Fonts in the template (constraint 1).** (#144) `src/fieldbook.template.html` links
   `fonts.googleapis.com`. It has been there since the first commit, with no recorded decision. Offline,
   the font stacks fall back to local serifs. → [Theming & icons](../ui/theming-and-icons.md)
-- `boot()` and `renderHome()` call `localStorage.getItem` outside a `try`, so a browser that throws on
-  storage access would stop boot **(unverified)** (#142). → [Storage](../architecture/storage.md)
-- **Remove and Remove all still write a green status line synchronously.** (#143) When the rules cache
-  can't be saved (no IndexedDB, quota), the refusal shows only in the red line above the pack list,
-  not on the status line — a plain source's Fetch reports it in both, and an install in its toast. → ledger L3797, and
-  [Storage](../architecture/storage.md)
 
 ### Latent: no shipped data triggers these yet
 
@@ -509,3 +496,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — A settled shot is put back by hand, not by Undo recovery, which now leaves the shots spent; added: a row's Recover has no Undo. → ledger L9155, #170
 - 2026-11-06 — Closed: Undo recovery dropping a home-joined entry's remainder, and its grant check reading "live now" rather than "revoked since": the full reversal they described is removed (#145's two entries). → ledger L9196, #170
 - 2026-11-06 — Removed: the glossary editor's Save replacing the whole entry; it keeps the fields it doesn't show. → ledger L9219, #136
+- 2026-11-06 — Removed four fixed in 1.9.1's Boot & storage branch: boot stopping where storage is blocked, a stale rules cache winning, no prompt for the boot autoload, and Remove's green line over a refused save. → ledger L9281, #142, #134, #135, #143
