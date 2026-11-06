@@ -312,9 +312,9 @@ the rules cache from localStorage synchronously (`loadRulesCacheLocal()`), `rein
 `applyTheme()`, `migrateOldChar()` (an alert if the move fails). It opens the autoload character,
 or seeds a blank one behind `showHome()`. If the browser blocks storage, it says so in an alert
 (`storageBlockedWhy()`). Then it runs `loadRulesCacheAsync(haveLocal)` (IndexedDB, after first
-paint, only when localStorage had no copy, see [Storage](../architecture/storage.md)), which calls
-`promptAfterRulesRestored()` when it restores the packs,
-and the three network checks, each optional and silent: `checkForUpdate()`, `checkForDataUpdate()`
+paint, only when localStorage had no copy, see [Storage](../architecture/storage.md)); when that
+restores the packs, `boot()` calls `promptAfterRulesRestored()`. Then come
+the three network checks, each optional and silent: `checkForUpdate()`, `checkForDataUpdate()`
 and `checkSources({boot:true})`. `wire()` has already drawn the Extensions pill from the manifests
 saved at the last check (`renderExtPill()`), so it shows before the network answers.
 

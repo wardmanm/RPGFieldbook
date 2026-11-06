@@ -93,8 +93,8 @@ when the call returns and the caller's own render shows the red line.
 `fetchAllRules()` waits for that promise and writes the error into its own status line,
 `finishSettingsImport()` does the same on the Import settings line, `runInstall()` puts it in
 the install's toast, which then stays as an error, and Remove and Remove all hand it to
-`rulesSaveReport()`, which writes their line plus the error, in red, on Settings' status line and
-the home screen's (#143). A fetch that brought nothing does not save at all: the pool did not
+`rulesSaveReport()`, which writes their line plus the error on Settings' status line, in red, and
+on the home screen's, as plain hint text like every message there (#143). A fetch that brought nothing does not save at all: the pool did not
 change, so the cache already matches it, and overwriting it is how an offline Fetch all used to
 leave the next launch with no rules (see [Rules packs](rules-packs.md)). An install that fails
 changes nothing, so it saves nothing either.

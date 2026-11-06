@@ -343,7 +343,9 @@ function saveRulesCache(change){
     .then(()=>{
       rulesCacheError="";
       /* Migrated: free the megabytes the old key was holding, which is also what
-         was starving character autosave and the update-tool backups. */
+         was starving character autosave and the update-tool backups. And it is
+         what makes a localStorage copy, whenever there is one, the newest: boot
+         keeps it over IndexedDB's on exactly that rule (#134). */
       try{localStorage.removeItem(K_RULES);}catch(e){}
       return "";
     })

@@ -111,7 +111,7 @@ binds one delegated click listener to each fresh `#extPage`. From the top:
   a delete button for a loaded pack, which confirms with the entry count. The header's **Remove
   all** is the old Clear all (`clearAllRules()`), shown while anything is loaded. Both draw the
   status line at once; if the cache write behind them is refused, `rulesSaveReport()` then adds the
-  refusal to that line and the home screen's, in red: "Your browser wouldn't save that change, so
+  refusal to that line, in red, and to the home screen's: "Your browser wouldn't save that change, so
   next time you open Fieldbook it will load the rules data it last saved, and what you removed may
   be back." (#143; see [Storage](../architecture/storage.md))
 - **Unsupported**, only when a source offers a pack of a category this app doesn't install: listed,

@@ -9155,11 +9155,21 @@ will load the rules data it last saved, and what you removed may be back." `clea
 returns true/false. The home screen's own handlers in `wire()` still write the bare count right
 after the call; the refusal lands after them, so it is what stays.
 
-Tests: `sheet.js`, the boot & storage block (47 checks): three blocked-storage shapes through the
-real `boot()` and `renderHome()`; five cache cases through the real save path; five prompt cases;
+Tests: `sheet.js`, the boot & storage block (50 checks): three blocked-storage shapes through the
+real `boot()` and `renderHome()`; six cache cases through the real save path; five prompt cases;
 the refused removals with and without IndexedDB. Each fix's tests were seen to fail first; each
 #135 guard was removed and seen to fail. Plan: `src/docs/plans/2026-11-06-boot-storage.md`.
 
 Pages: [storage](../wiki/architecture/storage.md), [rules-update tool](../wiki/features/rules-update-tool.md),
 [settings & updates](../wiki/features/settings-and-updates.md), [home & characters](../wiki/features/home-and-characters.md),
 [shell](../wiki/ui/shell.md), [testing](../wiki/process/testing.md), [known issues](../wiki/roadmap/known-issues.md).
+
+**Final review (a fresh reviewer, 11 mutations).** It found the half of #134's rule the fix leans
+on untested: deleting `saveRulesCache()`'s `localStorage.removeItem(K_RULES)` left every check
+green, and a fallback copy would then outrank every later IndexedDB save. Added: a fallback save,
+then a save IndexedDB takes, then a boot, which has the later save (seen to fail with the line
+removed); the line's comment now says it carries the rule. Two wiki sentences were wrong and are
+fixed: the home screen's status line shows the refusal as plain hint text, not in red, and it is
+`boot()`, not `loadRulesCacheAsync()`, that calls `promptAfterRulesRestored()`. Deferred:
+`loadRulesCacheLocal()` accepts any parsed object (an array would end the IndexedDB read), and two
+promise chains (`boot()`'s prompt, `clearAllRules()`'s report) have no `catch`.

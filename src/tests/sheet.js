@@ -9289,6 +9289,23 @@ async function tBootStorage134() {
     await BS.settle();
     ck('#134 an unreadable localStorage copy gives way to the IndexedDB one', names(b) === 'Delta', names(b));
   }
+  /* the other half of the rule: a save IndexedDB takes deletes the localStorage
+     copy, or a fallback copy left behind would outrank every later save */
+  {
+    const idb = BS.fakeIDB({});
+    const a = BS.app({}, {idb, noBoot: true});
+    idb.st.failPut = true;
+    a.X.mergeRules({system: 'AAA', spells: [{name: 'Alpha'}]}, 'a.json');
+    await a.X.saveRulesCache();
+    ck('#134 setup: a fallback save leaves a localStorage copy', a.X.K_RULES in a.store);
+    idb.st.failPut = false;
+    a.X.mergeRules({system: 'BBB', spells: [{name: 'Beta'}]}, 'b.json');
+    await a.X.saveRulesCache();
+    ck('#134 a later save IndexedDB takes deletes the localStorage copy', !(a.X.K_RULES in a.store));
+    const b = reboot(a, idb);
+    await BS.settle();
+    ck('#134 ...so the next boot has that later save, not the fallback copy', names(b) === 'Alpha,Beta', names(b));
+  }
   // both refused after an IndexedDB save: the next boot has what last landed, as the warning said
   {
     const idb = BS.fakeIDB({});
