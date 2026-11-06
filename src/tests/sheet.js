@@ -8599,6 +8599,58 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = X.blankChar();
 }
 
+/* ---- #129 the "Include spells" tick in the effect editors ---- */
+{
+  const fxRowSync = row => typeof ctx.fxRowSync === 'function' ? ctx.fxRowSync(row) : undefined;
+  const tick = h => (/<label class="fx-sp"[^>]*>/.exec(h) || [''])[0];
+  let h = ctx.fxRow({target: 'attack', value: 1, spells: true});
+  ck('#129 a ticked to-hit row shows the tick, checked', /<input type="checkbox" class="fx-s" checked>/.test(h) && tick(h) && !/hidden/.test(tick(h)) && /Include spells/.test(h), h);
+  h = ctx.fxRow({target: 'damage.ranged', value: 1});
+  ck('#129 an unticked damage row shows it, unchecked', tick(h) && !/hidden/.test(tick(h)) && /class="fx-s">/.test(h), h);
+  h = ctx.fxRow({target: 'ac', value: 1});
+  ck('#129 an AC row hides it', /hidden/.test(tick(h)), h);
+  h = ctx.fxRow(null);
+  ck('#129 a new row (AC, the first target) hides it', /hidden/.test(tick(h)) && /class="fx-s">/.test(h), h);
+  h = ctx.fxRow({target: 'ac', value: 1, spells: true});
+  ck('#129 a stray flag on another target is not shown ticked', /class="fx-s">/.test(h) && !/fx-s" checked/.test(h), h);
+
+  /* collectFx() over fake rows: {target, value, ticked} */
+  const scope = rows => ({querySelectorAll: () => rows.map(([t, v, on]) => ({querySelector: sel =>
+    sel === '.fx-t' ? {value: t} : sel === '.fx-v' ? {value: String(v)} : sel === '.fx-s' ? {checked: !!on} : null}))});
+  const got = ctx.collectFx(scope([['attack', 1, true], ['attack.melee', 2, false], ['ac', 1, true], ['damage', 0, true], ['spell.dc', 1, true]]));
+  ck('#129 collectFx writes spells:true only for a ticked generic target',
+     JSON.stringify(got) === '[{"target":"attack","value":1,"spells":true},{"target":"attack.melee","value":2},{"target":"ac","value":1},{"target":"spell.dc","value":1}]', got);
+
+  /* the show/hide as the target changes: one delegated listener calls this */
+  const fake = t => { const sp = {hidden: null}; return {sp, row: {querySelector: sel => sel === '.fx-t' ? {value: t} : sel === '.fx-sp' ? sp : null}}; };
+  let f = fake('damage.melee'); fxRowSync(f.row);
+  ck('#129 choosing a melee damage target shows the tick', f.sp.hidden === false, f.sp);
+  f = fake('spell.dc'); fxRowSync(f.row);
+  ck('#129 choosing Spell save DC hides it', f.sp.hidden === true, f.sp);
+
+  /* the copy paths carry the flag (the spec's list): effect objects copied whole */
+  const fx = () => [{target: 'attack', value: 1, spells: true}];
+  const ticked = list => Array.isArray(list) && list.length === 1 && list[0].spells === true;
+  X.character = X.blankChar();
+  ctx.addFeatureFromDef({name: 'Feat: Keen Caster', description: '', effects: fx()}, null);
+  ck('#129 the feat grant (addFeatureFromDef, also the choices path) keeps the tick', ticked(X.character.features[0].effects), X.character.features[0].effects);
+  ck('#129 the rules-update projection keeps it, for a feature and a browsed item',
+     ticked(ctx.updProject({name: 'F', effects: fx()}, 'feature', 'plain').effects) && ticked(ctx.updProject({name: 'I', effects: fx()}, 'item', 'browse').effects));
+  X.addLibraryItems([{name: 'Lens', category: 'Wondrous Item', effects: fx()}], null, null, 1);
+  ck('#129 the item finder keeps it', ticked(X.character.inventory[0].effects), X.character.inventory[0].effects);
+  const keepRules = X.rules;
+  try {
+    X.resetRules(); X.mergeRules({system: 'T129', items: [{name: 'Prism', category: 'Wondrous Item', effects: fx()}]}, 'test-129');
+    X.grantItemByName('Prism', 1, 'bg:Sage');
+    const pr = X.character.inventory.find(i => i.name === 'Prism');
+    ck('#129 a granted item keeps it', !!pr && ticked(pr.effects), pr);
+  } finally { X.resetRules(); X.rules = keepRules; }
+  ck('#129 the trade window\'s copy keeps it', ticked(X.invSnap(X.character.inventory[0]).effects));
+  const back = X.migrate(JSON.parse(JSON.stringify(X.character)));
+  ck('#129 a save and a load keep it', ticked(back.features[0].effects) && ticked(back.inventory[0].effects), back.features[0].effects);
+  X.character = X.blankChar();
+}
+
 /* ---- end of the #130 · #129 · #132 block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window

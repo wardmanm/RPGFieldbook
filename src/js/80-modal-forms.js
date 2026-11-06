@@ -211,6 +211,10 @@ modal.addEventListener("change",e=>{
   const div=t.closest(".choice[data-choose]");
   if(div)syncChoiceLimits(div);
 });
+/* The "Include spells" tick shows only while an effect row's target is one of
+   the six generic to-hit and damage targets (#129). The item, feature, status
+   and familiar editors wire their rows apart, so it rides the modal here, once. */
+modal.addEventListener("change",e=>{const t=e.target;if(t&&t.classList&&t.classList.contains("fx-t")&&t.closest)fxRowSync(t.closest(".fxrow"));});
 
 function openGlossView(g){
   /* g is a pack keyword or the character's own entry — either way someone
@@ -343,12 +347,25 @@ function setACFlat(v){
 function fxEditorRows(effects){
   return (effects||[]).map(e=>fxRow(e)).join("");
 }
+/* A to-hit or damage row carries an "Include spells" tick (#129): unticked, the
+   effect counts for weapons only; ticked, for spells too (spellFxList()). It is
+   hidden for every other target, and a hidden tick is never saved. */
 function fxRow(e){
   const opts=fxTargets().map(([l,t])=>`<option value="${esc(t)}"${e&&e.target===t?" selected":""}>${l}</option>`).join("");
-  return `<div class="fxrow"><select class="fx-t">${opts}</select><input class="fx-v" type="number" value="${esc(e?num(e.value):1)}"><button class="icon danger fx-del" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  const sp=fxSpellable(e?e.target:fxTargets()[0][1]);
+  return `<div class="fxrow"><select class="fx-t">${opts}</select><input class="fx-v" type="number" value="${esc(e?num(e.value):1)}"><button class="icon danger fx-del" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`+
+    `<label class="fx-sp" title="Count this for spell attacks and spell damage too, not only weapons"${sp?"":" hidden"}><input type="checkbox" class="fx-s"${sp&&e&&e.spells===true?" checked":""}> Include spells</label></div>`;
+}
+function fxRowSync(row){
+  const t=row&&row.querySelector(".fx-t"), sp=row&&row.querySelector(".fx-sp");
+  if(t&&sp)sp.hidden=!fxSpellable(t.value);
 }
 function collectFx(scope){
-  return Array.from(scope.querySelectorAll(".fxrow")).map(r=>({target:r.querySelector(".fx-t").value,value:num(r.querySelector(".fx-v").value)})).filter(e=>e.value!==0);
+  return Array.from(scope.querySelectorAll(".fxrow")).map(r=>{
+    const t=r.querySelector(".fx-t").value, s=r.querySelector(".fx-s"), e={target:t,value:num(r.querySelector(".fx-v").value)};
+    if(fxSpellable(t)&&s&&s.checked)e.spells=true;
+    return e;
+  }).filter(e=>e.value!==0);
 }
 
 /* ---- feature editor ---- */

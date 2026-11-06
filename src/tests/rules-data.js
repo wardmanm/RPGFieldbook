@@ -3275,6 +3275,23 @@ function block(html, needle, tag) {
      /\.hd-how label\{[^}]*display:inline-flex[^}]*align-items:center/.test(sc) && /\.hd-how label input\{[^}]*width:\d+px/.test(sc));
 }
 
+// ---------- #129 the Include spells tick: one delegated listener, not one per editor
+{
+  const forms = fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '');
+  /* the item, feature, status and familiar editors share fxRow() but wire
+     their rows apart; the tick's show/hide follows the target select through
+     ONE change listener on the modal, so no editor needs its own */
+  ck('#129 the modal has one change listener that shows or hides the tick',
+     /modal\.addEventListener\("change",[^\n]*fx-t[^\n]*fxRowSync\(/.test(forms), (forms.match(/modal\.addEventListener\("change"[^\n]*/) || [''])[0]);
+  ck('#129 ...and nothing else calls fxRowSync() or wires .fx-sp', (js.match(/fxRowSync\(/g) || []).length === 2 && (js.match(/\.fx-sp/g) || []).length === 1,
+     [(js.match(/fxRowSync\(/g) || []).length, (js.match(/\.fx-sp/g) || []).length]);
+  const mc = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8');
+  ck('#129 the tick takes its own line in the row, and hidden means hidden',
+     /\.fxrow \.fx-sp\{[^}]*grid-column:1\/-1/.test(mc) && /\.fxrow \.fx-sp\[hidden\]\{display:none\}/.test(mc));
+}
+
 /* ================= Fetch all never loses what is loaded (issue #65) ===========
    fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
    imported from a file was discarded, and when the fetch then failed (offline,
