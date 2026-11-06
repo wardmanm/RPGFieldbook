@@ -8794,6 +8794,51 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = X.blankChar();
 }
 
+/* ---- #132 phase 2: editing an item keeps a use count that scales ----
+   The item form had the same freeze as the feature form: it filled "Limited
+   uses" from itemUsesMax() and saved that number. */
+{
+  const drive = (item, shown, typed) => {
+    const realB = ctx.document.getElementById, realO = ctx.openModal, els = {}, on = {};
+    const fake = id => ({id, _t: '', get textContent() { return this._t; }, set textContent(v) { this._t = String(v); }, innerHTML: '', value: '', checked: false,
+      style: {}, dataset: {}, children: [], classList: {toggle() {}, add() {}, remove() {}, contains: () => false}, querySelector: () => null, querySelectorAll: () => [],
+      appendChild() {}, addEventListener(t, f) { on[id + ':' + t] = f; }, setAttribute() {}, removeAttribute() {}, insertAdjacentHTML() {}, focus() {}});
+    let body = '';
+    ctx.openModal = (t, b) => { body = String(b); };
+    ctx.document.getElementById = id => (els[id] = els[id] || fake(id));
+    /* the boxes hold what the form rendered, as in a browser */
+    els.iName = fake('iName'); els.iName.value = item.name; els.iQty = fake('iQty'); els.iQty.value = '1';
+    els.iUses = fake('iUses'); els.iUses.value = shown; els.iUsesPer = fake('iUsesPer'); els.iUsesPer.value = item.uses.per;
+    try {
+      ctx.openItemForm(item);
+      const rendered = (/id="iUses"[^>]*value="(\d*)"/.exec(body) || [])[1];
+      if (typed != null) els.iUses.value = typed;
+      on['iSave:click']();
+      return {body, rendered, saved: X.character.inventory.find(i => i.id === item.id)};
+    } finally { ctx.document.getElementById = realB; ctx.openModal = realO; }
+  };
+  const c = X.blankChar(); X.character = c; c.level = 3; Object.assign(c.abilities, {wis: 16});
+  const wand = () => ({id: 'wd', name: 'Wand of Echoes', qty: 1, description: '', effects: [], equipped: true,
+                       uses: {max: {byLevel: [1, 1, 2, 2, 3]}, per: 'long', used: 1}});
+  c.inventory = [wand()];
+  let d = drive(c.inventory[0], '2');
+  ck('#132 the item form opens on today\'s number, with the hint',
+     d.rendered === '2' && /id="iUsesHint"[^>]*>Grows with your level: 2 now/.test(d.body), [d.rendered, (d.body.match(/iUsesHint[^<]*/) || [''])[0]]);
+  ck('#132 saving an item unchanged keeps its byLevel', !!d.saved && JSON.stringify(d.saved.uses) === '{"max":{"byLevel":[1,1,2,2,3]},"per":"long","used":1}', d.saved && d.saved.uses);
+  c.level = 5;
+  ck('#132 ...so it still grows: 3 at level 5', X.itemUsesMax(X.character.inventory[0]) === 3, X.itemUsesMax(X.character.inventory[0]));
+  c.level = 3; c.inventory = [wand()];
+  d = drive(c.inventory[0], '2', '4');
+  ck('#132 typing a different number makes the item\'s uses that number', !!d.saved && JSON.stringify(d.saved.uses) === '{"max":4,"per":"long","used":1}', d.saved && d.saved.uses);
+  c.inventory = [{id: 'tb', name: 'Tome of Wits', qty: 1, description: '', effects: [], equipped: true, uses: {max: {formula: 'wis'}, per: 'short', used: 0}}];
+  d = drive(c.inventory[0], '3');
+  ck('#132 an item\'s formula survives an unchanged save', !!d.saved && JSON.stringify(d.saved.uses.max) === '{"formula":"wis"}' && /From your WIS modifier: 3 now/.test(d.body), d.saved && d.saved.uses);
+  c.inventory = [{id: 'pl', name: 'Pouch', qty: 1, description: '', effects: [], equipped: false, uses: {max: 2, per: 'none', used: 0}}];
+  d = drive(c.inventory[0], '2');
+  ck('#132 a plain number: no hint, still a number, its reset kept', !/iUsesHint/.test(d.body) && !!d.saved && JSON.stringify(d.saved.uses) === '{"max":2,"per":"none","used":0}', d.saved && d.saved.uses);
+  X.character = X.blankChar();
+}
+
 /* ---- end of the #130 · #129 · #132 block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window

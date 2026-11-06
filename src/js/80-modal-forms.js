@@ -470,6 +470,8 @@ function openFeatureForm(existing){
 /* ---- item editor ---- */
 function openItemForm(existing){
   const it=existing||{id:uid(),name:"",qty:1,description:"",effects:[],equipped:false};
+  /* the number the uses box opens on, and what it scales by (#132) */
+  const usesShown=num(itemUsesMax(it)), usesHint=it.uses?usesScaleHint(it):"";
   const lib=(rules.items||[]);
   const w=it.weapon||{};
   /* itemArmor(), not it.armor: pack armor carries no structured field at all —
@@ -540,8 +542,9 @@ function openItemForm(existing){
       <div class="field" id="iADexWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Max Dex added</label><input id="iADex" value="${esc(armDex)}" placeholder="none" autocomplete="off"></div>
       <p class="hint">Light adds all your Dex, Medium caps it (usually 2), Heavy adds none. Leave <b>Max Dex</b> as the kind sets it unless the item says otherwise — type a number, or <b>none</b>.</p>
     </div>
-    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${esc(itemUsesMax(it)||"")}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${esc(usesShown||"")}" placeholder="0"></div>
       <div class="field"><label class="f">Resets on</label><select id="iUsesPer">${[["long","Long rest"],["short","Short rest"],["none","Never (manual)"]].map(([v,l])=>`<option value="${esc(v)}"${((it.uses&&it.uses.per)||"long")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
+    ${usesHint?`<p class="hint" id="iUsesHint" style="margin:-6px 0 12px">${esc(usesHint)}</p>`:""}
     <div class="g2"><div class="field"><label class="f">Healing when used</label><input id="iHeal" value="${esc(use.heal||"")}" placeholder="2d4+2" autocomplete="off"></div>
       <div class="field"><label class="f">Status applied when used</label><input id="iStatus" list="itemStatusTerms" value="${esc(use.status||"")}" placeholder="Poisoned, Blessed…" autocomplete="off">${statusDatalistHTML("itemStatusTerms")}</div></div>
     <label class="equip ${use.consume?"on":""}" id="iConsume" style="font-size:12px"><span class="box"></span>Using one up reduces the quantity</label>
@@ -719,8 +722,9 @@ function openItemForm(existing){
        the FINISHED record — its section depends on the weapon flag set above.
        `used` is the player's own number and survives an edit, clamped in case
        the maximum came down. */
-    const um=Math.max(0,num(document.getElementById("iUses").value));
-    if(um>0)rec.uses={max:um,per:document.getElementById("iUsesPer").value,used:Math.min(num(it.uses&&it.uses.used),um)};
+    /* unchanged, a byLevel or formula maximum is kept; a new number replaces it (#132) */
+    const uses=usesFromForm(it.uses,usesShown,document.getElementById("iUses").value,document.getElementById("iUsesPer").value);
+    if(uses)rec.uses=uses;
     const heal=document.getElementById("iHeal").value.trim(), stName=document.getElementById("iStatus").value.trim();
     if(heal&&!parseDiceExpr(heal))return {err:`“${heal}” isn't dice this app can roll. Try 2d4+2, 1d8, or a plain number.`};
     if(heal||stName||consume){
