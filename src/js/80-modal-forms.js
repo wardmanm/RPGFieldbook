@@ -248,6 +248,7 @@ function openSizePicker(){
   });
 }
 function openStatBreakdown(target){
+  if(target==="ac")return openACWindow();
   const c=contributions();
   /* a bonus to every ability check (#79) is part of each skill and of
      initiative, so it is listed there by source; on an ability it is what a
@@ -260,7 +261,6 @@ function openStatBreakdown(target){
   if(target.startsWith("ability.")){const k=target.split(".")[1];base=`Base score ${num(character.abilities[k])}`;}
   else if(target.startsWith("save.")){const k=target.split(".")[1];const prof=effSaveProf(k);base=`Ability mod ${fmt(mods[k])}${prof?` + prof ${fmt(pb)}`:""}`;const src=grantSources("save",k);if(src.length)grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency from ${esc(src.join(", "))}</span><b>${fmt(pb)}</b></div>`;else if(character.saves[k])grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency (manual)</span><b>${fmt(pb)}</b></div>`;}
   else if(target.startsWith("skill.")){const key=target.split(".")[1];const ab=SKILLS.find(s=>s[0]===key)[2];const lvl=effSkill(key);base=`${ab.toUpperCase()} mod ${fmt(mods[ab])}${lvl>0?` + prof ${fmt(pb)}`:""}${lvl>1?` + expertise ${fmt(pb)}`:""}`;const src=grantSources("skill",key);if(src.length)grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency from ${esc(src.join(", "))}</span><b>${fmt(pb)}</b></div>`;else if((character.skills[key]||0)>0)grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency (manual)</span><b>${fmt(pb)}</b></div>`;}
-  else if(target==="ac"){const AB=armorAC(c);let p;if(AB.hasArmor){const cap=(AB.body.dexCap==null)?AB.dex:Math.min(AB.dex,AB.body.dexCap);p=`Armor ${AB.body.base} + DEX ${fmt(cap)}`;}else if(character.ac!=="")p=`Base AC ${num(character.ac)}`;else p=`10 + DEX ${fmt(mods.dex)}`;if(AB.shield)p+=` + Shield ${fmt(AB.shield)}`;base=p;}
   else if(target==="init")base=character.init===""?`DEX mod ${fmt(mods.dex)}`:`Base ${fmt(num(character.init))}`;
   else if(target==="speed")base=`Base ${num(character.speed)}`;
   else if(target==="profBonus")base=`Level ${Math.max(1,num(character.level)||1)}: ${fmt(pb-sumFx("profBonus",c))}`;
@@ -283,6 +283,58 @@ function openStatBreakdown(target){
     }
   }
   openModal(label+" breakdown",rows);
+}
+
+/* ---- the Armor Class window (#130) ----
+   Tapping the AC shield opens this, not a plain breakdown: a Calculated / Flat
+   switch over the lines that make the number, and its total — the same number
+   acTotal() gives the rail, youAC() and print. Calculated is the arithmetic:
+   armor (or 10 + Dex), the best shield, every `ac` effect. Flat is a number the
+   player types, the AC from their paper sheet: the struck line names what it
+   already counts, and only a status or a summoned familiar adds to it. */
+function acWindowHTML(c){
+  const flat=acIsFlat(character);
+  const line=(l,v)=>`<div${v<0?' class="bd-neg"':""} style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(l)}</span><b>${fmt(v)}</b></div>`;
+  let b=`<div class="seg" id="acMode" style="margin-bottom:12px">${[["calc","Calculated"],["flat","Flat"]].map(([v,l])=>{const on=(v==="flat")===flat;return `<button type="button" data-acmode="${esc(v)}" class="${on?"on":""}" aria-pressed="${on?"true":"false"}">${l}</button>`;}).join("")}</div>`;
+  const AB=armorAC(c), fx=acEffects(c);
+  if(flat){
+    b+=`<div class="field"><label class="f" for="acFlat">Your AC</label><input id="acFlat" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${esc(acFlatValue(character.ac))}"></div>`;
+    const gone=[];const put=n=>{if(n&&!gone.includes(n))gone.push(n);};
+    put(AB.bodyName);put(AB.shieldName);c.filter(x=>x.target==="ac"&&(x.kind==="item"||x.kind==="feature")).forEach(x=>put(x.source));
+    b+=`<p class="hint" style="margin:0 0 6px"><s>${esc(gone.length?gone.join(", "):"Armour, shields, items and features")}</s> don't add: your AC already counts them.</p>`;
+  }else{
+    const cap=AB.hasArmor?((AB.body.dexCap==null)?AB.dex:Math.min(AB.dex,AB.body.dexCap)):AB.dex;
+    b+=`<p style="margin-bottom:6px">${esc(AB.hasArmor?`Armor ${AB.body.base} + DEX ${fmt(cap)}`:`10 + DEX ${fmt(AB.dex)}`)}</p>`;
+    if(AB.shield)b+=line(AB.shieldName,AB.shield);
+    if(AB.shieldCount>1)b+=`<p class="hint" style="margin:2px 0 4px">Only your best shield counts (${AB.shieldCount} equipped).</p>`;
+  }
+  b+=fx.map(x=>line(x.source,x.value)).join("");
+  b+=`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--line);margin-top:6px;padding-top:6px"><b>Armor Class</b><b id="acTotal">${acTotal(c)}</b></div>`;
+  return b;
+}
+function openACWindow(){
+  openModal("Armor Class",acWindowHTML(contributions()));
+  const seg=document.getElementById("acMode");
+  if(seg)seg.addEventListener("click",e=>{const t=e.target.closest("[data-acmode]");if(t&&setACMode(t.dataset.acmode))openACWindow();});
+  const box=document.getElementById("acFlat");
+  if(box)box.addEventListener("change",()=>{
+    if(!setACFlat(box.value))box.value=String(acFlatValue(character.ac)??"");
+    const t=document.getElementById("acTotal");if(t)t.textContent=String(acTotal());
+  });
+}
+/* Calculated or Flat. A blank Flat box is never accepted: switching to Flat
+   with no number fills it from the sheet as it stands (acFlatSeed()), so the
+   number does not jump, and going back keeps it for next time. */
+function setACMode(mode){
+  const flat=mode==="flat";
+  if(flat&&acFlatValue(character.ac)==null)character.ac=acFlatSeed(contributions());
+  character.acMode=flat?"flat":"calc";
+  recompute();scheduleSave();return true;
+}
+/* The Flat box: a whole number, or refused (and the caller puts the last one back) */
+function setACFlat(v){
+  const n=acFlatValue(v);if(n==null)return false;
+  character.ac=n;recompute();scheduleSave();return true;
 }
 
 /* ---- effect editor markup ---- */

@@ -8391,6 +8391,95 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   X.character = X.blankChar();
 }
 
+/* ---- #130 the Armor Class window: Calculated / Flat, and FLAT on the rail ---- */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const acTotal = fn('acTotal'), setACMode = fn('setACMode'), setACFlat = fn('setACFlat'), acFlatValue = fn('acFlatValue');
+  const fresh = () => { const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1; return c; };
+  const armour = c => {
+    c.inventory = [{id: 'cm', name: 'Chain Mail', equipped: true, armor: {kind: 'body', base: 16, dexCap: 0}},
+                   {id: 'sh', name: 'Shield', equipped: true, armor: {kind: 'shield', bonus: 2}},
+                   {id: 'rp', name: 'Ring of Protection', equipped: true, effects: [{target: 'ac', value: 1}]}];
+  };
+  const spell = c => { c.statuses = [{id: 'sp', name: 'Shield (spell)', active: true, effects: [{target: 'ac', value: 5}]}]; };
+  const totalOf = b => { const m = /id="acTotal">(\d+)</.exec(b); return m ? Number(m[1]) : null; };
+  const rowRe = (name, v) => new RegExp('<span>' + name.replace(/[()]/g, '\\$&') + '</span><b>' + v.replace('+', '\\+') + '</b>');
+
+  let c = fresh(); armour(c);
+  let m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 tapping AC opens the Armor Class window', m.t === 'Armor Class', m.t);
+  ck('#130 ...on Calculated, with the switch', /data-acmode="calc"[^>]*class="on"/.test(m.b) && /data-acmode="flat"/.test(m.b)
+     && />Calculated</.test(m.b) && />Flat</.test(m.b), m.b.slice(0, 600));
+  ck('#130 ...its armor line as before', /Armor 16 \+ DEX \+0/.test(m.b), m.b.slice(0, 600));
+  ck('#130 ...the shield on its own line', rowRe('Shield', '+2').test(m.b), m.b);
+  ck('#130 ...each effect by source', rowRe('Ring of Protection', '+1').test(m.b), m.b);
+  let p = painted(['acDisp']);
+  ck('#130 ...and a total that is the number on the sheet: 19', totalOf(m.b) === 19 && p.acDisp === '19' && X.youAC() === 19, [totalOf(m.b), p.acDisp, X.youAC()]);
+  c.inventory.push({id: 'sh2', name: 'Spiked Shield', equipped: true, armor: {kind: 'shield', bonus: 3}});
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 two shields: the window says only the best counts', /Only your best shield counts \(2 equipped\)\./.test(m.b) && rowRe('Spiked Shield', '+3').test(m.b), m.b);
+  ck('#130 ...and adds it alone: 16 + 3 + 1 = 20', totalOf(m.b) === 20 && acTotal() === 20, [totalOf(m.b), acTotal()]);
+
+  c = fresh(); armour(c); spell(c); c.acMode = 'flat'; c.ac = 16;
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 Flat: the switch on Flat, and Your AC in a box', /data-acmode="flat"[^>]*class="on"/.test(m.b) && /Your AC/.test(m.b)
+     && /<input id="acFlat"[^>]*inputmode="numeric"[^>]*value="16"/.test(m.b), m.b.slice(0, 900));
+  const struck = (/<s>([^<]*)<\/s>/.exec(m.b) || [])[1] || '';
+  ck('#130 ...a struck line naming what no longer adds', struck === 'Chain Mail, Shield, Ring of Protection', struck);
+  ck('#130 ...the status that still adds', rowRe('Shield (spell)', '+5').test(m.b), m.b);
+  ck('#130 ...no line for the ring outside the struck one', !/Ring of Protection/.test(m.b.replace(/<s>[^<]*<\/s>/, '')), m.b);
+  ck('#130 ...and the total: 16 + 5 = 21', totalOf(m.b) === 21 && painted(['acDisp']).acDisp === '21', totalOf(m.b));
+  c.inventory = []; c.statuses = [];
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 Flat with nothing worn: the struck line names the kinds', /<s>Armour, shields, items and features<\/s>/.test(m.b), m.b);
+
+  c = fresh(); armour(c); spell(c);
+  ck('#130 switching to Flat with a blank box fills it with what the sheet showed, less what still adds: 19',
+     setACMode('flat') === true && c.acMode === 'flat' && acFlatValue(c.ac) === 19, [c.acMode, c.ac]);
+  ck('#130 ...so the number does not jump: 24 before, 24 after', acTotal() === 24 && painted(['acDisp']).acDisp === '24', acTotal());
+  ck('#130 back to Calculated keeps the Flat number for next time', setACMode('calc') === true && c.acMode === 'calc' && acFlatValue(c.ac) === 19, [c.acMode, c.ac]);
+
+  /* an old save with a typed AC: Calculated, and its number is what Flat shows (constraint 3) */
+  X.character = X.migrate({ac: '14', abilities: {str: 10, dex: 14, con: 10, int: 10, wis: 10, cha: 10}});
+  ck('#130 an old typed AC opens Calculated: 10 + DEX 2 = 12', X.character.acMode === 'calc' && acTotal() === 12, [X.character.acMode, acTotal()]);
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 ...the window opens on Calculated', /data-acmode="calc"[^>]*class="on"/.test(m.b) && totalOf(m.b) === 12, totalOf(m.b));
+  ck('#130 ...and switching to Flat shows its old 14', setACMode('flat') === true && acFlatValue(X.character.ac) === 14 && acTotal() === 14, [X.character.ac, acTotal()]);
+
+  c = fresh(); c.acMode = 'flat'; c.ac = 15;
+  const refused = ['', '  ', 'abc', '15.5', '-3'].filter(v => setACFlat(v) !== false || c.ac !== 15);
+  ck('#130 the Flat box refuses a blank or anything but a whole number, and keeps 15', refused.length === 0, refused);
+  ck('#130 ...and takes 17', setACFlat('17') === true && c.ac === 17 && painted(['acDisp']).acDisp === '17', [c.ac]);
+
+  /* the rail's shield: FLAT under the number, and the flat rim */
+  const rail = () => {
+    const got = {}, real = ctx.document.getElementById;
+    const el = () => { const e = {textContent: '', flat: null}; e.classList = {toggle: (k, on) => { if (k === 'flat') e.flat = !!on; }, add() {}, remove() {}, contains: () => false}; return e; };
+    ctx.document.getElementById = id => (id === 'acShield' || id === 'acLbl') ? (got[id] = got[id] || el()) : real(id);
+    try { X.recompute(); } finally { ctx.document.getElementById = real; }
+    return {flat: got.acShield && got.acShield.flat, label: got.acLbl && String(got.acLbl.textContent)};
+  };
+  c = fresh(); c.acMode = 'flat'; c.ac = 15;
+  let r = rail();
+  ck('#130 Flat: the shield takes the flat class and reads FLAT', r.flat === true && r.label === 'FLAT', r);
+  c.acMode = 'calc';
+  r = rail();
+  ck('#130 Calculated: no flat class, and it reads AC', r.flat === false && r.label === 'AC', r);
+
+  const fsR = require('fs'), pR = require('path');
+  const sheetHTML = fsR.readFileSync(pR.join(__dirname, '..', 'html', '00-sheet.html'), 'utf8');
+  ck('#130 the rail shield carries its ids', /<div class="rail-ac" id="acShield"[^>]*><div class="big" data-stat="ac" id="acDisp">10<\/div><div class="n" id="acLbl">AC<\/div><\/div>/.test(sheetHTML),
+     (sheetHTML.match(/<div class="rail-ac[^\n]*/) || [''])[0]);
+  const tok = fsR.readFileSync(pR.join(__dirname, '..', 'css', '00-tokens.css'), 'utf8');
+  const blocks = tok.split('}').filter(b => /--rail-line:/.test(b));
+  const bad = blocks.filter(b => { const f = /--rail-flat:\s*(#[0-9a-fA-F]{3,8})/.exec(b), l = /--rail-line:\s*(#[0-9a-fA-F]{3,8})/.exec(b);
+    return !f || !l || f[1].toLowerCase() === l[1].toLowerCase(); });
+  ck('#130 all four palettes set --rail-flat, each unlike their --rail-line', blocks.length === 4 && bad.length === 0, [blocks.length, bad.map(b => b.slice(0, 60))]);
+  const sheetCSS = fsR.readFileSync(pR.join(__dirname, '..', 'css', '30-sheet.css'), 'utf8');
+  ck('#130 a flat shield draws its rim in --rail-flat', /\.rail-ac\.flat\{background:var\(--rail-flat\)\}/.test(sheetCSS));
+  X.character = X.blankChar();
+}
+
 /* ---- end of the #130 · #129 · #132 block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window

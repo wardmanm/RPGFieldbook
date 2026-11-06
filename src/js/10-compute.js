@@ -28,6 +28,10 @@ function recompute(){
      effects it counted, so an item's penalty a Flat AC ignores is not red */
   const acFx=acEffects(c);
   const acEl=document.getElementById("acDisp");acEl.textContent=acTotal(c);mark(acEl,!!acFx.reduce((s,x)=>s+x.value,0),acFx.some(x=>x.value<0));
+  /* a Flat AC says so on the shield, in every skin: FLAT for AC, and the rim in --rail-flat */
+  const acFlat=acIsFlat(character), acSh=document.getElementById("acShield"), acLb=document.getElementById("acLbl");
+  if(acSh)acSh.classList.toggle("flat",acFlat);
+  if(acLb)acLb.textContent=acFlat?"FLAT":"AC";
   const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c)+ckFx;
   const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx,fxNeg(c,"init","check"));
   const spFx=sumFx("speed",c), spBase=num(character.speed)+spFx;
