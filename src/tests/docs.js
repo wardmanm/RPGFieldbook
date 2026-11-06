@@ -366,6 +366,47 @@ if (packsReg && Array.isArray(packsReg.packs)) {
     ck(f.label + ': its blob is the ' + f.bytes + ' bytes its comment says', bytes.length === f.bytes, bytes.length);
   });
 
+  // Same weights as online. Google served one @font-face per requested weight,
+  // so a weight between two of them snapped to a requested one (800 -> 900);
+  // one face with a range renders it as asked (800). Every weight the CSS asks
+  // of a family must land where it did, or "looks the same" is false (#144).
+  const snap = (w, have) => {                         // CSS Fonts 4 §5.2, font-weight
+    if (have.includes(w)) return w;
+    const up = have.filter(x => x > w).sort((a, b) => a - b), down = have.filter(x => x < w).sort((a, b) => b - a);
+    if (w >= 400 && w <= 500) {
+      const near = up.filter(x => x <= 500);
+      return near.length ? near[0] : down.length ? down[0] : up[0];
+    }
+    return w < 400 ? (down.length ? down[0] : up[0]) : (up.length ? up[0] : down[0]);
+  };
+  const requested = {};                               // "Family|style" -> [weights], from each face's comment
+  faces.forEach(f => {
+    const m = /, weights ([\d/]+)$/.exec(f.label);
+    if (m) requested[f.family + '|' + f.style] = m[1].split('/').map(Number);
+  });
+  const TOKEN_FAMS = { display: ['Grenze Gotisch', 'Cinzel'], head: ['Cinzel'], body: ['EB Garamond'] };
+  const WORD = { normal: 400, bold: 700 };
+  const asked = [];                                   // {where, family, w}
+  manifest.css.filter(p => p !== FONTS).forEach(p => {
+    const src = read(p).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const r of src.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const tok = /var\(--(display|head|body)\)/.exec(r[2]);
+      const w = /font-weight:\s*(\d+|normal|bold)\b/.exec(r[2]) || /font:\s*(\d+|bold)\b/.exec(r[2]);
+      if (tok && w) TOKEN_FAMS[tok[1]].forEach(family =>
+        asked.push({ where: p.slice(8) + ' ' + r[1].trim().replace(/\s+/g, ' '), family, w: WORD[w[1]] || +w[1] }));
+    }
+  });
+  ck('the CSS asks the fonts for weights (the parse found them)', asked.length > 10, asked.length);
+  const moved = asked.filter(a => {
+    const f = faces.find(x => x.family === a.family && x.style === 'normal');
+    const wr = f && /font-weight:(\d+)(?: (\d+))?;/.exec(f.body);
+    const have = requested[a.family + '|normal'];
+    if (!wr || !have) return true;
+    const lo = +wr[1], hi = wr[2] ? +wr[2] : lo;
+    return Math.min(hi, Math.max(lo, a.w)) !== snap(a.w, have);
+  }).map(a => a.where + ': ' + a.family + ' ' + a.w);
+  ck('every weight the CSS asks of a font renders as it did from Google', moved.length === 0, moved);
+
   // SIL OFL 1.1: each copy carries the copyright notice and the licence.
   ck('90-fonts.css carries the SIL Open Font License 1.1 text',
      css.includes('SIL OPEN FONT LICENSE Version 1.1') && css.includes('OTHER DEALINGS IN THE FONT SOFTWARE.'));
