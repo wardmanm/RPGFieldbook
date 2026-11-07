@@ -259,8 +259,9 @@ the suite is green, and a changed private allowlist is committed in the private 
 
 One issue is **one block, run as ONE Bash call**: Claude Code keeps no shell variables between
 calls, so a block split across two calls would run its second half with `$URL` and `$PRIORITY`
-empty. Fill in the five placeholders with literal values (`PRIORITY`, `NEXT`, the title, the
-label, and the milestone's `X.Y`) and the body between the `BODY` lines; nothing else changes.
+empty. Fill in the five placeholders with literal values (`PRIORITY`, `NEXT`, the title between
+the `TITLE` lines exactly as approved, quotes and all, the label, and the milestone's `X.Y`) and
+the body between the `BODY` lines; nothing else changes.
 
 - `PRIORITY` is the priority Mike confirmed, exactly `P0`, `P1` or `P2` (uppercase). The block
   checks it first and exits on anything else, before it writes anything.
@@ -277,6 +278,10 @@ label, and the milestone's `X.Y`) and the body between the `BODY` lines; nothing
 PRIORITY=<P0, P1 or P2: the priority Mike confirmed>
 NEXT=<the next fix version>
 case "$PRIORITY" in P0|P1|P2) ;; *) echo "PRIORITY must be P0, P1 or P2, not '$PRIORITY': nothing filed"; exit 1;; esac
+IFS= read -r TITLE <<'TITLE'   # read as typed: quotes, $ and backticks in a title are safe here
+<title>
+TITLE
+[ -n "$TITLE" ] || { echo "no title: nothing filed"; exit 1; }
 PROJ=$(gh project view 3 --owner wardmanm --format json --jq .id)
 F() { gh project field-list 3 --owner wardmanm --format json --jq "$(cat)"; }   # the jq filter comes on stdin: never a positional
 STATUS=$(F <<<'.fields[]|select(.name=="Status")|.id')
@@ -294,7 +299,7 @@ else
   LABELS+=(--label "$NEXT")
 fi
 OUT=$(mktemp)   # the body is never inside $(…): macOS bash 3.2 can't parse an apostrophe there
-gh issue create --title "<title>" --milestone "vX.Y.0" "${LABELS[@]}" --body-file - > "$OUT" <<'BODY'
+gh issue create --title "$TITLE" --milestone "vX.Y.0" "${LABELS[@]}" --body-file - > "$OUT" <<'BODY'
 <the body>
 BODY
 URL=$(tail -1 "$OUT"); rm -f "$OUT"
@@ -370,7 +375,10 @@ detailed run, kept out of the repo, whose failures reach Mike only as probable b
    - It never writes to `QA-CHECKLIST.md`. Its failures are listed to Mike as probable bugs.
 4. **Restore the build** after the pre-drive and before the commit, as always:
    `git checkout -- dist/fieldbook.html docs/CHANGELOG.md`. Then commit, and tell Mike the test
-   pass is ready: how many features and lines, and the pre-drive's probable bugs.
+   pass is ready: how many features and lines, and the pre-drive's probable bugs. Tell him too that
+   while he marks it he can run `/sign-off-notes` in a second window, in this checkout, to file
+   what he notices that doesn't fail a line (#200): each becomes an issue and a `while on` row in
+   the record's Step 4 table.
 5. **A rebuild** (only after Mike says yes, see the preflight) never wipes his marks. Before
    writing, read the old test pass. A line's text is the line without its checkbox and without
    `FAIL: …`. Every new line whose text is unchanged keeps his checkbox and `FAIL:` note. Re-run the
@@ -382,9 +390,13 @@ detailed run, kept out of the repo, whose failures reach Mike only as probable b
 ## Step 4 — Bugs from QA
 
 1. Mike works through the test pass and marks it.
-2. Gather the failures: every `FAIL:` line in the test pass, and every `✗` line in the pre-drive
-   report. Show the pre-drive's as probable bugs; Mike dismisses any he disagrees with. For each
-   remaining one, propose a title and a priority, and wait for his confirmation.
+2. **First, list the rows `/sign-off-notes` added** to the record's Step 4 table (their Line cell
+   starts `while on`): the notes he filed during the pass. They are issues already: never file them
+   again. A `(priority not set)` among them keeps this step open, as it does for any row. Then ask
+   whether the pass is finished, and gather the failures: every `FAIL:` line in the test pass, and
+   every `✗` line in the pre-drive report. Show the pre-drive's as probable bugs; Mike dismisses
+   any he disagrees with. For each remaining one, propose a title and a priority, and wait for his
+   confirmation.
 3. **P2 and P1** are filed as in step 2 (the milestone `vX.Y.0`, next fix version label, project,
    Backlog, Priority). **P0** is filed in the milestone with Priority P0 and no fix version label.
    Each goes in the record's "Step 4" table with its checklist line and its state.
@@ -428,6 +440,7 @@ anything is cut.
 | "I'll fix the ledger link by hand" | `move-docs.js` rewrites it in place; a hand edit can shift a line and break every `L<n>` below |
 | "A P1 bug is bad, I'll hold the release" | Only an open P0 blocks |
 | "1.9.1's milestone is v1.9.1" | There is none: release X.Y.Z's milestone is `vX.Y.0`, the line's |
+| "A `while on` row isn't filed yet" | It is: `/sign-off-notes` filed it. List it; never file it again |
 | "I couldn't drive that line, I'll tick it" | It stays `- [ ]` with `(not driven: <why>)` |
 | "Main moved, but the checklist is close enough" | Ask whether to rebuild step 3; it reopens 3, 4 and 5 |
 | "I'll rebuild the checklist from scratch" | His ticks and `FAIL:` notes carry forward to every unchanged line |

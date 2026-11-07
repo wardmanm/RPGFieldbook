@@ -627,9 +627,11 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   // let the open-P0 check pass with a P0 open. Step 3 picks this release's issues out of the
   // line by date, since a feature or a P0 carries no fix-version label (#182 for 1.9.1).
   const iss = read('.claude/skills/issue/SKILL.md');
-  const zMilestone = [['pre-release.md', pre], ['release/SKILL.md', rel], ['issue/SKILL.md', iss]]
+  const SON = '.claude/skills/sign-off-notes/SKILL.md';
+  const son = fs.existsSync(path.join(ROOT, SON)) ? read(SON) : '';
+  const zMilestone = [['pre-release.md', pre], ['release/SKILL.md', rel], ['issue/SKILL.md', iss], ['sign-off-notes/SKILL.md', son]]
     .flatMap(([n, t]) => t.split('\n').filter(l => /milestone/i.test(l) && /\bvX\.Y\.Z\b/.test(l)).map(l => n + ': ' + l.trim()));
-  ck('#199 the release and /issue skills name the milestone vX.Y.0, never vX.Y.Z', zMilestone.length === 0, zMilestone);
+  ck('#199 the release, /issue and /sign-off-notes skills name the milestone vX.Y.0, never vX.Y.Z', zMilestone.length === 0, zMilestone);
   ck('#199 ...the open-P0 query reads vX.Y.0',
      a.length === 1 && a[0].includes('--milestone "vX.Y.0"') && a[0].includes('.milestone.title=="vX.Y.0"'), a);
   ck('#199 ...the filing blocks file into vX.Y.0',
@@ -641,6 +643,40 @@ if (packsReg && Array.isArray(packsReg.packs)) {
      closed[0].includes('git log -1 --format=%ct "$PREV"') && /\(\.closedAt\|fromdateiso8601\) > \$T/.test(closed[0]), closed);
   ck('#199 /issue takes the line from the pre-release record, else APP_VERSION, not the earliest open milestone',
      iss.includes('head -1 src/docs/PRE-RELEASE.md') && iss.includes("grep -o 'APP_VERSION=") && !/earliest open/i.test(iss));
+  // #200 (spec §8): /sign-off-notes, Mike's side window during the test pass. It files what
+  // doesn't fail a line with /issue's own filing block, so the two can't drift (compared the
+  // way the open-P0 query is), records a "while on" row in the record's Step 4 table, and
+  // never commits, pushes or switches: both windows share the one checkout.
+  ck('#200 /sign-off-notes exists and is Mike\'s to start',
+     /^---\nname: sign-off-notes\n/.test(son) && /^disable-model-invocation: true$/m.test(son));
+  const fileBlock = t => fenced(t).filter(x => x.includes('gh issue create'));
+  ck('#200 ...its filing block is /issue\'s, byte for byte',
+     fileBlock(son).length === 1 && fileBlock(iss).length === 1 && fileBlock(son)[0] === fileBlock(iss)[0],
+     {son: fileBlock(son).length, issue: fileBlock(iss).length});
+  ck('#200 ...it never commits, pushes, switches or checks out', son !== '' && !/\bgit (commit|push|switch|checkout)\b/.test(son));
+  // #200's dry run: a title typed into `--title "<title>"` breaks on a ", a $ or a backtick, and
+  // this repo's titles often quote ("The "I rolled" box…"). Every filing block reads it as typed
+  // from a quoted heredoc, before any gh call, and refuses an empty one.
+  const titled = [['pre-release.md', pre], ['issue/SKILL.md', iss], ['sign-off-notes/SKILL.md', son]].map(([n, t]) => {
+    const b = fileBlock(t)[0] || '';
+    return [n, /^IFS= read -r TITLE <<'TITLE'[^\n]*\n<title>\nTITLE\n\[ -n "\$TITLE" \] \|\| \{[^\n]*exit 1; \}$/m.test(b) &&
+      b.indexOf("<<'TITLE'") < b.indexOf('gh ') && b.includes('--title "$TITLE"') && !b.includes('--title "<title>"')];
+  }).filter(([, ok]) => !ok).map(([n]) => n);
+  ck('#200 every filing block reads the title from a quoted heredoc, before any gh call', titled.length === 0, titled);
+  ck('#200 ...it starts on main only, and takes the milestone vX.Y.0 from the record',
+     son.includes('git branch --show-current') && son.includes('`vX.Y.0`') && son.includes('src/docs/PRE-RELEASE.md'));
+  const sonRows = son.split('\n').filter(l => /^\s*\| while on /.test(l));
+  ck('#200 ...its Step 4 rows have the table\'s five cells, a "while on" Line, and no relative link',
+     sonRows.length >= 2 && sonRows.every(l => l.trim().split('|').length === 7 && !/\]\((?!https?:)/.test(l)), sonRows);
+  // a step's own heading is "## Step N — …"; the record template's "## Step 4: bugs from QA" is not one
+  const preSec = h => pre.split(/^## /m).find(s => s.startsWith(h)) || '';
+  ck('#200 the pre-release names /sign-off-notes when it hands Mike the test pass (step 3)',
+     preSec('Step 3 — ').includes('/sign-off-notes'));
+  const s4 = preSec('Step 4 — ');
+  ck('#200 ...and lists its "while on" rows, already filed, before asking whether the pass is finished (step 4)',
+     s4.includes('/sign-off-notes') && s4.includes('while on') && s4.indexOf('while on') < s4.indexOf('whether the pass is finished'));
+  ck('#200 ...and its red flags say a "while on" row is filed already',
+     /^\| "A `while on` row isn't filed yet" \|/m.test(preSec('Red flags')));
   // spec §7: it runs on main and refuses elsewhere; it never switches branch (#127 ruling 8)
   ck('#127 the pre-release refuses off main and never switches branch',
      pre.includes('git branch --show-current') && !pre.includes('git switch'));

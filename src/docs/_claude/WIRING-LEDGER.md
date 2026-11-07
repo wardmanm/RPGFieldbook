@@ -9719,3 +9719,40 @@ the open-P0 query reads `vX.Y.0`; so do the filing blocks; step 3's query select
 tag's date; and `/issue` takes its line from the record or `APP_VERSION`.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md).
+
+## #200: /sign-off-notes, notes during the test pass (Mike, 2026-11-07)
+
+Built `/sign-off-notes [X.Y.Z]` (`.claude/skills/sign-off-notes/SKILL.md`) from its approved spec,
+`src/docs/specs/2026-11-06-sign-off-notes-design.md`. Mike runs it in a second window on main while he
+marks the test pass. A note that means any line's "what should hold" didn't hold (the line he's on, a
+later one, or one already ticked) is not filed: he gets that line's `FAIL:` text. Anything else is
+filed after his yes, with `/issue`'s own filing block, and gets a `while on` row in the record's Step 4
+table: a bug at P1 or P2 in `vX.Y.0` with X.Y.Z's patch-plus-one label, a P0 when it should block and
+no line covers it, and a change or feature as `feature` with no priority or milestone. It refuses once
+step 4 is done. `pre-release.md` names it in step 3, lists its rows first in step 4 (never filing them
+again), and gains a red flag.
+
+Two dry runs, each by a fresh subagent on scratch 1.9.1 copies of the 1.9.0 record and test pass,
+with GitHub writes forbidden:
+- **Run 1** sent spec §8's five notes: a later unticked line, a ticked line, a blocker, a Change the
+  wiki already promises, and a Feat. All five went as designed.
+- **Run 2** covered the untried paths: a duplicate found only in a grouped issue's body (a comment
+  and `#146 (noted)`), `(priority not set)`, a quoted title, a blocking `FAIL:`, and the refusal
+  after step 4. All as designed.
+
+Their gaps were fixed in the skill: the kind is asked before the blocker; a reply belongs to the note
+in hand; the line he's on is flagged as a guess; the `FAIL:` path reads the wiki and says when it
+should block; duplicates are searched in bodies too; a comment has a template; `Possible:` covers an
+unconfirmed cause. One gap was shared: `--title "<title>"` broke on a `"`, `$` or backtick, so all
+three filing blocks (`/issue`'s, the pre-release's and this copy) now read the title from a quoted
+heredoc before any `gh` call. Left for Mike: `/issue` §6 adds a Step 4 row without checking whether
+step 4 is done (the spec leaves `/issue` unchanged). Details: the spec's As built.
+
+Tests: `docs.js` pins the skill (Mike's to start; its filing block identical to `/issue`'s; no
+`git commit`, `push`, `switch` or `checkout`; on main, `vX.Y.0` from the record; its rows with five
+cells and no relative link), the pre-release's step 3, step 4 and red flag, and the title rule in all
+three filing blocks; the #199 milestone check now covers this skill too. `pre-release.js` pins the
+side window's row formats (P2, P0, a feature's `—`, `(noted)`, `(priority not set)`) against
+`recordProblem()` and `parseRecord()`.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md).

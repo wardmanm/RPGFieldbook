@@ -95,8 +95,9 @@ and wait.
 ## 5. File it
 
 After his yes, run this as **ONE Bash call** (Claude Code keeps no shell variables between calls).
-Fill in the literal values; the body goes between the `BODY` lines, on stdin, so no file is written
-into the repo.
+Fill in the literal values; the title goes between the `TITLE` lines exactly as Mike approved it
+(quotes and all, nothing escaped), and the body between the `BODY` lines, on stdin, so no file is
+written into the repo.
 
 ```bash
 KIND=<bug|feature|task>
@@ -106,6 +107,10 @@ NEXT=<the next fix version for a P1/P2 bug or task; empty otherwise>
 SIZE=<XS, S, M, L or XL; empty unless Mike gave one>
 case "$KIND" in bug|feature|task) ;; *) echo "KIND must be bug, feature or task: nothing filed"; exit 1;; esac
 case "$PRIORITY" in ''|P0|P1|P2) ;; *) echo "PRIORITY must be P0, P1 or P2: nothing filed"; exit 1;; esac
+IFS= read -r TITLE <<'TITLE'   # read as typed: quotes, $ and backticks in a title are safe here
+<title>
+TITLE
+[ -n "$TITLE" ] || { echo "no title: nothing filed"; exit 1; }
 [ "$PRIORITY" = P0 ] && NEXT=
 PROJ=$(gh project view 3 --owner wardmanm --format json --jq .id)
 F() { gh project field-list 3 --owner wardmanm --format json --jq "$(cat)"; }   # the jq filter comes on stdin: never a positional
@@ -120,7 +125,7 @@ SPICK=; [ -n "$SIZE" ] && SPICK=$(F <<<".fields[]|select(.name==\"Size\")|.optio
 if [ -n "$NEXT" ]; then
   gh label list --search "$NEXT" --json name -q '.[].name' | grep -qx "$NEXT" || gh label create "$NEXT" --color aaaaaa || exit 1
 fi
-ARGS=(--title "<title>" --label "$KIND")
+ARGS=(--title "$TITLE" --label "$KIND")
 [ -n "$NEXT" ] && ARGS+=(--label "$NEXT")
 [ -n "$MILESTONE" ] && ARGS+=(--milestone "$MILESTONE")
 OUT=$(mktemp)   # the body is never inside $(…): macOS bash 3.2 can't parse an apostrophe there
