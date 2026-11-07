@@ -96,6 +96,9 @@ docs/                    PLAYER-FACING, ships — an allowlist of exactly four f
   that version.
 - **Filing a bug, feature or task: `/issue`** (`.claude/skills/issue/`, Mike types it). It drafts the
   issue and files it only after his yes, with the milestone, labels and project #3 fields set.
+  During a release's test pass, **`/sign-off-notes`** (`.claude/skills/sign-off-notes/`, Mike types
+  it in a second window) files what he notices that doesn't fail a line, and records each in the
+  pre-release record's Step 4 table.
 - **Screenshots are required for any UI-affecting change** — each affected tab, before and after for
   a change to existing UI, via the project's Playwright MCP server (`.mcp.json`), never a
   plugin-provided one (it refuses `file://`). Tab names are lowercase; `newCharacter(name, system)`

@@ -256,7 +256,8 @@ pre-release's existing decisions.
 Settled while writing, for Mike to check; none changes what gets built in a way the decisions fix.
 
 - **The fix-version label** is the release under test's patch plus one (the pre-release's rule), not
-  `/issue`'s milestone-plus-one: the 1.9.1 pass files `1.9.2`, since 1.9.1 is the release in hand.
+  `/issue`'s rule (since #199, the higher of the release in hand's patch plus one and the line's
+  highest open fix label): the 1.9.1 pass files `1.9.2`, since 1.9.1 is the release in hand.
 - **Only a Bug can be a P0**; a Change or Feat never holds the release.
 - **Off main it refuses**, naming the branch, as the pre-release does.
 - **Duplicates** are checked as `/issue` checks them; a comment on #N records a `(noted)` row.
@@ -266,3 +267,46 @@ Settled while writing, for Mike to check; none changes what gets built in a way 
 - **`docs.js` keeps the filing block identical to `/issue`'s**, the way it keeps the two open-P0 queries
   identical.
 - **CLAUDE.md's `/issue` line** names `/sign-off-notes` for notes during a test pass.
+
+## As built
+
+Built as specified on `issue/200-sign-off-notes` (2026-11-07). These are the differences from this
+spec, all settled by Claude from the two dry runs (§8), each in a fresh subagent on scratch 1.9.1
+copies of the 1.9.0 record and test pass, with GitHub writes forbidden.
+
+- **Dry run 1** sent §8's five notes: a later unticked line, a ticked line, a blocker no line covers,
+  a Change the wiki already promises, and a plain Feat. All five went as designed (two `FAIL:` texts
+  and nothing filed, a P0, a kind question, a Feat with `—`), and the scratch files changed only by
+  the three rows.
+- **Dry run 2** took the paths run 1 hadn't reached, and the fixes from run 1. It covered a
+  duplicate found only in a grouped issue's body (#146, so a comment and `#146 (noted)`), a filing
+  whose project fields failed (`(priority not set)`), a title with quotes, a `FAIL:` that should
+  block, and a note after step 4 was done (refused). All as designed. The wording fixes made after
+  run 2 were not run a third time.
+- **Kind before blocker.** §4.2's step 5 (the kind) now comes before its step 4 (the blocker): in
+  the old order, a "Change" that was really a Bug and should block was asked about twice.
+- **A reply belongs to the note in hand**, whatever its first word ("Bug: yes" is an answer, not a
+  new note). "Change the title, then file it" counts as his yes.
+- **The line he's on is flagged as a guess**, in the opening line and under every draft ("say if
+  you were elsewhere"), since Mike marks the pass out of order. In run 1, all three filings named the
+  first unmarked line.
+- **The `FAIL:` path** reads the line's wiki page before giving the text, so the text names only
+  what is really wrong, and says when the failure should block, so Mike can ask for a P0 at step 4.
+- **Duplicates** are also searched by key words in issue bodies. The grouped issues (#145–#152)
+  list their items only there. A comment on #N has its own template, is confirmed like a draft, and
+  its row's Title is the matched item's own words when #N is a grouped issue.
+- **A cause** that was read but couldn't be confirmed goes in as `Possible: …; not confirmed`.
+  **Where** leaves out what Mike didn't give, except the browser and width for a layout bug.
+- **The build's sha** is read with `grep … | tail -1`, not a fixed `head` window, which a third
+  rebuild's header line would outgrow.
+- **Every filing block reads its title from a quoted heredoc** (`IFS= read -r TITLE <<'TITLE'`),
+  before any `gh` call: `/issue`'s, the pre-release's, and this skill's copy. Run 1 found that
+  `--title "<title>"` breaks on a `"`, a `$` or a backtick, and this repo's titles often quote.
+  `docs.js` checks all three blocks.
+- **Claude's calls, corrected:** `/issue`'s label is no longer "milestone-plus-one" (#199 changed
+  it). This skill keeps the pre-release's rule, which is lower than `/issue`'s once a later patch's
+  label is in use.
+
+**Open for Mike.** Run 2 noticed that `/issue` §6 adds a Step 4 row without checking whether step 4
+is already done. That row would land in a finished step's table. §5 leaves `/issue` unchanged, so
+this branch doesn't change it either.

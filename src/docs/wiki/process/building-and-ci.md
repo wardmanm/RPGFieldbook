@@ -248,7 +248,7 @@ bumps `data/packs.json` and prints its commands, also running none. The last are
 checklist (`8`, which starts at step 0, `/release X.Y.Z` running the pre-release), open the app (`9`) and where things
 live (`s`). It is Bash 3.2 compatible, and with no TTY it prints the menu and exits 0.
 
-### `/release` (with its pre-release), `/issue` and `/status`
+### `/release` (with its pre-release), `/issue`, `/sign-off-notes` and `/status`
 
 The **pre-release** (#127; `.claude/skills/release/pre-release.md`) gets an app release ready before
 it is cut. Since #180 it is part of `/release X.Y.Z`, not a command of its own: `/release` reads the
@@ -307,6 +307,18 @@ the line players have (still 1.9 during 2.0 work). It carries its kind label and
 that release's patch plus one and the highest `X.Y.Z` label on the line's open issues (none on a P0). A feature takes
 the milestone Mike names, or none. Nothing is filed before his yes. Its filing block, like the pre-release's, sets project #3's Status,
 Priority and Size, and finds the item project #3 has already auto-added when `gh project item-add` says it exists.
+
+`/sign-off-notes [X.Y.Z]` (`.claude/skills/sign-off-notes/`, #200) is Mike's side window during a release's test
+pass. He runs it in a second Claude window, in the same checkout on main, while he marks `QA-CHECKLIST.md`, and sends
+one note per message: `Bug -`, `Change -` or `Feat -`. Each note is compared with every line of the test pass, whatever
+its mark. A note that means some line's "what should hold" didn't hold is filed nowhere: Mike gets the `FAIL:` text for
+that line (unticking it first if it was ticked), since step 4 files the failures. Anything else is filed after his yes,
+with `/issue`'s own filing block, which `docs.js` keeps identical to it. A bug goes in at P1 or P2, in `vX.Y.0`, with
+the release's patch-plus-one label, or as a P0 when it should block and no line covers it. A change or a feature is
+labelled `feature`, with no priority and no milestone. Each note gets a `while on <section>: "<line>…"` row appended to
+the record's Step 4 table, and step 4 lists those rows, already filed, before it asks whether the pass is finished.
+The side window never edits the test pass, a step's state or another row, and never commits, pushes or switches
+branch. Once step 4 is done it refuses and points to `/issue`.
 
 ## Rules that must hold
 
@@ -405,6 +417,8 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 | Out-of-date docs (#127) | Candidates found, Mike confirms each; finished docs move to `src/docs/archive/<ver>/`, wrong ones are corrected in place. Nothing is deleted (L8070) | Deleting: breaks old links, buries old decisions |
 | Filing issues (#127) | Milestone = the release's line's (`vX.Y.0`, #199), label = the next fix version (`1.9.1` for 1.9.0), added to project #3 (RPGFieldbook) with Status Backlog and a Priority Mike confirms: P2 minor bug / visual / tweak; P1 medium bug, functionality affected, workaround exists, no data at risk; P0 blocker (L8070) | A `blocker` label: the project already has Priority |
 | The milestone for release X.Y.Z (#199) | `vX.Y.0`, the minor line's: every X.Y.x issue is on it. Filing and the open-P0 check use it as it is; step 3 picks this release's issues out of it as those closed as completed since the previous release's tag (L9692) | `vX.Y.Z`: there is no v1.9.1, so filing failed and the P0 check passed with a P0 open. Step 3 by the `X.Y.Z` label: a feature or a P0 carries none (#182 for 1.9.1) |
+| Notes during the test pass (#200) | `/sign-off-notes`, a side window Mike runs on main while he marks the pass: a note that fails any line, ticked or not, gets that line's `FAIL:` text and is not filed; anything else is filed after his yes with `/issue`'s block and recorded as a `while on` row in the record's Step 4 table; a blocker no line covers is filed as a P0; once step 4 is done it refuses (L9723) | Leaving the pass to `/issue` each time: it breaks his flow. Writing the notes into `QA-CHECKLIST.md`: the test pass carries no marks of Claude's. Filing a note that fails a later or ticked line: step 4 would file it again |
+| A filing block's title (#200) | Read as typed from a quoted heredoc (`IFS= read -r TITLE <<'TITLE'`), before any `gh` call, in all three blocks (L9723) | `--title "<title>"` filled in by hand: a `"`, `$` or backtick in the title breaks it or expands |
 | `/issue`'s milestone and fix label (#199) | The line of the release in hand: the pre-release record's version, else `APP_VERSION` (still 1.9 during 2.0 work). The label is the higher of that release's patch plus one and the highest `X.Y.Z` label on the line's open issues (L9692) | The earliest open milestone: it doesn't follow the release in hand. The newest open one: a bug in the 1.9.x players have would go to 2.0. The milestone's patch plus one: with the milestone held at v1.9.0, 1.9.1 for the whole line |
 | What blocks a release (#127) | Only an open P0 in the release's milestone. A P0 gets no next-version label; it stays in the milestone and holds step 4 open until it is closed (L8070) | P1 also blocking: it has a workaround and risks no data |
 | The QA checklist (#127) | One file, rebuilt every run, by app area, "New in this release" plus a standing "Still works" list, then a device pass; Claude pre-drives what it can in the project Playwright browser before Mike tests (L8070) | A blank checklist: Mike tests everything Claude could have | (amended 2026-11-02: the checklist is Mike's high-level test pass by feature, with no Claude marks; Claude's pre-drive is a separate report outside the repo)
@@ -450,3 +464,4 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 - 2026-11-05 — `docs/private-sources.md` joins the app zip's allowlist and the kit zip, which also carries a `fieldbook-version.txt` stamp; `/release private` writes `releases/data/` and offers `--allow-unchanged`. → ledger L8943, #182
 - 2026-11-06 — `scripts/fetch-fonts.js` joins `fetch-icons.js` as a fetcher kept out of the build. → ledger L9357, #144
 - 2026-11-07 — A release's milestone is its minor line's, `vX.Y.0`, in the pre-release, `/release` and `/issue`; step 3 takes the issues closed since the previous tag; `/issue` files into the line players have, with the line's highest open fix label. → ledger L9692, #199
+- 2026-11-07 — `/sign-off-notes`: Mike's side window during the test pass files what doesn't fail a line, with `/issue`'s block, as `while on` rows in the record's Step 4 table; step 4 lists them first. Every filing block reads its title from a quoted heredoc. → ledger L9723, #200

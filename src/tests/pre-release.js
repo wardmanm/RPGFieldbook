@@ -373,6 +373,22 @@ const record = (ver, open = []) => [
      rec.recordProblem(record('1.9.0', [1]).replace(row3, row3 + row3), '1.9.0').includes('has 2 rows for step 3'));
   ck('#127 no heading: refused', rec.recordProblem('just text\n', '1.9.0').includes('has no "# Pre-release X.Y.Z" heading'));
   ck('#127 the archive path', rec.archivePath('1.9.0') === ['src', 'docs', 'archive', '1.9.0', 'PRE-RELEASE.md'].join('/'));
+  /* #200 (spec §8): /sign-off-notes appends rows to the Step 4 table in its own format:
+     a P2 bug, a P0, a feature with no priority, a comment on an existing issue, and one
+     whose project fields could not be set. None of them may read as a step row. */
+  const sonRows = [
+    '| while on Level-up: "Type enough XP into the header…" | The XP bar overshoots the next level | P2 | #190 | open |',
+    '| while on Feats: "Level a character to 4…" | Taking a feat wipes the sheet | P0 | #191 | open |',
+    '| while on Trade and the inventory log: "Open a trade with…" (a feature) | Sort the trade window by value | — | #192 | open |',
+    '| while on Hide tabs: "Hide every tab but…" | Hidden tabs come back after a reload | P1 | #150 (noted) | open |',
+    '| while on Across the app: "Switch to dark…" | The pill is unreadable in dark mode | P2 | #193 (priority not set) | open |'];
+  const withRows = record('1.9.1').replace('| 1. Sheet | HP box | P2 | #140 | open |', '| 1. Sheet | HP box | P2 | #140 | open |\n' + sonRows.join('\n'));
+  const p2 = rec.parseRecord(withRows);
+  ck('#200 the side window\'s Step 4 rows leave the record complete, with five steps read',
+     withRows.includes(sonRows[4]) && rec.recordProblem(withRows, '1.9.1') === null && p2.steps.length === 5 && p2.version === '1.9.1', p2);
+  ck('#200 ...and with step 4 open, the record names step 4, not a row of theirs',
+     rec.recordProblem(withRows.replace('| 4. QA bugs | done | 2026-10-30 | ok |', '| 4. QA bugs | open | | |'), '1.9.1') ===
+     'pre-release 1.9.1 is not finished: step 4. QA bugs is open. Run /release 1.9.1 to finish it.');
 }
 
 {
