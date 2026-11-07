@@ -20,11 +20,12 @@ them. The first version was written from the wiki's feature pages (#127).
 - Add an ancestry, a background and a class from the Sheet header: each choice window opens, and what it grants lands on the sheet.
 - Remove that ancestry: everything it granted goes with it.
 - Level up: the hit points step and any choices open; Undo level-up puts the sheet back as it was.
-- Hit points: − and + change Current; a signed number typed into Current (−7, +4) applies; Temp HP takes damage first; locking Vitals with its pencil stops Max from moving; on a touchscreen, tapping the bar opens Hit points, and Damage, Heal and Temp do what their preview says.
+- Hit points: − and + change Current; a signed number typed into Current (−7, +4) applies; Temp HP takes damage first; locking Vitals with its pencil stops Max HP and your Flat AC from changing; on a touchscreen, tapping the bar opens Hit points, and Damage, Heal and Temp do what their preview says.
 - Short Rest restores Warlock pact slots and short-rest uses, offering to spend a Hit Die while any remain; Long Rest restores hit points to full, refills every spell slot, and returns half your Hit Dice.
 - Death saves: tick successes and failures; only a Long Rest clears them.
 - Add a condition in Statuses & Conditions: it shows with its notes, and removing it takes its effects away.
 - Features & Traits: Add searches every feat and trait; a feature with uses counts down and refills on its rest.
+- Edit a feature or an item whose uses grow with level, changing only its name: its uses still grow.
 - Resources: −, + and restore work, and a class's pool refills on the right rest.
 
 ## Combat
@@ -42,11 +43,12 @@ them. The first version was written from the wiki's feature pages (#127).
 - Cast a concentration spell while concentrating on another: the app asks to drop the first and start the new one; confirm, and only one Concentrating condition remains.
 - A spell with a duration appears in Active Spells and counts down with the rounds.
 - A spell with an attack roll or a save shows its line in Attacks & Weapons.
+- Tick Include spells on a to-hit effect: the Spellcasting card, the cast window and the spell's attack row all change together.
 
 ## Inventory
 - Add an item through the finder: it lands in its section with its weight and cost.
 - Type an item in by hand and edit it: the edits are still there after a reload.
-- Equip armor: AC in the Sheet's rail changes; add a shield: AC gains its bonus.
+- Equip armor: AC in the Sheet's rail changes; add a shield: AC gains its bonus, and a second shield adds nothing more. Tap AC and switch to Flat: the shield reads FLAT, and the number holds when armor goes on or off.
 - A weapon has a row in Attacks & Weapons with its to-hit and damage worked out.
 - An item with uses: Use counts down, and the uses come back on their rest.
 - Coins: a signed amount typed into a coin box applies, and the total follows.
