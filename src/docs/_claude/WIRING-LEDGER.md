@@ -9670,7 +9670,7 @@ Pages: [1.9.1](../wiki/roadmap/1.9.1.md).
 
 All seven wave-1 worktrees are merged into main, one branch at a time, and pushed. Merge order:
 Grants redraw, Ammo undo, Glossary editor, Boot & storage, Web fonts, Vitals & HP, then Armour & attack
-numbers. That is 17 issues, the full suite was green after each merge, and each branch had browser QA
+numbers. That is 16 issues, the full suite was green after each merge, and each branch had browser QA
 before and after. The design calls were Mike's:
 - Vitals unlocked by default; on a touchscreen the bar opens a Hit points window (#112).
 - A Calculated / Flat AC switch (#130), and a per-effect Include spells tick (#129).
