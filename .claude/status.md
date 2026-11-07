@@ -1,46 +1,47 @@
 # Status: Fieldbook
-Updated: 2026-11-05 · Branch: main
+Updated: 2026-11-07 · Branch: main
 
 ## Current focus
-1.9.1 is scoped (Mike, 2026-11-05): waves 1–3 of `src/docs/wiki/roadmap/1.9.1.md` plus #140, 32 issues
-labelled `1.9.1`; cut after wave 3. Waves 4–5 (22 issues) moved to `1.9.2`, not scoped yet. Next: wave
-1's six design calls with Mike, then its seven worktrees. No branch open.
+1.9.1 wave 1 is merged on main: all seven worktrees (`src/docs/wiki/roadmap/1.9.1.md`), not pushed
+yet; its browser QA filed #191–#198 for 1.9.2. Next: wave 2's design calls (Bio chips, Skin &
+settings saves, ASI, Initiative). The release process (#199, then #200) runs beside any wave and
+merges before the 1.9.1 pre-release. No branch open.
 
 ## Recent changes
-- 2026-11-05: Scoped 1.9.1 (Mike): the roadmap's waves 1–3 and #140; waves 4–5 relabelled `1.9.2`
-  (22 issues, new label); everything stays on the v1.9.0 milestone (ledger L9090). Filed #183 (P2,
-  1.9.2): #182's four set-aside follow-ups. Added CLAUDE.md's "Context handoffs" rule (Mike).
-- 2026-11-05: Released private data 1.9.0-2 (Mike: `/release private`, "publish"): Homebrew
-  1.9.0-1 → 1.9.0-2 (the XGE name), the others unchanged; the tag carries `releases/data/` (the pack
-  list and five packs), so private sources can install from it. One private zip; nothing public.
-- 2026-11-05: Homebrew names Xanathar's by its system, `XGE`, so the Extensions page matches its
-  requirement (private c9f53c5, ledger L9061; Mike's yes). Pushed, both repos.
-- 2026-11-05: Merged and pushed #182 (closed): Settings → Extensions installs and updates packs from a private
-  GitHub repo with a read-only token the owner sends (one source link); the token stays on the device.
-  The data kit gains `release` and a version stamp; `/release private` writes `releases/data/` and can
-  release with nothing changed (`--allow-unchanged`); an owner's guide ships in `docs/` (four files
-  now). Built task by task with reviews, a final review and its fixes; proven with a real fine-grained
-  token on a scratch private repo (ledger L8943, L9016). Mike chose this over making
-  RPGFieldbookPrivate public.
-- 2026-11-05: Closed #139: the official source installs SRD 5.2 1.9.0 from the v1.9.0 tag in the
-  released `fieldbook.html` (cleared profile, `file://`), and it survives a reload.
-- 2026-11-05: Released private data 1.9.0-1 (Mike: `/release private`, "publish"): XPHB, XGE, TCE
-  1.8.1-1 → 1.9.0-1, Homebrew 1.8.0 → 1.9.0-1, Humblewood unchanged; the leak scan now allows the SRD
-  run in `releases/data/srd52_full.json` (#138 closed, ledger L8921). Mike: every 1.9.x issue stays on
-  the v1.9.0 milestone, which closes only when all of it is fixed or delivered.
-- 2026-11-05: Released v1.9.0 (Mike: `/release 1.9.0`, "publish", approved in Actions). 36 player
-  notes; SRD 5.2 pack 1.9.0; the first release carrying `releases/data/`; marked latest.
-- 2026-11-05: Pre-release 1.9.0 step 5: Mike approved the release notes (3 rewritten, 1 folded).
-- 2026-11-04: Pre-release step 4: Mike's test pass finished (95 lines ticked, no FAIL); 9 fixed in
-  1.9.0, 17 open for 1.9.1, no P0 open.
-- 2026-11-04: Merged and pushed #181 (P0): Undo on a second class's level-up card restores the sheet
-  from before Add class.
+- 2026-11-07: Filed #199 (P1, `1.9.1`): the pre-release reads a 1.9.x release's milestone as
+  v1.9.1, which doesn't exist, so the open-P0 check and filing would miss v1.9.0. Filed #200 (P2,
+  `1.9.1`): `/sign-off-notes`, notes filed during a test pass; design approved by Mike
+  (`src/docs/specs/2026-11-06-sign-off-notes-design.md`), built after #199. Mike put both in 1.9.1:
+  34 issues (ledger L9656).
+- 2026-11-06: Merged wave 1's Armour & attack numbers (#130, #129, #132): Flat or calculated AC,
+  only the best shield, Include spells on generic to-hit and damage, scaling uses kept on edit.
+- 2026-11-06: Merged Vitals & HP (#115, #112, #113): the Vitals pencil, the Hit points window on a
+  touchscreen, the HP numbers centred.
+- 2026-11-06: Merged Web fonts (#144): the three fonts embedded, Latin only, with their OFL notices;
+  no third-party address left.
+- 2026-11-06: Merged Boot & storage (#142, #134, #135, #143), Glossary editor (#136), Ammo undo
+  (#170) and Grants redraw (#153, #154, #128).
+- 2026-11-06/07: Wave 1's browser QA filed #191–#198 (`1.9.2`).
+- 2026-11-05: Scoped 1.9.1 (Mike): the roadmap's waves 1–3 and #140; waves 4–5 relabelled `1.9.2`;
+  everything stays on the v1.9.0 milestone (ledger L9090). Filed #183 (P2, 1.9.2).
+- 2026-11-05: Released private data 1.9.0-2 (Mike): Homebrew names Xanathar's `XGE`; the tag
+  carries `releases/data/`.
+- 2026-11-05: Merged and pushed #182 (closed): Extensions installs packs from a private GitHub repo
+  with a read-only token. Closed #139.
+- 2026-11-05: Released v1.9.0 (Mike: `/release 1.9.0`, "publish", approved in Actions).
 
 ## Pending decisions
 - None open.
 
 ## Loose ends
+- main is 64 commits ahead of origin (wave 1's merges, these docs): not pushed. Wave 1's issues
+  (#128, #129, #130, #132, #134, #135, #136, #142, #143, #144, #153, #154, #170, #112, #113, #115)
+  are still open on GitHub; their merges' Closes lines close them on the push.
+- `dist/fieldbook.html` has an uncommitted rebuild on main (last committed 2026-11-05). Main's CI
+  fails on a stale artifact, so it goes in before the push.
+- Wave 1's seven merged worktrees are still in `.claude/worktrees/` (115, 130, 136, 142, 144, 153,
+  170).
 - Installing RPGFieldbookPrivate through Extensions on Mike's devices (a read-only token each) is his
   to do, with an app that has #182 (main's build now, or the next app release).
-- 1 player-visible note in `UNRELEASED.md` (#182), not released.
-- Deferred review minors are filed in the groups #145–#152, now labelled 1.9.2.
+- 17 player-visible notes in `UNRELEASED.md`, not released.
+- Deferred review minors are filed in the groups #145–#152, labelled 1.9.2.
