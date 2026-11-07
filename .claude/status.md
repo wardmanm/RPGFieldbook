@@ -2,11 +2,16 @@
 Updated: 2026-11-07 · Branch: main
 
 ## Current focus
-1.9.1 wave 1 is done: all seven worktrees are merged and pushed (`src/docs/wiki/roadmap/1.9.1.md`).
-Next: wave 2's design calls (Bio chips, Skin & settings saves, ASI, Initiative). The release process
-(#199, then #200) runs beside any wave and merges before the 1.9.1 pre-release. No branch open.
+1.9.1 wave 1 is done (`src/docs/wiki/roadmap/1.9.1.md`), and the release process's #199 is merged.
+Next: #200 (`/sign-off-notes`) in its own worktree, from its approved spec; it merges before the
+1.9.1 pre-release. Wave 2's design calls (Bio chips, Skin & settings saves, ASI, Initiative) may run
+in another session. No branch open.
 
 ## Recent changes
+- 2026-11-07: Merged #199: a release's milestone is its minor line's, `vX.Y.0`, in the pre-release,
+  `/release` and `/issue`. Step 3's test pass takes the issues closed in it since the previous tag;
+  `/issue` files into the line of the release in hand, with the line's highest open fix label
+  (Mike's calls; `/status` keeps its own lookup). Ledger L9692.
 - 2026-11-07: Pushed main (9caff27..c744b5b): wave 1's seven merges, the rebuilt artifact, the
   /sign-off-notes design and the roadmap's wave-1 update (ledger L9669).
 - 2026-11-07: Filed #199 (P1, `1.9.1`): the pre-release reads a 1.9.x release's milestone as
@@ -27,7 +32,6 @@ Next: wave 2's design calls (Bio chips, Skin & settings saves, ASI, Initiative).
   everything stays on the v1.9.0 milestone (ledger L9090). Filed #183 (P2, 1.9.2).
 - 2026-11-05: Released private data 1.9.0-2 (Mike): Homebrew names Xanathar's `XGE`.
 - 2026-11-05: Merged and pushed #182: Extensions installs packs from a private GitHub repo.
-- 2026-11-05: Released v1.9.0 (Mike: `/release 1.9.0`, "publish", approved in Actions).
 
 ## Pending decisions
 - None open.
@@ -38,3 +42,5 @@ Next: wave 2's design calls (Bio chips, Skin & settings saves, ASI, Initiative).
 - 17 player-visible notes in `UNRELEASED.md`, not released.
 - Deferred review minors are filed in the groups #145–#152, labelled 1.9.2.
 - #140 (old release assets): nothing is deleted until Mike confirms the exact asset list.
+- #200's spec ("Claude's calls") still calls `/issue`'s fix label "milestone-plus-one"; #199 made it
+  the line's highest open label (1.9.2 for the 1.9.1 pass either way). Correct it when building #200.
