@@ -1,8 +1,8 @@
 # `/sign-off-notes`: notes during the test pass — design
 
 **Status:** approved 2026-11-06 (Mike).
-**Issue:** not filed yet: a task, filed by Mike with `/issue` once this is approved. One branch.
-**Depends on:** the pre-release's milestone fix (decision 18), its own issue, built first.
+**Issue:** #200 (P2, `1.9.1`). One branch, `issue/200-sign-off-notes`.
+**Depends on:** #199, the pre-release's milestone fix (decision 18), built first.
 **Why:** while Mike works through a release's test pass he notices things that don't fail the line he
 is on: a bug elsewhere, a change he wants, a new idea. Today he has to leave the pass to `/issue` each
 one, or keep a list and file it later. This is a side command he runs in a second window that files

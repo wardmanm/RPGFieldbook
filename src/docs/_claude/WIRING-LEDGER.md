@@ -9652,3 +9652,16 @@ cover it, and the real browser shows it with Tab, Enter and Escape. Not changed:
 taken, as `acFlatValue()` takes any whole number.
 
 Pages: [armor & AC](../wiki/features/armor-and-ac.md).
+
+## #199, #200: /sign-off-notes designed; the pre-release's milestone rule filed first (Mike, 2026-11-07)
+
+Designed `/sign-off-notes` (#200), a side command for notes during a release's test pass, fitted from
+rollcall_derby's: the spec is `src/docs/specs/2026-11-06-sign-off-notes-design.md`, approved by Mike.
+Fieldbook has no walk-through (Mike marks `QA-CHECKLIST.md` himself), so what it files becomes rows in
+the record's Step 4 table, a blocker is filed as a P0, and it refuses once step 4 is done. Designing it
+showed that the pre-release reads a release's milestone as `vX.Y.Z`, while every 1.9.x issue is on
+v1.9.0: for 1.9.1 the open-P0 check, the filing blocks and step 3's issue list all name a milestone
+that doesn't exist. Filed as #199 (P1), to be fixed before #200 and before the 1.9.1 pre-release.
+Mike put both in 1.9.1 (label `1.9.1`), so the roadmap page gains a Release process row: 34 issues.
+
+Pages: [1.9.1](../wiki/roadmap/1.9.1.md).
