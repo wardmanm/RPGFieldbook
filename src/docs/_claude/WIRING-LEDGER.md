@@ -9665,3 +9665,26 @@ that doesn't exist. Filed as #199 (P1), to be fixed before #200 and before the 1
 Mike put both in 1.9.1 (label `1.9.1`), so the roadmap page gains a Release process row: 34 issues.
 
 Pages: [1.9.1](../wiki/roadmap/1.9.1.md).
+
+## 1.9.1 wave 1 done: seven worktrees merged and pushed (2026-11-07)
+
+All seven wave-1 worktrees are merged into main, one branch at a time, and pushed. Merge order:
+Grants redraw, Ammo undo, Glossary editor, Boot & storage, Web fonts, Vitals & HP, then Armour & attack
+numbers. That is 17 issues, the full suite was green after each merge, and each branch had browser QA
+before and after. The design calls were Mike's:
+- Vitals unlocked by default; on a touchscreen the bar opens a Hit points window (#112).
+- A Calculated / Flat AC switch (#130), and a per-effect Include spells tick (#129).
+- Undo recovery leaves the fired arrows spent (#170).
+- Fonts embedded, Latin only (#144).
+- New weapons arrive equipped, and armour and shields don't (#128).
+
+Armour was rebased onto main after Vitals merged, so its phase 2 could use the Vitals lock. Two
+traps came up in every union merge of the ledger:
+- The merge drops the blank line before an appended heading.
+- The second branch's entries move, so the citations it added must be re-pointed by hand. The
+  docs suite catches a citation that points at no heading, but not one that points at another
+  branch's heading.
+
+QA's follow-ups are #184–#198.
+
+Pages: [1.9.1](../wiki/roadmap/1.9.1.md).
