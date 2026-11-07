@@ -266,11 +266,12 @@ first, removes moved sources last, and on a failure part way prints the commands
 what it wrote; when `_private-data` is linked it rewrites the private leak scan's allowlist too,
 committed in the private repo and pushed by `/release` right after public main, never before; the
 artifact rebuilt and committed if a `src/js/` comment changed); **2. Outstanding issues** (loose ends from specs' As built, known issues
-and the status log, filed in the `vX.Y.Z` milestone with the next fix version's label, Status
+and the status log, filed in the release's milestone, `vX.Y.0`, with the next fix version's label, Status
 Backlog and the Priority Mike confirms, and the numbers written back and committed straight after
 filing, each issue by one block run as one Bash call, which checks the priority and looks up the
 project's ids before it files, and passes the body on stdin); **3. Test pass** (`QA-CHECKLIST.md`: Mike's high-level manual pass, one section per feature in the
-release, with no marks of Claude's; Claude's own pre-drive of the specs' testing sections and
+release, with no marks of Claude's; the release's issues are those closed as completed in the
+milestone since the previous release's tag, whatever their labels, beside the pending notes; Claude's own pre-drive of the specs' testing sections and
 `src/docs/qa/smoke.md` is a separate report outside the repo, whose failures become probable bugs); **4. QA bugs**
 (each failure filed; a P0 gets no fix-version label, and an open P0 in the milestone holds the
 step open); **5. Release notes** (the pending bullets read as a player would). Each step is
@@ -286,7 +287,7 @@ Two more project skills, typed as slash commands (#108, #109). `/release [app|da
 (`.claude/skills/release/`) runs a release for Mike: it works out which kind is due, for an app
 release runs the pre-release above until it is complete, then runs the
 preflight (on main and not behind, no untracked or unexplained modified files, every suite with
-`.venv/bin` on `PATH`, nothing half-merged, the private repo's state, where the milestone stands,
+`.venv/bin` on `PATH`, nothing half-merged, the private repo's state, where the release's roadmap page stands,
 and for an app release the pre-release record and no open P0; unlike the pre-release, which refuses
 off main, this preflight switches to main itself),
 asks Mike to confirm the exact version, cuts it, shows the changelog, and only after he says
@@ -300,9 +301,11 @@ written on main only, so it never conflicts in a worktree merge ([WORKTREES](../
 
 
 `/issue <bug|feature|task> <words>` (`.claude/skills/issue/`) files one issue: it reads the area's wiki page and code,
-checks for a duplicate, and drafts it in Mike's **What** / **Why** shape. A bug or task goes to the earliest open
-`vX.Y.Z` milestone with its kind label and the next fix version (none on a P0); a feature takes the milestone Mike
-names, or none. Nothing is filed before his yes. Its filing block, like the pre-release's, sets project #3's Status,
+checks for a duplicate, and drafts it in Mike's **What** / **Why** shape. A bug or task goes in its line's milestone,
+`vX.Y.0`: the line of the pre-release record's version while a pre-release is in progress, otherwise of `APP_VERSION`,
+the line players have (still 1.9 during 2.0 work). It carries its kind label and the next fix version, the higher of
+that release's patch plus one and the highest `X.Y.Z` label on the line's open issues (none on a P0). A feature takes
+the milestone Mike names, or none. Nothing is filed before his yes. Its filing block, like the pre-release's, sets project #3's Status,
 Priority and Size, and finds the item project #3 has already auto-added when `gh project item-add` says it exists.
 
 ## Rules that must hold
@@ -400,7 +403,9 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 | Links when docs move (#127) | Rewritten by script in the same step, everywhere: wiki, specs, plans, code comments, CLAUDE.md, skills, and the ledger (a same-line substitution, so every `L<n>` citation stays valid). The docs suite gains a check that every link to a spec, plan or archived doc resolves (L8070) | Leaving the ledger's old paths: dead links in the log |
 | Existing specs and plans (#127) | Backfilled once, each into the version it shipped in, worked out from git (L8070) | From 1.9.0 onward only: folders consistent only from now |
 | Out-of-date docs (#127) | Candidates found, Mike confirms each; finished docs move to `src/docs/archive/<ver>/`, wrong ones are corrected in place. Nothing is deleted (L8070) | Deleting: breaks old links, buries old decisions |
-| Filing issues (#127) | Milestone = the release's (v1.9.0), label = the next fix version (`1.9.1`), added to project #3 (RPGFieldbook) with Status Backlog and a Priority Mike confirms: P2 minor bug / visual / tweak; P1 medium bug, functionality affected, workaround exists, no data at risk; P0 blocker (L8070) | A `blocker` label: the project already has Priority |
+| Filing issues (#127) | Milestone = the release's line's (`vX.Y.0`, #199), label = the next fix version (`1.9.1` for 1.9.0), added to project #3 (RPGFieldbook) with Status Backlog and a Priority Mike confirms: P2 minor bug / visual / tweak; P1 medium bug, functionality affected, workaround exists, no data at risk; P0 blocker (L8070) | A `blocker` label: the project already has Priority |
+| The milestone for release X.Y.Z (#199) | `vX.Y.0`, the minor line's: every X.Y.x issue is on it. Filing and the open-P0 check use it as it is; step 3 picks this release's issues out of it as those closed as completed since the previous release's tag (L9692) | `vX.Y.Z`: there is no v1.9.1, so filing failed and the P0 check passed with a P0 open. Step 3 by the `X.Y.Z` label: a feature or a P0 carries none (#182 for 1.9.1) |
+| `/issue`'s milestone and fix label (#199) | The line of the release in hand: the pre-release record's version, else `APP_VERSION` (still 1.9 during 2.0 work). The label is the higher of that release's patch plus one and the highest `X.Y.Z` label on the line's open issues (L9692) | The earliest open milestone: it doesn't follow the release in hand. The newest open one: a bug in the 1.9.x players have would go to 2.0. The milestone's patch plus one: with the milestone held at v1.9.0, 1.9.1 for the whole line |
 | What blocks a release (#127) | Only an open P0 in the release's milestone. A P0 gets no next-version label; it stays in the milestone and holds step 4 open until it is closed (L8070) | P1 also blocking: it has a workaround and risks no data |
 | The QA checklist (#127) | One file, rebuilt every run, by app area, "New in this release" plus a standing "Still works" list, then a device pass; Claude pre-drives what it can in the project Playwright browser before Mike tests (L8070) | A blank checklist: Mike tests everything Claude could have | (amended 2026-11-02: the checklist is Mike's high-level test pass by feature, with no Claude marks; Claude's pre-drive is a separate report outside the repo)
 
@@ -444,3 +449,4 @@ Priority and Size, and finds the item project #3 has already auto-added when `gh
 - 2026-11-04 — The pre-release becomes part of `/release` (`.claude/skills/release/pre-release.md`): one command runs the open steps, stops when one waits on Mike, and goes on to the cut. → ledger L8860, #180
 - 2026-11-05 — `docs/private-sources.md` joins the app zip's allowlist and the kit zip, which also carries a `fieldbook-version.txt` stamp; `/release private` writes `releases/data/` and offers `--allow-unchanged`. → ledger L8943, #182
 - 2026-11-06 — `scripts/fetch-fonts.js` joins `fetch-icons.js` as a fetcher kept out of the build. → ledger L9357, #144
+- 2026-11-07 — A release's milestone is its minor line's, `vX.Y.0`, in the pre-release, `/release` and `/issue`; step 3 takes the issues closed since the previous tag; `/issue` files into the line players have, with the line's highest open fix label. → ledger L9692, #199

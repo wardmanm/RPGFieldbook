@@ -622,6 +622,25 @@ if (packsReg && Array.isArray(packsReg.packs)) {
   const [a, b] = [p0(pre), p0(rel)];
   ck('#127 the pre-release and /release each hold one open-P0 query, and it is the same query',
      a.length === 1 && b.length === 1 && a[0] === b[0], {pre: a, release: b});
+  // #199: the milestone for release X.Y.Z is vX.Y.0, the minor line's (every 1.9.x issue
+  // is on v1.9.0, and there is no v1.9.1). A vX.Y.Z milestone made the 1.9.1 filing fail and
+  // let the open-P0 check pass with a P0 open. Step 3 picks this release's issues out of the
+  // line by date, since a feature or a P0 carries no fix-version label (#182 for 1.9.1).
+  const iss = read('.claude/skills/issue/SKILL.md');
+  const zMilestone = [['pre-release.md', pre], ['release/SKILL.md', rel], ['issue/SKILL.md', iss]]
+    .flatMap(([n, t]) => t.split('\n').filter(l => /milestone/i.test(l) && /\bvX\.Y\.Z\b/.test(l)).map(l => n + ': ' + l.trim()));
+  ck('#199 the release and /issue skills name the milestone vX.Y.0, never vX.Y.Z', zMilestone.length === 0, zMilestone);
+  ck('#199 ...the open-P0 query reads vX.Y.0',
+     a.length === 1 && a[0].includes('--milestone "vX.Y.0"') && a[0].includes('.milestone.title=="vX.Y.0"'), a);
+  ck('#199 ...the filing blocks file into vX.Y.0',
+     fenced(pre).concat(fenced(iss)).filter(x => x.includes('gh issue create')).every(x => !/--milestone "v[^"]*"/.test(x) || x.includes('--milestone "vX.Y.0"')) &&
+     /^MILESTONE=<vX\.Y\.0, or empty for none>$/m.test(iss));
+  const closed = fenced(pre).filter(x => x.includes('--state closed'));
+  ck('#199 step 3 takes the issues closed as completed in vX.Y.0 since the previous release\'s tag',
+     closed.length === 1 && closed[0].includes('--milestone "vX.Y.0"') && closed[0].includes('.stateReason==\\"COMPLETED\\"') &&
+     closed[0].includes('git log -1 --format=%ct "$PREV"') && /\(\.closedAt\|fromdateiso8601\) > \$T/.test(closed[0]), closed);
+  ck('#199 /issue takes the line from the pre-release record, else APP_VERSION, not the earliest open milestone',
+     iss.includes('head -1 src/docs/PRE-RELEASE.md') && iss.includes("grep -o 'APP_VERSION=") && !/earliest open/i.test(iss));
   // spec §7: it runs on main and refuses elsewhere; it never switches branch (#127 ruling 8)
   ck('#127 the pre-release refuses off main and never switches branch',
      pre.includes('git branch --show-current') && !pre.includes('git switch'));

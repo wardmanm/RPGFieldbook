@@ -35,16 +35,33 @@ file anyway, or add it as a comment on #N (`gh issue comment <N> --body-file -`,
 
 ## 3. The fields
 
-- **Milestone.** The open release milestone is the earliest open `vX.Y.Z`:
+- **Milestone.** A **bug** or **task** goes in its line's milestone, `vX.Y.0`: every X.Y.x issue is
+  on it, and there is no `vX.Y.1` (Mike, 2026-11-05; #199). The line is the **release in hand**'s:
+  the pre-release record's version while a pre-release is in progress, otherwise `APP_VERSION`, the
+  line players have. During 2.0 work that is still 1.9 until 2.0.0 ships, since a bug in the
+  shipped app is fixed in its patch line (Mike, 2026-11-07).
 
   ```bash
-  gh api repos/:owner/:repo/milestones --jq '[.[]|select(.state=="open")|.title]|sort_by(ltrimstr("v")|split(".")|map(tonumber))|.[0]'
+  head -1 src/docs/PRE-RELEASE.md 2>/dev/null                  # "# Pre-release X.Y.Z": a pre-release is in progress
+  grep -o 'APP_VERSION="[^"]*"' src/js/30-version.js           # otherwise, the app's version
+  gh api repos/:owner/:repo/milestones --jq '.[]|select(.state=="open")|.title'   # the line's must be open
   ```
 
-  A **bug** or **task** goes there. A **feature** goes in the milestone Mike names, or none.
+  If the line's milestone isn't open, say so and ask. A **feature** goes in the milestone Mike
+  names, or none.
 - **Labels.** The kind: `bug`, `feature` or `task`. A bug or task also carries the **next fix
-  version**: the milestone's patch plus one (`v1.9.0` → `1.9.1`), except a **P0**, which carries no
-  fix version label (it stays in the milestone, where the pre-release's open-P0 check finds it).
+  version**, the patch it is meant for: the higher of the release in hand's patch plus one
+  (`1.9.0` → `1.9.1`) and the highest `X.Y.Z` label on the line's open issues, since a later patch
+  is often scoped already (`1.9.2` while 1.9.1 is being built; Mike, 2026-11-07). Mike changes it
+  in the draft when he opens a new patch.
+
+  ```bash
+  gh issue list --milestone "vX.Y.0" --state open -L 500 --json labels \
+    --jq '[.[].labels[].name|select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))]|unique|sort_by(split(".")|map(tonumber))|last'
+  ```
+
+  A **P0** carries no fix version label (it stays in the milestone, where the pre-release's
+  open-P0 check finds it).
 - **Project #3 (RPGFieldbook):** Status **Backlog**, and for a bug or task a **Priority**:
   - **P2**: a minor bug, a visual problem, a tweak.
   - **P1**: a medium bug; functionality is affected, a workaround exists, no data is at risk.
@@ -59,7 +76,7 @@ Show the whole thing, ready to file:
 
 ```markdown
 **Title:** <short, plain words: what goes wrong, or what's wanted>
-**Labels:** <kind>[, <next fix version>] · **Milestone:** <vX.Y.Z or none> · **Project #3:** Backlog[, <Pn>][, Size <s>]
+**Labels:** <kind>[, <next fix version>] · **Milestone:** <vX.Y.0 or none> · **Project #3:** Backlog[, <Pn>][, Size <s>]
 
 **What**
 <what happens, or what's wanted, the way a player would put it; an example with numbers if he gave one>
@@ -83,7 +100,7 @@ into the repo.
 
 ```bash
 KIND=<bug|feature|task>
-MILESTONE=<vX.Y.Z, or empty for none>
+MILESTONE=<vX.Y.0, or empty for none>
 PRIORITY=<P0, P1 or P2; empty for a feature with no priority>
 NEXT=<the next fix version for a P1/P2 bug or task; empty otherwise>
 SIZE=<XS, S, M, L or XL; empty unless Mike gave one>
@@ -133,7 +150,8 @@ with `bash <file>`.
 ## 6. After filing
 
 - Report the number and link, and what was set.
-- **A pre-release in progress** (`src/docs/PRE-RELEASE.md` exists, for the milestone's version):
+- **A pre-release in progress** (`src/docs/PRE-RELEASE.md` exists, and the issue went in its line's
+  milestone: `vX.Y.0` for a record naming X.Y.Z):
   add a row to its "Step 4: bugs from QA" table for a bug found in testing, `| <checklist line or
   "reported by Mike"> | <title> | <Pn> | #N | open |`. Don't commit: the next `/release` run
   commits the record first.
@@ -147,5 +165,7 @@ with `bash <file>`.
 | "I can see the fix, I'll make it" | Filing is the job; the fix is its own branch later |
 | "I'll guess the cause" | Name it only if you read it in the code; otherwise say you didn't find it |
 | "It's a P0, the block adds the fix label" | A P0 never gets the fix version label |
+| "1.9.1's bug goes in v1.9.1" | There is none: the line's milestone is `vX.Y.0` |
+| "v2.0.0 is open, so bugs go there" | The line players have, from `APP_VERSION`, until 2.0.0 ships |
 | "item-add failed, so it isn't in the project" | Project #3 auto-adds: the block finds the item |
 | "I'll run the block in two calls" | One call: variables don't survive between calls |
