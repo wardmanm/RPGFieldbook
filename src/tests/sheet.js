@@ -8056,9 +8056,9 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
        X.applyHPInput({dataset: {hp: 'max'}, value: '30'}) === true && c.hp.max === 30);
     const u = X.editToggleText('vitals', false), l = X.editToggleText('vitals', true);
     ck('#115 the pencil says Lock Vitals, and what that does',
-       u.title === 'Lock Vitals' && u.label === 'Lock Vitals — hides the portrait buttons and locks Max HP', u);
+       u.title === 'Lock Vitals' && u.label === 'Lock Vitals — hides the portrait buttons and locks Max HP and a flat AC', u);
     ck('#115 ...and Unlock Vitals while locked',
-       l.title === 'Unlock Vitals' && l.label === 'Unlock Vitals — shows the portrait buttons and unlocks Max HP', l);
+       l.title === 'Unlock Vitals' && l.label === 'Unlock Vitals — shows the portrait buttons and unlocks Max HP and a flat AC', l);
     ck('#115 ...while every other card keeps its words',
        X.editToggleText('features', false).title === 'Hide edit buttons' && X.editToggleText('features', true).title === 'Show edit buttons');
     ck('#115 the toggle HTML carries the Vitals words',
@@ -8292,6 +8292,626 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   }
   X.character = keep.ch;
 }
+
+/* ====== #130 · #129 · #132: Flat AC, "Include spells", scaling uses =========
+   One block for the Armour & attack numbers branch (spec 2026-11-06). Placed
+   at the end of the synchronous checks: the async chain below swaps ctx
+   globals before its first await, so a synchronous block after the file's last
+   line would run inside that setup. */
+
+/* ---- #129 contributions carry their kind and the spells flag ---- */
+{
+  const SIX = ['attack', 'attack.melee', 'attack.ranged', 'damage', 'damage.melee', 'damage.ranged'];
+  const fxS = t => typeof ctx.fxSpellable === 'function' ? ctx.fxSpellable(t) : undefined;
+  ck('#129 the six generic to-hit and damage targets can count for spells',
+     SIX.every(t => fxS(t) === true), SIX.map(t => [t, fxS(t)]));
+  ck('#129 ...and no other target can', ['ac', 'spell.attack', 'spell.dc', 'check', 'init', 'save.dex'].every(t => fxS(t) === false));
+  const c = X.blankChar(); X.character = c;
+  c.features.push({id: 'f', name: 'Feat', enabled: true, effects: [{target: 'attack', value: 1, spells: true}]});
+  c.inventory.push({id: 'i', name: 'Ring', equipped: true, effects: [{target: 'damage', value: 1}]});
+  c.statuses.push({id: 's', name: 'Blessed-ish', active: true, effects: [{target: 'attack.melee', value: 1, spells: 'yes'}]});
+  c.familiars.push({id: 'm', name: 'Owl', active: true, effects: [{target: 'ac', value: 1}]});
+  const list = X.contributions();
+  ck('#129 each contribution says where it came from',
+     JSON.stringify(list.map(x => x.kind)) === '["feature","item","status","familiar"]', list);
+  ck('#129 ...and carries the tick: true only for spells:true',
+     JSON.stringify(list.map(x => x.spells)) === '[true,false,false,false]', list);
+  X.character = X.blankChar();
+}
+
+/* ---- #130 one AC function: best shield, Calculated ignores the old value, Flat ---- */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const acTotal = fn('acTotal'), acFlatValue = fn('acFlatValue'), acFlatSeed = fn('acFlatSeed');
+  const fresh = () => { const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1; return c; };  /* 10 + DEX 2 */
+  const shield = (id, bonus, eq) => ({id, name: 'Shield ' + bonus, equipped: eq !== false, armor: {kind: 'shield', bonus}});
+  let c = fresh();
+  c.inventory = [shield('s2', 2), shield('s3', 3)];
+  let A = X.armorAC(X.contributions());
+  ck('#130 two equipped shields: only the best counts (+3, not +5)', A.shield === 3 && A.base === 15 && A.shieldCount === 2, A);
+  c.inventory = [shield('s3', 3), shield('s2', 2)];
+  A = X.armorAC(X.contributions());
+  ck('#130 ...whichever order they were equipped in', A.shield === 3 && A.base === 15, A);
+  ck('#130 ...and it names the shield that counts', A.shieldName === 'Shield 3', A.shieldName);
+  c.inventory = [shield('s3', 3, false), shield('s2', 2)];
+  A = X.armorAC(X.contributions());
+  ck('#130 an unequipped shield counts for nothing: the other one does', A.shield === 2 && A.base === 14 && A.shieldCount === 1, A);
+
+  for (const old of [14, '14', null]) {
+    c = fresh(); c.ac = old;
+    ck('#130 Calculated never reads character.ac (' + JSON.stringify(old) + '): 10 + DEX 2 = 12',
+       acTotal() === 12 && X.armorAC(X.contributions()).base === 12, [acTotal(), X.armorAC(X.contributions())]);
+  }
+
+  ck('#130 a Flat number is a whole number, from a number or digits',
+     acFlatValue(14) === 14 && acFlatValue('14') === 14 && acFlatValue(' 9 ') === 9 && acFlatValue(0) === 0,
+     [acFlatValue(14), acFlatValue('14'), acFlatValue(' 9 '), acFlatValue(0)]);
+  const junk = ['', null, undefined, 'abc', '15.5', 15.5, '-3', -3, '14 (with shield)', NaN];
+  ck('#130 ...and nothing else is one', junk.every(v => acFlatValue(v) === null), junk.map(v => [v, acFlatValue(v)]));
+
+  /* a fighter in chain mail with a shield, a Ring of Protection, the Defense
+     style, the Shield spell as a status, and a summoned familiar's +1 */
+  const kit = c => {
+    c.inventory = [{id: 'cm', name: 'Chain Mail', equipped: true, armor: {kind: 'body', base: 16, dexCap: 0}}, shield('sh', 2),
+                   {id: 'rp', name: 'Ring of Protection', equipped: true, effects: [{target: 'ac', value: 1}]}];
+    c.features = [{id: 'df', name: 'Defense', enabled: true, effects: [{target: 'ac', value: 1}]}];
+    c.statuses = [{id: 'sp', name: 'Shield (spell)', active: true, effects: [{target: 'ac', value: 5}]}];
+    c.familiars = [{id: 'ow', name: 'Owl', active: true, effects: [{target: 'ac', value: 1}]}];
+  };
+  c = fresh(); kit(c);
+  ck('#130 Calculated adds it all: 16 + 2 + 1 + 1 + 5 + 1 = 26', acTotal() === 26, acTotal());
+  ck('#130 the Flat seed is what Calculated gives less what still adds in Flat: 20', acFlatSeed(X.contributions()) === 20, acFlatSeed(X.contributions()));
+  c.acMode = 'flat'; c.ac = 16;
+  ck('#130 Flat 16 adds only the status and the familiar: 16 + 5 + 1 = 22', acTotal() === 22, acTotal());
+  let p = painted(['acDisp']);
+  ck('#130 every AC reader agrees in Flat: the shield, youAC() and acTotal()', p.acDisp === '22' && X.youAC() === 22, [p.acDisp, X.youAC()]);
+  c.acMode = 'calc';
+  p = painted(['acDisp']);
+  ck('#130 ...and in Calculated', p.acDisp === '26' && X.youAC() === 26 && acTotal() === 26, [p.acDisp, X.youAC()]);
+
+  /* the marks follow what counts: in Flat an item's penalty is not part of the number */
+  c = fresh(); c.acMode = 'flat'; c.ac = 15;
+  c.inventory = [{id: 'cr', name: 'Cursed Ring', equipped: true, effects: [{target: 'ac', value: -1}]}];
+  p = painted(['acDisp']);
+  ck('#130 Flat: an item\'s -1 neither moves the number nor marks it', p.acDisp === '15' && !painted.fx.acDisp && !painted.neg.acDisp, [p, painted.fx, painted.neg]);
+  c.statuses = [{id: 'st', name: 'Sundered', active: true, effects: [{target: 'ac', value: -2}]}];
+  p = painted(['acDisp']);
+  ck('#130 ...a status\'s -2 does both: 13, red', p.acDisp === '13' && painted.fx.acDisp && painted.neg.acDisp, [p, painted.neg]);
+
+  ck('#130 a new sheet is Calculated', X.blankChar().acMode === 'calc', X.blankChar().acMode);
+  const m = s => X.migrate(s);
+  ck('#130 a saved Flat with a number stays Flat', m({acMode: 'flat', ac: 15}).acMode === 'flat' && m({acMode: 'flat', ac: 15}).ac === 15);
+  ck('#130 a Flat with no number loads Calculated',
+     [{acMode: 'flat', ac: ''}, {acMode: 'flat', ac: null}, {acMode: 'flat'}, {acMode: 'flat', ac: 'abc'}].every(s => m(s).acMode === 'calc'),
+     [m({acMode: 'flat', ac: ''}).acMode, m({acMode: 'flat'}).acMode]);
+  ck('#130 any other mode loads Calculated, and the number stays', m({acMode: 'weird', ac: 12}).acMode === 'calc' && m({acMode: 'weird', ac: 12}).ac === 12);
+  ck('#130 a sheet from before the switch loads Calculated, its old number kept', m({ac: '14'}).acMode === 'calc' && m({ac: '14'}).ac === '14');
+  const rt = m(JSON.parse(JSON.stringify(m({acMode: 'flat', ac: 17}))));
+  ck('#130 Flat survives a save and a load', rt.acMode === 'flat' && rt.ac === 17, [rt.acMode, rt.ac]);
+  X.character = X.blankChar();
+}
+
+/* ---- #130 the Armor Class window: Calculated / Flat, and FLAT on the rail ---- */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const acTotal = fn('acTotal'), setACMode = fn('setACMode'), setACFlat = fn('setACFlat'), acFlatValue = fn('acFlatValue');
+  const fresh = () => { const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1; return c; };
+  const armour = c => {
+    c.inventory = [{id: 'cm', name: 'Chain Mail', equipped: true, armor: {kind: 'body', base: 16, dexCap: 0}},
+                   {id: 'sh', name: 'Shield', equipped: true, armor: {kind: 'shield', bonus: 2}},
+                   {id: 'rp', name: 'Ring of Protection', equipped: true, effects: [{target: 'ac', value: 1}]}];
+  };
+  const spell = c => { c.statuses = [{id: 'sp', name: 'Shield (spell)', active: true, effects: [{target: 'ac', value: 5}]}]; };
+  const totalOf = b => { const m = /id="acTotal">(\d+)</.exec(b); return m ? Number(m[1]) : null; };
+  const rowRe = (name, v) => new RegExp('<span>' + name.replace(/[()]/g, '\\$&') + '</span><b>' + v.replace('+', '\\+') + '</b>');
+
+  let c = fresh(); armour(c);
+  let m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 tapping AC opens the Armor Class window', m.t === 'Armor Class', m.t);
+  ck('#130 ...on Calculated, with the switch', /data-acmode="calc"[^>]*class="on"/.test(m.b) && /data-acmode="flat"/.test(m.b)
+     && />Calculated</.test(m.b) && />Flat</.test(m.b), m.b.slice(0, 600));
+  ck('#130 ...its armor line as before', /Armor 16 \+ DEX \+0/.test(m.b), m.b.slice(0, 600));
+  ck('#130 ...the shield on its own line', rowRe('Shield', '+2').test(m.b), m.b);
+  ck('#130 ...each effect by source', rowRe('Ring of Protection', '+1').test(m.b), m.b);
+  let p = painted(['acDisp']);
+  ck('#130 ...and a total that is the number on the sheet: 19', totalOf(m.b) === 19 && p.acDisp === '19' && X.youAC() === 19, [totalOf(m.b), p.acDisp, X.youAC()]);
+  c.inventory.push({id: 'sh2', name: 'Spiked Shield', equipped: true, armor: {kind: 'shield', bonus: 3}});
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 two shields: the window says only the best counts', /Only your best shield counts \(2 equipped\)\./.test(m.b) && rowRe('Spiked Shield', '+3').test(m.b), m.b);
+  ck('#130 ...and adds it alone: 16 + 3 + 1 = 20', totalOf(m.b) === 20 && acTotal() === 20, [totalOf(m.b), acTotal()]);
+
+  c = fresh(); armour(c); spell(c); c.acMode = 'flat'; c.ac = 16;
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 Flat: the switch on Flat, and Your AC in a box', /data-acmode="flat"[^>]*class="on"/.test(m.b) && /Your AC/.test(m.b)
+     && /<input id="acFlat"[^>]*inputmode="numeric"[^>]*value="16"/.test(m.b), m.b.slice(0, 900));
+  const struck = (/<s>([^<]*)<\/s>/.exec(m.b) || [])[1] || '';
+  ck('#130 ...a struck line naming what no longer adds', struck === 'Chain Mail, Shield, Ring of Protection' && /<\/s> don't add: your AC already counts them\./.test(m.b), struck);
+  ck('#130 ...the status that still adds', rowRe('Shield (spell)', '+5').test(m.b), m.b);
+  ck('#130 ...no line for the ring outside the struck one', !/Ring of Protection/.test(m.b.replace(/<s>[^<]*<\/s>/, '')), m.b);
+  ck('#130 ...and the total: 16 + 5 = 21', totalOf(m.b) === 21 && painted(['acDisp']).acDisp === '21', totalOf(m.b));
+  c.inventory = []; c.statuses = [];
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 Flat with nothing worn: the struck line names the kinds, in the app\'s spelling', /<s>Armor, shields, items and features<\/s> don't add/.test(m.b), m.b);
+
+  c = fresh(); armour(c); spell(c);
+  ck('#130 switching to Flat with a blank box fills it with what the sheet showed, less what still adds: 19',
+     setACMode('flat') === true && c.acMode === 'flat' && acFlatValue(c.ac) === 19, [c.acMode, c.ac]);
+  ck('#130 ...so the number does not jump: 24 before, 24 after', acTotal() === 24 && painted(['acDisp']).acDisp === '24', acTotal());
+  ck('#130 back to Calculated keeps the Flat number for next time', setACMode('calc') === true && c.acMode === 'calc' && acFlatValue(c.ac) === 19, [c.acMode, c.ac]);
+
+  /* an old save with a typed AC: Calculated, and its number is what Flat shows (constraint 3) */
+  X.character = X.migrate({ac: '14', abilities: {str: 10, dex: 14, con: 10, int: 10, wis: 10, cha: 10}});
+  ck('#130 an old typed AC opens Calculated: 10 + DEX 2 = 12', X.character.acMode === 'calc' && acTotal() === 12, [X.character.acMode, acTotal()]);
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 ...the window opens on Calculated', /data-acmode="calc"[^>]*class="on"/.test(m.b) && totalOf(m.b) === 12, totalOf(m.b));
+  ck('#130 ...and switching to Flat shows its old 14', setACMode('flat') === true && acFlatValue(X.character.ac) === 14 && acTotal() === 14, [X.character.ac, acTotal()]);
+
+  c = fresh(); c.acMode = 'flat'; c.ac = 15;
+  const refused = ['', '  ', 'abc', '15.5', '-3'].filter(v => setACFlat(v) !== false || c.ac !== 15);
+  ck('#130 the Flat box refuses a blank or anything but a whole number, and keeps 15', refused.length === 0, refused);
+  ck('#130 ...and takes 17', setACFlat('17') === true && c.ac === 17 && painted(['acDisp']).acDisp === '17', [c.ac]);
+
+  /* the rail's shield: FLAT under the number, and the flat rim */
+  const rail = () => {
+    const got = {}, real = ctx.document.getElementById;
+    const el = () => { const e = {textContent: '', flat: null}; e.classList = {toggle: (k, on) => { if (k === 'flat') e.flat = !!on; }, add() {}, remove() {}, contains: () => false}; return e; };
+    ctx.document.getElementById = id => (id === 'acShield' || id === 'acLbl') ? (got[id] = got[id] || el()) : real(id);
+    try { X.recompute(); } finally { ctx.document.getElementById = real; }
+    return {flat: got.acShield && got.acShield.flat, label: got.acLbl && String(got.acLbl.textContent)};
+  };
+  c = fresh(); c.acMode = 'flat'; c.ac = 15;
+  let r = rail();
+  ck('#130 Flat: the shield takes the flat class and reads FLAT', r.flat === true && r.label === 'FLAT', r);
+  c.acMode = 'calc';
+  r = rail();
+  ck('#130 Calculated: no flat class, and it reads AC', r.flat === false && r.label === 'AC', r);
+
+  const fsR = require('fs'), pR = require('path');
+  const sheetHTML = fsR.readFileSync(pR.join(__dirname, '..', 'html', '00-sheet.html'), 'utf8');
+  ck('#130 the rail shield carries its ids', /<div class="rail-ac" id="acShield"[^>]*><div class="big" data-stat="ac" id="acDisp">10<\/div><div class="n" id="acLbl">AC<\/div><\/div>/.test(sheetHTML),
+     (sheetHTML.match(/<div class="rail-ac[^\n]*/) || [''])[0]);
+  const tok = fsR.readFileSync(pR.join(__dirname, '..', 'css', '00-tokens.css'), 'utf8');
+  const blocks = tok.split('}').filter(b => /--rail-line:/.test(b));
+  const bad = blocks.filter(b => { const f = /--rail-flat:\s*(#[0-9a-fA-F]{3,8})/.exec(b), l = /--rail-line:\s*(#[0-9a-fA-F]{3,8})/.exec(b);
+    return !f || !l || f[1].toLowerCase() === l[1].toLowerCase(); });
+  ck('#130 all four palettes set --rail-flat, each unlike their --rail-line', blocks.length === 4 && bad.length === 0, [blocks.length, bad.map(b => b.slice(0, 60))]);
+  const sheetCSS = fsR.readFileSync(pR.join(__dirname, '..', 'css', '30-sheet.css'), 'utf8');
+  ck('#130 a flat shield draws its rim in --rail-flat', /\.rail-ac\.flat\{background:var\(--rail-flat\)\}/.test(sheetCSS));
+  X.character = X.blankChar();
+}
+
+/* ---- #129 a spell's numbers: spell.attack plus the ticked effects, the same everywhere ----
+   The Spellcasting card, the cast window and a spell's row in Attacks agree; an
+   unticked to-hit or damage effect counts for weapons only. INT 16 (+3), level
+   1 (PB 2): spell attack +5. */
+{
+  const fresh = () => {
+    const c = X.blankChar(); X.character = c; c.level = 1; c.spellAbility = 'int';
+    Object.assign(c.abilities, {str: 10, dex: 14, con: 10, int: 16, wis: 10, cha: 10});
+    c.attacks = [
+      {id: 'ls', name: 'Longsword', kind: 'melee', ability: 'str', proficient: true, addAbilityDamage: true, atkMisc: '', dmgMisc: '', damageDice: '1d8', damageType: 'slashing', notes: ''},
+      {id: 'fb', name: 'Fire Bolt', kind: 'ranged', ability: 'int', proficient: true, addAbilityDamage: false, atkMisc: '', dmgMisc: '', damageDice: '1d10', damageType: 'fire', notes: '', spellId: 'sfb', source: 'spell'},
+      {id: 'sg', name: 'Shocking Grasp', kind: 'melee', ability: 'int', proficient: true, addAbilityDamage: false, atkMisc: '', dmgMisc: '', damageDice: '1d8', damageType: 'lightning', notes: '', spellId: 'ssg', source: 'spell'},
+      {id: 'sf', name: 'Sacred Flame', save: {ability: 'dex'}, damageDice: '1d8', damageType: 'radiant', notes: '', spellId: 'ssf', source: 'spell'}];
+    return c;
+  };
+  const SP = {
+    fb: {id: 'sfb', name: 'Fire Bolt', level: 0, atkType: 'attack', atkKind: 'ranged', dice: '1d10', damageType: 'fire'},
+    sg: {id: 'ssg', name: 'Shocking Grasp', level: 0, atkType: 'attack', atkKind: 'melee', dice: '1d8', damageType: 'lightning'},
+    sf: {id: 'ssf', name: 'Sacred Flame', level: 0, atkType: 'save', saveAbility: 'dex', dice: '1d8', damageType: 'radiant'}};
+  const worn = (effects) => ({id: X.uid(), name: 'Charm', category: 'Wondrous item', qty: 1, equipped: true, effects});
+  const row = id => X.character.attacks.find(a => a.id === id);
+  const hit = id => X.attackNumbers(row(id)).toHit;
+  const cast = k => shownModal(() => X.promptSpellAttack(SP[k], 0)).b;
+  const castHit = k => { const m = /Spell attack:<\/b> ([+-]\d+) to hit/.exec(cast(k)); return m ? m[1] : null; };
+  const castDmg = k => { const m = /Damage:<\/b> ([^<]*)<\/p>/.exec(cast(k)); return m ? m[1] : null; };
+  /* the damage cell each row renders, and whether it is marked */
+  const rendered = () => {
+    const realC = ctx.document.createElement, realB = ctx.document.getElementById, made = [];
+    ctx.document.createElement = () => { const e = {style: {}, dataset: {}, classList: {toggle() {}, add() {}, remove() {}}}; made.push(e); return e; };
+    ctx.document.getElementById = id => id === 'attackList' ? {innerHTML: '', appendChild() {}, style: {}} : realB(id);
+    try { X.renderAttacks(); } finally { ctx.document.createElement = realC; ctx.document.getElementById = realB; }
+    const out = {};
+    made.forEach(e => { const h = String(e.innerHTML || ''); const nm = (/<span class="nm">([^<]*)</.exec(h) || [])[1];
+      const d = /Damage <b class="([^"]*)"[^>]*>([^<]*)<\/b>/.exec(h); if (nm && d) out[nm] = {cls: d[1], dmg: d[2]}; });
+    return out;
+  };
+
+  let c = fresh();
+  c.inventory.push(worn([{target: 'attack', value: 1}]));
+  ck('#129 an unticked "all attacks" +1 moves a weapon: Longsword +2 -> +3', hit('ls') === 3, hit('ls'));
+  ck('#129 ...and no spell number: the Fire Bolt row stays +5, unmarked', hit('fb') === 5 && X.attackNumbers(row('fb')).atkFx === 0, X.attackNumbers(row('fb')));
+  let p = painted(['satkDisp']);
+  ck('#129 ...the Spellcasting card stays +5', X.spellAtkBonus() === 5 && p.satkDisp === '+5' && !painted.fx.satkDisp, [X.spellAtkBonus(), p]);
+  ck('#129 ...and so does the cast window', castHit('fb') === '+5', cast('fb').slice(0, 160));
+  c.inventory[0].effects[0].spells = true;
+  p = painted(['satkDisp']);
+  ck('#129 ticked, all three move together: row +6, card +6 marked, cast window +6',
+     hit('fb') === 6 && X.attackNumbers(row('fb')).atkFx === 1 && X.spellAtkBonus() === 6 && p.satkDisp === '+6' && painted.fx.satkDisp && castHit('fb') === '+6',
+     [hit('fb'), X.spellAtkBonus(), p, castHit('fb')]);
+  ck('#129 ...and the weapon still takes it once: Longsword +3', hit('ls') === 3, hit('ls'));
+
+  c = fresh();
+  c.inventory.push(worn([{target: 'attack.melee', value: 1, spells: true}]));
+  ck('#129 a ticked melee +1 reaches a melee spell\'s row and its cast window: +6',
+     hit('sg') === 6 && castHit('sg') === '+6', [hit('sg'), castHit('sg')]);
+  ck('#129 ...not the card, which has no range: +5', X.spellAtkBonus() === 5 && painted(['satkDisp']).satkDisp === '+5', X.spellAtkBonus());
+  ck('#129 ...nor a ranged spell: Fire Bolt +5', hit('fb') === 5 && castHit('fb') === '+5', [hit('fb'), castHit('fb')]);
+
+  c = fresh();
+  c.inventory.push(worn([{target: 'damage', value: 2, spells: true}]));
+  let r = rendered();
+  ck('#129 ticked damage +2 reaches a save spell\'s row, marked: 1d8 +2 radiant',
+     r['Sacred Flame'] && r['Sacred Flame'].dmg === '1d8 +2 radiant' && /fx-on/.test(r['Sacred Flame'].cls), r['Sacred Flame']);
+  ck('#129 ...and its cast window', castDmg('sf') === '1d8 +2 radiant', cast('sf'));
+  ck('#129 ...and an attack spell\'s row and cast window: 1d10 +2 fire',
+     r['Fire Bolt'] && r['Fire Bolt'].dmg === '1d10 +2 fire' && castDmg('fb') === '1d10 +2 fire', [r['Fire Bolt'], castDmg('fb')]);
+  {
+    const realB = ctx.document.getElementById, pa = {innerHTML: ''}, els = {};
+    const fake = () => ({_t: '', get textContent() { return this._t; }, set textContent(v) { this._t = String(v); }, innerHTML: '', value: '', style: {}, dataset: {}, children: [],
+      classList: {toggle() {}, add() {}, remove() {}, contains: () => false}, querySelector: () => null, querySelectorAll: () => [],
+      appendChild() {}, addEventListener() {}, setAttribute() {}, removeAttribute() {}, insertAdjacentHTML() {}});
+    ctx.document.getElementById = id => id === 'printArea' ? pa : (els[id] = els[id] || fake());
+    try { ctx.printSheet(); } finally { ctx.document.getElementById = realB; }
+    ck('#129 ...and the print sheet prints the save spell\'s damage with it', /<td>Sacred Flame<\/td><td>Spell save<\/td><td>DC \d+ DEX<\/td><td>1d8 \+2 radiant<\/td>/.test(pa.innerHTML),
+       (pa.innerHTML.match(/<td>Sacred Flame<\/td>.{0,120}/) || [''])[0]);
+  }
+  c.inventory[0].effects[0].spells = false;
+  r = rendered();
+  ck('#129 unticked, the spells lose it: 1d8 radiant, unmarked; the Longsword keeps it',
+     r['Sacred Flame'].dmg === '1d8 radiant' && !/fx-on/.test(r['Sacred Flame'].cls) && castDmg('sf') === '1d8 radiant'
+     && r['Fire Bolt'].dmg === '1d10 fire' && r['Longsword'].dmg === '1d8 +2 slashing', r);
+
+  c = fresh();
+  c.inventory.push(worn([{target: 'damage.ranged', value: 1, spells: true}]));
+  r = rendered();
+  ck('#129 ticked ranged damage +1: a ranged attack spell takes it, a save spell (no range) does not',
+     r['Fire Bolt'].dmg === '1d10 +1 fire' && r['Sacred Flame'].dmg === '1d8 radiant' && castDmg('sf') === '1d8 radiant', r);
+
+  /* the shipped Archery: ranged WEAPON attacks, so unticked, and a bow's row only */
+  const featsJ = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', 'feats.json'), 'utf8'));
+  const archery = (featsJ.feats || featsJ).find(f => f.name === 'Archery');
+  ck('#129 the shipped Archery is attack.ranged +2, unticked', !!archery && JSON.stringify(archery.effects) === '[{"target":"attack.ranged","value":2}]', archery && archery.effects);
+  c = fresh();
+  c.attacks.push({id: 'lb', name: 'Longbow', kind: 'ranged', ability: 'dex', proficient: true, addAbilityDamage: true, atkMisc: '', dmgMisc: '', damageDice: '1d8', damageType: 'piercing', notes: ''});
+  ck('#129 the base: Longbow +4, Fire Bolt +5', hit('lb') === 4 && hit('fb') === 5, [hit('lb'), hit('fb')]);
+  ctx.addFeatureFromDef({name: 'Feat: Archery', description: archery.description, effects: archery.effects}, null);
+  ck('#129 Archery: the Longbow +6', hit('lb') === 6, hit('lb'));
+  ck('#129 ...and Fire Bolt stays +5, unmarked: Archery is for ranged weapons', hit('fb') === 5 && X.attackNumbers(row('fb')).atkFx === 0 && castHit('fb') === '+5', [hit('fb'), castHit('fb')]);
+
+  c = fresh(); c.spellAbility = '';
+  ck('#129 a spell row with no spellcasting ability still shows its own (#74): INT 3 + PB 2 = +5', hit('fb') === 5, X.attackNumbers(row('fb')));
+
+  c = fresh();
+  c.inventory.push({id: X.uid(), name: 'Bright Lens', equipped: true, effects: [{target: 'attack', value: 1, spells: true}]});
+  c.inventory.push({id: X.uid(), name: 'Sword Knot', equipped: true, effects: [{target: 'attack', value: 1}]});
+  let m = shownModal(() => X.openAttackBreakdown('fb'));
+  ck('#129 the spell row\'s breakdown names the ticked effect and leaves out the unticked one',
+     /<span>Bright Lens<\/span><b>\+1<\/b>/.test(m.b) && !/Sword Knot/.test(m.b), m.b);
+  m = shownModal(() => X.openAttackBreakdown('ls'));
+  ck('#129 ...a weapon\'s breakdown names both', /Bright Lens/.test(m.b) && /Sword Knot/.test(m.b), m.b);
+  m = shownModal(() => X.openStatBreakdown('spell.attack'));
+  ck('#129 the card\'s spell attack breakdown names the ticked effect too', /<span>Bright Lens<\/span><b>\+1<\/b>/.test(m.b) && !/Sword Knot/.test(m.b), m.b);
+  c.inventory[0].effects[0].value = -1;
+  ck('#129 a ticked penalty marks the spell row red, and the card', X.attackNumbers(row('fb')).atkNeg === true && (painted(['satkDisp']), painted.neg.satkDisp),
+     [X.attackNumbers(row('fb')).atkNeg, painted.neg]);
+  ck('#129 ...an unticked one does not', (c.inventory[0].effects[0].spells = false, X.attackNumbers(row('fb')).atkNeg === false && (painted(['satkDisp']), !painted.neg.satkDisp)));
+  X.character = X.blankChar();
+}
+
+/* ---- #129 the "Include spells" tick in the effect editors ---- */
+{
+  const fxRowSync = row => typeof ctx.fxRowSync === 'function' ? ctx.fxRowSync(row) : undefined;
+  const tick = h => (/<label class="fx-sp"[^>]*>/.exec(h) || [''])[0];
+  let h = ctx.fxRow({target: 'attack', value: 1, spells: true});
+  ck('#129 a ticked to-hit row shows the tick, checked', /<input type="checkbox" class="fx-s" checked>/.test(h) && tick(h) && !/hidden/.test(tick(h)) && /Include spells/.test(h), h);
+  h = ctx.fxRow({target: 'damage.ranged', value: 1});
+  ck('#129 an unticked damage row shows it, unchecked', tick(h) && !/hidden/.test(tick(h)) && /class="fx-s">/.test(h), h);
+  h = ctx.fxRow({target: 'ac', value: 1});
+  ck('#129 an AC row hides it', /hidden/.test(tick(h)), h);
+  h = ctx.fxRow(null);
+  ck('#129 a new row (AC, the first target) hides it', /hidden/.test(tick(h)) && /class="fx-s">/.test(h), h);
+  h = ctx.fxRow({target: 'ac', value: 1, spells: true});
+  ck('#129 a stray flag on another target is not shown ticked', /class="fx-s">/.test(h) && !/fx-s" checked/.test(h), h);
+
+  /* collectFx() over fake rows: {target, value, ticked} */
+  const scope = rows => ({querySelectorAll: () => rows.map(([t, v, on]) => ({querySelector: sel =>
+    sel === '.fx-t' ? {value: t} : sel === '.fx-v' ? {value: String(v)} : sel === '.fx-s' ? {checked: !!on} : null}))});
+  const got = ctx.collectFx(scope([['attack', 1, true], ['attack.melee', 2, false], ['ac', 1, true], ['damage', 0, true], ['spell.dc', 1, true]]));
+  ck('#129 collectFx writes spells:true only for a ticked generic target',
+     JSON.stringify(got) === '[{"target":"attack","value":1,"spells":true},{"target":"attack.melee","value":2},{"target":"ac","value":1},{"target":"spell.dc","value":1}]', got);
+
+  /* the show/hide as the target changes: one delegated listener calls this */
+  const fake = t => { const sp = {hidden: null}; return {sp, row: {querySelector: sel => sel === '.fx-t' ? {value: t} : sel === '.fx-sp' ? sp : null}}; };
+  let f = fake('damage.melee'); fxRowSync(f.row);
+  ck('#129 choosing a melee damage target shows the tick', f.sp.hidden === false, f.sp);
+  f = fake('spell.dc'); fxRowSync(f.row);
+  ck('#129 choosing Spell save DC hides it', f.sp.hidden === true, f.sp);
+
+  /* the copy paths carry the flag (the spec's list): effect objects copied whole */
+  const fx = () => [{target: 'attack', value: 1, spells: true}];
+  const ticked = list => Array.isArray(list) && list.length === 1 && list[0].spells === true;
+  X.character = X.blankChar();
+  ctx.addFeatureFromDef({name: 'Feat: Keen Caster', description: '', effects: fx()}, null);
+  ck('#129 the feat grant (addFeatureFromDef, also the choices path) keeps the tick', ticked(X.character.features[0].effects), X.character.features[0].effects);
+  ck('#129 the rules-update projection keeps it, for a feature and a browsed item',
+     ticked(ctx.updProject({name: 'F', effects: fx()}, 'feature', 'plain').effects) && ticked(ctx.updProject({name: 'I', effects: fx()}, 'item', 'browse').effects));
+  X.addLibraryItems([{name: 'Lens', category: 'Wondrous Item', effects: fx()}], null, null, 1);
+  ck('#129 the item finder keeps it', ticked(X.character.inventory[0].effects), X.character.inventory[0].effects);
+  const keepRules = X.rules;
+  try {
+    X.resetRules(); X.mergeRules({system: 'T129', items: [{name: 'Prism', category: 'Wondrous Item', effects: fx()}]}, 'test-129');
+    X.grantItemByName('Prism', 1, 'bg:Sage');
+    const pr = X.character.inventory.find(i => i.name === 'Prism');
+    ck('#129 a granted item keeps it', !!pr && ticked(pr.effects), pr);
+  } finally { X.resetRules(); X.rules = keepRules; }
+  ck('#129 the trade window\'s copy keeps it', ticked(X.invSnap(X.character.inventory[0]).effects));
+  const back = X.migrate(JSON.parse(JSON.stringify(X.character)));
+  ck('#129 a save and a load keep it', ticked(back.features[0].effects) && ticked(back.inventory[0].effects), back.features[0].effects);
+  X.character = X.blankChar();
+}
+
+/* ---- #132 editing a feature keeps a use count that scales ----
+   The form fills "Limited uses" from usesMax() and saved that number, so any
+   edit froze a byLevel or formula maximum at today's value. */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const usesFromForm = fn('usesFromForm'), usesScaleHint = fn('usesScaleHint');
+  const fresh = lvl => { const c = X.blankChar(); X.character = c; c.level = lvl;
+    Object.assign(c.abilities, {str: 10, dex: 10, con: 10, int: 10, wis: 16, cha: 12}); return c; };
+  const um = max => ctx.usesMax({uses: {max}});
+  fresh(1);
+  ck('#132 usesMax: a number is itself', um(3) === 3);
+  const BL = {byLevel: [1, 1, 2, 2, 3]};
+  const atLv = [1, 3, 5, 9].map(l => { fresh(l); return um(BL); });
+  ck('#132 usesMax: byLevel reads the row for the level, the last row past the end (1, 3, 5, 9 -> 1, 2, 3, 3)', JSON.stringify(atLv) === '[1,2,3,3]', atLv);
+  fresh(4);
+  ck('#132 usesMax: {formula:"level"} is the level', um({formula: 'level'}) === 4, um({formula: 'level'}));
+  ck('#132 usesMax: an ability formula is its modifier (WIS 16: 3)', um({formula: 'wis'}) === 3);
+  ck('#132 usesMax: ...plus its modifier, bare string too (wis+1: 4)', um('wis+1') === 4);
+  ck('#132 usesMax: ...with a floor of 1 (CHA 12 - 1 = 0 -> 1)', um({formula: 'cha-1'}) === 1, um({formula: 'cha-1'}));
+  X.character.abilities.wis = 8;
+  ck('#132 usesMax: ...a negative modifier is 1 too (WIS 8)', um({formula: 'wis'}) === 1, um({formula: 'wis'}));
+
+  /* what a "Limited uses" box saves: usesFromForm(prev, shown, typed, per) */
+  fresh(3);
+  const prevBL = {max: BL, per: 'long', used: 1}, prevF = {max: {formula: 'wis'}, per: 'short', used: 3};
+  let u = usesFromForm(prevBL, 2, '2', 'long');
+  ck('#132 unchanged, a byLevel maximum is kept as it was', !!u && u.max === BL && u.per === 'long' && u.used === 1, u);
+  u = usesFromForm(prevBL, 2, '4', 'short');
+  ck('#132 a new number replaces it, and the reset is the form\'s', !!u && u.max === 4 && u.per === 'short' && u.used === 1, u);
+  u = usesFromForm(prevF, 3, '3', 'short');
+  ck('#132 unchanged, a formula is kept as it was', !!u && u.max === prevF.max && u.used === 3, u);
+  u = usesFromForm(prevF, 3, '2', 'short');
+  ck('#132 ...and used is clamped to a lower new number', !!u && u.max === 2 && u.used === 2, u);
+  u = usesFromForm({max: 3, per: 'long', used: 0}, 3, '3', 'long');
+  ck('#132 a plain number stays a plain number', !!u && u.max === 3, u);
+  ck('#132 a blank box with a plain number means no uses', usesFromForm({max: 3, per: 'long', used: 0}, 3, '', 'long') === null);
+  ck('#132 a new feature with a number gets uses', JSON.stringify(usesFromForm(undefined, 0, '2', 'long')) === '{"max":2,"per":"long","used":0}');
+  ck('#132 a new feature with none gets none', usesFromForm(undefined, 0, '', 'long') === null);
+  fresh(1);
+  const zeroNow = {max: {byLevel: [0, 0, 2]}, per: 'long', used: 0};
+  u = usesFromForm(zeroNow, 0, '', 'long');
+  ck('#132 a byLevel that is 0 at this level (its box opens blank) is kept, not dropped', !!u && u.max === zeroNow.max, u);
+
+  /* the hint under the box */
+  fresh(3);
+  ck('#132 the hint: byLevel', usesScaleHint({uses: {max: BL}}) === 'Grows with your level: 2 now. Typing a different number stops it growing.', usesScaleHint({uses: {max: BL}}));
+  ck('#132 the hint: the level', usesScaleHint({uses: {max: {formula: 'level'}}}) === 'Grows with your level: 3 now. Typing a different number stops it growing.');
+  ck('#132 the hint: an ability', usesScaleHint({uses: {max: {formula: 'wis'}}}) === 'From your WIS modifier: 3 now. Typing a different number stops it changing.', usesScaleHint({uses: {max: {formula: 'wis'}}}));
+  ck('#132 the hint: an ability and a modifier', usesScaleHint({uses: {max: 'wis+1'}}) === 'From your WIS modifier + 1: 4 now. Typing a different number stops it changing.'
+     && usesScaleHint({uses: {max: {formula: 'cha-1'}}}) === 'From your CHA modifier − 1: 1 now. Typing a different number stops it changing.',
+     [usesScaleHint({uses: {max: 'wis+1'}}), usesScaleHint({uses: {max: {formula: 'cha-1'}}})]);
+  ck('#132 no hint for a plain number, or no uses', usesScaleHint({uses: {max: 3}}) === '' && usesScaleHint({}) === '');
+
+  /* driven through the real form: open it, read its box, save */
+  const drive = (feat, typed) => {
+    const realB = ctx.document.getElementById, realO = ctx.openModal, els = {}, on = {};
+    const fake = id => ({id, _t: '', get textContent() { return this._t; }, set textContent(v) { this._t = String(v); }, innerHTML: '', value: '', style: {}, dataset: {}, children: [],
+      classList: {toggle() {}, add() {}, remove() {}, contains: () => false}, querySelector: () => null, querySelectorAll: () => [],
+      appendChild() {}, addEventListener(t, f) { on[id + ':' + t] = f; }, setAttribute() {}, removeAttribute() {}, insertAdjacentHTML() {}, focus() {}});
+    let body = '';
+    ctx.openModal = (t, b) => { body = String(b); };
+    ctx.document.getElementById = id => (els[id] = els[id] || fake(id));
+    ['fName', 'fSrc', 'fDesc', 'fUses', 'fUsesPer', 'fCost', 'fCostRes'].forEach(id => { els[id] = fake(id); });
+    try {
+      ctx.openFeatureForm(feat);
+      const shown = (/id="fUses"[^>]*value="(\d*)"/.exec(body) || [])[1];
+      els.fName.value = feat.name; els.fSrc.value = ''; els.fDesc.value = ''; els.fUses.value = typed == null ? shown : typed;
+      els.fUsesPer.value = (feat.uses && feat.uses.per) || 'long'; els.fCost.value = ''; els.fCostRes.value = '';
+      on['fSave:click']();
+      return {body, shown, saved: X.character.features.find(f => f.id === feat.id)};
+    } finally { ctx.document.getElementById = realB; ctx.openModal = realO; }
+  };
+  let c = fresh(3);
+  const ward = () => ({id: 'w', name: 'Ward', source: '', description: '', effects: [], enabled: true, uses: {max: {byLevel: [1, 1, 2, 2, 3]}, per: 'long', used: 1}});
+  c.features = [ward()];
+  let d = drive(c.features[0]);
+  ck('#132 the form opens on today\'s number, with the hint', d.shown === '2' && /id="fUsesHint"[^>]*>Grows with your level: 2 now/.test(d.body), [d.shown, (d.body.match(/fUsesHint[^<]*/) || [''])[0]]);
+  ck('#132 saving it unchanged keeps the byLevel', !!d.saved && JSON.stringify(d.saved.uses) === '{"max":{"byLevel":[1,1,2,2,3]},"per":"long","used":1}', d.saved && d.saved.uses);
+  c.level = 5;
+  ck('#132 ...so it still grows: 3 at level 5', ctx.usesMax(X.character.features[0]) === 3, ctx.usesMax(X.character.features[0]));
+  c.level = 3; c.features = [ward()];
+  d = drive(c.features[0], '5');
+  ck('#132 typing a different number makes it that number', !!d.saved && JSON.stringify(d.saved.uses) === '{"max":5,"per":"long","used":1}', d.saved && d.saved.uses);
+  c.features = [{id: 'n', name: 'Ward of Shadows', source: '', description: '', effects: [], enabled: true, uses: {max: {formula: 'wis'}, per: 'long', used: 0}}];
+  d = drive(c.features[0]);
+  ck('#132 a formula survives an unchanged save too', JSON.stringify(d.saved.uses.max) === '{"formula":"wis"}' && /From your WIS modifier: 3 now/.test(d.body), d.saved.uses);
+  c.features = [{id: 'p', name: 'Plain', source: '', description: '', effects: [], enabled: true, uses: {max: 2, per: 'short', used: 0}}];
+  d = drive(c.features[0]);
+  ck('#132 a plain number shows no hint and stays a number', !/fUsesHint/.test(d.body) && d.saved.uses.max === 2, d.saved.uses);
+  X.character = X.blankChar();
+}
+
+/* ---- #129 final review: a spell that deals no damage takes no damage bonus ----
+   A ticked damage effect counts for "every spell that deals damage" (spec
+   decision 12). Charm Person deals none, so its cast window must not read
+   "Damage: +2"; nor may an attack spell row with no damage dice read "+2". */
+{
+  const c = X.blankChar(); X.character = c; c.level = 1; c.spellAbility = 'int';
+  Object.assign(c.abilities, {str: 10, dex: 10, con: 10, int: 16, wis: 10, cha: 10});
+  c.inventory.push({id: 'dc', name: 'Searing Charm', equipped: true, effects: [{target: 'damage', value: 2, spells: true}]});
+  const charm = {id: 'scp', name: 'Charm Person', level: 1, atkType: 'save', saveAbility: 'wis', dice: '', damageType: ''};
+  const b = shownModal(() => X.promptSpellAttack(charm, 1)).b;
+  ck('#129 a save spell that deals no damage: no Damage line in the cast window', /Save DC:/.test(b) && !/Damage:/.test(b), b.slice(0, 200));
+  const touch = {id: 'stt', name: 'Pointing Touch', level: 0, atkType: 'attack', atkKind: 'melee', dice: '', damageType: ''};
+  const t = shownModal(() => X.promptSpellAttack(touch, 0)).b;
+  ck('#129 ...nor for an attack spell with no damage dice', /Spell attack:/.test(t) && !/Damage:/.test(t), t.slice(0, 200));
+  c.attacks.push({id: 'pt', name: 'Pointing Touch', kind: 'melee', ability: 'int', proficient: true, addAbilityDamage: false, atkMisc: '', dmgMisc: '',
+                  damageDice: '', damageType: '', notes: '', spellId: 'stt', source: 'spell'});
+  const n = X.attackNumbers(c.attacks[0]);
+  ck('#129 ...and its attack row takes no damage bonus: nothing to add it to', n.dmgFx === 0 && n.dmgBonus === 0 && X.attackDamageStr(c.attacks[0], n.dmgBonus) === '', n);
+  c.attacks[0].damageDice = '1d4';
+  ck('#129 ...give it dice and the ticked +2 is back', X.attackNumbers(c.attacks[0]).dmgBonus === 2, X.attackNumbers(c.attacks[0]));
+  X.character = X.blankChar();
+}
+
+/* ---- #130 phase 2: the Armor Class window follows the Vitals lock ----
+   Like Max HP, the switch and the Flat number are read-only while the Vitals
+   pencil is locked (spec decision 7). */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const setACMode = fn('setACMode'), setACFlat = fn('setACFlat');
+  const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1;
+  c.acMode = 'flat'; c.ac = 15;
+  X.setVitalsLocked(true);
+  ck('#130 locked: the switch is refused, and nothing changes', setACMode('calc') === false && c.acMode === 'flat' && c.ac === 15, [c.acMode, c.ac]);
+  ck('#130 locked: the Flat box is refused, and nothing changes', setACFlat('18') === false && c.ac === 15, c.ac);
+  let m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 locked: the window says so', /Vitals is locked — unlock it to change your AC/.test(m.b), m.b.slice(0, 500));
+  const btns = m.b.match(/<button[^>]*data-acmode="[a-z]+"[^>]*>/g) || [];
+  ck('#130 ...with both halves of the switch disabled', btns.length === 2 && btns.every(b => / disabled/.test(b)), btns);
+  ck('#130 ...and the Flat box', /<input id="acFlat"[^>]* disabled/.test(m.b), (m.b.match(/<input id="acFlat"[^>]*>/) || [''])[0]);
+  ck('#130 locked: the number still shows, and counts', /id="acTotal">15</.test(m.b) && painted(['acDisp']).acDisp === '15');
+  X.setVitalsLocked(false);
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 unlocked: no lock line, nothing disabled', !/Vitals is locked/.test(m.b) && !/ disabled/.test(m.b), m.b.slice(0, 500));
+  ck('#130 unlocked: the box and the switch work again', setACFlat('18') === true && c.ac === 18 && setACMode('calc') === true && c.acMode === 'calc', [c.ac, c.acMode]);
+  c.acMode = 'calc'; X.setVitalsLocked(true);
+  m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 locked on Calculated: the switch is disabled too, and Flat refused', /data-acmode="flat"[^>]* disabled/.test(m.b) && setACMode('flat') === false && c.acMode === 'calc', m.b.slice(0, 400));
+  X.setVitalsLocked(false);
+  X.character = X.blankChar();
+}
+
+/* ---- #132 phase 2: editing an item keeps a use count that scales ----
+   The item form had the same freeze as the feature form: it filled "Limited
+   uses" from itemUsesMax() and saved that number. */
+{
+  const drive = (item, shown, typed) => {
+    const realB = ctx.document.getElementById, realO = ctx.openModal, els = {}, on = {};
+    const fake = id => ({id, _t: '', get textContent() { return this._t; }, set textContent(v) { this._t = String(v); }, innerHTML: '', value: '', checked: false,
+      style: {}, dataset: {}, children: [], classList: {toggle() {}, add() {}, remove() {}, contains: () => false}, querySelector: () => null, querySelectorAll: () => [],
+      appendChild() {}, addEventListener(t, f) { on[id + ':' + t] = f; }, setAttribute() {}, removeAttribute() {}, insertAdjacentHTML() {}, focus() {}});
+    let body = '';
+    ctx.openModal = (t, b) => { body = String(b); };
+    ctx.document.getElementById = id => (els[id] = els[id] || fake(id));
+    /* the boxes hold what the form rendered, as in a browser */
+    els.iName = fake('iName'); els.iName.value = item.name; els.iQty = fake('iQty'); els.iQty.value = '1';
+    els.iUses = fake('iUses'); els.iUses.value = shown; els.iUsesPer = fake('iUsesPer'); els.iUsesPer.value = item.uses.per;
+    try {
+      ctx.openItemForm(item);
+      const rendered = (/id="iUses"[^>]*value="(\d*)"/.exec(body) || [])[1];
+      if (typed != null) els.iUses.value = typed;
+      on['iSave:click']();
+      return {body, rendered, saved: X.character.inventory.find(i => i.id === item.id)};
+    } finally { ctx.document.getElementById = realB; ctx.openModal = realO; }
+  };
+  const c = X.blankChar(); X.character = c; c.level = 3; Object.assign(c.abilities, {wis: 16});
+  const wand = () => ({id: 'wd', name: 'Wand of Echoes', qty: 1, description: '', effects: [], equipped: true,
+                       uses: {max: {byLevel: [1, 1, 2, 2, 3]}, per: 'long', used: 1}});
+  c.inventory = [wand()];
+  let d = drive(c.inventory[0], '2');
+  ck('#132 the item form opens on today\'s number, with the hint',
+     d.rendered === '2' && /id="iUsesHint"[^>]*>Grows with your level: 2 now/.test(d.body), [d.rendered, (d.body.match(/iUsesHint[^<]*/) || [''])[0]]);
+  ck('#132 saving an item unchanged keeps its byLevel', !!d.saved && JSON.stringify(d.saved.uses) === '{"max":{"byLevel":[1,1,2,2,3]},"per":"long","used":1}', d.saved && d.saved.uses);
+  c.level = 5;
+  ck('#132 ...so it still grows: 3 at level 5', X.itemUsesMax(X.character.inventory[0]) === 3, X.itemUsesMax(X.character.inventory[0]));
+  c.level = 3; c.inventory = [wand()];
+  d = drive(c.inventory[0], '2', '4');
+  ck('#132 typing a different number makes the item\'s uses that number', !!d.saved && JSON.stringify(d.saved.uses) === '{"max":4,"per":"long","used":1}', d.saved && d.saved.uses);
+  c.inventory = [{id: 'tb', name: 'Tome of Wits', qty: 1, description: '', effects: [], equipped: true, uses: {max: {formula: 'wis'}, per: 'short', used: 0}}];
+  d = drive(c.inventory[0], '3');
+  ck('#132 an item\'s formula survives an unchanged save', !!d.saved && JSON.stringify(d.saved.uses.max) === '{"formula":"wis"}' && /From your WIS modifier: 3 now/.test(d.body), d.saved && d.saved.uses);
+  c.inventory = [{id: 'pl', name: 'Pouch', qty: 1, description: '', effects: [], equipped: false, uses: {max: 2, per: 'none', used: 0}}];
+  d = drive(c.inventory[0], '2');
+  ck('#132 a plain number: no hint, still a number, its reset kept', !/iUsesHint/.test(d.body) && !!d.saved && JSON.stringify(d.saved.uses) === '{"max":2,"per":"none","used":0}', d.saved && d.saved.uses);
+  X.character = X.blankChar();
+}
+
+/* ---- #130 · #129 final-review minors, fixed before merge ---- */
+{
+  const fn = name => (...a) => typeof ctx[name] === 'function' ? ctx[name](...a) : undefined;
+  const setACMode = fn('setACMode'), acFlatValue = fn('acFlatValue'), acFlatSeed = fn('acFlatSeed');
+  const fresh = () => { const c = X.blankChar(); X.character = c; c.abilities.dex = 14; c.level = 1; return c; };
+
+  /* the AC window's own wiring, driven: the switch's click, the box's change
+     (refused: the last number back; taken: the total repainted), and Escape */
+  const win = () => {
+    const realB = ctx.document.getElementById, realO = ctx.openModal, realC = ctx.closeModal, on = {}, bodies = [];
+    let closes = 0;
+    ctx.closeModal = function () { closes++; return realC.apply(null, arguments); };
+    const els = {acTotal: {textContent: ''}, acFlat: {value: ''}, acMode: {}};
+    Object.keys(els).forEach(id => { els[id].addEventListener = (t, f) => { on[id + ':' + t] = f; }; });
+    ctx.openModal = (t, b) => { bodies.push(String(b)); const v = /<input id="acFlat"[^>]*value="(\d*)"/.exec(b); els.acFlat.value = v ? v[1] : ''; };
+    ctx.document.getElementById = id => els[id] || realB(id);
+    return {on, els, bodies, closes: () => closes, done: () => { ctx.document.getElementById = realB; ctx.openModal = realO; ctx.closeModal = realC; }};
+  };
+  let c = fresh(); c.acMode = 'calc'; c.ac = '';
+  let w = win();
+  try {
+    ctx.openACWindow();
+    w.on['acMode:click']({target: {closest: () => ({dataset: {acmode: 'flat'}})}});
+    ck('#130 driven: tapping Flat switches and redraws the window on Flat',
+       c.acMode === 'flat' && w.bodies.length === 2 && /data-acmode="flat"[^>]*class="on"/.test(w.bodies[1]) && w.els.acFlat.value === '12', [c.acMode, w.bodies.length, w.els.acFlat.value]);
+    w.els.acFlat.value = 'abc'; w.on['acFlat:change']();
+    ck('#130 driven: junk in the box is refused and the last number comes back', c.ac === 12 && w.els.acFlat.value === '12', [c.ac, w.els.acFlat.value]);
+    w.els.acFlat.value = '17'; w.on['acFlat:change']();
+    ck('#130 driven: a whole number is taken and the total repainted', c.ac === 17 && w.els.acTotal.textContent === '17', [c.ac, w.els.acTotal.textContent]);
+    /* QA: " 18 " and "007" were taken as 18 and 7 but stayed in the box as typed */
+    w.els.acFlat.value = ' 18 '; w.on['acFlat:change']();
+    ck('#130 driven: a number taken with spaces round it reads back tidied in the box', c.ac === 18 && w.els.acFlat.value === '18', [c.ac, w.els.acFlat.value]);
+    w.els.acFlat.value = '007'; w.on['acFlat:change']();
+    ck('#130 driven: ...and one with leading zeros', c.ac === 7 && w.els.acFlat.value === '7' && w.els.acTotal.textContent === '7', [c.ac, w.els.acFlat.value]);
+    w.els.acFlat.value = '19';                     /* typed, not yet committed by change */
+    ctx.dismissModal();                            /* Escape, x and the backdrop all come here */
+    ck('#130 driven: Escape keeps a number typed but not yet committed, and closes', c.ac === 19 && painted(['acDisp']).acDisp === '19' && w.closes() === 1, [c.ac, w.closes()]);
+  } finally { w.done(); }
+  w = win();
+  try {
+    ctx.openACWindow(); w.els.acFlat.value = 'xyz'; ctx.dismissModal();
+    ck('#130 driven: Escape with junk in the box closes and keeps the last number', c.ac === 19 && w.closes() === 1, [c.ac, w.closes()]);
+    X.setVitalsLocked(true);
+    ctx.openACWindow(); w.els.acFlat.value = '25'; ctx.dismissModal();
+    ck('#130 driven: Escape while Vitals is locked changes nothing, and closes', c.ac === 19 && w.closes() === 2, [c.ac, w.closes()]);
+    X.setVitalsLocked(false);
+  } finally { w.done(); X.setVitalsLocked(false); }
+
+  /* a Flat seed never goes below 0, so switching to Flat always takes */
+  c = fresh();
+  c.inventory = [{id: 'cr', name: 'Cursed Plate', equipped: true, effects: [{target: 'ac', value: -20}]}];
+  ck('#130 the Flat seed is never negative: 12 - 20 gives 0', acFlatSeed(X.contributions()) === 0, acFlatSeed(X.contributions()));
+  ck('#130 ...so Flat takes, with a number to change', setACMode('flat') === true && ctx.acIsFlat(c) === true && acFlatValue(c.ac) === 0, [c.acMode, c.ac]);
+
+  /* the struck line's words */
+  c = fresh(); c.acMode = 'flat'; c.ac = 14;
+  c.inventory = [{id: 'sh', name: 'Shield', equipped: true, armor: {kind: 'shield', bonus: 2}}];
+  let m = shownModal(() => X.openStatBreakdown('ac'));
+  ck('#130 one name: "doesn\'t add"', /<s>Shield<\/s> doesn't add: your AC already counts it\./.test(m.b), (m.b.match(/<s>.*?<\/p>/) || [''])[0]);
+
+  /* a locked switch looks locked, not only refuses (phase 2 review) */
+  const modalCSS = require('fs').readFileSync(require('path').join(__dirname, '..', 'css', '50-modal.css'), 'utf8');
+  ck('#130 a disabled half of a .seg switch looks disabled', /\.seg button:disabled\{[^}]*cursor:default[^}]*opacity:\.55/.test(modalCSS));
+
+  /* a ticked effect's chip says it counts for spells */
+  const chip = e => ctx.fxChips([e]);
+  ck('#129 a ticked effect\'s chip says it includes spells', /To-hit \(all attacks\) \+1 · includes spells</.test(chip({target: 'attack', value: 1, spells: true})), chip({target: 'attack', value: 1, spells: true}));
+  ck('#129 ...an unticked one does not', !/spells/.test(chip({target: 'attack', value: 1})) && !/spells/.test(chip({target: 'ac', value: 1, spells: true})),
+     [chip({target: 'attack', value: 1}), chip({target: 'ac', value: 1, spells: true})]);
+  X.character = X.blankChar();
+}
+
+/* ---- end of the #130 · #129 · #132 block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
    A real timer (Node's), borrowed for this block only: the harness's setTimeout

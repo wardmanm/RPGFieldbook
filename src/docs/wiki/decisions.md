@@ -128,6 +128,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **A spell bonus the book limits to one class's spells (#77)** — Applied to the character's one spellcasting; the class stays in the description
 - **A bonus to every ability check (#79)** — One `check` target, added to each skill, initiative and passive Perception
 - **Where a plain ability check's bonus shows (#79)** — In the ability's breakdown, apart from the score; the modifier box stays the modifier
+- **Spells and the generic to-hit and damage effects (#129)** — A per-effect `spells: true` (the Include spells tick), unticked by default
+- **Where an effect came from (#130)** — A `kind` on each contribution (feature, item, status, familiar)
 
 ### [Rich text](architecture/rich-text.md)
 
@@ -208,7 +210,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How HP boxes commit** — On `change`, outside `data-path`
 - **Where the lock lives (#115)** — The Vitals pencil, `editHide.vitals`, read by `vitalsLocked()`
 - **Does Vitals start locked? (#115, Mike)** — Unlocked, like every card's pencil
-- **What the pencil covers (#115)** — The portrait's add and remove buttons, and Max HP
+- **What the pencil covers (#115)** — The portrait's add and remove buttons, and Max HP; and how AC is set (#130)
 - **Existing sheets (#115)** — All open unlocked; `hp.locked` is kept, unread
 - **Whether the lock confirms** — No confirm
 - **How HP is typed on a touchscreen (#112, Mike)** — Tapping the bar opens Hit points
@@ -266,6 +268,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **Should `attackNumbers()` skip the effects of the item that owns the row? (#74)** — No: effects are global, a weapon's own bonus is its `atkMisc`/`dmgMisc`, and the packs are fixed
 - **How a new weapon arrives (#128)** — Equipped with its row, from the finder, a grant or a new item on the form; armour and shields unequipped (Mike)
 - **How the item form equips a new weapon (#128)** — Its Equipped box follows Weapon until the player sets Equipped
+- **Do generic to-hit and damage effects count for spells? (#129)** — Only when ticked Include spells, in every effect editor; unticked by default
+- **Which targets get the tick (#129)** — The six generic ones: to-hit and damage, each all / melee / ranged
+- **Where a ticked to-hit counts (#129)** — The card, the cast window and the row alike; melee/ranged-only ones where the spell's range is known
+- **Where a ticked damage counts (#129)** — Every spell that deals damage, attack or save; melee/ranged-only ones need an attack spell of that range
 
 ### [Ammunition](features/ammunition.md)
 
@@ -302,6 +308,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Feats and traits in one picker** — Each wrapped as `{k, e, id}`
 - **The origin of a picked feature** — `null`, so it files under its own source, or "Other" without one
 - **Where a feat's kind and prerequisite are read** — The first line of the description only
+- **Editing a feature whose uses scale (#132)** — Keep the original maximum unless the player changes the number; a hint says it scales
 
 ### [Spells](features/spells.md)
 
@@ -312,6 +319,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Saying what the prepared tick means** — A visible `Prep` caption, `aria-pressed` and a title
 - **An item's bonus to one class's spells, such as a Moon Sickle's (#77)** — Applied to the one spellcasting the sheet has; the class stays in the description
 - **Half-caster spell slots when multiclassing (#101)** — Round up (SRD 5.2.1 p.26), for every ruleset, Humblewood included
+- **Whether generic to-hit and damage effects count for spells (#129)** — Only when ticked Include spells, and then on the card, the cast window and the row alike
 
 ### [Inventory](features/inventory.md)
 
@@ -350,6 +358,14 @@ When a page gains a Decisions row, add its line here under that page.
 - **How a custom item becomes armor** — An Armor toggle writing the structured field
 - **What the shield kind shows** — A bonus box instead of Base AC and Max Dex
 - **A pack item's AC bonus that holds only sometimes (#76)** — Prose in the description, no `ac` effect
+- **Can AC be typed by hand? (#130)** — Yes, "if needed" (Mike)
+- **How (#130)** — A Calculated / Flat switch in the Armor Class window
+- **What adds to Flat (#130)** — Only statuses and a summoned familiar; casting a spell adds no AC by itself
+- **An old sheet with a typed `character.ac` (#130)** — Opens Calculated, which never reads it; the old number fills the Flat box
+- **Shields (#130)** — Only the best equipped shield counts
+- **Showing Flat (#130)** — FLAT in place of AC under the number, and a `--rail-flat` rim unlike each palette's `--rail-line`
+- **An empty Flat box (#130)** — Not accepted; `migrate()` turns a numberless Flat into Calculated
+- **Locking (#130)** — The AC window's switch and Flat number follow the Vitals pencil, read-only while it is locked
 
 ### [Story & notes](features/story-and-notes.md)
 

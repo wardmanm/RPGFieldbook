@@ -267,7 +267,10 @@ quantity are out; a dice heal opens `openItemUsePrompt()` (type what the table r
 me), where the box holds the dice total and the flat bonus is added once. `applyItemUse()` heals
 through `adjustHP()`, switches a status on by name (`addStatusByName()`), spends a use, consumes one
 (the last one removes the row and its attack) and summarises. The editor refuses a heal that
-`parseDiceExpr()` cannot read.
+`parseDiceExpr()` cannot read. Its Limited uses box opens on `itemUsesMax()`, with the scaling hint
+under it when the maximum grows (`usesScaleHint()`, `#iUsesHint`), and saves through
+`usesFromForm()`: an unchanged box keeps a `byLevel` or formula maximum, as the feature form does
+([Features & traits](features-and-traits.md), #132).
 
 **Coins.** The card lists `coinKeys()` high to low — PP GP EP SP CP (D&D), GP SP CP (Humblewood);
 display order only. Each box takes `signedEntry()` grammar: a number sets, `+10` adds, `-5` spends,
@@ -436,3 +439,4 @@ the inventory and recompute, because coins have weight.
 - 2026-11-04 — End of combat's Loot opens the trade window as Loot (`openTrade({loot:true})`): From, You get alone, Worth, Take loot; logged "Looted from …" under Trades; rules items arrive Found. → ledger L8645, #166
 - 2026-11-04 — Balance trade; coins split to pay (typed or balanced), each split a receipt line; Complete warns, in the warning window, when short or giving more. → ledger L8780, #168
 - 2026-11-06 — Granted items and gold show at once, on add, change and remove (`renderClassRace()`); a granted weapon, or a new one on the form, arrives equipped with its attack row. → ledger L9101, #153, #128
+- 2026-11-06 — Editing an item keeps a use count that scales (`usesFromForm()`), with the hint under the box. → ledger L9597, #132

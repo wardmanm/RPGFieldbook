@@ -179,6 +179,8 @@ html[data-tabs="icons"] .sh-rest{padding:0 6px}
 .rail-ac::before{content:"";position:absolute;inset:3px;background:var(--panel);clip-path:polygon(50% 0,100% 14%,95% 68%,50% 100%,5% 68%,0 14%)}
 .rail-ac>*{position:relative}
 .rail-ac .big{font-family:var(--display);font-weight:900;font-size:26px;line-height:1;cursor:pointer}
+/* #130: a Flat AC's shield — FLAT under the number (recompute()) and its own rim */
+.rail-ac.flat{background:var(--rail-flat)}
 .rail-ac .n,.rail-badge .n{font-family:var(--head);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
 .rail-badges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;text-align:center}
 .rail-badge{border:1.5px solid var(--line);border-radius:7px;background:var(--field);padding:4px 2px 3px;min-width:0}

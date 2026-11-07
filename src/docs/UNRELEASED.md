@@ -59,3 +59,14 @@ Bullets below this line — leave the heading in place.
   Heal or Temp. No minus sign needed. "Set exactly" underneath types the numbers straight in.
 - The hit-point numbers and the − and + signs now sit in the middle of the bar and their buttons. When
   there isn't room beside the numbers, your temporary hit points show beside the Hit points label instead.
+- Armor Class can be set by hand: tap the AC shield and switch from Calculated to Flat, then type
+  your AC. Flat ignores armour, shields, and item and feature bonuses; things that come and go, like
+  the Shield spell as a status you've added, still add. The shield on the sheet reads FLAT while
+  it's on, and locking Vitals with its pencil locks your AC's setting too.
+- Only your best shield counts toward Armor Class now; two equipped shields used to add together.
+- A to-hit or damage effect can count for spells: tick Include spells on the effect. The
+  Spellcasting card, the cast window and the spell's attack row now always show the same number.
+  An effect that isn't ticked counts for weapons only, so a spell's attack row no longer adds it:
+  Archery's +2, for one, now goes only on ranged weapons, as the rules say, and no longer on a
+  spell like Fire Bolt.
+- Editing a feature or an item no longer stops its uses growing with your level.

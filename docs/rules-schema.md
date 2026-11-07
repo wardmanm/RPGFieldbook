@@ -194,14 +194,28 @@ Removing the source (unequip, remove ancestry, etc.) reverts its effects automat
 | `speed` | Speed |
 | `hp.max` | Max HP |
 | `profBonus` | Proficiency Bonus |
-| `attack` / `attack.melee` / `attack.ranged` | To-hit (all / melee / ranged) |
-| `damage` / `damage.melee` / `damage.ranged` | Damage (all / melee / ranged) |
+| `attack` / `attack.melee` / `attack.ranged` | Weapon to-hit (all / melee / ranged); spells too with `"spells": true` |
+| `damage` / `damage.melee` / `damage.ranged` | Weapon damage (all / melee / ranged); spells too with `"spells": true` |
 | `spell.attack` | Spell attack bonus (the Spellcasting card, spell attack rows, the cast window) |
 | `spell.dc` | Spell save DC (the Spellcasting card, spell save rows, the cast window) |
 | `ability.<abbr>` | Ability **score** (e.g. `ability.str`) |
 | `save.<abbr>` | Saving throw bonus (e.g. `save.con`) |
 | `skill.<key>` | Skill bonus (e.g. `skill.stealth`) |
 | `check` | Every ability check: each skill, Initiative and Passive Perception (not the ability modifier, not saves) |
+
+**Spells.** The six to-hit and damage targets above count for weapon attacks only, unless the
+effect also carries `"spells": true`:
+
+```json
+"effects": [ { "target": "attack", "value": 1, "spells": true } ]
+```
+
+Then the spell attack bonus counts it too, the same number on the Spellcasting card, in the cast
+window and on the spell's attack row; a damage one adds to every spell that deals damage. A
+`.melee` or `.ranged` one counts only for a spell attack of that range. Leave `spells` out for a
+weapon bonus: Archery is "+2 to ranged **weapon** attack rolls". `spells` is ignored on every other
+target; `spell.attack` and `spell.dc` already count only for spells. A player sets it with the
+**Include spells** tick in the effect editor.
 
 > Effects express **numeric** changes only. Non-numeric rules ("advantage on Stealth",
 > "resistance to fire") belong in the `description` text.
@@ -557,9 +571,14 @@ the converter applies — mirroring `overlay.json` for feats.
 - **`effects`** apply **while equipped** (e.g. a Ring of Protection: `{"target":"ac","value":1}`). Base
   gear/armor usually have none — the app doesn't replace base AC from an effect; that lives in the
   `description` or the `armor` object. Weapon damage comes from `weapon`, not from `effects`. An
-  `attack` or `damage` effect adds to **every** attack the character makes, spells included, so use
-  it only for a bonus that really does; a bonus for one weapon (or only bows) belongs on that
-  weapon, or in the `description`. Likewise an effect is on for as long as the item is equipped, so
+  `attack` or `damage` effect (or its `.melee` / `.ranged` form) adds to **every weapon** attack
+  the character makes, so use it only for a bonus that really does; a bonus for one weapon (or only
+  bows) belongs on that weapon, or in the `description`. It counts for **spells** only when it
+  also carries `"spells": true` — `{"target":"attack","value":1,"spells":true}` — and then the
+  Spellcasting card, the cast window and the spell's attack row all take it (a `.melee` or
+  `.ranged` one only on a spell of that range). Leave it out for a weapon bonus such as Archery's.
+  `spells` is read on those six targets only; `spell.attack` and `spell.dc` count for spells
+  already. Likewise an effect is on for as long as the item is equipped, so
   give one only for a bonus that holds all that time: a bonus for one moment ("as a Reaction, +5 AC
   against the triggering attack", "+2 AC against ranged attacks") belongs in the `description`.
   `equipped`, `qty` and `sectionOverride` (which inventory section to file it under) are set

@@ -24,8 +24,14 @@ function recompute(){
     const e=document.getElementById("skill-"+k);if(e){e.textContent=fmt(t);mark(e,!!skFx||!!ckFx||!!grantedProf("skill",k),fxNeg(c,"skill."+k,"check"));}
     const d=document.querySelector(`.dot[data-skill="${k}"]`);if(d){d.dataset.lvl=lvl;d.dataset.granted=(!(character.skills[k]||0)&&grantedProf("skill",k))?1:0;}
   });
-  const acBase=armorAC(c).base, acFx=sumFx("ac",c);
-  const acEl=document.getElementById("acDisp");acEl.textContent=acBase+acFx;mark(acEl,!!acFx,fxNeg(c,"ac"));
+  /* acTotal() owns the sum, Calculated or Flat (#130); the marks follow the
+     effects it counted, so an item's penalty a Flat AC ignores is not red */
+  const acFx=acEffects(c);
+  const acEl=document.getElementById("acDisp");acEl.textContent=acTotal(c);mark(acEl,!!acFx.reduce((s,x)=>s+x.value,0),acFx.some(x=>x.value<0));
+  /* a Flat AC says so on the shield, in every skin: FLAT for AC, and the rim in --rail-flat */
+  const acFlat=acIsFlat(character), acSh=document.getElementById("acShield"), acLb=document.getElementById("acLbl");
+  if(acSh)acSh.classList.toggle("flat",acFlat);
+  if(acLb)acLb.textContent=acFlat?"FLAT":"AC";
   const initBase=character.init===""?mods.dex:num(character.init), initFx=sumFx("init",c)+ckFx;
   const initEl=document.getElementById("initDisp");initEl.textContent=fmt(initBase+initFx);mark(initEl,!!initFx,fxNeg(c,"init","check"));
   const spFx=sumFx("speed",c), spBase=num(character.speed)+spFx;
@@ -53,7 +59,8 @@ function recompute(){
      card cannot read differently from the cast dialog or a save row */
   const sa=character.spellAbility;
   const dcEl=document.getElementById("dcDisp");dcEl.textContent=sa?String(spellDC(c)):"—";mark(dcEl,!!sa&&!!sumFx("spell.dc",c),!!sa&&fxNeg(c,"spell.dc"));
-  const satkEl=document.getElementById("satkDisp");satkEl.textContent=sa?fmt(spellAtkBonus(c)):"—";mark(satkEl,!!sa&&!!sumFx("spell.attack",c),!!sa&&fxNeg(c,"spell.attack"));
+  const satkFx=spellFxList(c,"attack");   /* spell.attack and the ticked "all attacks" effects (#129) */
+  const satkEl=document.getElementById("satkDisp");satkEl.textContent=sa?fmt(spellAtkBonus(c)):"—";mark(satkEl,!!sa&&!!satkFx.reduce((t,x)=>t+x.value,0),!!sa&&satkFx.some(x=>x.value<0));
   renderEncPill(encSt);
   renderDeath();autoSlots();renderSlotBubbles();renderHitDice();syncResources();renderResources();
   (character.attacks||[]).forEach(a=>{if(a.source==="spell"&&!a.save)a.ability=character.spellAbility||"none";});

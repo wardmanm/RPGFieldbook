@@ -6,7 +6,7 @@ from three places — made by hand, generated from a weapon in the inventory, or
 — and the last two stay linked to what made them. Most of the complexity is in keeping those links
 alive through edits, rules updates and old saves without ever overwriting what the player tuned.
 
-**Code:** `attackNumbers()`, `attackDamageStr()`, `extraDamageList()`, `renderAttacks()`,
+**Code:** `attackNumbers()`, `spellFxList()`, `attackDamageStr()`, `extraDamageList()`, `renderAttacks()`,
 `openAttackForm()`, `openAttackBreakdown()`, `carryAttackLinks()`, `syncSpellAttack()`,
 `detectSpellAttack()`, `spellDamageFromText()`, `ensureSpellAttacks()` in `60-attacks.js` ·
 `attackVisible()`, `isEquippable()` in `25-origins-items.js` · `addAttackForItem()`, `equipNewWeapon()` in `85-browse.js` ·
@@ -26,13 +26,24 @@ damageType, dmgMisc, addAbilityDamage, notes}`, plus optional `extraDamage`, `fa
 
 **The numbers.** `attackNumbers(a)` takes the ability modifier (`finesse` is the better of STR and
 DEX, labelled DEX on a tie; `none` is 0). To-hit is that modifier, plus the proficiency bonus when
-`proficient`, plus `atkMisc`, plus the `attack` and `attack.<kind>` effects, plus, on a spell attack
-row only, the `spell.attack` effects (a weapon's row never takes them). The damage bonus is the
-modifier when `addAbilityDamage`, plus `dmgMisc`, plus the `damage` and `damage.<kind>` effects.
-`kind` is melee unless it says ranged. `atkMisc`/`dmgMisc` belong to this row alone; an effect
-applies to every row while its source is live, so a magic weapon's own `+N` is its row's
-`atkMisc`/`dmgMisc` and never an effect. Tapping a to-hit opens `openAttackBreakdown()`, which lists
-every source by name.
+`proficient`, plus `atkMisc`, plus the effects it counts; the damage bonus is the modifier when
+`addAbilityDamage`, plus `dmgMisc`, plus the effects it counts. `kind` is melee unless it says
+ranged. Which effects (`atkList`, `dmgList`, returned beside the sums):
+
+- **A weapon's row** (anything not `source:"spell"`): every `attack` and `attack.<kind>` effect and
+  every `damage` and `damage.<kind>` one, ticked Include spells or not. Never `spell.attack`.
+- **A spell's row**: `spellFxList()`, the same set the Spellcasting card and the cast window take
+  ([Spells](spells.md)): `spell.attack`, plus the generic effects ticked Include spells
+  (`spells:true`), `.melee`/`.ranged` ones only on an attack spell of that range. A save row has no
+  range, so only the "all attacks" damage ones; a spell with no main damage dice takes no damage
+  bonus, having nothing to add it to. An unticked generic effect is for weapons only.
+  The row keeps its own ability part, so a row whose `ability` is set shows it even with no
+  spellcasting ability chosen (#74).
+
+`atkMisc`/`dmgMisc` belong to this row alone; an effect applies to every row it reaches while its
+source is live, so a magic weapon's own `+N` is its row's `atkMisc`/`dmgMisc` and never an effect.
+Tapping a to-hit opens `openAttackBreakdown()`, which lists the modifier, proficiency, the manual
+extras and exactly the effects `attackNumbers()` counted, by name.
 
 **The damage line.** `attackDamageStr(a, bonus)` builds `dice bonus type` for the main part and one
 `dice type` per `extraDamage` entry (`{dice, type}` — a sword's 1d8 slashing *and* 1d6 poison),
@@ -101,8 +112,9 @@ no ability damage; a `save` spell gets `save:{ability}` and no to-hit. `sp.extra
 A save spell with no damage (`spellHasDamage()`: main dice or extras) gets **no row** — it would only
 repeat the Spell Save DC; an attack spell always does, because the to-hit appears nowhere else.
 Spell rows show **Cast** where a weapon shows Edit; `recompute()` re-points their `ability` at the
-current `spellAbility` every pass; save rows print `DC N ABILITY` from `spellDC()` with no damage
-bonus, marked when a `spell.dc` effect applies. On every row the to-hit, the damage and a save row's
+current `spellAbility` every pass; save rows print `DC N ABILITY` from `spellDC()`, marked when a
+`spell.dc` effect applies, and their damage takes only the ticked damage effects (`n.dmgFx`; a
+save spell adds no ability), marked when one applies. The print sheet passes the same. On every row the to-hit, the damage and a save row's
 DC are red with ▼ (`fx-neg`) when any one effect on them is a penalty: `attackNumbers()` returns
 `atkNeg`/`dmgNeg` beside `atkFx`/`dmgFx`. `openAttackBreakdown()` reddens a penalty effect's line;
 the modifier and the manual extras are not effects and stay plain.
@@ -118,6 +130,8 @@ longer allows, leaving orphan rows alone.
 
 ## Rules that must hold
 
+- **A spell's row counts what the card and the cast window count.** All three read `spellFxList()`;
+  a spell row never adds an unticked generic effect, and a weapon row never asks about the tick.
 - **Only the main damage part takes the bonus.** Getting this wrong is invisible in the JSON and wrong
   at the table.
 - **Explicit wins.** Detection runs only on `atkType === undefined`; the form stores "Not an attack"
@@ -138,6 +152,11 @@ longer allows, leaving orphan rows alone.
 
 ## Traps
 
+- **A spell row read higher than its cast window (#129).** `attackNumbers()` added every `attack`
+  and `damage` effect to spell rows, while the Spellcasting card and `promptSpellAttack()` added
+  none, so with Archery a Fire Bolt row read 2 above the window. Archery is ranged *weapon*
+  attacks: the fix is an Include spells tick, unticked by default, and the packs are unchanged. A
+  character with Archery sees Fire Bolt's row drop by 2. → L9537
 - **The flag in `blankChar()`.** `wpnEquipInit` was first set there and silently skipped the
   migration for every existing sheet; caught by a test before it shipped. → L3213
 - **Gating on `equipped` without a migration** would have emptied every existing Attacks card, and a
@@ -186,6 +205,10 @@ longer allows, leaving orphan rows alone.
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
+| Do generic to-hit and damage effects count for spells? (#129) | Only when ticked: a per-effect Include spells tick (Mike) in every effect editor (item, feature, status, familiar), unticked by default | One switch per character: can't have one item count and another not. Always counting: no way to say "weapons only" |
+| Which targets get the tick (#129) | The six generic ones: to-hit and damage, each all / melee / ranged | Spell attack and Spell save DC: they already count only for spells |
+| Where a ticked to-hit counts (#129) | All three places agree; melee/ranged-only ones where the spell's range is known (its row and the cast window); the card takes the "all attacks" ones | — |
+| Where a ticked damage counts (#129) | Every spell that deals damage, attack or save; melee/ranged-only ones need an attack spell of that range | Attack spells only: a save spell's damage could never take one |
 | May a rules resync overwrite a player-edited attack? | No — rebuild only when `updAtkEdited()` is `false` (owner's call) | Rebuilding wholesale from the item: silently discarded the edit, with nothing to undo it |
 | Where does a spell's second damage type live? | On the spell, copied onto its row | On the row: rebuilt from the spell every time, and it has no Edit button |
 | Do save spells without damage get a row? | No; attack spells always do | Keeping them: a name that repeats the Spell Save DC in a list scanned mid-combat for numbers |
@@ -199,11 +222,6 @@ longer allows, leaving orphan rows alone.
 
 ## Open
 
-- **Spell rows pick up weapon effects.** `attackNumbers()` adds `attack`/`attack.<kind>` and
-  `damage`/`damage.<kind>` effects to spell rows too, while the Spellcasting card and the cast dialog
-  (`spellAtkBonus()`, damage bonus 0) do not — with an Archery-style `attack.ranged` effect, a Fire
-  Bolt row reads 2 higher than the dialog. `spell.attack` reaches all three alike (#77). Verified in
-  the code, not in a browser.
 - **Deleting a weapon's row is not sticky:** the next item save or rules update recreates it.
   Unequipping is the way to hide it.
 - `syncSpellAttack()` copies `sp.atkNote` into the row's notes, but nothing in the app or the packs
@@ -237,3 +255,4 @@ longer allows, leaving orphan rows alone.
 - 2026-10-23 — The card moves, unchanged, from the Sheet to the top of the Inventory tab, its note, combat-view place and #97 pencil with it. → ledger L6633, #103
 - 2026-10-24 — The ☰ section flyout is retired; `.inv-sec-head` gives the card its heading style only. → ledger L6804, #103
 - 2026-11-06 — A weapon arrives equipped with its row from a grant and from the item form, as from the finder, through `equipNewWeapon()`; `newCharacter()` sets `wpnEquipInit`. Armour and shields arrive unequipped. → ledger L9101, #128
+- 2026-11-06 — A spell's row takes `spellFxList()`: `spell.attack` and the effects ticked Include spells, as the card and the cast window do; a save row shows its ticked damage. → ledger L9537, #129

@@ -4,8 +4,8 @@ The Sheet's dark rail (the `vitals` section, #103) and the rest and level contro
 above it. The rail runs down the left: the portrait with the AC shield over its bottom edge, the
 death saves `✓ ○○○ ☠ ○○○ ✗`, Init / Speed / Prof badges, the Hit Points bar (Current / Max centred
 inside it, Temp at its right, − and + either side), the Hit Dice bar, and Size · Passive Perception in
-small text. Its header carries the pencil every list card has, which locks Max HP and hides the
-portrait's buttons. The Sheet's header holds Short Rest, Long Rest, the Inspiration star and the level
+small text. Its header carries the pencil every list card has, which locks Max HP and how AC is
+set, and hides the portrait's buttons. The Sheet's header holds Short Rest, Long Rest, the Inspiration star and the level
 ring with the XP. This page covers how hit points are typed and spent (typed into the bar with a
 mouse, the Hit points window on a touchscreen), the Max HP lock, the level-1 seed, the colour bands,
 the hit-dice bar and its spend box, the level badge, and what each rest gives back.
@@ -37,8 +37,9 @@ tinted in dark mode while the cards' own rules draw it ([Sections & layout](../u
 Every id `recompute()`, `renderHP()` and the death-save code paint kept its id when it moved here.
 At ≤700px the portrait sits small at the left with the rest of the rail beside it.
 
-**The badges.** AC (the shield), Initiative, Speed and the proficiency bonus tap through to their breakdowns (`data-stat`); AC is
-[Armor & AC](armor-and-ac.md), and Speed is its base plus `speed` effects, then encumbrance.
+**The badges.** AC (the shield), Initiative, Speed and the proficiency bonus tap through to their breakdowns (`data-stat`); AC
+opens the Armor Class window instead, with its Calculated / Flat switch, and its shield reads FLAT
+while it is Flat ([Armor & AC](armor-and-ac.md)). Speed is its base plus `speed` effects, then encumbrance.
 **Size** is `charSize()`: the size the player chose, else the ancestry's (`raceDefSize()`), else
 Medium. Tapping it (or Enter/Space) opens `openSizePicker()` — a chooser, not a breakdown, with
 "From ancestry (…)" first and a carrying-capacity preview from `capacityFor()`. The same list,
@@ -133,13 +134,15 @@ listeners bind to its own elements. None of its boxes carries `data-hp` or `data
 **The Max HP lock: the Vitals pencil (#115).** The rail's header carries the pencil every list card
 has ([Sections & layout](../ui/sections-and-layout.md)): `vitals` is in `EDIT_CARDS`, and the flag is
 `character.editHide.vitals`, `true` when locked. Locked, the portrait's add and remove buttons
-(`#btnPortrait`, `#btnPortraitDel`, which carry `ed`) are hidden and Max can't be changed; Current,
-Temp, −/+, the death saves, the hit dice, Size and the badges work either way. Every sheet starts
+(`#btnPortrait`, `#btnPortraitDel`, which carry `ed`) are hidden, Max can't be changed, and the
+Armor Class window's Calculated / Flat switch and Flat box are disabled, so a flat AC can't be
+changed either ([Armor & AC](armor-and-ac.md), #130); Current, Temp, −/+, the death saves, the hit
+dice, Size and the badges work either way, and AC still opens its window. Every sheet starts
 unlocked. Its title is "Lock Vitals" or "Unlock Vitals" and its aria-label says what that does ("Lock
-Vitals — hides the portrait buttons and locks Max HP"). **One reader:** `vitalsLocked(c)`, which is
+Vitals — hides the portrait buttons and locks Max HP and a flat AC"). **One reader:** `vitalsLocked(c)`, which is
 `editHidden(c,"vitals")`, used by `renderHP()` (Max `readOnly`), `applyHPInput()` (which refuses Max
 again, because `readOnly` does not stop a paste), the Hit points window's Max row and `hpSetApply()`,
-and `hpChoice()`. **One writer from code:** `setVitalsLocked(locked)`, which sets the flag through
+`hpChoice()`, and the AC window's `setACMode()`, `setACFlat()` and `acWindowHTML()`. **One writer from code:** `setVitalsLocked(locked)`, which sets the flag through
 `setEditHidden()`, toggles `ed-off` on the card, repaints the pencil (`paintEditToggle()`) and calls
 `renderHP()`. A level-up unlocks Vitals; the level's hit-points step puts it back as it was
 ([Character building](character-building.md)). Adding a second class unlocks it too, and so does a
@@ -336,7 +339,7 @@ came back.
 | How HP boxes commit | On `change`, outside `data-path` | `data-path`: commits every keystroke, storing a bare sign |
 | Where the lock lives (#115) | The Vitals pencil, `editHide.vitals`, read by `vitalsLocked()` | `hp.locked` behind a padlock beside "Max" (the 2026-08-14 answer): small, cluttered, and the one lock on the sheet that wasn't the cards' pencil |
 | Does Vitals start locked? (#115, Mike) | Unlocked, like every card's pencil | Locked, reusing `hp.locked`: keeps "Max locked by default" but hides Add portrait on a new character and makes Vitals the one card whose pencil works backwards |
-| What the pencil covers (#115) | The portrait's add and remove buttons, and Max HP | Hiding more: Current, Temp, −/+, death saves, hit dice, Size and the badges are play controls |
+| What the pencil covers (#115) | The portrait's add and remove buttons, and Max HP; and since #130, how AC is set (the AC window's switch and Flat box) | Hiding more: Current, Temp, −/+, death saves, hit dice, Size and the badges are play controls. AC always editable: the one rail number left open (#130) |
 | Existing sheets (#115) | All open unlocked; `hp.locked` is kept, unread | Carrying `hp.locked` over: every sheet would open locked, since that was the default |
 | Whether the lock confirms | No confirm | Confirming like the manual Hit Dice switch: that is a mode change with consequences, this is undone by a second tap |
 | How HP is typed on a touchscreen (#112, Mike) | Tapping the bar opens Hit points | Typing into the bar: three small boxes under a finger are the issue |
@@ -416,3 +419,5 @@ came back.
 - 2026-11-06 — Centring held for a blank Temp: the bar's outer columns are identical, and Temp leaves
   the bar wherever a measured fit says it can't sit beside the numbers, not below a fixed width; the
   17px step went. → ledger L9501, #113
+- 2026-11-06 — Tapping AC opens the Armor Class window (Calculated / Flat); the shield reads FLAT for a Flat AC. → ledger L9537, #130
+- 2026-11-06 — The Vitals pencil locks how AC is set too: the AC window's switch and Flat box; its label says so. → ledger L9597, #130

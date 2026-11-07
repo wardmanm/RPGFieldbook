@@ -49,6 +49,10 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 /* effect editor rows */
 .fxrow{display:grid;grid-template-columns:1fr 74px 34px;gap:7px;margin-bottom:7px;align-items:center}
 .fxrow select,.fxrow input{min-height:38px;padding:6px 8px;font-size:14px}
+/* #129: the "Include spells" tick, on its own line under a to-hit or damage row */
+.fxrow .fx-sp{grid-column:1/-1;display:flex;align-items:center;gap:8px;min-height:32px;margin:-4px 0 0;font-family:var(--head);font-size:12px;letter-spacing:.03em;color:var(--ink-soft);cursor:pointer}
+.fxrow .fx-sp[hidden]{display:none}
+.fxrow .fx-sp input{width:18px;height:18px;min-height:auto;margin:0;padding:0;flex:none;accent-color:var(--accent)}
 .fx-add{font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
   color:var(--accent-2);background:none;border:2px dashed var(--hair);border-radius:7px;padding:8px;cursor:pointer;width:100%}
 .fx-add:hover{border-color:var(--accent-2)}
@@ -58,6 +62,8 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .seg button{flex:1;font-family:var(--head);font-weight:600;font-size:12px;letter-spacing:.05em;text-transform:uppercase;
   background:var(--field);border:0;color:var(--ink-soft);padding:10px 4px;cursor:pointer;min-height:44px}
 .seg button.on{background:var(--accent);color:var(--on-accent)}
+/* #130: a switch the Vitals lock holds (the Armor Class window) looks held */
+.seg button:disabled{cursor:default;opacity:.55}
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px dotted var(--hair)}
 .toggle .t-lbl{font-size:15px}
 .toggle .t-sub{font-family:var(--body);font-size:12px;color:var(--ink-soft);margin-top:2px}

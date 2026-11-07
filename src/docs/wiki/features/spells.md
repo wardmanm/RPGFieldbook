@@ -8,7 +8,8 @@ pack through a searchable browser, or typed in by hand.
 
 **Code:** `renderSpells()`, `castSpell()`, `pickSlotLevel()`, `freeSlots()`, `promptSpellAttack()`,
 `renderActiveSpells()`, `advanceRound()`, `bumpActive()`, `maybeExpire()`, `endActiveSpell()`,
-`parseDurationSec()`, `spellDurationSec()`, `spellIsConc()`, `spellDC()`, `spellAtkBonus()` in
+`parseDurationSec()`, `spellDurationSec()`, `spellIsConc()`, `spellDC()`, `spellAtkBonus()`,
+`spellFxList()`, `spellAtkFx()`, `spellDmgFx()` in
 `60-attacks.js` · `autoSlots()`, `casterLevel()`, `classCasterKind()`, `warlockLevel()`,
 `spellLevelTally()`, `spellAllotment()`, `cantripsKnown()`, `maxCastableLevel()` in `00-constants.js`
 · `renderSlotBubbles()`, `longRest()`, `shortRest()` in `65-resources.js` · `browseSpells()` in
@@ -22,9 +23,9 @@ pack through a searchable browser, or typed in by hand.
 
 ## How it works
 
-**The tab**, top to bottom: Spellcasting (the ability select; save DC `8 + PB + mod` and spell attack
-`PB + mod`, each plus its `spell.dc` / `spell.attack` effects from `spellDC()` / `spellAtkBonus()`,
-marked when one applies; tapping either opens its breakdown, which names the item), Spell Slots, a Concentration card that mirrors the Concentrating condition
+**The tab**, top to bottom: Spellcasting (the ability select; save DC `8 + PB + mod` plus `spell.dc`
+effects from `spellDC()`, and spell attack `PB + mod` plus `spellAtkFx()` from `spellAtkBonus()`,
+each marked when an effect applies; tapping either opens its breakdown, which names the item), Spell Slots, a Concentration card that mirrors the Concentrating condition
 (`renderConcCard()`, hidden unless one is running), Active Spells (hidden when empty), then Spells &
 Cantrips.
 
@@ -73,7 +74,19 @@ duration) asks before replacing the one already running. Only then is the slot s
 concentrates or has a positive parsed duration is pushed to `activeSpells` as
 `{id, spellId, name, level, conc, durationSec, elapsedSec:0, castAt}`, the Concentrating condition is
 reconciled, a toast says what happened, and an attack or save spell opens `promptSpellAttack()`,
-whose to-hit and DC come from `spellAtkBonus()` and `spellDC()`, effects included.
+whose to-hit and DC come from `spellAtkBonus(c, kind)` and `spellDC()`, and whose damage line takes
+`spellDmgFx()`, effects included.
+
+**Which effects a spell's numbers take (#129).** `spellFxList(c, part, kind)` is the one list. To-hit:
+`spell.attack`, plus each generic to-hit effect ticked **Include spells** (`spells:true`, the
+effect editor's tick): "all attacks", and the spell's own range when `kind` is known. Damage: the
+ticked generic damage effects, likewise. The card has no range, so it takes only the "all attacks"
+ones; the cast window and the spell's attack row know the range and take the melee- or ranged-only
+ones too. A save spell has no range, and a spell with no main damage dice (Charm Person) takes no
+damage bonus, on its row or in the cast window. An unticked generic effect is for weapons only, so Archery
+(`attack.ranged` +2, ranged weapon attacks) reaches a bow and not Fire Bolt. `spellAtkFx()` and
+`spellDmgFx()` are the sums; the card's mark and breakdown, the cast window, a spell's row, its
+breakdown and print all read the list.
 
 **Active Spells and the round.** Each entry shows its slot level, a C for concentration, elapsed /
 duration and an "expired" flag; − rd / + rd move it 6 s, + sec… asks for seconds, ✕ ends it. The
@@ -92,7 +105,8 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
 - **Prepared never gates anything** unless that is decided on purpose; today nothing reads it.
 - **One formula per spell number.** The card, the cast window, save rows and the print sheet all
   read `spellDC()` and `spellAtkBonus()`; `recompute()` used to paint the card from its own copy of
-  the formulas. A spell attack row gets the same `spell.attack` effects through `attackNumbers()`.
+  the formulas. A spell's attack row takes the same effects through `attackNumbers()`, from
+  `spellFxList()`, so the three agree whenever the row's ability is the spellcasting ability.
 - **Explicit attack settings win** — see [Attacks & damage](attacks-and-damage.md).
 - **Every rebuild-from-form save carries `src`.** Without it `updResolve()` falls back to the name,
   every edited spell reads as unknowably edited, and a same-named spell in another pack makes it
@@ -139,6 +153,7 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
 | Fixing the off-screen Add button | `width:auto` on `.br-origin`, shared by both finders | `overflow-x:hidden` on `.browse`: hides a recurrence instead of preventing one; `flex-wrap` alone: a full-width select on every screen |
 | Saying what the prepared tick means | A visible `Prep` caption, `aria-pressed` and a title | The `aria-label` alone: nobody on a phone ever sees it |
 | An item's bonus to one class's spells, such as a Moon Sickle's (#77) | Applied to the one spellcasting the sheet has; the class stays in the description | Prose: the item would do nothing for the caster it was made for. See [Computed stats & effects](../architecture/computed-stats-and-effects.md) |
+| Whether generic to-hit and damage effects count for spells (#129) | Only when the effect is ticked Include spells, and then on the card, the cast window and the row alike (Mike) | Always: no way to say "weapons only", and Archery would reach Fire Bolt. One switch per character: can't have one item count and another not |
 | Half-caster spell slots when multiclassing (#101) | Round up (SRD 5.2.1 p.26), for every ruleset, Humblewood included (Mike: follow the 2024 rules even though Humblewood was built for the old ones) | Per ruleset: Humblewood would keep the 2014 rounding down |
 
 ## Open
@@ -148,9 +163,6 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
 - No suite test names `pickSlotLevel()`, `parseDurationSec()` or `autoSlots()`; the `castSpell()` tests
   give every level free slots, so the upcast path is exercised only in the browser.
 - Casting ignores `prepared` and ritual casting; the print sheet's `◆` has no key.
-- A spell row's to-hit can disagree with the Spellcasting card when a weapon effect (`attack`,
-  `attack.<kind>`) applies — see [Attacks & damage](attacks-and-damage.md). `spell.attack` reaches
-  both.
 - **One spellcasting per sheet.** A multiclass caster with two spellcasting abilities has one DC and
   one attack bonus here, so a bonus for one class's spells (a Moon Sickle's) reads on the other's
   too.
@@ -173,3 +185,4 @@ rounds, minutes, hours, days, seconds and "instant"; anything else (Until dispel
 - 2026-10-24 — Half casters (Paladin, Ranger, Artificer) round up, matching SRD 5.2.1 p.26, for
   every ruleset including Humblewood; a Paladin 1 now gets its two 1st-level slots. → ledger L6840, #101
 - 2026-10-24 — The half-caster rounding gains its Decisions row. → ledger L6928, #101
+- 2026-11-06 — The card, the cast window and a spell's row take one set of effects, `spellFxList()`: `spell.attack` and the effects ticked Include spells. → ledger L9537, #129

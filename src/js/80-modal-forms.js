@@ -211,6 +211,10 @@ modal.addEventListener("change",e=>{
   const div=t.closest(".choice[data-choose]");
   if(div)syncChoiceLimits(div);
 });
+/* The "Include spells" tick shows only while an effect row's target is one of
+   the six generic to-hit and damage targets (#129). The item, feature, status
+   and familiar editors wire their rows apart, so it rides the modal here, once. */
+modal.addEventListener("change",e=>{const t=e.target;if(t&&t.classList&&t.classList.contains("fx-t")&&t.closest)fxRowSync(t.closest(".fxrow"));});
 
 function openGlossView(g){
   /* g is a pack keyword or the character's own entry — either way someone
@@ -248,19 +252,21 @@ function openSizePicker(){
   });
 }
 function openStatBreakdown(target){
+  if(target==="ac")return openACWindow();
   const c=contributions();
   /* a bonus to every ability check (#79) is part of each skill and of
      initiative, so it is listed there by source; on an ability it is what a
      plain check with that ability adds, listed apart from the score */
   const onCheck=target.startsWith("skill.")||target==="init";
   const ckRows=c.filter(x=>x.target==="check").map(x=>({source:x.source+" (ability checks)",value:x.value}));
-  const contr=c.filter(x=>x.target===target).concat(onCheck?ckRows:[]);
+  /* the card's spell attack lists what spellAtkBonus() adds: spell.attack and
+     the ticked "all attacks" effects (#129) */
+  const contr=(target==="spell.attack"?spellFxList(c,"attack"):c.filter(x=>x.target===target)).concat(onCheck?ckRows:[]);
   let base="", label=FX_LABEL[target]||target, grantLines="";
   const mods={};ABIL.forEach(([k])=>mods[k]=Math.floor((abilFinal(k,c)-10)/2));const pb=pbValue(c);
   if(target.startsWith("ability.")){const k=target.split(".")[1];base=`Base score ${num(character.abilities[k])}`;}
   else if(target.startsWith("save.")){const k=target.split(".")[1];const prof=effSaveProf(k);base=`Ability mod ${fmt(mods[k])}${prof?` + prof ${fmt(pb)}`:""}`;const src=grantSources("save",k);if(src.length)grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency from ${esc(src.join(", "))}</span><b>${fmt(pb)}</b></div>`;else if(character.saves[k])grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency (manual)</span><b>${fmt(pb)}</b></div>`;}
   else if(target.startsWith("skill.")){const key=target.split(".")[1];const ab=SKILLS.find(s=>s[0]===key)[2];const lvl=effSkill(key);base=`${ab.toUpperCase()} mod ${fmt(mods[ab])}${lvl>0?` + prof ${fmt(pb)}`:""}${lvl>1?` + expertise ${fmt(pb)}`:""}`;const src=grantSources("skill",key);if(src.length)grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency from ${esc(src.join(", "))}</span><b>${fmt(pb)}</b></div>`;else if((character.skills[key]||0)>0)grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency (manual)</span><b>${fmt(pb)}</b></div>`;}
-  else if(target==="ac"){const AB=armorAC(c);let p;if(AB.hasArmor){const cap=(AB.body.dexCap==null)?AB.dex:Math.min(AB.dex,AB.body.dexCap);p=`Armor ${AB.body.base} + DEX ${fmt(cap)}`;}else if(character.ac!=="")p=`Base AC ${num(character.ac)}`;else p=`10 + DEX ${fmt(mods.dex)}`;if(AB.shield)p+=` + Shield ${fmt(AB.shield)}`;base=p;}
   else if(target==="init")base=character.init===""?`DEX mod ${fmt(mods.dex)}`:`Base ${fmt(num(character.init))}`;
   else if(target==="speed")base=`Base ${num(character.speed)}`;
   else if(target==="profBonus")base=`Level ${Math.max(1,num(character.level)||1)}: ${fmt(pb-sumFx("profBonus",c))}`;
@@ -285,16 +291,92 @@ function openStatBreakdown(target){
   openModal(label+" breakdown",rows);
 }
 
+/* ---- the Armor Class window (#130) ----
+   Tapping the AC shield opens this, not a plain breakdown: a Calculated / Flat
+   switch over the lines that make the number, and its total — the same number
+   acTotal() gives the rail, youAC() and print. Calculated is the arithmetic:
+   armor (or 10 + Dex), the best shield, every `ac` effect. Flat is a number the
+   player types, the AC from their paper sheet: the struck line names what it
+   already counts, and only a status or a summoned familiar adds to it. */
+function acWindowHTML(c){
+  /* the Vitals pencil locks the switch and the Flat number, like Max HP */
+  const flat=acIsFlat(character), locked=vitalsLocked(character), dis=locked?" disabled":"";
+  const line=(l,v)=>`<div${v<0?' class="bd-neg"':""} style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>${esc(l)}</span><b>${fmt(v)}</b></div>`;
+  let b=`<div class="seg" id="acMode" style="margin-bottom:12px">${[["calc","Calculated"],["flat","Flat"]].map(([v,l])=>{const on=(v==="flat")===flat;return `<button type="button" data-acmode="${esc(v)}" class="${on?"on":""}" aria-pressed="${on?"true":"false"}"${dis}>${l}</button>`;}).join("")}</div>`;
+  if(locked)b+=`<p class="hint" style="margin:-4px 0 10px">Vitals is locked — unlock it to change your AC</p>`;
+  const AB=armorAC(c), fx=acEffects(c);
+  if(flat){
+    b+=`<div class="field"><label class="f" for="acFlat">Your AC</label><input id="acFlat" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="${esc(acFlatValue(character.ac))}"${dis}></div>`;
+    const gone=[];const put=n=>{if(n&&!gone.includes(n))gone.push(n);};
+    put(AB.bodyName);put(AB.shieldName);c.filter(x=>x.target==="ac"&&(x.kind==="item"||x.kind==="feature")).forEach(x=>put(x.source));
+    b+=`<p class="hint" style="margin:0 0 6px"><s>${esc(gone.length?gone.join(", "):"Armor, shields, items and features")}</s> ${gone.length===1?"doesn't add: your AC already counts it.":"don't add: your AC already counts them."}</p>`;
+  }else{
+    const cap=AB.hasArmor?((AB.body.dexCap==null)?AB.dex:Math.min(AB.dex,AB.body.dexCap)):AB.dex;
+    b+=`<p style="margin-bottom:6px">${esc(AB.hasArmor?`Armor ${AB.body.base} + DEX ${fmt(cap)}`:`10 + DEX ${fmt(AB.dex)}`)}</p>`;
+    if(AB.shield)b+=line(AB.shieldName,AB.shield);
+    if(AB.shieldCount>1)b+=`<p class="hint" style="margin:2px 0 4px">Only your best shield counts (${AB.shieldCount} equipped).</p>`;
+  }
+  b+=fx.map(x=>line(x.source,x.value)).join("");
+  b+=`<div style="display:flex;justify-content:space-between;border-top:2px solid var(--line);margin-top:6px;padding-top:6px"><b>Armor Class</b><b id="acTotal">${acTotal(c)}</b></div>`;
+  return b;
+}
+function openACWindow(){
+  openModal("Armor Class",acWindowHTML(contributions()));
+  /* Escape closes the window without blurring the box, so its change never
+     fires: a number typed but not yet committed is committed here. (× and the
+     backdrop blur it first, so change has already committed it.) Anything
+     else closes as it is. */
+  setDismissGuard(()=>{const b=document.getElementById("acFlat");if(b&&acFlatValue(b.value)!=null&&acFlatValue(b.value)!==acFlatValue(character.ac))setACFlat(b.value);return null;});
+  const seg=document.getElementById("acMode");
+  if(seg)seg.addEventListener("click",e=>{const t=e.target.closest("[data-acmode]");if(t&&setACMode(t.dataset.acmode))openACWindow();});
+  const box=document.getElementById("acFlat");
+  if(box)box.addEventListener("change",()=>{
+    /* taken or refused, the box then shows the number the sheet holds: the last
+       one for junk, and " 18 " or "007" tidied to 18 or 7 (QA) */
+    setACFlat(box.value);box.value=String(acFlatValue(character.ac)??"");
+    const t=document.getElementById("acTotal");if(t)t.textContent=String(acTotal());
+  });
+}
+/* Calculated or Flat. A blank Flat box is never accepted: switching to Flat
+   with no number fills it from the sheet as it stands (acFlatSeed()), so the
+   number does not jump, and going back keeps it for next time. */
+function setACMode(mode){
+  if(vitalsLocked(character))return false;
+  const flat=mode==="flat";
+  if(flat&&acFlatValue(character.ac)==null)character.ac=acFlatSeed(contributions());
+  character.acMode=flat?"flat":"calc";
+  recompute();scheduleSave();return true;
+}
+/* The Flat box: a whole number, or refused (and the caller puts the last one back) */
+function setACFlat(v){
+  if(vitalsLocked(character))return false;
+  const n=acFlatValue(v);if(n==null)return false;
+  character.ac=n;recompute();scheduleSave();return true;
+}
+
 /* ---- effect editor markup ---- */
 function fxEditorRows(effects){
   return (effects||[]).map(e=>fxRow(e)).join("");
 }
+/* A to-hit or damage row carries an "Include spells" tick (#129): unticked, the
+   effect counts for weapons only; ticked, for spells too (spellFxList()). It is
+   hidden for every other target, and a hidden tick is never saved. */
 function fxRow(e){
   const opts=fxTargets().map(([l,t])=>`<option value="${esc(t)}"${e&&e.target===t?" selected":""}>${l}</option>`).join("");
-  return `<div class="fxrow"><select class="fx-t">${opts}</select><input class="fx-v" type="number" value="${esc(e?num(e.value):1)}"><button class="icon danger fx-del" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  const sp=fxSpellable(e?e.target:fxTargets()[0][1]);
+  return `<div class="fxrow"><select class="fx-t">${opts}</select><input class="fx-v" type="number" value="${esc(e?num(e.value):1)}"><button class="icon danger fx-del" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`+
+    `<label class="fx-sp" title="Count this for spell attacks and spell damage too, not only weapons"${sp?"":" hidden"}><input type="checkbox" class="fx-s"${sp&&e&&e.spells===true?" checked":""}> Include spells</label></div>`;
+}
+function fxRowSync(row){
+  const t=row&&row.querySelector(".fx-t"), sp=row&&row.querySelector(".fx-sp");
+  if(t&&sp)sp.hidden=!fxSpellable(t.value);
 }
 function collectFx(scope){
-  return Array.from(scope.querySelectorAll(".fxrow")).map(r=>({target:r.querySelector(".fx-t").value,value:num(r.querySelector(".fx-v").value)})).filter(e=>e.value!==0);
+  return Array.from(scope.querySelectorAll(".fxrow")).map(r=>{
+    const t=r.querySelector(".fx-t").value, s=r.querySelector(".fx-s"), e={target:t,value:num(r.querySelector(".fx-v").value)};
+    if(fxSpellable(t)&&s&&s.checked)e.spells=true;
+    return e;
+  }).filter(e=>e.value!==0);
 }
 
 /* ---- feature editor ---- */
@@ -349,14 +431,17 @@ function openFeatureForm(existing){
      from — which the placeholder names. */
   const srcField=groupFieldHTML({id:"fSrc",list:"fSrcGroups",label:"Source",value:f.source,
     choices:(character.features||[]).map(featGroupLabel),placeholder:`Automatic (${featOriginLabel(f)})`});
+  /* the number the uses box opens on, and what it scales by (#132) */
+  const usesShown=num(f.uses&&usesMax(f)), usesHint=f.uses?usesScaleHint(f):"";
   openModal(existing?"Edit feature":"New feature",`
     ${lib.length?`<div class="field"><label class="f">Insert from rules pack</label><select id="fLib"><option value="">—</option>${lib.map((x,i)=>`<option value="${esc(i)}">${esc(x.name)}</option>`).join("")}</select></div>`:""}
     <div class="field"><label class="f">Name</label><input id="fName" value="${esc(f.name)}"></div>
     ${srcField}
     <div class="field"><label class="f">Description</label><textarea id="fDesc">${esc(f.description||"")}</textarea></div>
     <div class="field"><label class="f">Effects on stats</label><div id="fFx">${fxEditorRows(f.effects)}</div><button class="fx-add" id="fAddFx">+ Add effect</button></div>
-    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${esc(num(f.uses&&usesMax(f))||"")}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="fUses" type="number" min="0" value="${esc(usesShown||"")}" placeholder="0"></div>
       <div class="field"><label class="f">Resets on</label><select id="fUsesPer"><option value="long"${(f.uses&&f.uses.per)!=="short"?" selected":""}>Long rest</option><option value="short"${(f.uses&&f.uses.per)==="short"?" selected":""}>Short rest</option></select></div></div>
+    ${usesHint?`<p class="hint" id="fUsesHint" style="margin:-6px 0 12px">${esc(usesHint)}</p>`:""}
     <div class="g2"><div class="field"><label class="f">Cost per use (0 = none)</label><input id="fCost" type="number" min="0" value="${esc(num(f.cost&&f.cost.amount)||"")}" placeholder="0"></div>
       <div class="field"><label class="f">From resource</label><input id="fCostRes" list="resNamesDL" value="${esc(f.cost&&f.cost.resource||"")}" placeholder="e.g. Scrap" autocomplete="off"></div></div>
     <datalist id="resNamesDL">${(character.resources||[]).map(r=>`<option value="${esc(r.name)}"></option>`).join("")}</datalist>
@@ -370,8 +455,9 @@ function openFeatureForm(existing){
   document.getElementById("fSave").addEventListener("click",()=>{
     if(groupFieldBlocked("fSrc"))return;
     const rec={id:f.id,name:document.getElementById("fName").value.trim()||"Feature",source:tagLabel(document.getElementById("fSrc").value),description:document.getElementById("fDesc").value,effects:collectFx(fxWrap),enabled:f.enabled!==false};
-    const um=Math.max(0,num(document.getElementById("fUses").value));
-    if(um>0)rec.uses={max:um,per:document.getElementById("fUsesPer").value,used:Math.min(num(f.uses&&f.uses.used),um)};
+    /* unchanged, a byLevel or formula maximum is kept; a new number replaces it (#132) */
+    const uses=usesFromForm(f.uses,usesShown,document.getElementById("fUses").value,document.getElementById("fUsesPer").value);
+    if(uses)rec.uses=uses;
     const cAmt=Math.max(0,num(document.getElementById("fCost").value)), cRes=document.getElementById("fCostRes").value.trim();
     if(cAmt>0&&cRes)rec.cost={resource:cRes,amount:cAmt};
     /* rec is rebuilt from the form, so anything the form doesn't ask about has to
@@ -391,6 +477,8 @@ function openFeatureForm(existing){
 /* ---- item editor ---- */
 function openItemForm(existing){
   const it=existing||{id:uid(),name:"",qty:1,description:"",effects:[],equipped:false};
+  /* the number the uses box opens on, and what it scales by (#132) */
+  const usesShown=num(itemUsesMax(it)), usesHint=it.uses?usesScaleHint(it):"";
   const lib=(rules.items||[]);
   const w=it.weapon||{};
   /* itemArmor(), not it.armor: pack armor carries no structured field at all —
@@ -461,8 +549,9 @@ function openItemForm(existing){
       <div class="field" id="iADexWrap" style="${armKind==="shield"?"display:none":""}"><label class="f">Max Dex added</label><input id="iADex" value="${esc(armDex)}" placeholder="none" autocomplete="off"></div>
       <p class="hint">Light adds all your Dex, Medium caps it (usually 2), Heavy adds none. Leave <b>Max Dex</b> as the kind sets it unless the item says otherwise — type a number, or <b>none</b>.</p>
     </div>
-    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${esc(itemUsesMax(it)||"")}" placeholder="0"></div>
+    <div class="g2"><div class="field"><label class="f">Limited uses (0 = none)</label><input id="iUses" type="number" min="0" value="${esc(usesShown||"")}" placeholder="0"></div>
       <div class="field"><label class="f">Resets on</label><select id="iUsesPer">${[["long","Long rest"],["short","Short rest"],["none","Never (manual)"]].map(([v,l])=>`<option value="${esc(v)}"${((it.uses&&it.uses.per)||"long")===v?" selected":""}>${l}</option>`).join("")}</select></div></div>
+    ${usesHint?`<p class="hint" id="iUsesHint" style="margin:-6px 0 12px">${esc(usesHint)}</p>`:""}
     <div class="g2"><div class="field"><label class="f">Healing when used</label><input id="iHeal" value="${esc(use.heal||"")}" placeholder="2d4+2" autocomplete="off"></div>
       <div class="field"><label class="f">Status applied when used</label><input id="iStatus" list="itemStatusTerms" value="${esc(use.status||"")}" placeholder="Poisoned, Blessed…" autocomplete="off">${statusDatalistHTML("itemStatusTerms")}</div></div>
     <label class="equip ${use.consume?"on":""}" id="iConsume" style="font-size:12px"><span class="box"></span>Using one up reduces the quantity</label>
@@ -640,8 +729,9 @@ function openItemForm(existing){
        the FINISHED record — its section depends on the weapon flag set above.
        `used` is the player's own number and survives an edit, clamped in case
        the maximum came down. */
-    const um=Math.max(0,num(document.getElementById("iUses").value));
-    if(um>0)rec.uses={max:um,per:document.getElementById("iUsesPer").value,used:Math.min(num(it.uses&&it.uses.used),um)};
+    /* unchanged, a byLevel or formula maximum is kept; a new number replaces it (#132) */
+    const uses=usesFromForm(it.uses,usesShown,document.getElementById("iUses").value,document.getElementById("iUsesPer").value);
+    if(uses)rec.uses=uses;
     const heal=document.getElementById("iHeal").value.trim(), stName=document.getElementById("iStatus").value.trim();
     if(heal&&!parseDiceExpr(heal))return {err:`“${heal}” isn't dice this app can roll. Try 2d4+2, 1d8, or a plain number.`};
     if(heal||stName||consume){

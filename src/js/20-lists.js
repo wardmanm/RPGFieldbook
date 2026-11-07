@@ -1,7 +1,9 @@
 /* ================= structured lists ================= */
 function fxChips(effects){
   if(!effects||!effects.length)return "";
-  return `<div class="fx">`+effects.map(e=>`<span class="chip">${esc(FX_LABEL[e.target]||e.target)} ${fmt(num(e.value))}</span>`).join("")+`</div>`;
+  /* a to-hit or damage effect ticked Include spells says so (#129): otherwise
+     "To-hit (all attacks)" reads the same counted for spells or not */
+  return `<div class="fx">`+effects.map(e=>`<span class="chip">${esc(FX_LABEL[e.target]||e.target)} ${fmt(num(e.value))}${e.spells===true&&fxSpellable(e.target)?" · includes spells":""}</span>`).join("")+`</div>`;
 }
 /* The group a feature files under is its SOURCE (#98) — the label on its row,
    which the player can edit — and only when it has none, where it came from.
@@ -44,21 +46,46 @@ function featItemHTML(f){
       ${ic?"":`${f.description?`<div class="desc">${descHTML(f.description)}</div>`:""}${hasCost?`<div class="use-cost">Costs ${num(f.cost.amount)} ${esc(f.cost.resource||"resource")} per use</div>`:""}${hasUses?usesRowHTML(f):""}${on?fxChips(f.effects):fxChips(f.effects).replace(/class="chip"/g,'class="chip off"')}`}
     </div>`;
 }
-function usesMax(f){
-  const m=f&&f.uses?f.uses.max:0;
-  if(typeof m==="number")return m;
-  if(m&&typeof m==="object"&&Array.isArray(m.byLevel)){const i=Math.max(0,Math.min(totalLevel(),m.byLevel.length)-1);return num(m.byLevel[i]);}
+/* What kind of maximum a `uses.max` is: a number, {byLevel:[…]}, the level
+   ({formula:"level"}), or an ability modifier ± N ({formula:"wis+1"}, or the
+   string bare). usesMax() resolves it; the forms' hint names it (#132). */
+function usesShape(m){
+  if(typeof m==="number")return {kind:"number"};
+  if(m&&typeof m==="object"&&Array.isArray(m.byLevel))return {kind:"byLevel"};
   const fstr=(m&&typeof m==="object"&&m.formula)?m.formula:(typeof m==="string"?m:null);
   if(fstr){
     const s=String(fstr).toLowerCase();
-    if(s==="level")return totalLevel();
+    if(s==="level")return {kind:"level"};
     const mA=s.match(/^([a-z]{3})([+-]\d+)?$/);
-    if(mA&&["str","dex","con","int","wis","cha"].includes(mA[1])){
-      const mod=Math.floor((abilFinal(mA[1],contributions())-10)/2)+(mA[2]?parseInt(mA[2],10):0);
-      return Math.max(1,mod);
-    }
+    if(mA&&["str","dex","con","int","wis","cha"].includes(mA[1]))return {kind:"ability",abil:mA[1],add:mA[2]?parseInt(mA[2],10):0};
   }
+  return {kind:"other"};
+}
+function usesMax(f){
+  const m=f&&f.uses?f.uses.max:0, sh=usesShape(m);
+  if(sh.kind==="number")return m;
+  if(sh.kind==="byLevel"){const i=Math.max(0,Math.min(totalLevel(),m.byLevel.length)-1);return num(m.byLevel[i]);}
+  if(sh.kind==="level")return totalLevel();
+  if(sh.kind==="ability")return Math.max(1,Math.floor((abilFinal(sh.abil,contributions())-10)/2)+sh.add);
   return num(m);
+}
+/* What a form's "Limited uses" box saves (#132). The box opens on usesMax()'s
+   number for today (`shown`); saved as that number, a maximum that grows with
+   the level or follows an ability would freeze. So while the box still holds
+   what it opened on, a scaling maximum is kept as it was, and only a changed
+   number replaces it. `used` is clamped to the (new) number. null: no uses. */
+function usesFromForm(prev,shown,typed,per){
+  const um=Math.max(0,num(typed)), used=Math.min(num(prev&&prev.used),um);
+  if(prev&&prev.max!=null&&typeof prev.max!=="number"&&um===num(shown))return {max:prev.max,per,used};
+  return um>0?{max:um,per,used}:null;
+}
+/* The line under that box when the maximum scales, so the player knows a
+   typed number stops it; "" for a plain number */
+function usesScaleHint(f){
+  const sh=usesShape(f&&f.uses?f.uses.max:null), n=usesMax(f);
+  if(sh.kind==="byLevel"||sh.kind==="level")return `Grows with your level: ${n} now. Typing a different number stops it growing.`;
+  if(sh.kind==="ability")return `From your ${sh.abil.toUpperCase()} modifier${sh.add?` ${sh.add<0?"\u2212":"+"} ${Math.abs(sh.add)}`:""}: ${n} now. Typing a different number stops it changing.`;
+  return "";
 }
 function usesRowHTML(f){
   const u=f.uses,mx=usesMax(f);let pips="";for(let i=1;i<=mx;i++)pips+=`<button class="use-b ${i<=(u.used||0)?"used":""}" data-fuse="${esc(f.id)}" data-i="${esc(i)}" aria-label="Use"></button>`;

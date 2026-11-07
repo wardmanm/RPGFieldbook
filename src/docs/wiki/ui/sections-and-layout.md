@@ -146,7 +146,7 @@ Summoned switch, + Add). One switch per card, per character, shown by default.
 `EDIT_CARDS` in `87-notes.js` lists the thirteen keys: the eleven `NOTE_SECTIONS` ids `statuses`,
 `attacks`, `resources`, `features`, `spells`, `inventory`, `trackers`, `defences` and
 `proficiencies` (these two hide the chips' ×), plus `party` (#91; hides a roster row's edit and
-remove icons), plus `vitals` (#115; hides the portrait's add and remove buttons **and locks Max HP**,
+remove icons), plus `vitals` (#115; hides the portrait's add and remove buttons **and locks Max HP** and how AC is set (#130),
 the one pencil that also locks a number: `vitalsLocked()` reads it, `setVitalsLocked()` sets it from
 code, [Vitals & rest](../features/vitals-and-rest.md)), plus
 `journal` and `secnotes` — the two cards outside that registry, found by id (`#journalCard`,
@@ -187,7 +187,7 @@ click-delegation key.
 Title is the action ("Hide edit buttons" / "Show edit buttons"); the aria-label adds the card's
 title via `noteTitle()` — "Hide edit buttons — Features & Traits". Vitals says "Lock Vitals" /
 "Unlock Vitals" instead, and its aria-label says what that does ("Lock Vitals — hides the portrait
-buttons and locks Max HP"), since it locks a number too.
+buttons and locks Max HP and a flat AC"), since it locks a number too.
 
 ### Group headings: `.fgroup` / `.fghead` / `.fcaret`
 
@@ -485,3 +485,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-11-02 — Mike's decision: at three columns the columns always end on one line, in CSS alone; the 240px rule and its script (`SHEET_STRETCH_MAX`, `sheetLevel()`, the ResizeObserver, `.cols-even`) go; two columns and one are unchanged. → ledger L8408, #155
 - 2026-11-06 — Vitals joins `EDIT_CARDS` (thirteen): its pencil hides the portrait buttons and locks Max HP, reads "Lock Vitals" / "Unlock Vitals", and repaints Max. → ledger L9441, #115
 - 2026-11-06 — The #155 "CSS alone" check exempts exactly the HP bar's Temp observer, which measures no column. → ledger L9501, #113
+- 2026-11-06 — The Vitals pencil's label says it locks a flat AC too. → ledger L9597, #130

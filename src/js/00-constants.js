@@ -24,6 +24,11 @@ function fxTargets(){
   return g;
 }
 const FX_LABEL={};fxTargets().forEach(([l,t])=>FX_LABEL[t]=l);
+/* The six generic to-hit and damage targets, which count for weapons always and
+   for spells only when the effect is ticked "Include spells" (`spells:true`,
+   #129). The spell targets above already count only for spells. */
+const FX_SPELL_TARGETS=["attack","attack.melee","attack.ranged","damage","damage.melee","damage.ranged"];
+function fxSpellable(t){return FX_SPELL_TARGETS.includes(t);}
 
 /* ================= state ================= */
 function uid(){return Math.random().toString(36).slice(2,9)}
@@ -104,6 +109,8 @@ function blankChar(){
        gave back during the current fight, per kind: kind -> {fired, back}, so
        End combat's log line counts it (#47); End combat clears it. */
     ammoSpent:{}, ammoRecovery:"half", ammoFight:{},
+    /* #130: AC is "calc" (worked out) or "flat" (typed: `ac` holds the number) */
+    acMode:"calc",
     proficiencies:"" };
   ABIL.forEach(([k])=>{c.abilities[k]=10;c.saves[k]=false});
   SKILLS.forEach(([k])=>c.skills[k]=0);
@@ -207,12 +214,17 @@ function fpHash(v){
 }
 
 /* ================= effects engine ================= */
+/* Each entry says where it came from (`kind`), so a Flat AC can keep only what
+   comes and goes — statuses and a summoned familiar (#130) — and carries the
+   "Include spells" tick (`spells`), so the spell sums can keep the ticked ones
+   (#129). */
 function contributions(){
   const list=[];
-  (character.features||[]).forEach(f=>{ if(f.enabled!==false)(f.effects||[]).forEach(e=>list.push({source:f.name||"Feature",target:e.target,value:num(e.value)})); });
-  (character.inventory||[]).forEach(it=>{ if(it.equipped)(it.effects||[]).forEach(e=>list.push({source:it.name||"Item",target:e.target,value:num(e.value)})); });
-  (character.statuses||[]).forEach(s=>{ if(s.active!==false)(s.effects||[]).forEach(e=>list.push({source:s.name||"Status",target:e.target,value:num(e.value)})); });
-  (character.familiars||[]).forEach(f=>{ if(f.active)(f.effects||[]).forEach(e=>list.push({source:(f.name||"Familiar")+" (summoned)",target:e.target,value:num(e.value)})); });
+  const add=(kind,source,e)=>list.push({source,target:e.target,value:num(e.value),kind,spells:e.spells===true});
+  (character.features||[]).forEach(f=>{ if(f.enabled!==false)(f.effects||[]).forEach(e=>add("feature",f.name||"Feature",e)); });
+  (character.inventory||[]).forEach(it=>{ if(it.equipped)(it.effects||[]).forEach(e=>add("item",it.name||"Item",e)); });
+  (character.statuses||[]).forEach(s=>{ if(s.active!==false)(s.effects||[]).forEach(e=>add("status",s.name||"Status",e)); });
+  (character.familiars||[]).forEach(f=>{ if(f.active)(f.effects||[]).forEach(e=>add("familiar",(f.name||"Familiar")+" (summoned)",e)); });
   return list;
 }
 function sumFx(target,contribs){return contribs.filter(c=>c.target===target).reduce((a,c)=>a+c.value,0)}

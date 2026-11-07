@@ -8,7 +8,7 @@ source — the label on its row, which the player can edit — pins favourites a
 button searches every feat and trait in the loaded packs.
 
 **Code:** `renderFeatures()`, `featGroups()`, `featGroupLabel()`, `featOriginLabel()`, `featItemHTML()`, `usesMax()`,
-`usesRowHTML()`, `useFeature()`, `featCol()`, `fxChips()` in `20-lists.js`; `addFeatureFromDef()`,
+`usesShape()`, `usesFromForm()`, `usesScaleHint()`, `usesRowHTML()`, `useFeature()`, `featCol()`, `fxChips()` in `20-lists.js`; `addFeatureFromDef()`,
 `grantFeatDef()` in `50-classrace.js`; `browseFeatures()`, `featPickList()`, `featPickKind()`,
 `featPickPrereq()`, `featPickGroup()`, `addPickedFeature()` in `85-browse.js`; `openFeatureForm()`,
 `groupFieldHTML()` in `80-modal-forms.js`; `resetFeatureUses()` in `65-resources.js`; the feature handlers in
@@ -88,9 +88,15 @@ shared full-screen picker, or the plain form when no pack has feats or traits:
   keeps its name and is stamped against `features`. Both get `origin: null`; a trait files under its
   own source ("Eldritch Invocation"), a feat, which has none, under "Other".
 
-**Editing.** `openFeatureForm()` has name, source, description, effect rows, limited uses with a
-reset, a cost with a resource (a datalist of the sheet's pools), and an "Insert from rules pack"
-select over `rules.features`. The source is the group field (`groupFieldHTML()`, see
+**Editing.** `openFeatureForm()` has name, source, description, effect rows (each to-hit or damage
+row with its Include spells tick, see [Computed stats & effects](../architecture/computed-stats-and-effects.md)),
+limited uses with a reset, a cost with a resource (a datalist of the sheet's pools), and an "Insert
+from rules pack" select over `rules.features`. **Limited uses** opens on `usesMax(f)`, today's
+number; when the maximum scales, a hint under it says so (`usesScaleHint()`: "Grows with your
+level: 3 now…", "From your WIS modifier: 3 now…"). Saving goes through `usesFromForm()`: while the
+box still holds what it opened on, the original `uses.max` is kept as it was (`byLevel`, formula or
+number), and only a changed number replaces it; `used` is clamped to the new maximum (#132). The
+item form does the same ([Inventory](inventory.md)). The source is the group field (`groupFieldHTML()`, see
 [Sections & layout](../ui/sections-and-layout.md)): it offers every group on the list, and left
 empty it reads "Automatic (*the group it came from*)". Save stores the source tidied as a tag
 (`tagLabel()`), rebuilds the record from the form and carries `fav`, `origin` and `src` across.
@@ -103,6 +109,8 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
   the same string for the inventory.
 - **`fav` stays out of `UPD_FIELDS.feature`**, so an update never writes it and `updEdited()` never
   reads a star as an edit.
+- **An unchanged uses box keeps the maximum it showed.** The box shows a number, but the maximum
+  may be a `byLevel` table or a formula; saving the number would freeze it (#132).
 - **Every form save carries `fav`, `origin` and `src`.** Each fails silently in its own way — a lost
   star, a class feature that no longer goes when its class does, a copy the update tool can no
   longer tell from a hand edit — and each has its own source guard in `rules-data.js`.
@@ -126,9 +134,10 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 - **The form's rebuild dropped what it did not ask about.** `origin` and `src` were already being
   lost when favourites arrived: an edited class feature jumped to "Other" and dropped out of the
   update tool. Fixed alongside `fav`, the same guard the item form has.
-- **The form also freezes a scaling use count.** Its "Limited uses" box is filled from `usesMax(f)`
+- **The form froze a scaling use count (#132).** Its "Limited uses" box was filled from `usesMax(f)`
   and saved as that number, so editing any field of a feature whose max is `{byLevel}` or a formula
-  replaces the scaling with today's value. Traced in the code.
+  replaced the scaling with today's value. A byLevel that is 0 at the current level opens blank,
+  so the fix keeps it on an unchanged save rather than dropping its uses. → L9537
 - **A favourited granted feature loses its star** when the grant is rebuilt — a subclass change,
   a removed class, a swapped ancestry — because `addFeatureFromDef()` makes a new object with a new
   id. Levelling up only adds, so it is safe. Inventory avoids this because `grantItemByName()`
@@ -137,8 +146,6 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
   alone; 117 feats were reachable only by typing them out until the browser.
 - **`addFeatureFromDef()`'s own stamp has an empty category**, which would send the update tool down
   the name-only legacy path; `addPickedFeature()` re-stamps against the real category.
-- **`usesMax()` has no check in the suite.** Its formula handling was verified once, when it was
-  written, by a throwaway script.
 
 ## Decisions
 
@@ -150,6 +157,7 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 | The order of groups once sources move (#98) | The groups features came from, in grant order; a group named only by a source right after the group its first feature came from | Placing each group at its first member, or each feature placing its origin then its own group: one feature moving pulls a group up past others. A to Z: loses ancestry, background, class order |
 | Favourites in the ☰ menu | Moot since #103 retired the ☰ menu; it was not listed (the menu collected `.inv-sec-head`, not `.fghead`) | Adding them: every feature group would land in the menu |
 | A starred granted feature on a grant rebuild | Loses the star, left as-is: in most of those paths the feature genuinely changes | — |
+| Editing a feature whose uses scale (#132) | Keep the original maximum unless the player changes the number; a hint says it scales | Saving the number: froze it at today's value. Always keeping it: a player could never turn a scaling count into a fixed one |
 | Feats and traits in one picker | Each wrapped as `{k, e, id}` | Concatenating the lists: Humblewood ships `Glide` as both, added in different shapes, and `_id` alone does not say which list a row came from |
 | The origin of a picked feature | `null`, so it files under its own source, or "Other" without one | An origin select for the label: `origin` drives clean revert, and browse origins carry `detail`, not the `name` those predicates match |
 | Where a feat's kind and prerequisite are read | The first line of the description only | The whole body: its prose would gate half the list behind false prerequisites |
@@ -158,7 +166,7 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 
 - A feat picked from the browser gets no skill-choice prompt; `grantFeatDef()` offers those only
   when there is an origin source id.
-- The form's freezing of scaling uses, above. See [Known issues](../roadmap/known-issues.md).
+- See [Known issues](../roadmap/known-issues.md).
 
 ## History
 
@@ -174,3 +182,5 @@ empty it reads "Automatic (*the group it came from*)". Save stores the source ti
 - 2026-10-24 — The ☰ section flyout is retired, so the Favourites-in-the-menu decision is moot. → ledger L6804, #103
 - 2026-11-02 — The card is a full-width row under the Sheet's three columns, its rows two across within each group. → ledger L8262, #155
 - 2026-11-02 — One feature per row at every width (Mike); the two-across groups are gone. → ledger L8301, #155
+- 2026-11-06 — Editing a feature keeps a use count that scales (`usesFromForm()`), with a hint under the box; `usesMax()` gets its first checks. → ledger L9537, #132
+- 2026-11-06 — The item form gets the same fix, so the freeze is gone from both forms. → ledger L9597, #132
