@@ -8868,6 +8868,11 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#130 driven: junk in the box is refused and the last number comes back', c.ac === 12 && w.els.acFlat.value === '12', [c.ac, w.els.acFlat.value]);
     w.els.acFlat.value = '17'; w.on['acFlat:change']();
     ck('#130 driven: a whole number is taken and the total repainted', c.ac === 17 && w.els.acTotal.textContent === '17', [c.ac, w.els.acTotal.textContent]);
+    /* QA: " 18 " and "007" were taken as 18 and 7 but stayed in the box as typed */
+    w.els.acFlat.value = ' 18 '; w.on['acFlat:change']();
+    ck('#130 driven: a number taken with spaces round it reads back tidied in the box', c.ac === 18 && w.els.acFlat.value === '18', [c.ac, w.els.acFlat.value]);
+    w.els.acFlat.value = '007'; w.on['acFlat:change']();
+    ck('#130 driven: ...and one with leading zeros', c.ac === 7 && w.els.acFlat.value === '7' && w.els.acTotal.textContent === '7', [c.ac, w.els.acFlat.value]);
     w.els.acFlat.value = '19';                     /* typed, not yet committed by change */
     ctx.dismissModal();                            /* Escape, x and the backdrop all come here */
     ck('#130 driven: Escape keeps a number typed but not yet committed, and closes', c.ac === 19 && painted(['acDisp']).acDisp === '19' && w.closes() === 1, [c.ac, w.closes()]);

@@ -9641,3 +9641,14 @@ Escape needs the guard; × and the backdrop blur it first and `change` has alrea
 Release notes keep "armour" (their spelling throughout); the UI says "Armor".
 
 Pages: [armor & AC](../wiki/features/armor-and-ac.md).
+
+## #130 QA: the Flat box shows the number it took (coordinator, 2026-11-06)
+
+The browser QA pass found every drive step as expected. One oddity was in this branch's own code:
+the Flat box took " 18 " and "007" as 18 and 7, but went on showing them as typed until the window
+was reopened. The box's `change` handler put the stored number back only when `setACFlat()`
+refused. Now it does so every time, so a number that was taken reads back tidied. Two driven checks
+cover it, and the real browser shows it with Tab, Enter and Escape. Not changed: a Flat AC of 0 is
+taken, as `acFlatValue()` takes any whole number.
+
+Pages: [armor & AC](../wiki/features/armor-and-ac.md).

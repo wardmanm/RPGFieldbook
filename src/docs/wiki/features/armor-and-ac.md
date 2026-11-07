@@ -77,7 +77,8 @@ and a total (`#acTotal`, the number on the sheet).
 - `setACMode()` switches. Switching to Flat with no number fills it with `acFlatSeed()`, the
   Calculated total less the status and familiar effects (never below 0), so the number does not
   jump; going back keeps the number for next time. `setACFlat()` takes a whole number and refuses
-  anything else, and the box gets the last number back.
+  anything else. Either way the box then shows the number the sheet holds: the last one after
+  junk, and " 18 " or "007" tidied to 18 or 7.
 - **Escape keeps a typed number.** Escape closes the window without blurring the box, so its
   `change` never fires; `openACWindow()` registers a dismiss guard (`setDismissGuard()`) that
   commits a whole number still in the box, and anything else closes as it is. × and the backdrop
@@ -193,3 +194,4 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - 2026-11-06 — Calculated or Flat AC: one `acTotal()`, only the best shield, `character.ac` the Flat number only, the Armor Class window's switch, FLAT on the rail. → ledger L9537, #130
 - 2026-11-06 — The AC window follows the Vitals lock; Escape keeps a typed Flat number; the Flat seed is never below 0; the struck line's wording. → ledger L9597, #130
 - 2026-11-06 — A switch the Vitals lock holds looks held; only Escape needs the dismiss guard (× and the backdrop blur the box first). → ledger L9632, #130
+- 2026-11-06 — The Flat box shows the number it took, tidied (" 18 " reads 18). → ledger L9645, #130

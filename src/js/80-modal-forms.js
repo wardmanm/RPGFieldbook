@@ -331,7 +331,9 @@ function openACWindow(){
   if(seg)seg.addEventListener("click",e=>{const t=e.target.closest("[data-acmode]");if(t&&setACMode(t.dataset.acmode))openACWindow();});
   const box=document.getElementById("acFlat");
   if(box)box.addEventListener("change",()=>{
-    if(!setACFlat(box.value))box.value=String(acFlatValue(character.ac)??"");
+    /* taken or refused, the box then shows the number the sheet holds: the last
+       one for junk, and " 18 " or "007" tidied to 18 or 7 (QA) */
+    setACFlat(box.value);box.value=String(acFlatValue(character.ac)??"");
     const t=document.getElementById("acTotal");if(t)t.textContent=String(acTotal());
   });
 }
