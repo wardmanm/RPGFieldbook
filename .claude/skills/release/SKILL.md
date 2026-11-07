@@ -62,13 +62,14 @@ node scripts/pre-release-record.js                            # app only: the pr
 
 - **The pre-release record (app releases only, #127).** `node scripts/pre-release-record.js`
   checks `src/docs/PRE-RELEASE.md`, the record §1a keeps; the version it names is the one you
-  propose at Gate 1. Then check that no issue in that milestone with Priority P0 is open:
+  propose at Gate 1. Then check that no issue with Priority P0 is open in its milestone, `vX.Y.0`
+  for version X.Y.Z (the minor line's: every X.Y.x issue is on it, and there is no `vX.Y.1`, #199):
   a number printed by both of these is an open P0.
 
   ```bash
-  gh issue list --milestone "vX.Y.Z" --state open -L 500 --json number --jq '.[].number'
+  gh issue list --milestone "vX.Y.0" --state open -L 500 --json number --jq '.[].number'
   gh project item-list 3 --owner wardmanm --format json -L 2000 \
-    --jq '.items[]|select(.content.type=="Issue" and .milestone.title=="vX.Y.Z" and .priority=="P0")|.content.number'
+    --jq '.items[]|select(.content.type=="Issue" and .milestone.title=="vX.Y.0" and .priority=="P0")|.content.number'
   ```
 
   An incomplete record, a missing one, or an open P0: say which and go back to §1a (an open P0
@@ -82,9 +83,10 @@ node scripts/pre-release-record.js                            # app only: the pr
   committed first or removed, and do not propose a version until none are left.
 - **` M` lines:** list each and ask whether it belongs in this release; `git add -A` will include it.
   Do not propose a version until Mike has answered.
-- **The milestone:** read the open roadmap page (`src/docs/wiki/roadmap/<version>.md`, or
+- **The roadmap:** read the release's roadmap page (`src/docs/wiki/roadmap/<version>.md`, or
   `src/docs/archive/<version>/roadmap-<version>.md` once the pre-release has archived it). If this
-  release ships part of a milestone, say which items are in and which are not.
+  release ships only part of that page, say which items are in and which are not. (A patch always
+  ships only part of its milestone, which holds the whole minor line: the page is the plan.)
 - Check memory for a release freeze. Read the pending bullets back to Mike.
 
 ## 3. Gate 1 — the exact number

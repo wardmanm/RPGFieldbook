@@ -12,6 +12,11 @@ until `src/docs/PRE-RELEASE.md` names exactly `X.Y.Z` with all five steps `done`
 `node scripts/pre-release-record.js X.Y.Z` to see what it would say: it prints
 `pre-release X.Y.Z: complete` and exits 0, or prints the refusal and exits 1.
 
+**The milestone** for release X.Y.Z is `vX.Y.0`, the minor line's: every X.Y.x issue is on it,
+and there is no `vX.Y.1` (Mike, 2026-11-05; #199). Steps 2 and 4 file into it, and the open-P0
+check reads it, so an open P0 anywhere in the line holds the release. Step 3 picks this release's
+own issues out of it by date: the ones closed since the previous release's tag.
+
 ## Who decides what
 
 Mike typing `/release` for an app release is his instruction to prepare it. **He decides; you
@@ -228,9 +233,9 @@ the suite is green, and a changed private allowlist is committed in the private 
 3. **Table** them in the record's "Step 2" table: item, source (file and section), proposed title,
    proposed priority. Mike marks each row **file**, **skip** or **merge with #N**, and confirms or
    changes its priority. Nothing is created until every row is marked.
-4. **File** the "file" rows. The milestone is `vX.Y.Z`; the label is the **next fix version**, the
-   patch plus one (`1.9.0` → `1.9.1`, `1.9.1` → `1.9.2`), except on a P0; type is the label `bug`
-   or `task`. See "Filing an issue" below. "Merge with #N" is `gh issue comment <N> --body "<the
+4. **File** the "file" rows. The milestone is `vX.Y.0` (above); the label is the **next fix
+   version**, the patch plus one (`1.9.0` → `1.9.1`, `1.9.1` → `1.9.2`), except on a P0; type is
+   the label `bug` or `task`. See "Filing an issue" below. "Merge with #N" is `gh issue comment <N> --body "<the
    item>, from <source> (pre-release X.Y.Z)"`.
 5. **Write each number back**: into the table's Issue column, and into its source line (a
    known-issues entry gains "(#131)"; so does an As built line or a status loose end).
@@ -254,8 +259,8 @@ the suite is green, and a changed private allowlist is committed in the private 
 
 One issue is **one block, run as ONE Bash call**: Claude Code keeps no shell variables between
 calls, so a block split across two calls would run its second half with `$URL` and `$PRIORITY`
-empty. Fill in the four placeholders with literal values (`PRIORITY`, `NEXT`, the title, the
-label) and the body between the `BODY` lines; nothing else changes.
+empty. Fill in the five placeholders with literal values (`PRIORITY`, `NEXT`, the title, the
+label, and the milestone's `X.Y`) and the body between the `BODY` lines; nothing else changes.
 
 - `PRIORITY` is the priority Mike confirmed, exactly `P0`, `P1` or `P2` (uppercase). The block
   checks it first and exits on anything else, before it writes anything.
@@ -289,7 +294,7 @@ else
   LABELS+=(--label "$NEXT")
 fi
 OUT=$(mktemp)   # the body is never inside $(…): macOS bash 3.2 can't parse an apostrophe there
-gh issue create --title "<title>" --milestone "vX.Y.Z" "${LABELS[@]}" --body-file - > "$OUT" <<'BODY'
+gh issue create --title "<title>" --milestone "vX.Y.0" "${LABELS[@]}" --body-file - > "$OUT" <<'BODY'
 <the body>
 BODY
 URL=$(tail -1 "$OUT"); rm -f "$OUT"
@@ -325,13 +330,24 @@ detailed run, kept out of the repo, whose failures reach Mike only as probable b
    - Top: `# Test pass X.Y.Z`, then "Generated against `<short sha>` (<subject>) on YYYY-MM-DD",
      the sha being `git rev-parse --short HEAD` now, then how to mark: `- [x]` when a line holds,
      `FAIL: <what happened>` appended to a line that doesn't.
-   - **One `## <feature> (#N)` section per thing going into the release**: the milestone's closed
-     issues that change what a player sees (`gh issue list --milestone vX.Y.Z --state closed -L 500
-     --json number,title,labels`) and the `UNRELEASED.md` bullets, one section per feature (several
-     issues of one feature share a section). Each has three to six **high-level** lines: a scenario
-     to play through and what should hold, the way a player would try it (e.g. "Level a character to
-     4 and take a feat you don't qualify for: the list, the warning and the +1 all make sense"). Not
-     one line per detail: the specs' testing sections and the pre-drive cover the detail.
+   - **One `## <feature> (#N)` section per thing going into the release**: this release's closed
+     issues that change what a player sees, and the `UNRELEASED.md` bullets, one section per feature
+     (several issues of one feature share a section). This release's issues are the ones closed as
+     completed in the milestone since the previous release's tag, whatever their labels: a feature
+     or a P0 carries no fix-version label, and a later patch's issue fixed early ships too (#199).
+     One Bash call, since the two variables don't survive between calls:
+
+     ```bash
+     PREV=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)   # the previous release
+     T=$(git log -1 --format=%ct "$PREV")
+     gh issue list --milestone "vX.Y.0" --state closed -L 500 --json number,title,labels,closedAt,stateReason \
+       --jq ".[]|select(.stateReason==\"COMPLETED\" and (.closedAt|fromdateiso8601) > $T)|\"#\(.number) \(.title)\""
+     ```
+
+     Each has three to six **high-level** lines: a scenario to play through and what should hold,
+     the way a player would try it (e.g. "Level a character to 4 and take a feat you don't qualify
+     for: the list, the warning and the +1 all make sense"). Not one line per detail: the specs'
+     testing sections and the pre-drive cover the detail.
    - `## Across the app`: both skins, light and dark; phone width; offline; an old character
      loading; print.
    - Last, `## Device pass`: touch, Safari and Firefox, real phones, his own characters, and every
@@ -369,16 +385,16 @@ detailed run, kept out of the repo, whose failures reach Mike only as probable b
 2. Gather the failures: every `FAIL:` line in the test pass, and every `✗` line in the pre-drive
    report. Show the pre-drive's as probable bugs; Mike dismisses any he disagrees with. For each
    remaining one, propose a title and a priority, and wait for his confirmation.
-3. **P2 and P1** are filed as in step 2 (milestone, next fix version label, project, Backlog,
-   Priority). **P0** is filed in the milestone with Priority P0 and no fix version label. Each goes in
-   the record's "Step 4" table with its checklist line and its state.
+3. **P2 and P1** are filed as in step 2 (the milestone `vX.Y.0`, next fix version label, project,
+   Backlog, Priority). **P0** is filed in the milestone with Priority P0 and no fix version label.
+   Each goes in the record's "Step 4" table with its checklist line and its state.
 4. **An open P0 holds this step open**, whichever step filed it. Mike fixes it through the normal
    worktree flow. Each rerun re-checks: an issue number in both lists is an open P0.
 
    ```bash
-   gh issue list --milestone "vX.Y.Z" --state open -L 500 --json number --jq '.[].number'
+   gh issue list --milestone "vX.Y.0" --state open -L 500 --json number --jq '.[].number'
    gh project item-list 3 --owner wardmanm --format json -L 2000 \
-     --jq '.items[]|select(.content.type=="Issue" and .milestone.title=="vX.Y.Z" and .priority=="P0")|.content.number'
+     --jq '.items[]|select(.content.type=="Issue" and .milestone.title=="vX.Y.0" and .priority=="P0")|.content.number'
    ```
 5. Commit.
 
@@ -411,6 +427,7 @@ anything is cut.
 | "This loose end is clearly P1, I'll file it" | Nothing reaches GitHub before he marks the row |
 | "I'll fix the ledger link by hand" | `move-docs.js` rewrites it in place; a hand edit can shift a line and break every `L<n>` below |
 | "A P1 bug is bad, I'll hold the release" | Only an open P0 blocks |
+| "1.9.1's milestone is v1.9.1" | There is none: release X.Y.Z's milestone is `vX.Y.0`, the line's |
 | "I couldn't drive that line, I'll tick it" | It stays `- [ ]` with `(not driven: <why>)` |
 | "Main moved, but the checklist is close enough" | Ask whether to rebuild step 3; it reopens 3, 4 and 5 |
 | "I'll rebuild the checklist from scratch" | His ticks and `FAIL:` notes carry forward to every unchanged line |

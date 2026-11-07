@@ -40,11 +40,13 @@ them in `src/docs/PRE-RELEASE.md`:
    never before. `move-docs.js` checks it can write every file first, removes moved sources last,
    and if a write still fails part way, prints the exact commands that undo what it wrote.
 2. **Outstanding issues.** Loose ends from the release's specs, known issues and the status log are
-   filed (milestone `vX.Y.Z`, the next fix version's label, project #3 with Status Backlog and a
-   Priority), merged into an existing issue, or skipped. Nothing reaches GitHub before Mike marks
-   every row, and the issue numbers written back into their sources are committed straight away.
-3. **QA checklist.** `src/docs/QA-CHECKLIST.md`, rebuilt from this release's notes, issues and
-   specs plus the standing list `src/docs/qa/smoke.md`, and pre-driven by Claude in the browser.
+   filed (milestone `vX.Y.0`, the minor line's: every X.Y.x issue is on it; the next fix version's
+   label; project #3 with Status Backlog and a Priority), merged into an existing issue, or
+   skipped. Nothing reaches GitHub before Mike marks every row, and the issue numbers written back
+   into their sources are committed straight away.
+3. **QA checklist.** `src/docs/QA-CHECKLIST.md`, rebuilt from this release's notes, issues (those
+   closed in the milestone since the previous release's tag) and specs plus the standing list
+   `src/docs/qa/smoke.md`, and pre-driven by Claude in the browser.
 4. **QA bugs.** Mike's pass; every failure filed. A P0 is filed in the milestone with no fix-version
    label, and an open P0 holds this step open.
 5. **Release notes.** The pending bullets, read as a player would, rewritten where Mike agrees.

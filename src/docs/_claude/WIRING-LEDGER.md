@@ -9688,3 +9688,34 @@ traps came up in every union merge of the ledger:
 QA's follow-ups are #184–#198.
 
 Pages: [1.9.1](../wiki/roadmap/1.9.1.md).
+
+## #199: a release's milestone is its minor line's, vX.Y.0 (Mike, 2026-11-07)
+
+Every 1.9.x issue is on v1.9.0 (Mike, 2026-11-05), but the pre-release and `/release` read release
+X.Y.Z's milestone as `vX.Y.Z`. For 1.9.1 that names v1.9.1, which doesn't exist: filing in steps 2
+and 4 would fail, and the open-P0 check would find nothing, so an open P0 in v1.9.0 would never hold
+1.9.1. The milestone for release X.Y.Z is now `vX.Y.0` everywhere (decision 18 of the
+`/sign-off-notes` spec):
+
+- **The open-P0 query** reads `vX.Y.0`. It is still one query in two places, `pre-release.md` step 4
+  and `/release`'s preflight, and `docs.js` still keeps the two identical.
+- **The filing blocks** (steps 2 and 4) file into `vX.Y.0`.
+- **Step 3's test pass** takes this release's issues out of the line by date: closed as completed in
+  `vX.Y.0` since the previous release's tag, whatever their labels (Mike's call). The `X.Y.Z` label
+  alone would miss every P0, and #182 (private sources), a 1.9.1 feature with no fix label closed
+  after the v1.9.0 tag. For 1.9.1 today the query returns 19: wave 1's 16, #138, #139 and #182.
+- **`/issue`** files a bug or task into the line players have, `vX.Y.0` of `APP_VERSION`, or of the
+  pre-release record's version while one is in progress. During 2.0 work that is still v1.9.0 (Mike's
+  call; it was the earliest open milestone). Its fix label was the milestone's patch plus one, which
+  with the milestone held at v1.9.0 is 1.9.1 for the whole line. It is now the higher of the release
+  in hand's patch plus one and the highest `X.Y.Z` label on the line's open issues: 1.9.2 today, as
+  Mike has been filing (Mike's call). Its §6 adds a Step 4 row for an issue in the record's line.
+- **`/release`'s preflight** reads the release's roadmap page where it read "the milestone", since a
+  patch always ships only part of the line's milestone.
+- `/status` keeps its own milestone lookup (Mike's call).
+
+`docs.js` gains five checks: no line of the release or `/issue` skills names a `vX.Y.Z` milestone;
+the open-P0 query reads `vX.Y.0`; so do the filing blocks; step 3's query selects by the previous
+tag's date; and `/issue` takes its line from the record or `APP_VERSION`.
+
+Pages: [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md).
