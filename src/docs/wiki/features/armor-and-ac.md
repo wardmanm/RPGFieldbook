@@ -78,9 +78,10 @@ and a total (`#acTotal`, the number on the sheet).
   Calculated total less the status and familiar effects (never below 0), so the number does not
   jump; going back keeps the number for next time. `setACFlat()` takes a whole number and refuses
   anything else, and the box gets the last number back.
-- **Escape keeps a typed number.** Escape (and ×) close the window before the box's `change`
-  fires, so `openACWindow()` registers a dismiss guard (`setDismissGuard()`) that commits a whole
-  number still in the box; anything else closes as it is.
+- **Escape keeps a typed number.** Escape closes the window without blurring the box, so its
+  `change` never fires; `openACWindow()` registers a dismiss guard (`setDismissGuard()`) that
+  commits a whole number still in the box, and anything else closes as it is. × and the backdrop
+  blur the box first, so `change` has already committed it and the guard finds nothing to do.
 - **The Vitals lock** ([Vitals & rest](vitals-and-rest.md)): while `vitalsLocked(character)`,
   `setACMode()` and `setACFlat()` refuse, and the window says "Vitals is locked — unlock it to
   change your AC" with both halves of the switch and the box disabled. The number still shows and
@@ -191,3 +192,4 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - 2026-09-28 — A pack item's `ac` effect is a standing bonus only; five conditional ones (Quarterstaff of the Acrobat among them) stay in the description. → ledger L4502, #76
 - 2026-11-06 — Calculated or Flat AC: one `acTotal()`, only the best shield, `character.ac` the Flat number only, the Armor Class window's switch, FLAT on the rail. → ledger L9537, #130
 - 2026-11-06 — The AC window follows the Vitals lock; Escape keeps a typed Flat number; the Flat seed is never below 0; the struck line's wording. → ledger L9597, #130
+- 2026-11-06 — A switch the Vitals lock holds looks held; only Escape needs the dismiss guard (× and the backdrop blur the box first). → ledger L9632, #130

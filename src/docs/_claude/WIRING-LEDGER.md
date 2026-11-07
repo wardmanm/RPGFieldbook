@@ -9628,3 +9628,16 @@ Pages: [armor & AC](../wiki/features/armor-and-ac.md), [vitals & rest](../wiki/f
 [features & traits](../wiki/features/features-and-traits.md),
 [computed stats & effects](../wiki/architecture/computed-stats-and-effects.md),
 [known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md).
+
+## #130 phase 2 review: a held switch looks held; Escape's checks see the close (2026-11-06)
+
+The fresh review of phase 2 found no correctness bug. Three things fixed before merge: the Armor
+Class window's switch looked live while the Vitals lock held it (disabled, but with the accent fill
+and a pointer), so `.seg button:disabled` now dims it with a default cursor, for any `.seg`; the
+driven Escape checks now count `closeModal()` calls, because a guard that refused to close passed
+them all and the window has no other way out; and the entry above is wrong about ×, which the
+code comment and the wiki now say right: only Escape closes without blurring the box, so only
+Escape needs the guard; × and the backdrop blur it first and `change` has already committed.
+Release notes keep "armour" (their spelling throughout); the UI says "Armor".
+
+Pages: [armor & AC](../wiki/features/armor-and-ac.md).

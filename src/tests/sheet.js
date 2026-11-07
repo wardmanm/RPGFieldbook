@@ -8848,12 +8848,14 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   /* the AC window's own wiring, driven: the switch's click, the box's change
      (refused: the last number back; taken: the total repainted), and Escape */
   const win = () => {
-    const realB = ctx.document.getElementById, realO = ctx.openModal, on = {}, bodies = [];
+    const realB = ctx.document.getElementById, realO = ctx.openModal, realC = ctx.closeModal, on = {}, bodies = [];
+    let closes = 0;
+    ctx.closeModal = function () { closes++; return realC.apply(null, arguments); };
     const els = {acTotal: {textContent: ''}, acFlat: {value: ''}, acMode: {}};
     Object.keys(els).forEach(id => { els[id].addEventListener = (t, f) => { on[id + ':' + t] = f; }; });
     ctx.openModal = (t, b) => { bodies.push(String(b)); const v = /<input id="acFlat"[^>]*value="(\d*)"/.exec(b); els.acFlat.value = v ? v[1] : ''; };
     ctx.document.getElementById = id => els[id] || realB(id);
-    return {on, els, bodies, done: () => { ctx.document.getElementById = realB; ctx.openModal = realO; }};
+    return {on, els, bodies, closes: () => closes, done: () => { ctx.document.getElementById = realB; ctx.openModal = realO; ctx.closeModal = realC; }};
   };
   let c = fresh(); c.acMode = 'calc'; c.ac = '';
   let w = win();
@@ -8868,15 +8870,15 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#130 driven: a whole number is taken and the total repainted', c.ac === 17 && w.els.acTotal.textContent === '17', [c.ac, w.els.acTotal.textContent]);
     w.els.acFlat.value = '19';                     /* typed, not yet committed by change */
     ctx.dismissModal();                            /* Escape, x and the backdrop all come here */
-    ck('#130 driven: Escape keeps a number typed but not yet committed', c.ac === 19 && painted(['acDisp']).acDisp === '19', c.ac);
+    ck('#130 driven: Escape keeps a number typed but not yet committed, and closes', c.ac === 19 && painted(['acDisp']).acDisp === '19' && w.closes() === 1, [c.ac, w.closes()]);
   } finally { w.done(); }
   w = win();
   try {
     ctx.openACWindow(); w.els.acFlat.value = 'xyz'; ctx.dismissModal();
-    ck('#130 driven: Escape with junk in the box closes and keeps the last number', c.ac === 19, c.ac);
+    ck('#130 driven: Escape with junk in the box closes and keeps the last number', c.ac === 19 && w.closes() === 1, [c.ac, w.closes()]);
     X.setVitalsLocked(true);
     ctx.openACWindow(); w.els.acFlat.value = '25'; ctx.dismissModal();
-    ck('#130 driven: Escape while Vitals is locked changes nothing', c.ac === 19, c.ac);
+    ck('#130 driven: Escape while Vitals is locked changes nothing, and closes', c.ac === 19 && w.closes() === 2, [c.ac, w.closes()]);
     X.setVitalsLocked(false);
   } finally { w.done(); X.setVitalsLocked(false); }
 
@@ -8891,6 +8893,10 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   c.inventory = [{id: 'sh', name: 'Shield', equipped: true, armor: {kind: 'shield', bonus: 2}}];
   let m = shownModal(() => X.openStatBreakdown('ac'));
   ck('#130 one name: "doesn\'t add"', /<s>Shield<\/s> doesn't add: your AC already counts it\./.test(m.b), (m.b.match(/<s>.*?<\/p>/) || [''])[0]);
+
+  /* a locked switch looks locked, not only refuses (phase 2 review) */
+  const modalCSS = require('fs').readFileSync(require('path').join(__dirname, '..', 'css', '50-modal.css'), 'utf8');
+  ck('#130 a disabled half of a .seg switch looks disabled', /\.seg button:disabled\{[^}]*cursor:default[^}]*opacity:\.55/.test(modalCSS));
 
   /* a ticked effect's chip says it counts for spells */
   const chip = e => ctx.fxChips([e]);

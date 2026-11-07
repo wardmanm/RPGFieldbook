@@ -322,8 +322,10 @@ function acWindowHTML(c){
 }
 function openACWindow(){
   openModal("Armor Class",acWindowHTML(contributions()));
-  /* Escape (and ×) closes before the box's change fires, so a number typed but
-     not yet committed is committed here; anything else closes as it is */
+  /* Escape closes the window without blurring the box, so its change never
+     fires: a number typed but not yet committed is committed here. (× and the
+     backdrop blur it first, so change has already committed it.) Anything
+     else closes as it is. */
   setDismissGuard(()=>{const b=document.getElementById("acFlat");if(b&&acFlatValue(b.value)!=null&&acFlatValue(b.value)!==acFlatValue(character.ac))setACFlat(b.value);return null;});
   const seg=document.getElementById("acMode");
   if(seg)seg.addEventListener("click",e=>{const t=e.target.closest("[data-acmode]");if(t&&setACMode(t.dataset.acmode))openACWindow();});
