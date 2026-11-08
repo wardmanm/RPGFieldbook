@@ -109,6 +109,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'featPendingIncreases', 'asiRowHidden',
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
+  'isStyleChoice', 'classStyleSources', 'hasFightingStyle', 'featFeatureNamed', 'styleOptionTaken', 'findClassDef',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -8912,6 +8913,115 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
 }
 
 /* ---- end of the #130 · #129 · #132 block ---- */
+
+/* ---------- #172 · #171 the ASI step: the class's Fighting Style counts (#172);
+   every increase is asked, none past 20, in level order (#171); "+1 to two"
+   needs two abilities (#146 S2-24). One fixture pack, test-172, invented text;
+   the real SRD pack is read once, from data/srd52. */
+{
+  const keep = {ch: X.character, rules: X.rules};
+  const fsFrom = [{name: 'Archery', effects: [{target: 'attack.ranged', value: 2}]}, {name: 'Defense', effects: [{target: 'ac', value: 1}]}];
+  const styleCh = () => ({type: 'option', label: 'Choose a Fighting Style', choose: 1, from: fsFrom.map(o => Object.assign({}, o))});
+  const asiAt = L => ({[String(L)]: {choices: [{type: 'asi'}]}});
+  const T172 = {system: 'T172',
+    classes: [
+      {name: 'Fighter', hitDie: 'd10', levels: Object.assign({'1': {choices: [styleCh()]}}, asiAt(4), asiAt(6), asiAt(8), asiAt(12), asiAt(14), asiAt(16)),
+       subclasses: {Champion: {levels: {'7': {traits: [{name: 'Additional Fighting Style', description: 'You gain another Fighting Style feat.'}]}}}}},
+      {name: 'Paladin', hitDie: 'd10', levels: {'2': {choices: [styleCh()]}}},
+      {name: 'Bard', hitDie: 'd8', levels: {}, subclasses: {'College of Swords': {levels: {'3': {choices: [{type: 'option', label: 'Fighting Style: choose 1', choose: 1, from: [{name: 'Dueling'}]}]}}}}},
+      {name: 'Warlock', hitDie: 'd8', levels: {'2': {choices: [{type: 'option', label: 'Eldritch Invocations', choose: 1, from: [{name: 'Defense', description: 'A ward.'}]}]}}},
+      {name: 'Gizmo'}],
+    feats: [
+      {name: 'Defense', description: 'Fighting Style feat · Prerequisite: Fighting Style feature\nGuarded: While you wear armor you gain +1 AC.', effects: [{target: 'ac', value: 1}]},
+      {name: 'Archery', description: 'Fighting Style feat · Prerequisite: Fighting Style feature\nAim: +2 to ranged attack rolls.'},
+      {name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nHeavy Swing: You hit hard.', ability: [{str: 1}]},
+      {name: 'Grappler', description: 'General feat · Prerequisite: Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\nPin: You hold on.', ability: [{choose: ['str', 'dex'], amount: 1}]},
+      {name: 'Boon of Combat Prowess', description: 'Epic Boon · Prerequisite: Level 19+\nPeerless Aim: You rarely miss.', ability: [{choose: ['str', 'dex', 'con', 'int', 'wis', 'cha'], amount: 1, max: 30}]},
+      {name: 'Skilled', description: 'General feat\nRepeatable: You can take this feat more than once.\nTraining: Three skills.'}]};
+  X.resetRules(); X.mergeRules(T172, 'test-172');
+  const feat = n => X.rules.feats.find(f => f.name === n);
+  const sheet = (classes, extra) => {
+    X.character = X.blankChar();
+    X.character.classes = classes.map(c => Object.assign({subclass: null}, c));
+    X.character.level = classes.reduce((a, c) => a + c.level, 0);
+    Object.assign(X.character, extra || {});
+    return X.character;
+  };
+  const DEF = feat('Defense'), ARC = feat('Archery');
+
+  // ---- #172, the feature: the class's own Fighting Style counts
+  sheet([{name: 'Fighter', level: 4}]);
+  ck('#172 a Fighter 4 with no "Fighting Style" feature and no style picked has the feature, from its class',
+     X.hasFightingStyle() === true && X.featUnmet(DEF).length === 0 && X.featOfferable(DEF, {}) === true, X.featUnmet(DEF));
+  ck('#172 ...the walk names the class and the choice\'s options',
+     JSON.stringify(X.classStyleSources()) === JSON.stringify([{cls: 'Fighter', options: ['Archery', 'Defense']}]), X.classStyleSources());
+  ck('#172 isStyleChoice reads the label', X.isStyleChoice(styleCh()) && X.isStyleChoice({label: 'Fighting Style: choose 1'}) && !X.isStyleChoice({label: 'Eldritch Invocations'}) && !X.isStyleChoice(null));
+  sheet([{name: 'Paladin', level: 1}]);
+  ck('#172 a Paladin 1 is below the choice\'s level: unmet', X.hasFightingStyle() === false && X.featUnmet(DEF).length === 1 && !X.featOfferable(DEF, {}));
+  sheet([{name: 'Paladin', level: 2}]);
+  ck('#172 ...a Paladin 2 has it', X.hasFightingStyle() === true && X.featUnmet(DEF).length === 0);
+  sheet([{name: 'Bard', level: 3, subclass: 'College of Swords'}]);
+  ck('#172 a College of Swords bard at 3 counts, from its subclass\'s "Fighting Style: choose 1"', X.hasFightingStyle() === true, X.classStyleSources());
+  sheet([{name: 'Bard', level: 2, subclass: 'College of Swords'}]);
+  ck('#172 ...at 2 it does not', X.hasFightingStyle() === false);
+  sheet([{name: 'Fighter', level: 7, subclass: 'Champion'}]);
+  ck('#172 a Champion\'s level-7 trait is a second source', X.classStyleSources().length === 2 && X.classStyleSources()[1].options.length === 0, X.classStyleSources());
+  sheet([{name: 'Fighter', level: 6, subclass: 'Champion'}]);
+  ck('#172 ...at 6 there is only the class\'s own', X.classStyleSources().length === 1);
+  sheet([{name: 'Paladin', level: 1}, {name: 'Fighter', level: 1}]);
+  ck('#172 a Paladin 1 / Fighter 1 has it, from the Fighter', X.hasFightingStyle() === true);
+  {
+    let threw = '';
+    try {
+      sheet([{name: 'Gizmo', level: 5}]); const g = X.hasFightingStyle();
+      sheet([{name: 'Nobody', level: 3}]); const n = X.hasFightingStyle();
+      sheet([{name: 'Bard', level: 9, subclass: 'Nowhere'}]); const s = X.hasFightingStyle();
+      sheet([{name: 'Fighter', level: 4}]); X.character.classes.push(null, {level: 2}); const j = X.hasFightingStyle();
+      ck('#172 a class with no levels, one named nowhere, and an unknown subclass: no feature, no throw', g === false && n === false && s === false && j === true, [g, n, s, j]);
+    } catch (err) { threw = String(err && err.stack || err); }
+    ck('#172 ...the walk never throws (Review Focus 3)', threw === '', threw);
+  }
+  sheet([], {features: [{id: 'fs', name: 'Fighting Style', enabled: true}]});
+  ck('#172 a hand-made "Fighting Style" feature still counts on its own', X.hasFightingStyle() === true && X.featUnmet(DEF).length === 0);
+
+  // ---- #172, taken both ways: the class's style IS that feat
+  const optDef = (origin) => ({id: 'od', name: 'Defense', enabled: true, effects: [{target: 'ac', value: 1}], origin});
+  sheet([{name: 'Fighter', level: 4}], {features: [optDef({kind: 'class', class: 'Fighter', level: 1})]});
+  ck('#172 the Defense option picked counts as the Defense feat taken', X.featTaken('Defense') === true && X.styleOptionTaken('Defense') === true && X.featFeatureNamed('Defense') === false);
+  ck('#172 ...so the ASI step does not offer it', X.featOfferable(DEF, {}) === false);
+  ck('#172 ...Show all still lists it (the escape hatch)', X.featOfferable(DEF, {showAll: true}) === true);
+  ck('#172 ...and the other styles are offered', X.featOfferable(ARC, {}) === true);
+  ck('#172 ...case-blind', X.featTaken('defense') === true);
+  X.character.features[0].enabled = false;
+  ck('#172 ...whether or not the feature is switched on', X.featTaken('Defense') === true);
+  sheet([{name: 'Fighter', level: 4}], {features: [optDef({kind: 'race', name: 'Human'})]});
+  ck('#172 a "Defense" feature from a species is not the style', X.featTaken('Defense') === false && X.featOfferable(DEF, {}) === true);
+  sheet([{name: 'Fighter', level: 1}, {name: 'Warlock', level: 2}], {features: [optDef({kind: 'class', class: 'Warlock', level: 2})]});
+  ck('#172 ...nor one from a class with no Fighting Style choice (an invocation)', X.featTaken('Defense') === false);
+  sheet([{name: 'Fighter', level: 4}], {features: [{id: 'fd', name: 'Feat: Defense', enabled: true, effects: []}]});
+  const so = X.choiceFieldHTML(Object.assign(styleCh(), {_level: 1, _sid: 'class:Fighter'}), 0, X.findClassDef('Fighter'));
+  ck('#172 the other way: with the Defense feat, the Fighting Style option shows Defense as already yours',
+     /data-opt-i="1" disabled><span><b>Defense<\/b> \(already yours\)/.test(so) && /data-opt-i="0"><span><b>Archery<\/b> —|data-opt-i="0"><span><b>Archery<\/b> </.test(so) && /\(1 already yours\)/.test(so), so);
+  const inv = X.choiceFieldHTML({type: 'option', label: 'Eldritch Invocations', choose: 1, from: [{name: 'Defense', description: 'A ward.'}], _level: 2, _sid: 'class:Warlock'}, 0, null);
+  ck('#172 ...an invocation named like a feat keeps its name-only match: still open', /data-opt-i="0"><span><b>Defense<\/b> —/.test(inv) && !/already yours/.test(inv), inv);
+
+  // ---- #172, the real SRD pack
+  {
+    const rd = n => JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'data', 'srd52', n), 'utf8'));
+    X.resetRules(); X.mergeRules(rd('classes.json'), 'srd-classes'); X.mergeRules(rd('feats.json'), 'srd-feats');
+    sheet([{name: 'Fighter', level: 4}]);
+    const srdDef = X.rules.feats.find(f => f.name === 'Defense');
+    ck('#172 the SRD pack: a Fighter 4 meets Defense\'s "Fighting Style feature"', srdDef && X.featUnmet(srdDef).length === 0 && X.featOfferable(srdDef, {}) === true, srdDef && X.featUnmet(srdDef));
+    sheet([{name: 'Fighter', level: 4}], {features: [optDef({kind: 'class', class: 'Fighter', level: 1})]});
+    ck('#172 the SRD pack: ...and its Defense option counts as the feat taken', srdDef && X.featOfferable(srdDef, {}) === false);
+    sheet([{name: 'Rogue', level: 4}]);
+    ck('#172 the SRD pack: a Rogue 4 does not', srdDef && X.featUnmet(srdDef).length === 1);
+    X.resetRules(); X.mergeRules(T172, 'test-172');
+  }
+
+  X.character = keep.ch; X.rules = keep.rules;
+}
+/* ---- end of the #172 · #171 block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
    A real timer (Node's), borrowed for this block only: the harness's setTimeout

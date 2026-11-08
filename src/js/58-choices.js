@@ -85,6 +85,53 @@ function featPrereq(f){
 }
 function featAbilName(k){const full=Object.keys(FEAT_ABIL).find(x=>FEAT_ABIL[x]===k)||String(k);return full.charAt(0).toUpperCase()+full.slice(1);}
 function featHasFeature(re){return (character.features||[]).some(x=>x&&x.enabled!==false&&re.test(String(x.name||"")));}
+/* ---- the Fighting Style feature (#172) ----
+   No pack puts a feature NAMED "Fighting Style" on the sheet: the Fighter (1),
+   Paladin and Ranger (2) carry an `option` choice labelled "Choose a Fighting
+   Style", whose pick becomes a feature named after the option ("Defense").
+   Looking for the name alone said every one of them lacked the feature. So the
+   classes on the sheet are read the way classCasterKind() reads casters: each
+   class's rules entry, and its chosen subclass's, from level 1 to the class's
+   level — a trait named "Fighting Style" (Champion's "Additional Fighting
+   Style") or a choice labelled so (College of Swords' "Fighting Style: choose
+   1"). One entry per source; `options` are the choice's option names. DOM-free,
+   and a missing entry, `levels` or subclass adds nothing. */
+function isStyleChoice(ch){return !!(ch&&/Fighting Style/i.test(String(ch.label||"")));}
+function classStyleSources(){
+  const out=[];
+  (character.classes||[]).forEach(c=>{
+    if(!c||!c.name)return;
+    const d=findClassDef(c.name);if(!d)return;
+    const top=num(c.level);
+    const walk=levels=>{
+      if(!levels||typeof levels!=="object")return;
+      for(let L=1;L<=top;L++){
+        const lv=levels[String(L)];if(!lv||typeof lv!=="object")continue;
+        (Array.isArray(lv.traits)?lv.traits:[]).forEach(t=>{if(t&&/Fighting Style/i.test(String(t.name||"")))out.push({cls:c.name,options:[]});});
+        (Array.isArray(lv.choices)?lv.choices:[]).forEach(ch=>{if(isStyleChoice(ch))out.push({cls:c.name,options:(Array.isArray(ch.from)?ch.from:[]).map(o=>String((o&&o.name)||"")).filter(Boolean)});});
+      }
+    };
+    walk(d.levels);
+    if(c.subclass){const sc=subclassesFor(d)[c.subclass];if(sc)walk(sc.levels);}
+  });
+  return out;
+}
+/* A feature named "Fighting Style" (a custom class, a hand-added feature) still
+   counts; so does a class whose rules give one at or below its level. */
+function hasFightingStyle(){return featHasFeature(/Fighting Style/i)||classStyleSources().length>0;}
+/* a `Feat: <name>` feature on the sheet */
+function featFeatureNamed(name){const n=String(name||"").toLowerCase();return (character.features||[]).some(x=>x&&String(x.name||"").toLowerCase()==="feat: "+n);}
+/* In 2024 the class's Fighting Style option IS the feat (the Defense option and
+   the Defense feat both carry `ac` +1), and Fighting Style feats aren't
+   repeatable: a class-origin feature named as an option of a Fighting Style
+   choice that class has counts as that feat taken. Switched off or on alike. */
+function styleOptionTaken(name){
+  const n=String(name||"").toLowerCase();if(!n)return false;
+  const own=(character.features||[]).filter(x=>x&&x.origin&&x.origin.kind==="class"&&String(x.name||"").toLowerCase()===n);
+  if(!own.length)return false;
+  const src=classStyleSources();
+  return own.some(x=>src.some(s=>String(s.cls).toLowerCase()===String(x.origin.class||"").toLowerCase()&&s.options.some(o=>o.toLowerCase()===n)));
+}
 function featPartUnmet(p){
   if(p.kind==="level")return num(character.level)>=p.n?"":`level ${p.n} or higher (yours is ${num(character.level)})`;
   if(p.kind==="ability"){const v=abilFinal(p.key,contributions());const nm=featAbilName(p.key);return v>=p.n?"":`${nm} ${p.n} or higher (yours is ${v})`;}
@@ -99,7 +146,7 @@ function featPartUnmet(p){
     const ok=featHasFeature(p.pact?/Spellcasting|Pact Magic/i:/Spellcasting/i)||hasClass;
     return ok?"":(p.pact?"the Spellcasting or Pact Magic feature":"the Spellcasting feature");
   }
-  if(p.kind==="style")return featHasFeature(/Fighting Style/i)?"":"the Fighting Style feature";
+  if(p.kind==="style")return hasFightingStyle()?"":"the Fighting Style feature";
   return "";   /* unknown: shown on the row, never unmet */
 }
 /* A part as it reads inside an "or" (Strength 13, level 4), and the
@@ -150,7 +197,7 @@ function featAbilityChoices(f){
   const keys=m[1].split(/,?\s+or\s+|,\s*/).map(w=>FEAT_ABIL[w.trim().toLowerCase()]).filter(Boolean);
   return keys.length===1?[{fixed:{[keys[0]]:num(m[2])}}]:[{choose:keys,amount:num(m[2])}];
 }
-function featTaken(name){const n=String(name||"").toLowerCase();return (character.features||[]).some(x=>String(x.name||"").toLowerCase()==="feat: "+n);}
+function featTaken(name){return featFeatureNamed(name)||styleOptionTaken(name);}
 function featOfferable(f,opts){
   const o=opts||{};const nm=String((f&&f.name)||"");
   if(!nm||/^ability score improvement$/i.test(nm))return false;
@@ -171,7 +218,7 @@ function featOfferable(f,opts){
   if(o.anyCategory&&cat==="origin")return true;
   if(cat==="origin")return false;
   if(cat==="boon")return !!o.boon&&!o.anyCategory;
-  if(cat==="style")return featHasFeature(/Fighting Style/i);
+  if(cat==="style")return hasFightingStyle();
   return featUnmet(f).length===0;
 }
 /* ---- the ASI-or-feat step (#118) ----
@@ -446,8 +493,12 @@ function choiceFieldHTML(ch,ci,d){
        not offered twice — ticked and data-fixed like a granted skill, or just
        disabled in a radio group, where a tick would read as this level's pick.
        Matched by name, the only thing a sheet feature shares with its option.
-       `repeatable` (four 2024 invocations) stays open. */
-    const owned=from.map(o=>!o.repeatable&&(character.features||[]).some(f=>String(f.name||"").toLowerCase()===String(o.name||"").toLowerCase()));
+       `repeatable` (four 2024 invocations) stays open. A Fighting Style
+       option is also yours when its feat is (`Feat: Defense`, #172): the two
+       are one thing in 2024. Only for a Fighting Style choice — invocations and
+       maneuvers keep their name-only match. */
+    const style=isStyleChoice(ch);
+    const owned=from.map(o=>!o.repeatable&&((character.features||[]).some(f=>String(f.name||"").toLowerCase()===String(o.name||"").toLowerCase())||(style&&featFeatureNamed(o.name))));
     const have=owned.filter(Boolean).length,target=effectiveChoose(choose,from.length,have);
     if(!single)chooseAttr=` data-choose="${esc(target)}"`;
     inner=`<label class="f">${esc(ch.label||("Choose "+choose))}`+
