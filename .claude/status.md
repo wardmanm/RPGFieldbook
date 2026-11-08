@@ -2,11 +2,14 @@
 Updated: 2026-11-08 · Branch: main
 
 ## Current focus
-1.9.1 wave 2 is merged on main, not pushed (`src/docs/wiki/roadmap/1.9.1.md`): main is 56 commits
-ahead of origin, suites green, artifact rebuilt. Waiting on Mike's QA of main before the push.
-Next: wave 3 (Backgrounds & Humblewood, Class training, #140), then the 1.9.1 pre-release.
+1.9.1 wave 2 is merged and pushed (`src/docs/wiki/roadmap/1.9.1.md`). No branch open. Next: wave 3
+(Backgrounds & Humblewood #169 → #177 → #160, Class training #137, old release assets #140), then
+the 1.9.1 pre-release.
 
 ## Recent changes
+- 2026-11-08: Pushed main (e07a136..bec7b60): wave 2's four merges, the artifact, the roadmap and
+  four smoke lines. Its 11 issues closed; #146's S2-24, S2-26 and S2-41 ticked, and W2-1–W2-4 added
+  (1.9.2). Wave-2 worktrees removed.
 - 2026-11-08: Merged wave 2 into main, one branch each: Bio chips (#121, #120, #119, #123, #131),
   Skin & settings saves (#133, #141), ASI (#172, #171, with #146 S2-24 and S2-26), Initiative (#164,
   #163). Each had a fresh review (all findings fixed) and a browser pass; 9659 checks green after the
@@ -43,9 +46,6 @@ Next: wave 3 (Backgrounds & Humblewood, Class training, #140), then the 1.9.1 pr
 - None open.
 
 ## Loose ends
-- Push main once Mike has QA'd it; then remove the four wave-2 worktrees (`scripts/wt.sh rm`).
-- At push: tick #146's S2-24, S2-26 and Size "set by hand" items; add #146's two new 1.9.2 items
-  (window prerequisites read from the sheet; a blank single-radio option or subclass not counted).
 - Five older issues from wave 2's QA for Mike to `/issue` (ledger L10190): Combatants table stays
   open into another character's fight; live region keeps the old turn on a removed actor; home
   "Classic D&D" clips at 390 px; Coins "Auto-convert" wraps at 390 px; the private 2024 pack's
