@@ -68,8 +68,8 @@ function itemWeight(it){return fnum(it&&it.weight);}            /* per unit */
 /* itemQty(), not num(it.qty)||1 (#104 review finding 2): see inventoryTotal(). */
 function itemWeightTotal(it){return itemWeight(it)*itemQty(it);}
 /* 5e: 50 coins weigh a pound. Sums every denomination the sheet holds rather
-   than coinKeys(), because an imported character can be carrying electrum the
-   current skin doesn't display — it is still in their purse. */
+   than coinKeys(): a coin weighs whether or not its row shows, and coinKeys()
+   is display order only. */
 function coinsWeight(){
   if(character.coinWeight===false)return 0;
   const c=character.coins||{};

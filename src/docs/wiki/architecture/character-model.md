@@ -15,7 +15,8 @@ in `20-lists.js`, `encMode()` in `25-origins-items.js`,
 `noteMap()` in `87-notes.js`, `combatSectionsOf()` in `87-combat.js`,
 `cleanParty()`, `cleanCombatants()` (#91, in `migrate()`'s own cleaning block) in `87-initiative.js`, `cleanInvLog()`, `INV_LOG_SIZES` (#47) in `67-trade.js`, `chipList()`,
 `advancementOf()` in `41-chips.js`; the #103 pass `migrateSheet103()`, `mergeNoteInto()`,
-`liftLanguages()` in `71-char-io.js`, `ensureDefaultLanguages()` in `41-chips.js` · **Tests:** `char-update.js`
+`liftLanguages()` in `71-char-io.js`, `ensureDefaultLanguages()`, `swapDefaultLanguages()` in `41-chips.js`;
+`changeSystem()` in `75-home-theme.js` · **Tests:** `char-update.js`
 (the stamp is preserved and never advanced; unknown fields survive), `tables.js` (the round trip is
 idempotent), `sheet.js` (sub-key defaults arrive through `migrate()`; malformed glossary entries and
 junk list items, repaired, idempotent, and rendered) · **See also:**
@@ -201,12 +202,20 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
   not be carried over: every sheet opened unlocked, by decision, and the old key stays unread.
 - **`system` is not a pack name.** It is `"dnd"` or `"humblewood"`, and `migrate()` enforces that.
   Supplements such as `XGE` and `TCE` are packs, never systems a character is created in.
+- **`system` changes in one place** (#133): Settings → Sheet display → Game system, through
+  `changeSystem()`, which sets it and then swaps the default languages with
+  `swapDefaultLanguages(c, sys)`. Each `system` chip the new ruleset doesn't list (case-blind,
+  `defaultLanguagesFor()`) goes, then each default the character lacks is added, stamped `system`.
+  Chips with `src:""` (the player's) and `race:`/`bg:` (grants) are never touched, whatever their
+  names, and nothing else changes: not the coins, not `invLog`, not the ancestry. The skin never
+  writes `system`. No field is added, so nothing migrates.
 
 ## Decisions
 
 | Question | Decision | Rejected, and why |
 |---|---|---|
 | What `migrate()` does with fields it does not know | Keep every field, then normalize the known structured ones | A field whitelist: new fields were silently dropped on every load, the autosave restore included (L284) |
+| A system change's default language chips (#133) | Swapped: a `system` chip the new ruleset doesn't list goes, its defaults are added; the player's and the grants' chips are never touched (`swapDefaultLanguages()`, beside `ensureDefaultLanguages()`) | Leaving them: the old ruleset's defaults stay behind. Re-granting the species' and background's languages from the rules during the swap: a second grant path for a case no shipped pack reaches (L9760) |
 | What `appVersion` means | The version last *reconciled* against | "Last saved with": `migrate()` runs on every load, so stamping there erases the mismatch the update tool needs (L702) |
 | Where a new character is stamped | `newCharacter()` | `blankChar()`: it runs at top level before `30-version.js` defines `APP_VERSION`, a TDZ white screen (L702) |
 | Where the Max HP lock lives (#115) | `editHide.vitals`, the Vitals pencil, absent (unlocked) by default; read only by `vitalsLocked()` | `hp.locked` inside `hp` (L2105): the sub-key fill gave every old sheet a locked default, so a deliberate lock couldn't be told from it. A top-level `hpLocked`: no better |
@@ -227,8 +236,10 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - `newCharacter()` reads the default languages from the loaded packs; a sheet made before a cold
   rules cache has loaded gets the fallback Common even where a pack would declare others. Inert
   today: no pack declares `defaultLanguages` ([Known issues](../roadmap/known-issues.md)).
-- Changing a sheet's system (Settings → Skin) does not swap its `system` chips for the new
-  ruleset's (spec §4 asked for it). Inert today for the same reason.
+- A default the swap drops that the species also grants is dropped with it (#133, decision 9):
+  `grantLanguages()` skips a name already present, so a species granting Common has no `race:` chip
+  of its own while the `system` chip covers it. Inert today: every ruleset's default is Common, so
+  nothing is dropped ([Known issues](../roadmap/known-issues.md)).
 
 ## History
 
@@ -263,3 +274,4 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - 2026-11-06 — `newCharacter()` marks `wpnEquipInit` done: a new sheet's weapons arrive equipped, and the first reload no longer re-equips one the player unequipped. → ledger L9101, #128
 - 2026-11-06 — `hp.locked` is retired: gone from `blankChar()`, kept unread on an old sheet; the Max HP lock is `editHide.vitals`, so every sheet opens unlocked. → ledger L9441, #115
 - 2026-11-06 — `acMode` (`"calc"`) joins `blankChar()`; `ac` becomes the Flat number only; `migrate()` makes a Flat with no whole number Calculated. Effects may carry `spells: true` (#129), kept as they are. → ledger L9537, #130
+- 2026-11-07 — `system` changes only from Game system, through `changeSystem()`; `swapDefaultLanguages()` swaps the `system` chips, so the open gap about a changed system's chips is closed and its latent cousin (a default a species also grants) recorded. → ledger L9760, #133

@@ -70,3 +70,12 @@ Bullets below this line — leave the heading in place.
   Archery's +2, for one, now goes only on ranged weapons, as the rules say, and no longer on a
   spell like Fire Bolt.
 - Editing a feature or an item no longer stops its uses growing with your level.
+- Skin now only changes how Fieldbook looks. It no longer changes the open character's game, and
+  opening a character from the other game no longer switches it. To change a character's game, use
+  Settings → Sheet display → Game system, which tells you what will change before it does.
+- A D&D character's sheet says Race and its top bar reads D&D Character Sheet, and a Humblewood
+  character's says Ancestry, whichever skin you use.
+- A Humblewood character holding platinum or electrum (from a D&D sheet, or an imported one) now
+  sees them on the Coins card until they're spent or converted.
+- When a settings change can't be saved, because your browser's storage is full, Fieldbook now says
+  so once instead of quietly losing it the next time you open it.

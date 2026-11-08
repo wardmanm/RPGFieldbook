@@ -27,8 +27,10 @@ Two layers, joined at runtime:
   single packs (#102); they are cached in IndexedDB. → [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md),
   [Storage](architecture/storage.md)
 
-A **character** is created in one of two **systems**, `"dnd"` or `"humblewood"`, which also picks
-the **skin** (`classic` or `humblewood`). Packs are stamped with a `system` of their own:
+A **character** is created in one of two **systems**, `"dnd"` or `"humblewood"`, and changed later
+only from Settings → Sheet display → Game system. The **skin** (`classic` or `humblewood`) is the
+look, the player's to choose for the whole app; no character sets it (#133). Packs are stamped with a
+`system` of their own:
 
 | Pack dir | `system` stamp | Role | Where |
 |---|---|---|---|
@@ -140,7 +142,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `25-origins-items.js` | `ORIGIN_KINDS`, item origin and cost, weight and encumbrance, size, `itemArmor()`, `armorAC()`, `acTotal()` | [Inventory](features/inventory.md), [Armor & AC](features/armor-and-ac.md), [Vitals & rest](features/vitals-and-rest.md) |
 | `30-version.js` | `APP_VERSION`, `DATA_VERSIONS`, `CHANGELOG`, `UPDATE_REPO`; `checkForUpdate()`, the update pill; data versions (`cmpDataVer()`) and `checkForDataUpdate()` | [Settings & updates](features/settings-and-updates.md), [Rules packs](architecture/rules-packs.md), [Data archive](architecture/data-archive.md) |
 | `40-sheet.js` | `selectTab()`, `scrollToCard()`; `invSection()`, item uses, `renderInventory()`; statuses, concentration card, familiars; the Sheet header (class line, class and familiar menus, level badge) | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Conditions & concentration](features/conditions-and-concentration.md), [Sections & layout](ui/sections-and-layout.md) |
-| `41-chips.js` | chips (defences, senses, languages), their grants, the advancement table, default languages | [Vitals & rest](features/vitals-and-rest.md), [Character model](architecture/character-model.md), [Grants](architecture/grants-and-provenance.md), [Story & notes](features/story-and-notes.md) |
+| `41-chips.js` | chips (defences, senses, languages), their grants, the advancement table, default languages and their swap on a system change | [Vitals & rest](features/vitals-and-rest.md), [Character model](architecture/character-model.md), [Grants](architecture/grants-and-provenance.md), [Story & notes](features/story-and-notes.md) |
 | `50-classrace.js` | rules lookups, emblems (`iconSVG()`), subclasses; the grant machinery (`applyEquipGrants()`, `revertEquipmentGrants()`, `grantFeatDef()`, `runExtraChoices()`); `renderClassRace()` | [Grants](architecture/grants-and-provenance.md), [Character building](features/character-building.md) |
 | `52-race.js` | ancestry/species pickers, `systemOf()` | [Character building](features/character-building.md) |
 | `54-background.js` | background pickers | [Character building](features/character-building.md) |
@@ -152,11 +154,11 @@ name says where its first function came from, not everything it holds: `migrate(
 | `65-resources.js` | death saves, rests, Hit Dice, dice expressions, resource trackers, slot bubbles | [Vitals & rest](features/vitals-and-rest.md), [Class resources](features/class-resources.md) |
 | `66-coins-hp.js` | portrait, coins and the Adjust transaction, HP entry, `renderAll()` | [Inventory](features/inventory.md), [Vitals & rest](features/vitals-and-rest.md) |
 | `67-trade.js` | the inventory log (one line per item or coin change), its undo and its dialog, and the trade window | [Inventory](features/inventory.md), [Grants & provenance](architecture/grants-and-provenance.md), [Character model](architecture/character-model.md) |
-| `70-persistence.js` | localStorage keys, the character library, backups, IndexedDB with timeouts, LZW | [Storage](architecture/storage.md), [Home & characters](features/home-and-characters.md) |
+| `70-persistence.js` | localStorage keys, the character library, backups, settings saves and their toast, IndexedDB with timeouts, LZW | [Storage](architecture/storage.md), [Home & characters](features/home-and-characters.md) |
 | `71-char-io.js` | the rules cache's boot reads (localStorage, then IDB hydration), `migrate()`, export/import, print | [Character model](architecture/character-model.md), [Home & characters](features/home-and-characters.md), [Storage](architecture/storage.md) |
 | `72-char-update.js` | pure diff of a sheet against its packs: `stampSrc()`, `diffCharacter()` | [Rules-update tool](features/rules-update-tool.md) |
 | `73-char-update-ui.js` | the review modal for that diff; the prompt on load, and after the boot hydration | [Rules-update tool](features/rules-update-tool.md), [Storage](architecture/storage.md) |
-| `75-home-theme.js` | home screen, `newCharacter()`, `applyTheme()` (the skin is `settings.skin`, set by the Skin control) | [Home & characters](features/home-and-characters.md), [Theming & icons](ui/theming-and-icons.md) |
+| `75-home-theme.js` | home screen, `newCharacter()`, `applyTheme()`, a character's system change (`systemChangePlan()`, `systemChangeLines()`, `changeSystem()`) | [Home & characters](features/home-and-characters.md), [Theming & icons](ui/theming-and-icons.md), [Settings & updates](features/settings-and-updates.md) |
 | `80-modal-forms.js` | `openModal()` with dismiss guards and focus; the item, feature, spell, status and familiar forms; the Armor Class window | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md), [Armor & AC](features/armor-and-ac.md) |
 | `85-browse.js` | `openBrowse()`, the full-screen finder; item, spell and feat pickers | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md), [Features & traits](features/features-and-traits.md) |
 | `86-tables.js` | `findTable()`, `tableHTML()` | [Rules & tables](features/rules-and-tables.md) |
@@ -206,7 +208,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | **data kit** | `tools/data-kit/fbdata.py` and the converter, attached to each app release as `fieldbook-data-kit-<ver>.zip`; `fbdata.py build` turns a 5e-tools export into an archive Fieldbook opens. → [Data kit](data/data-kit.md) |
 | **supplement** | A pack that adds to a system rather than being one (XGE, TCE, homebrew) |
 | **SRD 5.2** | The pack of the D&D rules Wizards of the Coast publishes free under CC-BY-4.0, the System Reference Document: `data/srd52/`, `system: "SRD 5.2"`, built by `convert.py srd` from the SRD-flagged entries of the 5e-tools dump and matched to the SRD 5.2.1 PDF. A system read as D&D (`systemOf()`). Not the same as the `srd52` *flag* in the dump, which marks what the SRD contains. → [SRD 5.2](data/srd.md) |
-| **skin** | The visual theme, `classic` or `humblewood`; follows the character's system |
+| **skin** | The visual theme, `classic` or `humblewood`: colours, lettering and frames, for the whole app. The player's choice; it never follows or changes a character's system |
 | **sid** | A grant's source id: `race:<name>`, `bg:<name>`, `class:<name>`, `subclass:<class>:<sub>` — from `originSid()` |
 | **grant** | Something a source added to the character (a proficiency, feature, item, gold), recorded with its sid so removing the source reverts it |
 | **origin** | Where an item came from — one of `ORIGIN_KINDS` (class, background, ancestry, feat, starting, purchased, found, …), shown as a letter badge |
@@ -249,3 +251,4 @@ name says where its first function came from, not everything it holds: `migrate(
 - 2026-11-05 — `docs/` ships four files: `private-sources.md`, the owner's guide to private sources, joins the three. → ledger L8943, #182
 - 2026-11-06 — The code map: `71-char-io.js` holds both boot reads of the rules cache, `73-char-update-ui.js` the prompt after the boot hydration. → ledger L9281, #134, #135
 - 2026-11-06 — The code map gains `90-fonts.css`, and the scripts list `fetch-fonts.js`. → ledger L9357, #144
+- 2026-11-07 — The skin is look only, and a character's system changes only from Game system; the code map's `75-home-theme.js` and `41-chips.js` lines name the system change. → ledger L9760, #133

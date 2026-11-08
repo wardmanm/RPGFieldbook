@@ -9756,3 +9756,77 @@ side window's row formats (P2, P0, a feature's `—`, `(noted)`, `(priority not 
 `recordProblem()` and `parseRecord()`.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md).
+
+## #133, #141: Skin is look only; every settings save says so (Mike, 2026-11-07)
+
+Built from the approved spec, `src/docs/specs/2026-11-07-skin-settings-saves-design.md`, and its
+plan, on `issue/133-skin-settings-saves` (wave 2 of 1.9.1).
+
+**#133, Skin is look only.** The Settings Skin control no longer writes `character.system`, and
+opening, making or importing a character (`loadCharById()`, `newCharacter()`, `finishImport()`) no
+longer writes `settings.skin`; `skinForSystem()` and `systemForSkin()` are gone. What reads like the
+game follows the open character's system: `raceTerm()` (so "+ Race" / "+ Ancestry", the features
+list's fallback heading, the credits line), the picker's example name, and `applyTheme()`'s wordmark
+and page title, which follow the skin only with no character open. The Skin row reads "How Fieldbook
+looks: colours, lettering and frames. It doesn't change any character.", and the New character hint
+says what the system really sets. A character's system is changed from a new first group on Settings
+→ Sheet display, *Game* → **Game system** (`#segSystem`). A tap on the other system works out the change
+first with `systemChangePlan()` (pure), asks with `askConfirm()` in sentences read only from that
+plan (`systemChangeLines()`), and on Yes applies the same plan with `changeSystem()`: the system,
+then `swapDefaultLanguages()`, new in `41-chips.js` beside `ensureDefaultLanguages()`, which swaps
+the `system` chips for the new ruleset's defaults and never touches the player's or a grant's. The
+control's `on` class and `aria-pressed` move only on Yes. Coins are never converted and nothing is
+logged (decision 10): `coinKeys()` shows PP and EP on a Humblewood sheet while it holds some, which
+also fixes older Humblewood sheets whose electrum was hidden but weighed.
+
+**#141, every settings save says so.** `saveSettingsSaid(what)`, beside `saveSettings()` in
+`70-persistence.js`, toasts a refused write as an error that stays ("Couldn't save your settings:
+*why*. Changes to settings last until you close Fieldbook.", or "Couldn't save *what*: *why*."), once
+per sentence a session, re-armed by a save that lands, and quiet when `storageBlockedWhy()` is set.
+The eleven silent callers (Skin, Mode, borders, Icon tabs and Tap outside on Appearance; the top
+bar's theme button; a Settings page switch; a Rules category tap; the home screen's Skin, Mode and
+borders) and both pills' × use it; `_pillSaved()` goes. Boot's fold of old sources keeps a refused
+save in `extSaveError`, so Settings → Extensions shows it, as the boot source check does. No bare
+`saveSettings();` is left in `src/js`.
+
+Tests: `sheet.js` block A (shared app, above `t118EndToEnd()`): the open paths leave the skin,
+`raceTerm()` and the wordmark under either skin, Import settings' skin (Review Focus 5), the swap,
+`coinKeys()` with junk counts, Convert, the trade window's give side, the plan's purity, the
+warning's sentences and plurals, round trips with and without declared defaults, the question's
+title and buttons, and the control driven through `openSettings()`'s handler with Cancel then Yes.
+Block B (fresh `BS.app()` at the file's end): once a session, re-armed, the pill's own sentence,
+`rbOpenCat()`, storage working, blocked storage, and the boot fold refused and landing.
+`rules-data.js`: the skin's two writers, the Settings handlers, the row and its help, the hint, every
+`saveSettings()` answer used, each named site through the helper, `_pillSaved()` gone, the fold
+line; the `#swBackdrop` and page-switch checks rewritten in place. A throwaway Node check compared
+`systemChangePlan().langs` with `changeSystem()` over four chip mixes, both systems and both default
+maps: no mismatch.
+
+Builder's calls against the plan:
+- The plan's "Convert on a Humblewood sheet holding ep:50 folds it into sp (+250)" is not what the
+  unchanged `convertCoins()` does: 2,500 cp re-issues as 25 GP. The check asserts that, and 1 PP
+  3 EP as 11 GP 5 SP.
+- `changeSystem()` returns the swap's `{drop, add, keep}` (the plan said void), so a check compares
+  it with the plan's `langs`. With no declared defaults `keep` is `["Common"]`: "every list empty"
+  is read as nothing dropped or added.
+- On Yes, `confirmSystemChange()` also calls `renderFeatures()` (the features list's ancestry
+  heading falls back to `raceTerm()`), and answers false if the open character was replaced while
+  it asked.
+- "Your 1 PP stays" is singular; any other count reads "stay".
+- `docs.js`'s leak scan reads `fn('humblewood', …)` and `["humblewood",` in a suite as a private
+  pack read, so block A passes a `HW` constant and the `rules-data.js` regex spells the quote `\x22`.
+- Block A's asking checks stub `askConfirm()` with a thenable that answers at once, so they finish
+  before the async chain borrows the shared character.
+
+Not done here: the screenshots and the drive (plan Task 5) wait for the shared browser. The smoke
+list's line 78 is Mike's; the spec's §10 proposes its new wording. Left open: an ancestry the new
+system's picker leaves out only by `excludeSystems` (Tasha's Custom Lineage going to Humblewood) gets
+no "stays on the sheet" sentence, since the spec's rule is `systemOf()` of its definition; the
+Credits page's `raceTerm()` line reads the old word until Settings is reopened.
+
+Pages: [theming & icons](../wiki/ui/theming-and-icons.md), [settings & updates](../wiki/features/settings-and-updates.md),
+[home & characters](../wiki/features/home-and-characters.md), [storage](../wiki/architecture/storage.md),
+[character model](../wiki/architecture/character-model.md), [character building](../wiki/features/character-building.md),
+[inventory](../wiki/features/inventory.md), [overview](../wiki/overview.md), [decisions](../wiki/decisions.md),
+[known issues](../wiki/roadmap/known-issues.md), [screenshot QA](../wiki/process/screenshot-qa.md),
+[1.9.1](../wiki/roadmap/1.9.1.md).

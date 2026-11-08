@@ -8,7 +8,7 @@ page exists for: **a write that does not land must say so.** An empty `catch` ar
 write is how five loaded packs quietly came back as two.
 
 **Code:** `scheduleSave()`, `saveNow()`, `showSaveResult()`, `retrySave()`, `leaveCharacterOk()`,
-`libLoad()`, `libSave()`, `libTouch()`, `backupCharacter()`, `storageWhy()`, `storageBlockedWhy()`, `saveSettings()`, `saveRulesCache()`, `idbReady()`, `idbOpen()`, `idbTx()`, `idbTimeout()`,
+`libLoad()`, `libSave()`, `libTouch()`, `backupCharacter()`, `storageWhy()`, `storageBlockedWhy()`, `saveSettings()`, `saveSettingsSaid()`, `saveRulesCache()`, `idbReady()`, `idbOpen()`, `idbTx()`, `idbTimeout()`,
 `lzwCompress()`, `lzwDecompress()`, `readRulesCacheString()`, `cacheBytes()` in
 `70-persistence.js`; `loadRulesCacheLocal()`, `loadRulesCacheAsync()`, `finishImport()` in `71-char-io.js`;
 `promptAfterRulesRestored()` in `73-char-update-ui.js`;
@@ -18,7 +18,9 @@ write is how five loaded packs quietly came back as two.
 (the fallback, the loud path, the LZW round trips), `char-update.js` (backup semantics, the index
 read-back, the refused-write paths and leaving a character), `sheet.js`'s boot & storage block (the
 real `boot()` with storage blocked, which cache copy boot keeps, the boot autoload's prompt, a
-refused removal) · **See also:** [Character model](character-model.md), [Rules packs](rules-packs.md),
+refused removal; and #141's block at its end: a refused settings save said once, re-armed, quiet
+when blocked, the boot fold kept), `rules-data.js` again (every `saveSettings()` answer used, each
+silent caller through `saveSettingsSaid()`) · **See also:** [Character model](character-model.md), [Rules packs](rules-packs.md),
 [Home & characters](../features/home-and-characters.md),
 [Rules-update tool](../features/rules-update-tool.md)
 
@@ -100,13 +102,23 @@ leave the next launch with no rules (see [Rules packs](rules-packs.md)). An inst
 changes nothing, so it saves nothing either.
 
 **Settings** are one `localStorage` key, written whole by `saveSettings()` after every change.
-It returns `""`, or why the write was refused (`storageWhy()`). The toggles ignore that, since each
-one is re-saved at the next change. Import settings reports it: "Settings imported for this
-session only: …". The Extensions page (#102) reports it too: a source added, removed, switched or
-folded says "Couldn't save …" on its status line, and an install puts it in its toast. The boot
-source check stays quiet, so a save refused there is kept (`extSaveErrorText()`) and the page shows
-it as "Couldn't save your sources at the last check: …" until a later save lands. A pill's ×
-toasts it ("Couldn't save that you cleared the notice: …").
+It returns `""`, or why the write was refused (`storageWhy()`), and every caller uses that answer
+(#141). A caller with a line of its own reports there: Import settings ("Settings imported for this
+session only: …"), the Extensions page (#102: a source added, removed, switched or folded says
+"Couldn't save …" on its status line, and an install puts it in its toast). Every other save goes
+through **`saveSettingsSaid(what)`**: the Appearance controls (Skin, Mode, borders, Icon tabs, Tap
+outside), the top bar's theme button, a Settings page switch, a Rules category tap, the home
+screen's Skin, Mode and borders, and the two pills' ×. On a refusal it toasts an error that stays
+until tapped (#87) and shows over Settings and the home screen: "Couldn't save your settings: *why*.
+Changes to settings last until you close Fieldbook.", or with `what` "Couldn't save *what*: *why*."
+(the pills: "that you cleared the notice"). Each sentence is said **once a session**: a page switch
+and a category tap save too, so a full disk would otherwise toast at every ordinary tap. A save that
+lands forgets what was said, so the next refusal is said again; the memory is a module `Set` in
+`70-persistence.js`, never saved. It stays quiet where `storageBlockedWhy()` is set, because boot's
+alert has already said nothing will be kept. The boot source check stays quiet too, so a save
+refused there is kept (`extSaveErrorText()`) and the page shows it as "Couldn't save your sources
+at the last check: …" until a later save lands; boot's own fold of old sources
+(`foldLegacySettings()`) keeps a refused save the same way.
 
 **Every IndexedDB call is timed out.** `idbOpen()` and each `idbTx()` go through `idbTimeout()`,
 which rejects after `IDB_TIMEOUT` (4000 ms). A missing or throwing IndexedDB rejects at once. A
@@ -167,8 +179,10 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
   `showSaveResult()`), leaving a character (`leaveCharacterOk()`), moving a pre-library save
   (`migrateOldChar()`), deleting a character and changing the autoload star (`deleteCharacter()`,
   `setAutoload()`, which alert, since the home screen covers the strip), `backupCharacter()`,
-  `saveRulesCache()`, Remove and Remove all (`rulesSaveReport()`), and Import settings for both of
-  its writes.
+  `saveRulesCache()`, Remove and Remove all (`rulesSaveReport()`), Import settings for both of
+  its writes, and every settings save (#141: `saveSettingsSaid()`, or the caller's own line). A
+  bare `saveSettings();` whose answer is thrown away is a break of constraint 2, and
+  `rules-data.js` fails on one.
 - **A storage read can throw too.** Every `localStorage` and `indexedDB` touch on the boot path is
   in a `try`; a browser that blocks storage throws on `getItem`, and once that stopped boot at its
   first line (#142). Where storage can't be used at all, boot says so (`storageBlockedWhy()`).
@@ -237,11 +251,12 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 | What a failed backup returns | `{error, copy}`, so the caller can offer a download | Returning `null`: every failure looked the same and dead-ended the update tool (L1116) |
 | Which rules copy boot keeps (#134) | The `localStorage` copy whenever there is a readable one, since a save IndexedDB takes deletes it; IndexedDB's only otherwise | A saved-at stamp on both copies: both stored formats change, and the `localStorage` stamp can't be written atomically with its copy. Deleting the IndexedDB copy when a save falls back: a delete whose open is slow can land after a later save and remove the newest copy (L9281) |
 | How boot reports storage it can't use (#142) | One alert once the home screen is up, as `migrateOldChar()`'s failure does | The save strip: no character is open for it to be about, and the home screen covers it (L9281) |
+| How a refused settings save is reported (#141) | An error toast, through one helper beside `saveSettings()`; callers that already report keep their own line | A status line on each Settings page: three pages and the home screen would each need one. The character save strip: it is about the open character, and its button saves the character to a file (L9760) |
+| How often it is said (#141) | Once per sentence a session, re-armed by a save that lands; quiet when `storageBlockedWhy()` is set | On every refused save: a page switch and a category tap each save, so a full disk would toast on every tap (L9760) |
+| The boot fold's refused save (#141) | Kept in `extSaveError`, so Settings → Extensions shows it, as the boot source check's is | A toast at boot: it would sit over the first paint about a conversion the player never asked for (L9760) |
 
 ## Open
 
-- **`saveSettings()` returns why it was refused, but only Import settings reports it.** The toggles
-  re-save at their next change.
 - **Blocked storage is verified in the harness, not yet in a browser.** The three shapes (no
   `localStorage`, every call throwing `SecurityError`, the property throwing) run the real `boot()`;
   no browser with cookies blocked for the page has been opened.
@@ -267,3 +282,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-26 — `settings.sources`, `packOrigin` and `dismissedUpdates` replace `rulesSources`; the Extensions page's folds are `setCollapse` `ext:` keys; a source save refused at the boot check is kept and shown on the page. → ledger L7428, #102
 - 2026-11-05 — `settings.sources` holds a private GitHub source's token, on this device only; `extSettingsForExport()` blanks it in the Settings export and `extKeepTokens()` keeps the device's own on import. → ledger L8943, #182
 - 2026-11-06 — A storage read can no longer stop boot, and storage the browser blocks is said at boot; boot keeps the newest rules copy, not IndexedDB's always; Remove and Remove all report a refused save on their line, in words true for a removal. → ledger L9281, #142, #134, #143
+- 2026-11-07 — Every settings save reports a refusal: `saveSettingsSaid()` toasts once a session, quiet when storage is blocked; boot's fold keeps its refusal for the Extensions page. → ledger L9760, #141

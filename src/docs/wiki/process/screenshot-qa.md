@@ -77,8 +77,12 @@ as "fully tested".
 
 - **Every PR and every merge that changes what a tab renders carries a screenshot of each affected
   tab,** with before and after for a change to existing UI. No screenshot, no claim that the UI works.
-- **Shoot both skins when a change touches themed CSS.** The skin is `settings.skin`, set by the
-  Skin control, and no character sets it (#133).
+- **Shoot both skins when a change touches themed CSS.** The skin is independent of the character
+  (#133), so set it: `settings.skin="classic";applyTheme()` (and back to `"humblewood"`) through
+  `browser_evaluate`, or tap Skin on Settings → Appearance. A character's system doesn't change it.
+- **Shoot one D&D and one Humblewood character when the change is about the system** (the coins,
+  Race/Ancestry, the wordmark): `newCharacter("QA", "dnd")` and `newCharacter("QA", "humblewood")`,
+  each under whichever skin the line needs.
 - **The launcher's flags stay in the launcher,** where the platform split can be expressed.
   `.mcp.json` spawns `node scripts/playwright-mcp.js` and nothing else.
 - **The server version is pinned.** Bump it deliberately. Never move to `@latest`, which re-resolves
@@ -129,3 +133,4 @@ as "fully tested".
 - 2026-09-24 — Launcher path made relative, and the server connects again. → ledger L3361
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
 - 2026-10-25 — Shots are filed by issue, in `in-progress/` and `complete/` lanes. → ledger L7261
+- 2026-11-07 — Both skins are shot by setting the skin, which no character sets any more; a D&D and a Humblewood character cover the lines about the system. → ledger L9760, #133

@@ -44,6 +44,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **What a failed backup returns** — `{error, copy}`, so the caller can offer a download
 - **Which rules copy boot keeps** — The `localStorage` copy when there is a readable one; IndexedDB's otherwise (#134)
 - **How boot reports storage it can't use** — One alert once the home screen is up (#142)
+- **How a refused settings save is reported (#141)** — An error toast, through `saveSettingsSaid()` beside `saveSettings()`; callers with their own line keep it
+- **How often it is said (#141)** — Once per sentence a session, re-armed by a save that lands; quiet when `storageBlockedWhy()` is set
+- **The boot fold's refused save (#141)** — Kept in `extSaveError` for Settings → Extensions, as the boot source check's is
 
 ### [Character model](architecture/character-model.md)
 
@@ -60,6 +63,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How often the Languages lift runs (#103)** — Once, flagged by `langLifted` (never in `blankChar()`)
 - **Where hidden tabs are scoped (#52)** — Per character, saved on `character.hiddenTabs`; a new character shows every tab
 - **The End of combat window's settings (#105)** — `xpSplit` and `endCombatOpen` per character; the window's own state never saved
+- **A system change's default language chips (#133)** — Swapped by `swapDefaultLanguages()`; the player's and the grants' chips are never touched
 
 ### [Rules packs](architecture/rules-packs.md)
 
@@ -157,6 +161,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Where the home Import button gets its logic** — It clicks the existing hidden `#fileLoad`
 - **How a card knows a sheet is behind** — `appVersion` rides on the library index
 - **What a failed backup returns** — `{error, copy}`, so the caller can offer the snapshot as a download
+- **The New character dialog's system choice (#133)** — Stays, Humblewood preselected, with a hint that says what the system sets
+- **The setup panel's Skin, Mode and borders (#133)** — Stay as they are: each changes only the look
 
 ### [Character building](features/character-building.md)
 
@@ -351,6 +357,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **The trade's layout (#47)** — Side by side above 700px; tabs and a ✓ button at 700px and under
 - **Other parties (#47)** — Free text with chips from the Party card and earlier trades
 - **A custom item's origin in a trade (#47)** — Custom, "traded from *who*"; library items get Traded
+- **Platinum and electrum on a Humblewood sheet (#133)** — Never converted: shown while held, until spent or converted (Mike, 2026-11-07)
 
 ### [Armor & AC](features/armor-and-ac.md)
 
@@ -507,6 +514,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **Get templates (#102)** — Removed
 - **The plan while it installs (#102, Ruling 14)** — Can't be dismissed; × and Escape say to wait
 - **Feats allowed's default (#118, decision 4)** — On for every character
+- **How a character's system is changed (#133)** — A Game system row that says what will change and asks first (Mike, 2026-11-07)
+- **Where the Game system row is (#133)** — Sheet display, in a new first group "Game"
+- **What the warning says (#133)** — Only what changes for this character, from one pure plan the change also applies
 
 ## UI
 - **Who makes a player's token (#182)** — The owner, one read-only fine-grained token per player (their account as resource owner, one repo, Contents read-only, an expiry)
@@ -586,6 +596,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **Text on an accent fill** — `--on-accent`, chosen per palette
 - **The mid-band HP colour** — Its own `--warn` token in all four palettes
 - **The web fonts (#144)** — Embedded: the three families as base64 woff2 in a generated fragment, `90-fonts.css`, Latin only (Mike, 2026-11-06)
+- **What Skin does (#133)** — Look only: it never writes `character.system`, and nothing that opens a character writes `settings.skin` (Mike, 2026-11-07)
+- **What follows the system instead of the skin (#133)** — The Race/Ancestry wording and the wordmark and page title (Mike, 2026-11-07)
+- **The wordmark and title with no character open (#133)** — They follow the skin
 
 ## Data
 

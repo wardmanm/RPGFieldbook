@@ -146,10 +146,6 @@ Known behaviour that is accepted for now.
   reads the packs as they are at that moment, and `migrate()` only adds missing defaults later, so
   the fallback Common stays beside them. Inert today: no pack declares `defaultLanguages`.
   → ledger L6633, and [Character model](../architecture/character-model.md)
-- **Changing a sheet's system does not swap its `system` language chips** (#133) for the new ruleset's
-  defaults (the #103 spec §4 asked for it; ruled not needed at plan time, as a character's system
-  is not meant to change, though Settings → Skin does rewrite the open character's). Inert today:
-  every ruleset falls back to Common. → ledger L6633, and [Character model](../architecture/character-model.md)
 - **Languages lifted from an old sheet are the player's own**, so they stay after a species or
   background change. #103 turned a sheet's "Languages: …" lines into chips once, with no source,
   because the old race grant wrote them as prose and which grant added which cannot be recovered:
@@ -287,9 +283,6 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
   is filed by guesswork and the rules-update tool can match it only by name. → [Inventory](../features/inventory.md)
 - **Homebrew loaded alone reports "15 missing" for 14 entries** (#149): Warlock is counted by both the
   structural and the declared check. → [Homebrew](../data/homebrew.md)
-- **Changing the skin rewrites `character.system`** (#133) (coins, the ancestry list) with no warning, and the
-  New-character hint "All loaded rules stay available either way" is false for ancestries, which
-  `racesForCharacter()` filters by system. → [Theming & icons](../ui/theming-and-icons.md)
 - **Print includes hidden attacks** (#151): `printSheet()` prints the attacks of unequipped weapons.
   → [Attacks & damage](../features/attacks-and-damage.md)
 
@@ -297,13 +290,6 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 
 - Features group heads and inventory section heads fold on a click but can't be focused at all (#151). The Attacks card's `data-atksec` headings look
   clickable but have no handler. → [Sections & layout](../ui/sections-and-layout.md)
-
-### Breaks of a non-negotiable
-
-- **Silent storage writes (constraint 2), narrowed.** (#141) Every character and library write now reports
-  a refused write (#81): autosave (`saveNow()`), `newCharacter()`, `finishImport()`,
-  `migrateOldChar()`, `deleteCharacter()` and `setAutoload()`. `saveSettings()` still returns why it
-  was refused, but most of its callers ignore that. → [Storage](../architecture/storage.md)
 
 ### Latent: no shipped data triggers these yet
 
@@ -313,6 +299,11 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
   subclass key is `class|name`. → [Rules packs](../architecture/rules-packs.md)
 - `usesMax()` reads `byLevel` by total character level; `resolveResMax()` uses the class's own level (#146).
   → [Computed stats & effects](../architecture/computed-stats-and-effects.md)
+- A system change drops a default language the species also grants (#133, decision 9):
+  `grantLanguages()` skips a name already present, so a species granting Common gets no `race:` chip
+  while the ruleset's `system` chip covers it, and a swap to a ruleset without Common would drop it.
+  Inert: no pack declares `defaultLanguages`, so every ruleset's default is Common.
+  → [Character model](../architecture/character-model.md)
 - `settings.autoload` is seeded and never read (#151). `portraitImg` has no default in `blankChar()`.
   `choicesSettled()` is defined and never called. Nothing binds `character.speed`, so base speed only
   ever comes from the ancestry. → [Character model](../architecture/character-model.md)
@@ -494,3 +485,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — The estimated 220px threshold went: Temp's place is a measured fit now. → ledger L9501, #113
 - 2026-11-06 — #129 and #130 fixed (Include spells; Flat AC, best shield); #132 fixed for the feature form; what waits on phase 2 recorded (the Vitals lock, the item form); `usesMax()` is tested. → ledger L9537, #129, #130, #132
 - 2026-11-06 — Removed: the item form's scaling-uses freeze and the Flat AC's missing Vitals lock, both fixed in phase 2. → ledger L9597, #130, #132
+- 2026-11-07 — Removed: the skin rewriting `character.system`, a changed system keeping its `system` chips (#133), and silent settings saves (#141), all fixed; added as latent: a swap dropping a default the species also grants. → ledger L9760, #133, #141

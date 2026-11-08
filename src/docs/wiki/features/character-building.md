@@ -48,7 +48,7 @@ levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `mul
   when there is a subrace), which, from the sheet and for the
   character's own pick, ends in **Change** (the picker again) and **Remove** (confirm, then the
   window closes) — `raceInfoFoot()` / `bgInfoFoot()`. Reference mode (`{ref:true}`) shows neither.
-- **Nothing chosen** reads "+ Class", "+ Race" / "+ Ancestry" (by skin, `raceTerm()`) and
+- **Nothing chosen** reads "+ Class", "+ Race" / "+ Ancestry" (by the character's system, `raceTerm()`) and
   "+ Background", each opening its picker.
 
 **Ancestry.** `openAddRace()` lists `racesForCharacter()`: every loaded species except those whose
@@ -610,3 +610,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-11-04 — A background with no ability scores or feat (seven Humblewood ones) previews and adds without empty pickers, and Add no longer refuses it; its info card drops the empty lines. → ledger L8474, #159
 - 2026-11-04 — Undo on a second class's level-up card restores the sheet from before Add class: `addClass()` takes the Undo copy, as `doLevelUp()` does. → ledger L8893, #181
 - 2026-11-06 — A level-up and Add class unlock Vitals (its pencil is the Max HP lock now) and the HP step puts it back as it was, through `setVitalsLocked()`; `LU_HP_CLOSE` says Vitals is unlocked. → ledger L9441, #115
+- 2026-11-07 — "+ Race" / "+ Ancestry", and the picker's example name, follow the character's system, not the skin. → ledger L9760, #133

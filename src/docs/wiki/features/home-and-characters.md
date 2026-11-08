@@ -42,20 +42,25 @@ from the top bar's house button (`#btnHome`) and from Settings → Backup → Op
 - **The setup panel** (`#homeSetup`: skin, mode, hand-drawn borders, bulk rules import, loaded data,
   Clear all) shows on first run — no saved settings, or no characters — or when the cog toggles
   `homeForceSetup`. The cog is hidden on first run; "Back to sheet" shows only when a character is
-  active.
+  active. Its skin, mode and borders change only the look, and save through `saveSettingsSaid()`,
+  so a refused save says so in a toast over the home screen (#141, [Storage](../architecture/storage.md)).
 
 **New character.** `openNewCharacter()` asks for a name and a system (Humblewood preselected) and
-calls `newCharacter(name, system)`: `blankChar()`, the system, `seedGlossary()`, the `appVersion`
-stamp, a blob write, `libTouch()`, the skin switched to match the system, `renderAll()`,
-`hideHome()`. The system picks the skin and wordmark, filters the ancestry picker's species (see
-[Character building](character-building.md)) and sets which coins show; classes, spells, feats and
-items from every loaded pack stay available either way. A new or imported character that the
+calls `newCharacter(name, system)`: `blankChar()`, the system, `seedGlossary()`, the default
+languages, the `appVersion` stamp, a blob write, `libTouch()`, `applyTheme()`, `renderAll()`,
+`hideHome()`. The dialog's hint says what the system does: "The game this character is for. It sets
+the coins, the ancestries you're offered and your starting languages. Classes, spells, feats and
+items from every loaded pack are offered either way. You can change it later in Settings → Sheet
+display." The system also sets the Race/Ancestry wording and the top bar's wordmark (see
+[Theming & icons](../ui/theming-and-icons.md)), and it filters the ancestry picker's species (see
+[Character building](character-building.md)). The skin stays as the player chose it (#133). A new or imported character that the
 browser refuses to store stays open, isn't listed until it is stored, and raises the save warning
 (see [Storage](../architecture/storage.md)).
 
 **Opening one.** A card calls `loadCharById()`: `leaveCharacterOk()`, then
-`migrate(JSON.parse(raw))`, skin from system, `renderAll()`, `hideHome()`, `showSaveResult("")`,
-then `maybePromptUpdate()` with the sheet already behind it.
+`migrate(JSON.parse(raw))`, `applyTheme()` (the wordmark and title follow its system; the skin
+stays), `renderAll()`, `hideHome()`, `showSaveResult("")`, then `maybePromptUpdate()` with the sheet
+already behind it.
 
 **Leaving one.** `loadCharById()`, `newCharacter()` and `finishImport()` all start with
 `leaveCharacterOk()` (see [Storage](../architecture/storage.md)). It writes an edit still waiting on
@@ -91,8 +96,8 @@ hidden `#fileLoad`, whose change handler calls `importChar(file)`:
    name + " (copy)"), or **Replace <name>**.
 
 `finishImport()` asks `leaveCharacterOk()` first, then makes it the active character, writes the blob, touches the index only once that
-lands, switches the skin, renders, hides home, reports through the save warning strip, and calls
-`maybePromptUpdate()` last.
+lands, runs `applyTheme()` (leaving the skin as it was), renders, hides home, reports through the
+save warning strip, and calls `maybePromptUpdate()` last.
 
 **Backups.** `backupCharacter(ch, tag)` deep-copies the character under a new id, names it
 "<name> (backup <tag>)", sets `isBackup:true`, and writes the blob and an index entry **without**
@@ -117,7 +122,10 @@ exports and imports *settings and rules data* — not characters (see
 - **`maybePromptUpdate()` runs after the sheet is drawn**, and in `finishImport()` after the clash
   modal, so it stacks over it rather than under it.
 - **One import path.** Both buttons feed `#fileLoad` → `importChar()`, so the parse guard,
-  `migrate()`, the clash prompt and the skin switch exist once. A hidden file input answers a
+  `migrate()` and the clash prompt exist once.
+- **Opening, making or importing a character never writes `settings.skin`** (#133). The skin is the
+  player's, set only by Skin on Settings → Appearance and on the setup panel; a character's system is
+  changed only from Settings → Sheet display → Game system. A hidden file input answers a
   programmatic `.click()` even with the home overlay over it **(unverified)**.
 - **The home Import button is `#homeLoadChar`.** `#homeImportBtn` is the bulk *rules* import on the
   same screen.
@@ -143,7 +151,9 @@ exports and imports *settings and rules data* — not characters (see
 |---|---|---|
 | What `migrate()` carries across | Every field by default, then normalizes the structured ones | A field whitelist: recently added fields vanished on import and on every autosave restore |
 | A file whose id you already have | Ask: Replace, Import as copy, or Cancel; a new id imports with no prompt | — |
-| Where the home Import button gets its logic | It clicks the existing hidden `#fileLoad` | A second input and handler: the parse guard, clash prompt and skin switch would be duplicated |
+| Where the home Import button gets its logic | It clicks the existing hidden `#fileLoad` | A second input and handler: the parse guard and clash prompt would be duplicated |
+| The New character dialog's system choice (#133) | Stays, Humblewood preselected, with a hint that says what the system sets | Preselecting the system that matches the skin: it puts back the look-to-game link #133 removed (L9760) |
+| The setup panel's Skin, Mode and borders (#133) | Stay as they are: each changes only the look, which is what Skin means everywhere now | Removing Skin from the home screen: a first run would have no way to choose a look before making a character (L9760) |
 | How a card knows a sheet is behind | `appVersion` rides on the library index | Reading and parsing every character blob to draw the list |
 | What a failed backup returns | `{error, copy}`, so the caller can offer the snapshot as a download | Returning `null`: every cause became the same dead-end modal, with no way on and no clue which it was |
 
@@ -160,3 +170,4 @@ exports and imports *settings and rules data* — not characters (see
 - 2026-09-29 — A refused character write raises a warning strip that stays until a save lands; new, imported and migrated characters report it too. → ledger L4771, #81
 - 2026-09-29 — Opening, making or importing a character first saves the one left, and asks before dropping changes it can't save; delete and the star say when the library refuses them. → ledger L4856, #81
 - 2026-11-06 — Boot opens, and alerts, where the browser blocks storage; the autoloaded character gets its rules-update prompt once the packs are back. → ledger L9281, #142, #135
+- 2026-11-07 — New, open and import no longer switch the skin; the New character hint says what the system sets; the setup panel's look buttons report a refused save. → ledger L9760, #133, #141
