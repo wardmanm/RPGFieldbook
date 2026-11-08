@@ -85,6 +85,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'CHIP_SOURCED', 'TOOL_KINDS', 'TOOL_KIND_HEAD', 'toolParse', 'toolSuggestions', 'grantTools', 'dropChips', 'liftTools',
   'removeBackground', 'removeRace', 'printSheet', 'nameToolChip',
   'CHIP_MULTI', 'CHIP_TITLE', 'addChips', 'chipAddLabel', 'openToolNamer', 'renderChipsAll',
+  'SEED_FIELDS', 'seedsOf', 'playerOwns', 'seedField', 'unseedSource', 'handOnSpellAbility', 'setPlayerField', 'raceWould', 'sizeByHand',
   'pawHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
   'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
   'isTabHidden', 'cleanHiddenTabs', 'setTabHidden', 'applyHiddenTabs', 'HIDEABLE_TABS', 'TAB_LABELS', 'selectTab',
@@ -8932,14 +8933,16 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   let els = {};
   const rec = id => {
     const t = {id: id || '', value: '', checked: false, disabled: false, textContent: '', title: '', placeholder: '',
-      _h: '', _kids: [], _on: {}, style: {setProperty: noop}, dataset: {}, children: [], options: [],
-      classList: {toggle: noop, add: noop, remove: noop, contains: () => false},
+      _h: '', _kids: [], _on: {}, _cls: new Set(), style: {setProperty: noop}, dataset: {}, children: [], options: [],
       addEventListener: (type, fn) => { (t._on[type] = t._on[type] || []).push(fn); },
       appendChild: c => { t._kids.push(c && typeof c.__html === 'string' ? c.__html : ''); return c; },
       insertAdjacentHTML: (pos, h) => { t._kids.push(String(h)); },
       querySelector: () => null, querySelectorAll: () => [], closest: () => null,
       getBoundingClientRect: () => ({top: 0, bottom: 0, left: 0, right: 0, height: 0, width: 0}),
       setAttribute: noop, removeAttribute: noop, hasAttribute: () => false, focus: noop, remove: noop};
+    /* a real class list, so a mark recompute() sets can be read back */
+    t.classList = {toggle: (c, on) => { const v = on === undefined ? !t._cls.has(c) : !!on; if (v) t._cls.add(c); else t._cls.delete(c); return v; },
+      add: c => t._cls.add(c), remove: c => t._cls.delete(c), contains: c => t._cls.has(c)};
     const p = new Proxy(t, {
       get: (o, k) => k === 'innerHTML' ? o._h : k === '__html' ? o._h + o._kids.join('')
         : k === 'firstElementChild' ? p : (k in o ? o[k] : noop),
@@ -9177,6 +9180,129 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       ck('#121 ...a new one names it, keeping its source, and the card shows it at once', (tools().find(x => x.id === pid) || {}).name === 'Playing Cards' && (tools().find(x => x.id === pid) || {}).src === 'bg:Soldier' &&
          /PLAYING CARDS<span class="chip-src"> · background/.test(screen('bioTools')), [tools(), screen('bioTools')]);
     } finally { ctx.openModal = keepOpen; }
+
+    // #131 the seeds record: removing or swapping a source takes back what it seeded, never the player's values
+    const SEED_PACK = JSON.parse(JSON.stringify(BC_PACK));
+    SEED_PACK.classes = [{name: 'Wizard', hitDie: 'd6', spellcasting: 'int', levels: {}}, {name: 'Cleric', hitDie: 'd8', spellcasting: 'wis', levels: {}},
+      {name: 'Barbarian', hitDie: 'd12', levels: {}},
+      {name: 'Fighter', hitDie: 'd10', levels: {}, subclasses: {'Eldritch Knight': {spellcasting: 'int'}, 'Champion': {description: 'Crits.'}}}];
+    const keepMM = ctx.window.matchMedia;
+    ctx.window.matchMedia = () => ({matches: true, addEventListener() {}});   /* reduced motion: no level-up scene */
+    const seeds = () => X.seedsOf(C());
+    const entry = (sid, field) => seeds().find(e => e.sid === sid && e.field === field);
+    const loadSeedPack = () => { X.resetRules(); X.mergeRules(JSON.parse(JSON.stringify(SEED_PACK)), 'test-131'); };
+    try {
+      loadSeedPack();
+      ck('#131 seeds defaults to [], and SEED_FIELDS are the four', JSON.stringify(X.blankChar().seeds) === '[]' && JSON.stringify(X.SEED_FIELDS) === '["speed","size","spellAbility","proficiencies"]');
+      fresh();
+      err = flow(() => { ctx.applyRace('Elf', null, {}); });
+      ck('#131 applying Elf records what it seeded: speed, size and its proficiencies text', !err && (entry('race:Elf', 'speed') || {}).value === '30 ft' &&
+         (entry('race:Elf', 'size') || {}).value === 'Medium' && (entry('race:Elf', 'proficiencies') || {}).value === 'Longbows' && C().speed === '30 ft' && C().size === 'Medium' && C().proficiencies === 'Longbows', why(err) || seeds());
+      err = flow(() => { ctx.applyRace('Elf', null, {}); });
+      ck('#131 Elf applied again: one entry per field (Review Focus 2)', !err && seeds().length === 3 && C().proficiencies === 'Longbows', why(err) || [seeds(), C().proficiencies]);
+      X.recompute();
+      ck('#131 Size is not marked "set by hand" when the species set it', X.sizeByHand(C()) === false && !el('sizeDisp').classList.contains('fx-on'));
+      err = flow(() => { ctx.removeRace(); });
+      ck('#131 removing Elf empties its speed and size, takes its text and the ancestry string', !err && C().speed === '' && C().size === '' && C().proficiencies === '' && C().ancestry === '' && seeds().length === 0, why(err) || [C().speed, C().size, C().proficiencies, C().ancestry, seeds()]);
+      fresh(); C().proficiencies = 'Light armor';
+      flow(() => { ctx.applyRace('Elf', null, {}); });
+      C().proficiencies = C().proficiencies.replace('Longbows', 'Longbows and shortbows');
+      flow(() => { ctx.removeRace(); });
+      ck('#131 ...text the player edited stays, and so does their own', C().proficiencies === 'Light armor\nLongbows and shortbows', JSON.stringify(C().proficiencies));
+      fresh(); C().proficiencies = 'Light armor';
+      flow(() => { ctx.applyRace('Elf', null, {}); ctx.removeRace(); });
+      ck('#131 ...an unedited species line leaves with the newline that joined it', C().proficiencies === 'Light armor', JSON.stringify(C().proficiencies));
+      fresh(); C().speed = 35;
+      flow(() => { ctx.applyRace('Elf', null, {}); });
+      ck('#131 a species over a speed already set records null, and leaves it', C().speed === 35 && entry('race:Elf', 'speed') && entry('race:Elf', 'speed').value === null, seeds());
+      flow(() => { ctx.removeRace(); });
+      ck('#131 ...and its removal leaves it too', C().speed === 35);
+
+      // decision 10a: a Tiefling, the player picks Small, a swap to Gnome, Gnome removed: Small stays
+      fresh();
+      flow(() => { ctx.applyRace('Tiefling', null, {}); });
+      ck('#131 Tiefling seeds its largest size, Medium', C().size === 'Medium' && (entry('race:Tiefling', 'size') || {}).value === 'Medium', seeds());
+      X.setPlayerField(C(), 'size', 'Small');
+      X.recompute();
+      ck('#131 picking Small writes a player entry, and Size is marked', C().size === 'Small' && X.playerOwns(C(), 'size') && X.sizeByHand(C()) === true && el('sizeDisp').classList.contains('fx-on'), seeds());
+      flow(() => { ctx.applyRace('Gnome', null, {}); });
+      ck('#131 ...a swap to Gnome keeps Small, and Gnome records null', C().size === 'Small' && entry('race:Gnome', 'size') && entry('race:Gnome', 'size').value === null && !entry('race:Tiefling', 'size'), seeds());
+      flow(() => { ctx.removeRace(); });
+      ck('#131 ...and removing Gnome leaves Small', C().size === 'Small', C().size);
+      // a picked size equal to the old species' own survives a swap too
+      fresh(); flow(() => { ctx.applyRace('Elf', null, {}); }); X.setPlayerField(C(), 'size', 'Medium');
+      flow(() => { ctx.applyRace('Gnome', null, {}); });
+      ck('#131 a picked Medium, equal to Elf\'s own, survives the swap to Gnome', C().size === 'Medium' && X.sizeByHand(C()) === true, [C().size, seeds()]);
+      X.setPlayerField(C(), 'size', '');
+      X.recompute();
+      ck('#131 "From ancestry" clears it: the player entry goes, Size reads Gnome\'s live and is unmarked', C().size === '' && !X.playerOwns(C(), 'size') && X.charSize() === 'Small' && X.sizeByHand(C()) === false && !el('sizeDisp').classList.contains('fx-on'), [C().size, seeds()]);
+
+      // a Wizard added over an INT the player set, then removed: INT stays
+      fresh(); C().spellAbility = 'int';
+      flow(() => { ctx.addClass('Wizard', 1); });
+      ck('#131 a Wizard over a hand-set INT records null', C().spellAbility === 'int' && entry('class:Wizard', 'spellAbility') && entry('class:Wizard', 'spellAbility').value === null, seeds());
+      flow(() => { ctx.removeClass(0); });
+      ck('#131 ...removing it leaves INT', C().spellAbility === 'int', C().spellAbility);
+
+      // decision 12: the spellcasting ability is handed to the next caster
+      fresh(); ctx.luAbandon();
+      flow(() => { ctx.addClass('Cleric', 1); ctx.luAbandon(); ctx.addClass('Wizard', 1); ctx.luAbandon(); });
+      ck('#131 Cleric then Wizard: WIS, Cleric\'s; Wizard records null', C().spellAbility === 'wis' && (entry('class:Cleric', 'spellAbility') || {}).value === 'wis' && entry('class:Wizard', 'spellAbility') && entry('class:Wizard', 'spellAbility').value === null, seeds());
+      flow(() => { ctx.removeClass(0); });
+      ck('#131 removing Cleric hands INT to the Wizard, under class:Wizard', C().spellAbility === 'int' && (entry('class:Wizard', 'spellAbility') || {}).value === 'int' && !entry('class:Cleric', 'spellAbility'), [C().spellAbility, seeds()]);
+      flow(() => { ctx.removeClass(0); });
+      ck('#131 ...and with no caster left it is empty', C().spellAbility === '' && seeds().length === 0, [C().spellAbility, seeds()]);
+      fresh();
+      flow(() => { ctx.addClass('Fighter', 3); ctx.selectSubclass('Fighter', 'Eldritch Knight'); ctx.luAbandon(); ctx.addClass('Wizard', 1); ctx.luAbandon(); });
+      ck('#131 Fighter/Wizard: the Eldritch Knight seeded INT first', C().spellAbility === 'int' && (entry('subclass:Fighter:Eldritch Knight', 'spellAbility') || {}).value === 'int', seeds());
+      flow(() => { ctx.selectSubclass('Fighter', 'Champion'); });
+      ck('#131 ...replacing it with Champion hands INT to the Wizard, under class:Wizard', C().spellAbility === 'int' && (entry('class:Wizard', 'spellAbility') || {}).value === 'int' && !entry('subclass:Fighter:Eldritch Knight', 'spellAbility'), seeds());
+      fresh();
+      flow(() => { ctx.addClass('Barbarian', 1); });
+      ck('#131 a class with no spellcasting writes no entry (Review Focus 4)', seeds().length === 0 && C().spellAbility === '', seeds());
+
+      // a Humblewood-shaped species: a numeric speed and no size
+      fresh();
+      flow(() => { ctx.applyRace('Corvum', null, {}); });
+      ck('#131 Corvum seeds a number, 30, and seedsOf() keeps it', C().speed === 30 && (entry('race:Corvum', 'speed') || {}).value === 30, seeds());
+      ck('#131 ...no size entry for a species with no size (Review Focus 4)', !entry('race:Corvum', 'size') && !entry('race:Corvum', 'proficiencies') && C().size === '', seeds());
+      flow(() => { ctx.removeRace(); });
+      ck('#131 ...removing it reverts the number', C().speed === '' && seeds().length === 0, [C().speed, seeds()]);
+      fresh();
+      flow(() => { ctx.applyRace('Gnome', null, {}); ctx.removeRace(); });
+      ck('#131 an SRD-shaped "30 ft" reverts the same way', C().speed === '' && C().size === '');
+      fresh(); C().race = {name: 'Nobody', subrace: null}; C().ancestry = 'Nobody';
+      flow(() => { ctx.removeRace(); });
+      ck('#131 a custom ancestry carries nothing: its removal touches nothing but its own string', C().speed === '' && C().ancestry === '' && seeds().length === 0);
+
+      // decision 11: a sheet from before the record
+      const old = (sp, sz) => { fresh(); Object.assign(C(), {race: {name: 'Elf', subrace: null}, ancestry: 'Elf', speed: sp, size: sz, seeds: [], proficiencies: 'Longbows'}); };
+      old('30 ft', 'Medium'); flow(() => { ctx.removeRace(); });
+      ck('#131 an old sheet: what equals Elf\'s loaded definition reverts', C().speed === '' && C().size === '' && C().proficiencies === '', [C().speed, C().size, C().proficiencies]);
+      old('35 ft', 'Large'); flow(() => { ctx.removeRace(); });
+      ck('#131 ...a different value is kept', C().speed === '35 ft' && C().size === 'Large');
+      old('30 ft', 'Medium'); X.resetRules(); flow(() => { ctx.removeRace(); });
+      ck('#131 ...with no Elf loaded, everything is kept', C().speed === '30 ft' && C().size === 'Medium' && C().proficiencies === 'Longbows');
+      loadSeedPack();
+      old('', 'Large');
+      ck('#131 sizeByHand on an old sheet with a size Elf doesn\'t have, and no entries: true', X.sizeByHand(C()) === true);
+      old('', 'Medium');
+      ck('#131 ...with Elf\'s own size: false', X.sizeByHand(C()) === false);
+
+      // the legacy strings and a background
+      fresh(); flow(() => { ctx.applyBackground('Criminal', {}); ctx.removeBackground(); });
+      ck('#131 removing a background clears the background string', C().background === '' && C().bg === null);
+
+      // Review Focus 1: junk in seeds loads, is ignored, and survives
+      const junk = X.migrate({abilities: {}, seeds: [{sid: 'race:Elf', field: 'hp', value: 1}, {field: 'speed', value: {}}, 'x', null,
+        {sid: 'race:Elf', field: 'speed', value: '30 ft'}, {sid: 'race:Elf', field: 'size', value: null}, {sid: 'player', field: 'speed', value: 35}, {sid: 'race:X', field: 'speed', value: {}}, {sid: 'race:Y', field: 'speed', value: NaN}]});
+      ck('#131 seedsOf() keeps strings, numbers, null and the player sid, and nothing else', JSON.stringify(X.seedsOf(junk)) === JSON.stringify([{sid: 'race:Elf', field: 'speed', value: '30 ft'}, {sid: 'race:Elf', field: 'size', value: null}, {sid: 'player', field: 'speed', value: 35}]), X.seedsOf(junk));
+      ck('#131 ...the junk objects survive the load (an unknown field included)', junk.seeds.length === 7 && junk.seeds.some(e => e.field === 'hp'), junk.seeds);
+      ck('#131 ...and a second migrate changes nothing', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(junk)))) === JSON.stringify(junk));
+      ck('#131 a string for seeds reads as none', JSON.stringify(X.migrate({abilities: {}, seeds: 'x'}).seeds) === '[]');
+      fresh(); X.seedField(C(), 'speed', undefined, 'race:Q'); X.seedField(C(), 'speed', NaN, 'race:Q'); X.seedField(C(), 'speed', {walk: 30}, 'race:Q'); X.seedField(C(), 'hp', 5, 'race:Q');
+      ck('#131 seedField stores nothing for a value it can\'t keep, or a field it doesn\'t know', C().seeds.length === 0 && C().speed === '', C().seeds);
+    } finally { ctx.window.matchMedia = keepMM; ctx.luAbandon(); }
   } catch (e) {
     ck('#121 the Bio chips block ran without throwing', false, why(e));
   } finally {

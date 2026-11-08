@@ -228,7 +228,7 @@ function openSettings(){
   {const ep=document.getElementById("extPage");if(ep)wireExtPage(ep);}
   /* the size / encumbrance / coin-weight block only exists when a character is
      open, so every one of these is guarded */
-  {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
+  {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{setPlayerField(character,"size",s.value);encSettingsChanged();});}
   {const g=document.getElementById("segEnc");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-enc]");if(!b)return;character.encumbrance=b.dataset.enc;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));encSettingsChanged();});}
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}

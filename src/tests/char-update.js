@@ -882,6 +882,17 @@ ck('an HP the player edited survives class removal', X.num(X.character.hp.max)==
 hpSetup(CLS); X.addClass('Fighter',1); X.addClass('Wizard',1); X.removeClass(1);
 ck('removing a multiclass level does not clear HP', X.num(X.character.hp.max)===10);
 
+/* #131: the spellcasting ability leaves with the class that seeded it, and the
+   next caster takes it, as saving throws pass to the new first class (#66) */
+hpSetup([{name:'Cleric',hitDie:'d8',spellcasting:'wis'},{name:'Wizard',hitDie:'d6',spellcasting:'int'}]);
+X.luAbandon(); X.addClass('Cleric',1); X.luAbandon(); X.addClass('Wizard',1); X.luAbandon();
+ck('#131 a Cleric/Wizard casts with the first caster\'s WIS', X.character.spellAbility==='wis', X.character.spellAbility);
+X.removeClass(0);
+ck('#131 removeClass() hands the ability on: dropping Cleric gives the Wizard\'s INT', X.character.spellAbility==='int' &&
+   (X.character.seeds||[]).some(e=>e.sid==='class:Wizard'&&e.field==='spellAbility'&&e.value==='int'), [X.character.spellAbility, X.character.seeds]);
+X.removeClass(0);
+ck('#131 ...and with no caster left, there is none', X.character.spellAbility==='', X.character.spellAbility);
+
 // ---------- the CON term
 hpSetup(CLS,16);
 ck('level1HP adds a positive CON mod', X.level1HP({hitDie:'d8'})===11, X.level1HP({hitDie:'d8'}));

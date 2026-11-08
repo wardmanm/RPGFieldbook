@@ -247,7 +247,8 @@ function openSizePicker(){
   sel.addEventListener("change",()=>{hint.textContent=line(sel.value);});
   document.getElementById("szCancel").addEventListener("click",closeModal);
   document.getElementById("szSave").addEventListener("click",()=>{
-    character.size=sel.value;
+    /* the player's own, which no swap or remove touches; "" gives it back (#131) */
+    setPlayerField(character,"size",sel.value);
     closeModal();renderInventory();recompute();scheduleSave();
   });
 }

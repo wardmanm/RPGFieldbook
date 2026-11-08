@@ -117,12 +117,14 @@ function applyRace(sel, subrace, opts){
     else if(fl.length>1)pending.push({ch:{type:"feat",from:fl.slice(),label:"A feat of your choice",_sid:"race:"+name},sid:"race:"+name,label});
     (obj.choices||[]).forEach(ch=>{if(ch&&ch.type==="feat")pending.push({ch:Object.assign({},ch,{_sid:"race:"+name}),sid:"race:"+name,label:ch.label||label});});
     applyEquipGrants(obj.equipmentGrants,"race:"+name,pending);
-    if(obj.speed&&(character.speed===""||character.speed==null))character.speed=obj.speed;
-    /* Seeded like speed — only when empty, so a subrace never overrides the base
-       species and a player's own choice always wins. Leaving it "" is also fine:
-       charSize() falls back to the ancestry's own size at read time. */
-    if(obj.size&&(character.size===""||character.size==null))character.size=sizeName(obj.size);
-    if(obj.proficiencies)character.proficiencies=(character.proficiencies?character.proficiencies+"\n":"")+obj.proficiencies;
+    /* #131: speed, size and the proficiencies text are seeded through
+       seedField() and recorded, so removing or swapping the species takes back
+       exactly what it put there. Only into an empty field, so a subrace never
+       overrides the base species and a player's own choice always wins. Size
+       left "" is fine: charSize() falls back to the ancestry's own at read time. */
+    seedField(character,"speed",obj.speed,"race:"+name);
+    seedField(character,"size",sizeName(obj.size),"race:"+name);
+    seedField(character,"proficiencies",obj.proficiencies,"race:"+name);
     if(obj.languages)grantLanguages(character,"race:"+name,obj.languages);
   };
   if(d){
@@ -131,18 +133,34 @@ function applyRace(sel, subrace, opts){
     if(sd)grantFrom(sd, name+" ("+subrace+")");
   }
   if(opts&&opts.abilFx&&opts.abilFx.length){addFeatureFromDef({name:name+" — Ability Bonus",description:"Ability score increase (your choice).",effects:opts.abilFx},{kind:"race",name});}
-  const si=document.querySelector('[data-path="character.speed"]');if(si)si.value=character.speed;
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
   return pending;
 }
+/* What the current species' definition seeds (#131), as grantFrom() seeds it:
+   the base species first, then its subrace — for unseedSource()'s fallback on
+   a sheet from before the record, and for Speed's "From species". null when
+   there is no species, or no definition loaded for it. */
+function raceWould(c){
+  const r=c&&c.race;if(!r||!r.name)return null;
+  const d=findRaceDef(r.name);if(!d)return null;
+  const sd=(d.subraces||[]).find(s=>s&&s.name===r.subrace)||null;
+  const has=v=>!(v===undefined||v===null||v==="");
+  const pick=k=>has(d[k])?d[k]:(sd&&has(sd[k])?sd[k]:undefined);
+  return {speed:pick("speed"),size:sizeName(d.size)||(sd?sizeName(sd.size):"")||undefined,spellAbility:undefined,
+    proficiencies:[d.proficiencies,sd&&sd.proficiencies].filter(x=>typeof x==="string"&&x)};
+}
 function removeRace(doRender){
   const name=character.race&&character.race.name;
+  const would=raceWould(character);   /* before character.race goes */
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="race"&&f.origin.name===name);
   removeGrants(g=>g.sid==="race:"+name);
   const mine=x=>x.src==="race:"+name||x.src.indexOf("race:"+name+" (")===0;
   character.languages=chipClean(character.languages,"languages",true).filter(x=>!mine(x));
   character.tools=chipClean(character.tools,"tools",true).filter(x=>!mine(x));   /* none granted today (#121); #137 may */
   revertEquipmentGrants("race:"+name);
+  /* #131: the speed, size and text it seeded, where they are still its own,
+     and the legacy string printSheet() falls back to */
+  if(name){unseedSource(character,"race:"+name,would);if(character.ancestry===name)character.ancestry="";}
   character.race=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
 }

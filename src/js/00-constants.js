@@ -62,6 +62,9 @@ function blankChar(){
     coins:{cp:"",sp:"",ep:"",gp:"",pp:""},
     abilities:{},saves:{},skills:{},
     spellAbility:"", slots:{}, spells:[], attacks:[], race:null, bg:null, classes:[], grants:[],
+    /* #131: what each source seeded into speed, size, spellAbility and
+       Proficiencies, [{sid, field, value}], read only through seedsOf() */
+    seeds:[],
     features:[], inventory:[], statuses:[], familiars:[], glossary:[],
     featCollapse:{groups:{},items:{}}, invCollapse:{items:{}}, atkCollapse:{items:{}}, hdUsed:{}, resources:[],
     /* The combat view (87-combat.js). combatActive is its own flag, NOT

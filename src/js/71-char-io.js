@@ -159,7 +159,7 @@ function migrate(s){
      either one stopped the render: the first read of a field on null throws,
      and in strict mode so does the first write to a string (renderSpells()
      normalises `level`, detectSpellAttack() sets `atkType`). */
-  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources","journal","trackers"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
+  ["features","inventory","statuses","familiars","spells","attacks","activeSpells","glossary","classes","grants","resources","journal","trackers","seeds"].forEach(k=>{ base[k]=Array.isArray(base[k])?base[k].filter(x=>x!==null&&typeof x==="object"):[]; });
   /* The player's own glossary entries are theirs, so none is dropped for its
      shape (#71). Each gets what makes it reachable: the other categories' field
      names read as the glossary's (glossRepair), and an id, without which the

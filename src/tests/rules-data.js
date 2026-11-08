@@ -1315,6 +1315,23 @@ function block(html, needle, tag) {
      fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8').includes('.chip{font-family:var(--head);font-size:10px;letter-spacing:.03em;padding:3px 7px;border-radius:99px;\n  background:color-mix(in srgb,var(--accent-2) 16%,transparent);color:var(--accent-2);text-transform:uppercase;font-weight:700}'));
 }
 
+// ---------- #131: every seed goes through seedField(), every size the player picks through setPlayerField()
+{
+  const src = f => fs.readFileSync(path.join(ROOT, 'src/js/' + f), 'utf8');
+  const fn = (code, name) => { const i = code.indexOf('function ' + name + '('); if (i < 0) return ''; const j = code.indexOf('\nfunction ', i + 1); return code.slice(i, j < 0 ? undefined : j); };
+  const race = src('52-race.js'), cls = src('56-class.js'), forms = src('80-modal-forms.js'), set = src('88-settings.js');
+  ck('#131 applyRace() no longer queries the dead [data-path="character.speed"]', !!fn(race, 'applyRace') && !/data-path="character\.speed"/.test(fn(race, 'applyRace')));
+  ck('#131 ...it seeds speed, size and proficiencies through seedField()', /seedField\(character,"speed"/.test(fn(race, 'applyRace')) && /seedField\(character,"size"/.test(fn(race, 'applyRace')) && /seedField\(character,"proficiencies"/.test(fn(race, 'applyRace')) &&
+     !/character\.speed=|character\.size=|character\.proficiencies=/.test(fn(race, 'applyRace')));
+  ck('#131 addClass() and selectSubclass() seed spellAbility through seedField()', /seedField\(character,"spellAbility"/.test(fn(cls, 'addClass')) && /seedField\(character,"spellAbility"/.test(fn(cls, 'selectSubclass')) &&
+     !/character\.spellAbility=/.test(fn(cls, 'addClass') + fn(cls, 'selectSubclass')));
+  ck('#131 removeClass() and selectSubclass() unseed, then hand the ability on', /unseedSource\(/.test(fn(cls, 'removeClass')) && /handOnSpellAbility\(character\)/.test(fn(cls, 'removeClass')) &&
+     /unseedSource\(/.test(fn(cls, 'selectSubclass')) && /handOnSpellAbility\(character\)/.test(fn(cls, 'selectSubclass')));
+  ck('#131 the Size window\'s Save writes through setPlayerField()', /setPlayerField\(character,"size",sel\.value\)/.test(fn(forms, 'openSizePicker')) && !/character\.size=/.test(fn(forms, 'openSizePicker')));
+  ck('#131 ...and so does Settings → Carrying\'s size select', /getElementById\("setSize"\);if\(s\)s\.addEventListener\("change",\(\)=>\{setPlayerField\(character,"size",s\.value\)/.test(set) && !/character\.size=s\.value/.test(set));
+  ck('#131 the Size mark reads sizeByHand()', /mark\(szEl,sizeByHand\(character\)\)/.test(src('10-compute.js')));
+}
+
 // ---------- #103: the new Sheet
 {
   const t = loadHTML();

@@ -209,3 +209,104 @@ function renderClassRace(){
   renderInventory();renderCoins();renderChipsAll();
 }
 
+
+/* ---- seeds (#131) ----
+   A species seeds speed, size and a line of Proficiencies text; a class or
+   subclass seeds the spellcasting ability. Each is written only into an EMPTY
+   field, so a player's own value always wins, and `character.seeds` records
+   what each source put there: one {sid, field, value} per sid and field, the
+   value exactly as the source gave it (a Humblewood speed is 30, an SRD one
+   "30 ft"), or null when the field was already full and it wrote nothing.
+   The revert then takes back only what still equals that record. A field
+   with no entry at all for the sid means a source applied before the record,
+   and falls back to what its loaded definition would have seeded. The sid
+   "player" marks a speed or size the player set in its window: no seed writes
+   over it, and no revert touches it.
+   Read only through seedsOf(): a hand-edited file's junk entries are kept, so
+   they round-trip, but never read. */
+const SEED_FIELDS=["speed","size","spellAbility","proficiencies"];
+function seedOk(e){return !!e&&typeof e==="object"&&!Array.isArray(e)&&typeof e.sid==="string"&&!!e.sid&&SEED_FIELDS.indexOf(e.field)>=0&&
+  (e.value===null||typeof e.value==="string"||(typeof e.value==="number"&&isFinite(e.value)));}
+function seedsOf(c){return (c&&Array.isArray(c.seeds)?c.seeds:[]).filter(seedOk).map(e=>({sid:e.sid,field:e.field,value:e.value}));}
+function seedEntry(c,sid,field){return seedsOf(c).find(e=>e.sid===sid&&e.field===field)||null;}
+/* replaces this sid's entry for the field; junk entries stay where they are */
+function seedSet(c,sid,field,value){
+  c.seeds=(Array.isArray(c.seeds)?c.seeds:[]).filter(e=>!(seedOk(e)&&e.sid===sid&&e.field===field)).concat([{sid,field,value}]);
+}
+function seedDrop(c,pred){if(Array.isArray(c.seeds))c.seeds=c.seeds.filter(e=>!(seedOk(e)&&pred(e)));}
+function playerOwns(c,field){return !!seedEntry(c,"player",field);}
+const seedBlank=v=>v===""||v===null||v===undefined;   /* 0 is a value: a speed of 0 is full */
+/* `value` undefined, null or "" means the source doesn't carry the field, and
+   nothing is recorded; neither is a value no field could hold (NaN, an object).
+   A species then its subrace seed under one sid: a second, later seed that
+   finds the field full keeps the first's record rather than nulling it, and
+   their proficiencies lines are recorded as the one text they make together. */
+function seedField(c,field,value,sid){
+  if(!c||!sid||SEED_FIELDS.indexOf(field)<0||seedBlank(value))return;
+  if(typeof value!=="string"&&!(typeof value==="number"&&isFinite(value)))return;
+  const prev=seedEntry(c,sid,field);
+  if(field==="proficiencies"){
+    c.proficiencies=(c.proficiencies?c.proficiencies+"\n":"")+value;
+    seedSet(c,sid,field,prev&&prev.value!==null?String(prev.value)+"\n"+value:value);
+    return;
+  }
+  if(seedBlank(c[field])&&!playerOwns(c,field)){c[field]=value;seedSet(c,sid,field,value);}
+  else if(!(prev&&prev.value!==null))seedSet(c,sid,field,null);
+}
+/* Take `t` out of the text where it still stands as its own line(s), with the
+   newline that joined it, and tidy as the lifts do. Edited text stays. */
+function unseedText(p,t){
+  p=typeof p==="string"?p:"";t=String(t==null?"":t);if(!t)return p;
+  for(let i=p.lastIndexOf(t);i>=0;i=i>0?p.lastIndexOf(t,i-1):-1){
+    if(!(i===0||p[i-1]==="\n")||!(i+t.length===p.length||p[i+t.length]==="\n"))continue;
+    const s=i>0?i-1:i,e=i>0?i+t.length:Math.min(p.length,i+t.length+1);
+    return (p.slice(0,s)+p.slice(e)).replace(/\n{3,}/g,"\n\n").trim();
+  }
+  return p;
+}
+/* `would`: what the outgoing source's loaded definition seeds,
+   {speed, size, spellAbility, proficiencies:[texts]}, or null when it isn't
+   loaded — read only for a field with no entry at all (decision 11). */
+function unseedSource(c,sid,would){
+  if(!c||!sid)return;
+  const w=would&&typeof would==="object"?would:null;
+  SEED_FIELDS.forEach(field=>{
+    if(playerOwns(c,field))return;
+    const e=seedEntry(c,sid,field);
+    if(field==="proficiencies"){
+      const texts=e?(e.value===null?[]:[String(e.value)]):(w&&Array.isArray(w.proficiencies)?w.proficiencies.filter(x=>typeof x==="string"&&x):[]);
+      texts.forEach(t=>{c.proficiencies=unseedText(c.proficiencies,t);});
+      return;
+    }
+    const was=e?e.value:(w?w[field]:null);
+    if(!seedBlank(was)&&!seedBlank(c[field])&&String(c[field])===String(was))c[field]="";
+  });
+  seedDrop(c,e=>e.sid===sid);
+}
+/* Decision 12: an empty spellcasting ability goes to the first class still on
+   the sheet that casts, or that class's subclass, under that one's sid — as
+   saving throws pass to the new first class (#66). */
+function handOnSpellAbility(c){
+  if(!c||!seedBlank(c.spellAbility))return;
+  for(const cl of (Array.isArray(c.classes)?c.classes:[])){
+    const d=findClassDef(cl&&cl.name);if(!d)continue;
+    if(d.spellcasting){seedField(c,"spellAbility",d.spellcasting,"class:"+cl.name);return;}
+    const sc=cl.subclass?subclassesFor(d)[cl.subclass]:null;
+    if(sc&&sc.spellcasting){seedField(c,"spellAbility",sc.spellcasting,"subclass:"+cl.name+":"+cl.subclass);return;}
+  }
+}
+/* A speed or size the player sets in its window (or Settings → Carrying):
+   theirs, marked by a "player" entry that both helpers above respect. The
+   sources' own entries stay, so their reverts still know what they seeded.
+   "" gives it back: Size then reads the species' size live (charSize()), and
+   Speed, which has no live fallback, is seeded again from the current species. */
+function setPlayerField(c,field,value){
+  if(!c||(field!=="speed"&&field!=="size"))return;
+  if(seedBlank(value)){
+    seedDrop(c,e=>e.sid==="player"&&e.field===field);
+    c[field]="";
+    if(field==="speed"&&c.race&&c.race.name){const w=raceWould(c);if(w)seedField(c,"speed",w.speed,"race:"+c.race.name);}
+    return;
+  }
+  c[field]=value;seedSet(c,"player",field,value);
+}

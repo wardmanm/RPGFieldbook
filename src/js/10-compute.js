@@ -43,7 +43,7 @@ function recompute(){
   /* marked when you have set it yourself rather than taking the ancestry's —
      the same "this isn't the default" signal the other Vitals boxes use */
   const szEl=document.getElementById("sizeDisp");
-  if(szEl){szEl.textContent=charSize();mark(szEl,!!character.size);}
+  if(szEl){szEl.textContent=charSize();mark(szEl,sizeByHand(character));}
   const pv=mods.wis+(effSkill("perception")>0?pb:0)+(effSkill("perception")>1?pb:0)+sumFx("skill.perception",c)+ckFx;
   document.getElementById("passDisp").textContent=10+pv;
   const hpFx=sumFx("hp.max",c);

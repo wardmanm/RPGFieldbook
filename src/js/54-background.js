@@ -90,6 +90,9 @@ function removeBackground(doRender){
   dropLanguages(character,"bg:"+name);
   dropChips(character,"tools","bg:"+name);   /* #121: its placeholders too, named or not */
   revertEquipmentGrants("bg:"+name);
+  /* #131: a background seeds nothing yet, but its revert costs nothing; and
+     the legacy string goes with it */
+  if(name){unseedSource(character,"bg:"+name,null);if(character.background===name)character.background="";}
   character.bg=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
 }
