@@ -110,6 +110,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
   'isStyleChoice', 'classStyleSources', 'hasFightingStyle', 'featFeatureNamed', 'styleOptionTaken', 'findClassDef',
+  'asiStepLabel', 'asiReadStep', 'asiStepDone',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -1104,8 +1105,11 @@ X.character = X.blankChar();
   const sub = fld({type: 'subclass', from: ['Thief', 'Assassin']});
   ck('a subclass block is unchanged and uncapped',
      sub.indexOf('data-choose') === -1 && /type="radio"/.test(sub), sub);
+  /* #171: the ASI step has a count now, one pick, so Picks left and the
+     dismiss guard see a blank one (it used to be left alone, and a level-up
+     window holding only an ASI closed on Escape without asking) */
   const asi = fld({type: 'asi'});
-  ck('an ASI block is unchanged', asi.indexOf('data-choose') === -1, asi);
+  ck('an ASI block asks for its one pick (#171)', attr(asi, /data-choose="(\d+)"/) === '1', asi);
 }
 
 /* ================= favourites on Features & Traits =================
@@ -9017,6 +9021,92 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     sheet([{name: 'Rogue', level: 4}]);
     ck('#172 the SRD pack: a Rogue 4 does not', srdDef && X.featUnmet(srdDef).length === 1);
     X.resetRules(); X.mergeRules(T172, 'test-172');
+  }
+
+  // ---- #171, the markup: every class ASI step blank, named by its level, counted
+  sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 16;
+  const blankOpt = '<option value="" selected>— choose —</option>';
+  const nBlank = h => h.split(blankOpt).length - 1;
+  const anySelected = h => /<option value="(str|dex|con|int|wis|cha)" selected/.test(h);
+  const h4 = X.choiceFieldHTML({type: 'asi', _level: 4, _sid: 'class:Fighter'}, 0, null);
+  ck('#171 a class ASI step names its level before the em dash', h4.includes('<label class="f">Level 4 · Ability Score Improvement — or a feat instead</label>'), h4.slice(0, 400));
+  ck('#171 ...is one pick to make (data-choose) and carries its level', /^<div class="choice" data-ci="0" data-ctype="asi" data-sid="class:Fighter" data-choose="1" data-level="4"/.test(h4), h4.slice(0, 200));
+  ck('#171 ...both ability selects start on "— choose —", none on an ability', nBlank(h4) === 2 && !anySelected(h4), h4);
+  ck('#171 ..."+2 to one" ticked, and the second select hidden under it', /data-asi-mode value="2" checked>\+2 to one/.test(h4) && /data-asi-mode value="1">\+1 to two/.test(h4) && /<div data-asi-bwrap hidden><select data-asi-b/.test(h4), h4);
+  ck('#171 ...the ASI row is still the pressed one (#118, the step\'s route, not an increase)', /data-ft-pick="__asi__" aria-pressed="true"/.test(h4));
+  ck('#171 level 19\'s boon step names its level', X.choiceFieldHTML({type: 'asi', boon: true, _level: 19}, 0, null).includes('>Level 19 · Epic Boon — a feat, or an Ability Score Improvement</label>'));
+  ck('#171 a pack\'s own label gets the level before it', X.choiceFieldHTML({type: 'asi', label: 'Ability Score Improvement', _level: 8}, 0, null).includes('>Level 8 · Ability Score Improvement</label>'));
+  ck('#171 with no level the label is as before', X.choiceFieldHTML({type: 'asi'}, 0, null).includes('<label class="f">Ability Score Improvement — or a feat instead</label>'));
+  X.character.featsAllowed = false;
+  const off4 = X.choiceFieldHTML({type: 'asi', _level: 4, _sid: 'class:Fighter'}, 3, null);
+  ck('#171 Feats allowed off: the heading names the level, the step counts, the selects start blank',
+     off4.includes('<label class="f">Level 4 · Ability Score Improvement</label>') && /data-choose="1"/.test(off4) && nBlank(off4) === 2 && !anySelected(off4) && /name="asimode-3"/.test(off4), off4);
+  ck('#171 Feats allowed off: the level-19 boon is a plain ASI, named by its level', X.choiceFieldHTML({type: 'asi', boon: true, _level: 19}, 0, null).includes('<label class="f">Level 19 · Ability Score Improvement</label>'));
+  X.character.featsAllowed = true;
+  ck('#171 a species feat list keeps its label, with no level', !/Level \d/.test(X.choiceFieldHTML({type: 'feat', category: 'origin', _sid: 'race:Human'}, 0, null)));
+  const gp = X.asiPanelHTML({type: 'asi'}, 0, 'Grappler');
+  ck('#171 a feat\'s "+1 to:" starts with no chip pressed', !/aria-pressed="true"/.test(gp) && !/ft-chip on/.test(gp) && /<div class="ft-plus" role="group" aria-label="\+1 to" data-ft-group="0">/.test(gp), gp);
+
+  // ---- #171 asiStepDone: whether a step is set
+  const GRP = feat('Grappler');
+  const done = (sel, f) => X.asiStepDone(sel, f === undefined ? null : f);
+  ck('#171 not set: no pick, a blank ability, "+1 to two" short of two different, a feat\'s group unanswered',
+     !done({pick: null}) && !done({pick: ''}) && !done({pick: '__asi__', mode: '2', a: ''}) && !done({pick: '__asi__', mode: '2', a: undefined})
+     && !done({pick: '__asi__', mode: '1', a: 'str', b: ''}) && !done({pick: '__asi__', mode: '1', a: 'str', b: 'str'}) && !done({pick: 'Grappler', plus: []}, GRP)
+     && !done({pick: 'Grappler', plus: ['wis']}, GRP));
+  ck('#171 set: "+2 to one" an ability, "+1 to two" two different, a group answered or capped out, a feat with no loaded rules (Review Focus 5)',
+     done({pick: '__asi__', mode: '2', a: 'str'}) && done({pick: '__asi__', mode: '1', a: 'con', b: 'wis'}) && done({pick: 'Grappler', plus: ['dex']}, GRP)
+     && done({pick: 'Grappler', plus: [], capped: [0]}, GRP) && done({pick: 'Nowhere Feat'}, null) && done({pick: 'Great Weapon Master', plus: []}, feat('Great Weapon Master')));
+  /* asiReadStep() and choiceBlockPicked() over a stand-in step: just the
+     selectors they ask, answered from a plain object */
+  const fakeStep = s => ({dataset: {ctype: 'asi', ci: '2', level: s.level == null ? undefined : String(s.level), sid: 'class:Fighter'},
+    querySelector: q => q === '[data-ft-pick][aria-pressed="true"]' ? (s.pick && s.rows ? {dataset: {ftPick: s.pick}} : null)
+      : q === '[data-ft-pick]' ? (s.rows ? {} : null) : q === '[data-asi-mode]:checked' ? {value: s.mode || '2'}
+      : q === '[data-asi-a]' ? (s.rows && s.pick !== '__asi__' ? null : {value: s.a == null ? '' : s.a}) : q === '[data-asi-b]' ? (s.rows && s.pick !== '__asi__' ? null : {value: s.b == null ? '' : s.b}) : null,
+    querySelectorAll: q => q === '[data-ft-plus][aria-pressed="true"]' ? (s.plus || []).map(([i, k]) => ({dataset: {ftPlus: String(i), k}}))
+      : q === '.ft-plus[data-capped="1"]' ? (s.capped || []).map(i => ({dataset: {ftGroup: String(i)}})) : []});
+  const rs = X.asiReadStep(fakeStep({rows: true, pick: 'Grappler', plus: [[0, 'dex']], level: 6}));
+  ck('#171 asiReadStep: the pressed row, each "+1 to:" answer at its index, the level and the step', rs.pick === 'Grappler' && rs.plus[0] === 'dex' && rs.level === 6 && rs.ci === 2 && rs.sid === 'class:Fighter' && rs.type === 'asi' && rs.capped.length === 0, rs);
+  const rb = X.asiReadStep(fakeStep({rows: false, a: ''}));
+  ck('#171 asiReadStep: Feats allowed off is the ASI, a blank select reads "", no level reads null', rb.pick === '__asi__' && rb.a === '' && rb.mode === '2' && rb.level === null, rb);
+  ck('#171 choiceBlockPicked: a blank ASI step is 0 of 1 (Picks left, and the dismiss guard, S2-26)',
+     X.choiceBlockPicked(fakeStep({rows: true, pick: '__asi__', a: ''})) === 0 && X.choiceBlockPicked(fakeStep({rows: false, a: ''})) === 0);
+  ck('#171 choiceBlockPicked: ...a set one is 1, a feat counts once its "+1 to:" is answered',
+     X.choiceBlockPicked(fakeStep({rows: true, pick: '__asi__', a: 'str'})) === 1 && X.choiceBlockPicked(fakeStep({rows: true, pick: 'Grappler'})) === 0
+     && X.choiceBlockPicked(fakeStep({rows: true, pick: 'Grappler', plus: [[0, 'str']]})) === 1 && X.choiceBlockPicked(fakeStep({rows: true, pick: 'Grappler', capped: [0]})) === 1
+     && X.choiceBlockPicked(fakeStep({rows: true, pick: 'Great Weapon Master'})) === 1 && X.choiceBlockPicked(fakeStep({rows: true})) === 0);
+  ck('#171 choiceBlockPicked: "+1 to two" the same ability twice is not set (S2-24)', X.choiceBlockPicked(fakeStep({rows: false, mode: '1', a: 'dex', b: 'dex'})) === 0 && X.choiceBlockPicked(fakeStep({rows: false, mode: '1', a: 'dex', b: 'con'})) === 1);
+
+  // ---- #171 commit: no default fills a blank
+  const fo = {kind: 'class', class: 'Fighter', level: 4};
+  const abFx = f => (f && f.effects || []).filter(e => /^ability\./.test(e.target));
+  sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 15;
+  X.commitAsiPick({type: 'asi', pick: 'Grappler', plus: []}, fo, []);
+  const g0 = X.character.features.find(f => f.name === 'Feat: Grappler');
+  ck('#171 a feat with its "+1 to:" blank is granted with no increase (the first-option fallback is gone)', g0 && abFx(g0).length === 0, g0);
+  sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 15;
+  X.commitAsiPick({type: 'asi', pick: 'Grappler', plus: ['wis']}, fo, []);
+  ck('#171 ...and an answer outside its choices adds nothing', abFx(X.character.features.find(f => f.name === 'Feat: Grappler')).length === 0);
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '1', a: 'str', b: 'str'}, fo, []);
+  ck('#146 S2-24 "+1 to two" with the same ability twice grants nothing', !X.character.features.some(f => f.name === 'Ability Score Improvement'));
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '1', a: 'str', b: 'dex'}, fo, []);
+  ck('#146 S2-24 ...two different abilities still do', X.character.features.some(f => f.name === 'Ability Score Improvement' && f.effects.length === 2));
+
+  // ---- #171 end to end: a level-18 start opens one window, six blank ASI steps
+  {
+    const om = ctx.openModal, opened = [];
+    try {
+      ctx.openModal = function (t, h) { opened.push({t: String(t), h: String(h)}); return om.apply(null, arguments); };
+      X.character = X.blankChar(); X.character.abilities.str = 16;
+      ctx.addClass('Fighter', 18);
+      const w = opened.length === 1 ? opened[0].h : '';
+      const lv = (w.match(/Level (\d+) · Ability Score Improvement — or a feat instead/g) || []).map(s => /\d+/.exec(s)[0]);
+      ck('#171 e2e: Add class Fighter 18 opens one window', opened.length === 1 && /Fighter — Levels 1–18/.test(opened[0].t), opened.map(o => o.t));
+      ck('#171 e2e: ...with six ASI steps, labelled 4 to 16', lv.join() === '4,6,8,12,14,16', lv);
+      ck('#171 e2e: ...each one counted, none with an ability selected', (w.match(/data-ctype="asi"[^>]*data-choose="1"/g) || []).length === 6 && nBlank(w) === 12 && !anySelected(w), w.length);
+      ck('#171 e2e: ...and nothing granted until Done', !X.character.features.some(f => /Ability Score Improvement|^Feat:/.test(f.name)) && X.num(X.character.abilities.str) === 16);
+      ctx.closeModal();
+    } finally { ctx.openModal = om; }
   }
 
   X.character = keep.ch; X.rules = keep.rules;

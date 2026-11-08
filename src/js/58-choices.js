@@ -49,9 +49,12 @@ function choiceBlocks(){
             picked:choiceBlockPicked(div)};
   });
 }
-/* A block's own picks: its ticked boxes, or — a species or background feat
-   list (#118), which has no boxes — its pressed row. */
+/* A block's own picks: its ticked boxes, or — an ASI step, or a species or
+   background feat list (#118), which have no boxes — 1 once the step is set
+   (asiStepDone, #171): an ability for the ASI, or a feat with its "+1 to:"
+   answered. A pressed ASI row with no ability chosen is not a pick. */
 function choiceBlockPicked(div){
+  if(div&&div.dataset&&div.dataset.ctype==="asi"){const s=asiReadStep(div);return asiStepDone(s,asiStepFeat(s))?1:0;}
   return div.querySelectorAll('input[type="checkbox"]:not([data-fixed]):checked').length+
     div.querySelectorAll('[data-ft-pick][aria-pressed="true"]').length;
 }
@@ -230,12 +233,24 @@ function featOfferable(f,opts){
    takes either. Markup only: wireAsiFeats() binds it once the modal is open. */
 function asiFeatDef(key){const a=rules.feats||[];return a.find(x=>x&&x._id&&x._id===key)||a.find(x=>x&&x.name===key);}
 function asiFeatKey(f){return String(f._id||f.name);}
-/* today's +2 / +1+1 controls, unchanged; `label` false drops the heading when
-   the list above already names the step */
-function asiControlsHTML(ci,label){
-  return (label===false?"":`<label class="f">Ability Score Improvement</label>`)+`
+/* The feat a step's pick names, or null: the ASI, no pick, or a `from` menu
+   name with no loaded feat (granted by name) */
+function asiStepFeat(sel){const k=sel&&sel.pick;return k&&k!=="__asi__"?(asiFeatDef(k)||findFeatDef(k)||null):null;}
+/* A class step names its level before the em dash (#171): one window can hold
+   six ASI steps, and choiceBlocks() keeps the text before the dash as the
+   Picks left line ("Level 4 · Ability Score Improvement"). A species or
+   background list has no `_level` and keeps its label. */
+function asiStepLabel(ch,text){return ch&&ch._level?"Level "+ch._level+" · "+text:text;}
+/* The +2 / +1+1 controls. Nothing is chosen for the player (#171): both
+   selects start on "— choose —", and the second shows only under "+1 to two"
+   (asiRefresh). "+2 to one" starts ticked: the mode alone changes nothing on
+   the sheet. `heading` false drops the heading, when the list above already
+   names the step. */
+function asiAbilOptionsHTML(){return `<option value="" selected>— choose —</option>`+ABIL.map(([k,l])=>`<option value="${esc(k)}">${l}</option>`).join("");}
+function asiControlsHTML(ci,heading){
+  return (heading===false?"":`<label class="f">${esc(heading==null?"Ability Score Improvement":heading)}</label>`)+`
       <div style="display:flex;gap:14px;margin-bottom:6px"><label class="opt" style="margin:0"><input type="radio" name="asimode-${esc(ci)}" data-asi-mode value="2" checked>+2 to one</label><label class="opt" style="margin:0"><input type="radio" name="asimode-${esc(ci)}" data-asi-mode value="1">+1 to two</label></div>
-      <div class="g2"><select data-asi-a aria-label="Ability">${ABIL.map(([k,l])=>`<option value="${esc(k)}">${l}</option>`).join("")}</select><select data-asi-b aria-label="Second ability">${ABIL.map(([k,l])=>`<option value="${esc(k)}">${l}</option>`).join("")}</select></div>`;
+      <div class="g2"><select data-asi-a aria-label="Ability">${asiAbilOptionsHTML()}</select><div data-asi-bwrap hidden><select data-asi-b aria-label="Second ability">${asiAbilOptionsHTML()}</select></div></div>`;
 }
 /* The increases the step still has to add: featAbilityChoices() minus what
    the feat's own `effects` already raise — a pack can carry the +1 there AND
@@ -291,18 +306,51 @@ function asiFeatRowsHTML(ch,o){
 }
 function asiFeatListHTML(ch,ci,opts){
   const o=Object.assign(asiListOpts(ch),{pick:asiIsFeatChoice(ch)?"":"__asi__"},opts||{});
-  return `<label class="f">${esc(ch.label||(ch.boon?"Epic Boon — a feat, or an Ability Score Improvement":asiIsFeatChoice(ch)?"A feat of your choice":"Ability Score Improvement — or a feat instead"))}</label>`+
+  return `<label class="f">${esc(asiStepLabel(ch,ch.label||(ch.boon?"Epic Boon — a feat, or an Ability Score Improvement":asiIsFeatChoice(ch)?"A feat of your choice":"Ability Score Improvement — or a feat instead")))}</label>`+
     `<div class="ft-tools"><input type="search" data-ft-search placeholder="Search feats…" aria-label="Search feats"><label class="ft-all">Show all <button type="button" class="switch${o.showAll?" on":""}" data-ft-all role="switch" aria-checked="${o.showAll?"true":"false"}" aria-label="Show all feats"></button></label></div>`+
     `<div class="ft-list" data-ft-list="${esc(ci)}">${asiFeatRowsHTML(ch,o)}</div>`;
 }
+/* A feat's "+1 to:" starts with no chip pressed (#171): the first-chip
+   default was a choice the player never made, and could itself pass 20.
+   Each group carries its featAbilityChoices() index, `data-ft-group`. */
 function asiPanelHTML(ch,ci,pick){
   if(pick==="__asi__")return asiControlsHTML(ci,false);
   const f=asiFeatDef(pick);if(!f)return "";
   const body=featBodyLines(f).join("\n");
   const plus=featPendingIncreases(f).map(a=>a.fixed
     ?`<p class="hint">${esc(Object.entries(a.fixed).map(([k,v])=>"+"+v+" "+featAbilName(k)).join(", "))}</p>`
-    :`<div class="ft-plus" role="group" aria-label="+${esc(String(a.amount))} to">+${esc(String(a.amount))} to: ${a.choose.map((k,j)=>`<button type="button" class="ft-chip${j===0?" on":""}" data-ft-plus="${esc(String(a.i))}" data-k="${esc(k)}" aria-pressed="${j===0?"true":"false"}">${esc(featAbilName(k))}</button>`).join("")}</div>`).join("");
+    :`<div class="ft-plus" role="group" aria-label="+${esc(String(a.amount))} to" data-ft-group="${esc(String(a.i))}">+${esc(String(a.amount))} to: ${a.choose.map(k=>`<button type="button" class="ft-chip" data-ft-plus="${esc(String(a.i))}" data-k="${esc(k)}" aria-pressed="false">${esc(featAbilName(k))}</button>`).join("")}</div>`).join("");
   return `<div class="ft-desc">${body.split(/\n\s*\n|\n/).filter(s=>s.trim()).map(p=>`<p>${esc(p)}</p>`).join("")}</div>${plus}`;
+}
+/* One ASI step as gatherChoices() reads it (#118), and as Picks left and the
+   live window read it (#171): the pressed row — with no rows drawn (Feats
+   allowed off) the ASI, with rows but none pressed (a category list) null, no
+   pick — the ASI's controls ("" for a select on "— choose —"), and each "+1
+   to:" answer at the index of its featAbilityChoices() entry: a fixed increase
+   draws no group, so reading the groups in order would shift the ones after
+   it. `capped`: the groups with no ability left under the cap. */
+function asiReadStep(div){
+  const pk=div.querySelector('[data-ft-pick][aria-pressed="true"]');const pick=pk?pk.dataset.ftPick:(div.querySelector("[data-ft-pick]")?null:"__asi__");
+  const mode=(div.querySelector('[data-asi-mode]:checked')||{}).value||"2";
+  const plus=[];div.querySelectorAll('[data-ft-plus][aria-pressed="true"]').forEach(c=>{plus[num(c.dataset.ftPlus)]=c.dataset.k;});
+  const capped=[];div.querySelectorAll('.ft-plus[data-capped="1"]').forEach(g=>capped.push(num(g.dataset.ftGroup)));
+  const ds=div.dataset||{};
+  return {type:"asi",pick,mode,a:(div.querySelector('[data-asi-a]')||{}).value,b:(div.querySelector('[data-asi-b]')||{}).value,plus,capped,
+    sid:ds.sid||"",ci:num(ds.ci),level:ds.level?num(ds.level):null};
+}
+/* Is the step set? DOM-free. The ASI with an ability ("+2 to one"), or two
+   different ones ("+1 to two", #146 S2-24); a feat with every "+1 to:" group
+   answered from its own choices, or capped out; a `from` name with no loaded
+   feat (`feat` null) is set by being pressed. No row pressed is not set. */
+function asiStepDone(sel,feat){
+  if(!sel||sel.pick==null||sel.pick==="")return false;
+  if(sel.pick==="__asi__"){
+    if(sel.mode==="1")return FEAT_ABIL_KEYS.includes(sel.a)&&FEAT_ABIL_KEYS.includes(sel.b)&&sel.a!==sel.b;
+    return FEAT_ABIL_KEYS.includes(sel.a);
+  }
+  if(!feat)return true;
+  const plus=sel.plus||[],capped=sel.capped||[];
+  return featPendingIncreases(feat).every(a=>!!a.fixed||a.choose.includes(plus[a.i])||capped.includes(a.i));
 }
 /* Binds every ASI step on screen. Delegated to each step's own .choice div,
    which openModal() builds new on every open — so nothing stacks (#mBody
@@ -393,8 +441,9 @@ function choiceDoneHandler(btn,commit){
 function commitAsiPick(sel,origin,pending){
   if(sel.pick==null||sel.pick==="")return;   /* no row pressed (a category list): nothing to grant */
   if(sel.pick==="__asi__"){
-    /* never an `ability.undefined` effect */
-    if(!FEAT_ABIL_KEYS.includes(sel.a)||(sel.mode==="1"&&!FEAT_ABIL_KEYS.includes(sel.b)))return;
+    /* never an `ability.undefined` effect, and "+1 to two" is two different
+       scores (#146 S2-24): the same one twice is +2 by another route */
+    if(!FEAT_ABIL_KEYS.includes(sel.a)||(sel.mode==="1"&&(!FEAT_ABIL_KEYS.includes(sel.b)||sel.a===sel.b)))return;
     const fx=sel.mode==="1"?[{target:"ability."+sel.a,value:1},{target:"ability."+sel.b,value:1}]:[{target:"ability."+sel.a,value:2}];
     addFeatureFromDef({name:"Ability Score Improvement",description:"Gained from leveling "+((origin&&origin.class)||"")+".",effects:fx},origin);return;
   }
@@ -406,7 +455,8 @@ function commitAsiPick(sel,origin,pending){
   const fx=[];
   featPendingIncreases(fd).forEach(a=>{
     if(a.fixed)Object.entries(a.fixed).forEach(([k,v])=>fx.push({target:"ability."+k,value:v}));
-    else{const k=(sel.plus||[])[a.i];const key=a.choose.includes(k)?k:a.choose[0];if(key)fx.push({target:"ability."+key,value:a.amount});}
+    /* an unanswered "+1 to:" adds nothing: no fallback to the first option (#171) */
+    else{const k=(sel.plus||[])[a.i];if(a.choose.includes(k))fx.push({target:"ability."+k,value:a.amount});}
   });
   /* a new array: the feature's effects may still be the rules entry's own */
   if(fx.length)ft.effects=(Array.isArray(ft.effects)?ft.effects:[]).concat(fx);
@@ -461,8 +511,11 @@ function choiceFieldHTML(ch,ci,d){
       :`<label class="f">Hit points gained</label><input type="number" min="0" inputmode="numeric" data-hp-dice placeholder="hit points gained" aria-label="Hit points gained">`+
         `<p class="hint" style="margin:6px 0 0">${esc(ch.cls||"This class")} has no hit die in the loaded rules — type what you gained, or leave it blank and set Max yourself.</p>`;
   }else if(t==="asi"){
-    /* Feats allowed off (#118): exactly today's controls, no list */
-    inner=character.featsAllowed===false?asiControlsHTML(ci):asiFeatListHTML(ch,ci,{showAll:false})+`<div class="ft-panel" data-ft-panel="${esc(ci)}">${asiPanelHTML(ch,ci,"__asi__")}</div>`;
+    /* Every class ASI step is one pick to make (#171): Picks left and the
+       dismiss guard count it until it is set (choiceBlockPicked). Feats allowed
+       off (#118): the controls alone, no list, headed by the level too. */
+    chooseAttr=` data-choose="1"`;
+    inner=character.featsAllowed===false?asiControlsHTML(ci,asiStepLabel(ch,"Ability Score Improvement")):asiFeatListHTML(ch,ci,{showAll:false})+`<div class="ft-panel" data-ft-panel="${esc(ci)}">${asiPanelHTML(ch,ci,"__asi__")}</div>`;
   }else if(t==="feat"&&((ch.category&&!ch.from)||/^(race|bg):/.test(String(ch._sid||"")))){
     /* #118 §4.1: a species or background feat choice is the ASI step's list —
        filtered to its category ("an Origin feat of your choice"), to its
@@ -512,7 +565,10 @@ function choiceFieldHTML(ch,ci,d){
   }else{
     inner=`<p class="hint">${esc(ch.label||ch.note||"A choice is available at your table.")}</p>`;
   }
-  return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(ctype||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
+  /* an ASI or option step's level: the "Choose again" note and the "picked at
+     level N" tag name it (asiRefresh) */
+  const lvAttr=(ctype==="asi"||ctype==="option")&&ch._level?` data-level="${esc(ch._level)}"`:"";
+  return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(ctype||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr}${lvAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
 }
 let _activeChoices=[];
 /* ---- a choice window's title (#69) ----
@@ -633,16 +689,7 @@ function gatherChoices(){
     const t=div.dataset.ctype;
     if(t==="skill")out.push({type:"skill",sid:div.dataset.sid||"",keys:Array.from(div.querySelectorAll('[data-skill-opt]:checked:not(:disabled)')).map(cb=>cb.dataset.skillOpt).filter(Boolean)});
     else if(t==="subclass"){const r=div.querySelector('[data-sub-opt]:checked');out.push({type:"subclass",name:r?r.value:null});}
-    else if(t==="asi"){
-      /* #118: the pressed row — with no rows drawn (Feats allowed off) the ASI,
-         with rows but none pressed (a category list) null, no pick — the
-         ASI's controls when it is the pick, and each "+1 to:" answer at the index
-         of its featAbilityChoices() entry — a fixed increase draws no group, so
-         reading the groups in order would shift the ones after it. */
-      const pk=div.querySelector('[data-ft-pick][aria-pressed="true"]');const pick=pk?pk.dataset.ftPick:(div.querySelector("[data-ft-pick]")?null:"__asi__");
-      const mode=(div.querySelector('[data-asi-mode]:checked')||{}).value||"2";
-      const plus=[];div.querySelectorAll('[data-ft-plus][aria-pressed="true"]').forEach(c=>{plus[num(c.dataset.ftPlus)]=c.dataset.k;});
-      out.push({type:"asi",pick,mode,a:(div.querySelector('[data-asi-a]')||{}).value,b:(div.querySelector('[data-asi-b]')||{}).value,plus,sid:div.dataset.sid||""});}
+    else if(t==="asi")out.push(asiReadStep(div));
     else if(t==="feat"){const sel=div.querySelector('[data-feat-opt]');out.push({type:"feat",name:sel?sel.value:"",sid:div.dataset.sid||""});}
     else if(t==="option")out.push({type:"option",ci:num(div.dataset.ci),sid:div.dataset.sid||"",idxs:Array.from(div.querySelectorAll('[data-opt-i]:checked:not(:disabled)')).map(cb=>num(cb.dataset.optI))});
     else if(t==="hp"){const b=div.querySelector('[data-hp-dice]');out.push({type:"hp",ci:num(div.dataset.ci),dice:b?String(b.value).trim():""});}
