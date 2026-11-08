@@ -111,6 +111,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
   'isStyleChoice', 'classStyleSources', 'hasFightingStyle', 'featFeatureNamed', 'styleOptionTaken', 'findClassDef',
   'asiStepLabel', 'asiReadStep', 'asiStepDone', 'asiScore', 'asiScores', 'asiStepIncreases', 'asiLedger',
+  'asiLineText', 'asiChooseAgainText', 'asiTakenElsewhere',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -9009,7 +9010,7 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   sheet([{name: 'Fighter', level: 4}], {features: [{id: 'fd', name: 'Feat: Defense', enabled: true, effects: []}]});
   const so = X.choiceFieldHTML(Object.assign(styleCh(), {_level: 1, _sid: 'class:Fighter'}), 0, X.findClassDef('Fighter'));
   ck('#172 the other way: with the Defense feat, the Fighting Style option shows Defense as already yours',
-     /data-opt-i="1" disabled><span><b>Defense<\/b> \(already yours\)/.test(so) && /data-opt-i="0"><span><b>Archery<\/b> —|data-opt-i="0"><span><b>Archery<\/b> </.test(so) && /\(1 already yours\)/.test(so), so);
+     /data-opt-i="1" disabled><span><b>Defense<\/b>(<span class="opt-taken" data-opt-taken><\/span>)? \(already yours\)/.test(so) && /data-opt-i="0"><span><b>Archery<\/b>(<span class="opt-taken" data-opt-taken><\/span>)? </.test(so) && /\(1 already yours\)/.test(so), so);
   const inv = X.choiceFieldHTML({type: 'option', label: 'Eldritch Invocations', choose: 1, from: [{name: 'Defense', description: 'A ward.'}], _level: 2, _sid: 'class:Warlock'}, 0, null);
   ck('#172 ...an invocation named like a feat keeps its name-only match: still open', /data-opt-i="0"><span><b>Defense<\/b> —/.test(inv) && !/already yours/.test(inv), inv);
 
@@ -9201,6 +9202,48 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#171 panel: ...and with room, just the increase', />\+1 Strength<\/p>/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master', {str: 19, dex: 10, con: 10, int: 10, wis: 10, cha: 10})));
   sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 20;
   ck('#171 panel: ...read from the sheet when no scores are given', X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master').includes('(already 20: no increase)'));
+
+  // ---- #171 the live window's slots and its words (asiRefresh fills them; driven in the browser)
+  sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 16;
+  const slots = h => /<p class="hint asi-note" data-asi-note hidden><\/p><p class="hint asi-line" data-asi-line><\/p><\/div>$/.test(h);
+  const w4 = X.choiceFieldHTML({type: 'asi', _level: 4}, 0, null);
+  ck('#171 live: an ASI step holds its note and its scores line, last', slots(w4), w4.slice(-300));
+  X.character.featsAllowed = false;
+  ck('#171 live: ...with Feats allowed off too', slots(X.choiceFieldHTML({type: 'asi', _level: 4}, 0, null)));
+  X.character.featsAllowed = true;
+  ck('#171 live: ...and a species feat list', slots(X.choiceFieldHTML({type: 'feat', category: 'general', _sid: 'race:Human'}, 0, null)));
+  ck('#171 live: each row carries its tag, to put back after "picked at level N"',
+     /data-ft-pick="__asi__" aria-pressed="true" data-tag="General"/.test(w4) && new RegExp('data-ft-pick="' + DEF._id + '" aria-pressed="false" data-tag="Fighting Style"').test(w4)
+     && new RegExp('data-ft-pick="' + feat('Canopy Runner')._id + '" aria-pressed="false" data-tag=""><span class="ft-nm"><b>Canopy Runner</b><small>[^<]*</small></span></button>').test(w4), w4);
+  ck('#171 live: a "+1 to:" group holds its capped-out note, hidden',
+     /<span class="hint ft-capnote" data-ft-capnote hidden>no increase: all at the maximum<\/span><\/div>/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Grappler')));
+  ck('#171 live: a Fighting Style option holds a slot for "(picked at level N)"; an invocation does not',
+     /<b>Archery<\/b><span class="opt-taken" data-opt-taken><\/span>/.test(X.choiceFieldHTML(Object.assign(styleCh(), {_level: 1}), 0, null))
+     && !/data-opt-taken/.test(X.choiceFieldHTML({type: 'option', label: 'Eldritch Invocations', choose: 1, from: [{name: 'Defense'}], _level: 2}, 0, null)));
+  ck('#171 live: an option step carries its level', /data-ctype="option" data-sid="" data-level="1"/.test(X.choiceFieldHTML(Object.assign(styleCh(), {_level: 1}), 0, null)));
+  const sc = {str: 18, dex: 14, con: 16, int: 10, wis: 12, cha: 8};
+  ck('#171 live: the scores line', X.asiLineText(sc, 6) === 'After level 6: STR 18 · DEX 14 · CON 16 · INT 10 · WIS 12 · CHA 8', X.asiLineText(sc, 6));
+  ck('#171 live: ...a score at the cap is marked', X.asiLineText(Object.assign({}, sc, {str: 20}), 6) === 'After level 6: STR 20 (max) · DEX 14 · CON 16 · INT 10 · WIS 12 · CHA 8');
+  ck('#171 live: ...past it too (a sheet already at 22)', /^After level 8: STR 22 \(max\) · /.test(X.asiLineText(Object.assign({}, sc, {str: 22}), 8)));
+  ck('#171 live: ...under an Epic Boon\'s 30, 20 is not the max and 30 is',
+     /STR 20 · /.test(X.asiLineText(Object.assign({}, sc, {str: 20}), 19, 30)) && /STR 30 \(max\) · /.test(X.asiLineText(Object.assign({}, sc, {str: 30}), 19, 30)));
+  ck('#171 live: ...with no level (a species list), "After this pick: "', /^After this pick: STR 18 · /.test(X.asiLineText(sc, null)));
+  ck('#171 live: ...junk reads 0, never NaN', X.asiLineText({str: 'abc'}, 4) === 'After level 4: STR 0 · DEX 0 · CON 0 · INT 0 · WIS 0 · CHA 0');
+  ck('#171 live: "Choose again" names the level that took the room', X.asiChooseAgainText(4) === "Choose again: level 4's pick took the room");
+  ck('#171 live: ...or, for the step\'s own switch, the cap', X.asiChooseAgainText(null) === 'Choose again: that would pass 20');
+  const picks = [{ci: 1, level: 4, name: 'Athlete', repeatable: false}, {ci: 2, level: 6, name: 'Skilled', repeatable: true}, {ci: 0, level: 1, name: 'Defense', repeatable: false}];
+  const te2 = X.asiTakenElsewhere(picks, 2), te1 = X.asiTakenElsewhere(picks, 1);
+  ck('#171 live: a feat pressed at one step is taken at the others, by its level', te2.get('athlete') === 4 && !te1.has('athlete'), [...te2]);
+  ck('#171 live: ...a Repeatable feat never is', !te1.has('skilled') && !X.asiTakenElsewhere(picks, 5).has('skilled'));
+  ck('#171 live: ...and a Fighting Style option picked at level 1 is, at the level-4 step', te1.get('defense') === 1 && X.asiTakenElsewhere(picks, 0).has('athlete') && !X.asiTakenElsewhere(picks, 0).has('defense'));
+  ck('#171 live: ...the first step that took it names it', X.asiTakenElsewhere([{ci: 3, level: 8, name: 'Tough'}, {ci: 4, level: 12, name: 'tough'}], 5).get('tough') === 8);
+  ck('#171 live: ...nothing picked, nothing taken', X.asiTakenElsewhere([], 0).size === 0 && X.asiTakenElsewhere(null, 0).size === 0);
+  {
+    const css = require('fs').readFileSync(require('path').join(__dirname, '..', 'css', '50-modal.css'), 'utf8');
+    ck('#171 live: a chip or row that can\'t be chosen looks it (as a .seg button does)', /\.ft-chip:disabled,\.ft-row:disabled\{cursor:default;opacity:\.55\}/.test(css));
+    ck('#171 live: the note is in --brick, the line small, both hidden when hidden', /\.asi-note\{[^}]*color:var\(--brick\)/.test(css) && /\.asi-line\{[^}]*font-size:12px/.test(css) && /\.asi-note\[hidden\][^{]*\{display:none\}/.test(css) && /\.ft-capnote\[hidden\]\{display:none\}/.test(css));
+  }
+  ck('#171 live: asiRefresh() over the harness\'s empty document does nothing, and throws nothing', (() => { try { ctx.asiRefresh(); ctx.wireAsiFeats([]); return true; } catch (e) { return String(e); } })() === true);
 
   // ---- #171 end to end: a level-18 start opens one window, six blank ASI steps
   {
