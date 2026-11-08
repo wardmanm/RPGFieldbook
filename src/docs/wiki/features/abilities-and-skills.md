@@ -26,8 +26,13 @@ statuses and summoned familiars. A feat's own increase is asked, not applied by 
 the feat is taken at an ASI, or as a species or background feat, the step asks "+1 to:" from the
 feat's `ability` field or its text, and stores the answer as an `ability.<k>` effect on the feat's
 feature. Removing the feat, or whatever granted it, removes the +1
-([Character building](character-building.md)). Nothing caps a score at 20 or at a feat's stated
-`max`. The modifier is `modOf()` of that. Typing CON also re-syncs a
+([Character building](character-building.md)). **The ASI step caps what it adds** (#171): an
+Ability Score Improvement or a feat's +1 can't take a score past 20, and an Epic Boon's own increase
+past 30 (its `max`), counting the typed score, enabled features' `ability.<k>` effects and the window's
+earlier levels (`asiScore()`, `asiLedger()`). Nothing else is capped: a typed score, an equipped
+item, an active status or a summoned familiar can take the final score past 20, and a sheet already
+past 20 is never lowered (that ability is simply disabled at the next ASI). The modifier is
+`modOf()` of the final score. Typing CON also re-syncs a
 seeded level-1 Max HP — the input handler grabs the previous score before the write
 ([Vitals & rest](vitals-and-rest.md)).
 
@@ -140,7 +145,7 @@ the only sane order with one column.
 - A feat added from the Features & Traits browser gets no "+1 to:" question, so its increase is
   applied by hand. Taken through the ASI step or a species or background list, the increase is
   asked, and that includes Humblewood's Sun Touched and Moonlit, read from their text.
-- The ASI's "+1 to two" accepts the same ability twice. 2024 says two different scores
+- A +1 a feat carries as its own effect (the Humblewood shape) isn't capped at 20
   ([Known issues](../roadmap/known-issues.md)).
 
 ## History
@@ -156,3 +161,4 @@ the only sane order with one column.
 - 2026-10-16 — In the combat view the By ability header keeps a full-size name, modifier and score. → ledger L5756, #92
 - 2026-10-23 — One layout: the abilities as a strip with their saves, Skills its own condensed card beside Defences; By ability and the Skills display setting retired. → ledger L6633, #103
 - 2026-10-27 — A feat's +1 is asked when the feat is taken at an ASI or from a species or background, and stored on the feat's feature. → ledger L7569, #118
+- 2026-11-07 — The ASI step caps what it adds at 20 (30 for an Epic Boon's), in level order; nothing else caps a score, and nothing lowers one already past 20. "+1 to two" needs two different abilities. → ledger L9972, #171, #146

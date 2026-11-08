@@ -199,7 +199,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **What the level card lists (#101)** — What changed on the sheet, from `levelSnapshot()` before and after the level (`levelGains()`)
 - **Which features the card says "don't stack" (#101)** — An allowlist, `LU_NO_STACK`: Extra Attack and Unarmored Defense (SRD 5.2.1 p.26)
 - **Which feats the ASI step offers (#118, decision 1)** — The ones the character qualifies for, with Show all; an unmet prerequisite asks at Done and never blocks
-- **A feat's own +1 (#118, decision 2)** — Asked in the same step and stored on the feat
+- **A feat's own +1 (#118, decision 2)** — Asked in the same step and stored on the feat; capped at 20, or the increase's own `max`, since #171
 - **Level 19's Epic Boon (#118, decision 3)** — An ASI level too, detected in the app from the "Epic Boon" trait; Epic Boons are offered only there
 - **The step's layout (#118, decision 5)** — One list, Ability Score Improvement pinned first
 - **Species feats (#118, decision 7)** — Granted as a background's are: a fixed `feat` or a feat choice through the same list
@@ -213,6 +213,13 @@ When a page gains a Decisions row, add its line here under that page.
 - **Level down (#118, decision 9)** — Each level-up records what it gave; level down removes the ticked HP and features and lists the rest
 - **A background's tool choice (#121)** — A `tool` step in `runExtraChoices()`, asked when the background is added (Mike)
 - **Dismissing a window with a tool step unpicked (#121)** — No warning for it; Done's Picks left still counts it
+- **How a high-level start asks for its ASIs (#171, decision 1; Mike 2026-11-07)** — One window, each step labelled by its level and starting blank; Picks left counts the blank ones
+- **Where the ASI cap is enforced (#171, decision 2; Mike 2026-11-07)** — In the step: an ability with no room can't be chosen; `commitAsiPick()` applies the same rule at Done
+- **What counts toward the ASI cap (#171, decision 3)** — The typed score plus enabled features' ability effects, plus the window's earlier levels, in level order; not items, statuses or familiars
+- **An earlier change that takes a later pick's room (#171, decision 4)** — The later pick is cleared, with "Choose again", and counts in Picks left again
+- **What has the Fighting Style feature (#172, decision 13)** — A feature so named, or a class on the sheet whose rules give a Fighting Style trait or choice at or below its level
+- **A style the class already gave (#172, decision 14)** — Counts as that Fighting Style feat taken, and the reverse
+- **The same feat at two steps of one window (#171, decision 15)** — Disabled at the other steps, "picked at level N"; Show all doesn't lift it
 
 ### [Abilities & skills](features/abilities-and-skills.md)
 

@@ -468,6 +468,16 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 .ft-plus{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .ft-chip{min-height:44px;padding:4px 14px;border:1.3px solid var(--line);border-radius:999px;background:var(--panel);color:var(--ink);font:inherit;cursor:pointer}
 .ft-chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+/* #171 an increase with no room, or a feat picked at another step, can't be
+   chosen and looks it (as a .seg button does); the step's "Choose again" note
+   and its scores line sit under its controls */
+.ft-chip:disabled,.ft-row:disabled{cursor:default;opacity:.55}
+.ft-plus .ft-capnote{margin:0 0 0 4px}
+.ft-capnote[hidden]{display:none}
+.m-body p.asi-note{color:var(--brick);margin:6px 0 0;line-height:1.4}
+.m-body p.asi-note[hidden]{display:none}
+.m-body p.asi-line{font-size:12px;margin:6px 0 0;line-height:1.4;overflow-wrap:anywhere}
+.opt-taken{color:var(--ink-soft)}
 /* #105 the End of combat window (87-combat-end.js). It opens wide, so like the
    trade window it fills the fixed-height box: the rows scroll, Done stays. */
 /* Ruling 19: the window fits its content, up to the wide modal's height — a

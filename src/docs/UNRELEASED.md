@@ -91,3 +91,10 @@ Bullets below this line — leave the heading in place.
   sees them on the Coins card until they're spent or converted.
 - When a settings change can't be saved, because your browser's storage is full, Fieldbook now says
   so once instead of quietly losing it the next time you open it.
+- Starting a character above level 1 now asks for each Ability Score Improvement on the way up,
+  each labelled with its level. Nothing is filled in for you.
+- At every Ability Score Improvement, choose the ability (or a feat, and its +1) yourself: nothing is
+  picked for you, and an increase can't take a score past 20 (30 for an Epic Boon). "+1 to two" now
+  needs two different abilities.
+- Fighters, Paladins and Rangers with the Fighting Style feature now qualify for Fighting Style feats,
+  and the style you already have counts as that feat taken.

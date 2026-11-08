@@ -34,8 +34,17 @@ Known behaviour that is accepted for now.
   shipped data: no shipped species uses a fixed `feat`, and Origin feats carry no `ability`.
   `docs/rules-schema.md` says so. → ledger L7657, and
   [Character building](../features/character-building.md)
-- **The ASI's "+1 to two" accepts the same ability twice,** (#146) for +2 to one score. The 2024 rule
-  says two different scores. It predates #118. → ledger L7569, and
+- **Prerequisites in a choices window are read from the sheet,** (#146, 1.9.2) not from the window's
+  earlier steps. A feat whose Strength 13 only the level-4 ASI in the same window would reach still
+  says "needs …" at level 8, and Done's "Take it anyway" warns. → ledger L9972, and
+  [Character building](../features/character-building.md)
+- **A blank single-radio option or subclass isn't counted** (#146, 1.9.2) by Picks left or the
+  dismiss guard: a "choose 1" option and a subclass choice carry no `data-choose`, as an ASI step now
+  does (#171). → ledger L9972, and [Character building](../features/character-building.md)
+- **A +1 a feat carries as its own effect isn't capped at 20.** The Humblewood shape (Arboreal
+  Acrobat's `ability.dex` effect) is granted with the feat by `grantFeatDef()`, outside the ASI
+  step's cap; the window counts it toward the next step's room, so what it shows still lands. A
+  pack's `ability` field and its text's "Increase your …" are capped (#171). → ledger L9972, and
   [Abilities & skills](../features/abilities-and-skills.md)
 - **The choices inside a feat stay by hand.** (#146) The ASI step asks only for a feat's +1. Its spells
   (Magic Initiate, Fey-Touched, Ritual Caster…), tools and instruments (Crafter, Musician), damage
@@ -299,6 +308,14 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
   → [Character model](../architecture/character-model.md)
 - `settings.autoload` is seeded and never read (#151). `portraitImg` has no default in `blankChar()`.
   `choicesSettled()` is defined and never called. → [Character model](../architecture/character-model.md)
+- The ASI step's window starts from the sheet as it opens (#146, 1.9.2). In a high-level start, a
+  later level's ability effect (a level-20 trait carried as an effect) would count before an earlier
+  step's increase, so the screen could refuse a pick the levels allow. Only Humblewood's Arboreal
+  Acrobat carries an ability effect, and it is a feat. → ledger L9972, and
+  [Character building](../features/character-building.md)
+- `featAbilityChoices()`'s text fallback doesn't read "to a maximum of 30" (#146, 1.9.2), so an Epic
+  Boon with no `ability` field would cap at 20. Every shipped boon carries `ability` with `max: 30`.
+  → ledger L9972, and [Character building](../features/character-building.md)
 
 
 ### Tooling
@@ -479,3 +496,5 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — Removed: the item form's scaling-uses freeze and the Flat AC's missing Vitals lock, both fixed in phase 2. → ledger L9597, #130, #132
 - 2026-11-07 — Removed, fixed by the Bio chips branch: a removed source's seeded speed, size, spellcasting ability, text and strings (#131), Size marked set by hand when the species set it (#146's item), and nothing binding `character.speed` (the Speed window's Base speed box). → ledger L9760, #131, #146
 - 2026-11-07 — Removed: the skin rewriting `character.system`, a changed system keeping its `system` chips (#133), and silent settings saves (#141), all fixed; added as latent: a swap dropping a default the species also grants. → ledger L9865, #133, #141
+- 2026-11-07 — Removed: "+1 to two" accepting one ability twice (#146 S2-24, fixed with #171). Added: prerequisites in a choices window read from the sheet, and a blank single-radio option or subclass not counted (both 1.9.2, #146); a feat's own-effect +1 not capped. → ledger L9972, #171, #172
+- 2026-11-08 — Added, latent (#146, 1.9.2): the ASI window's base is the sheet at open, and a text-only Epic Boon would cap at 20. → ledger L9972, #171

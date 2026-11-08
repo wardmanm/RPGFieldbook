@@ -531,7 +531,9 @@ strings. A tool's own name is always read as that tool ("Three-Dragon Ante Set")
 
   Each entry is either `{"choose": [abil…], "amount": N}` (the player picks one of `choose`, +N)
   or a fixed `{abil: N, …}` — either shape may carry its own `max`. `max` is the score cap the
-  feat states; it is shown but not enforced. Ability keys are `str`/`dex`/`con`/`int`/`wis`/`cha`.
+  feat states: when the feat is taken at an Ability Score Improvement or from a species or
+  background list, its increase can't take a score past it (past 20 when there is none). Ability
+  keys are `str`/`dex`/`con`/`int`/`wis`/`cha`.
   Omit the field when the feat raises no score; the converter also drops any entry 5etools marks
   `hidden` (only the Ability Score Improvement feat has one — the app supplies that feat's own
   increase itself).

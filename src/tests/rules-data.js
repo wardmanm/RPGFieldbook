@@ -2249,6 +2249,31 @@ function block(html, needle, tag) {
   ck('choiceBlocks reads the target from the DOM, not from _activeChoices',
      /function choiceBlocks\(\)\{[\s\S]*?\.choice\[data-choose\]/.test(js));
 
+  // #171: the ASI steps' live window. asiRefresh() applies the cap, clears a pick
+  // that lost its room and offers a feat once; the harness stubs the document,
+  // so the binding is guarded here, as text (the browser pass drives it).
+  {
+    const fnBody = name => (js.match(new RegExp('function ' + name + '\\([^)]*\\)\\{[\\s\\S]*?\\n\\}')) || [''])[0];
+    const wire = fnBody('wireAsiFeats'), refresh = fnBody('asiRefresh');
+    const early = wire.indexOf('if(!rows||!panel)return;');
+    ck('#171 every ASI step is bound for change, the Feats-off one too: the listener comes before the early return on a missing list',
+       early > 0 && /div\.addEventListener\("change"[^\n]*asiRefresh\(div\)/.test(wire.slice(0, early)), wire.slice(0, 600));
+    ck('#171 ...a row press, a "+1 to:" chip and Show all each end in asiRefresh()',
+       /if\(r\.getAttribute\("aria-pressed"\)!=="true"\)\{pick\(r\.dataset\.ftPick\);asiNote\(div,""\);asiRefresh\(div\);\}/.test(wire)
+       && /x\.setAttribute\("aria-pressed",on\?"true":"false"\);\}\);asiNote\(div,""\);asiRefresh\(div\);return;/.test(wire)
+       && /filter\(\);\s*asiRefresh\(div\);\s*\}/.test(wire), wire);
+    ck('#171 ...a Fighting Style option step is bound too, and one asiRefresh() runs once all is bound',
+       /\.choice\[data-ctype="option"\][\s\S]{0,200}isStyleChoice\(chs\[num\(div\.dataset\.ci\)\]\)\)div\.addEventListener\("change",\(\)=>asiRefresh\(div\)\)/.test(wire) && /\}\);\s*asiRefresh\(\);\s*\}$/.test(wire), wire.slice(-400));
+    ck('#171 ...a disabled row or chip does nothing', /if\(r\.disabled\)return;/.test(wire) && /if\(c\.disabled\)return;/.test(wire));
+    ck('#171 asiRefresh reads only the open window, through document.querySelectorAll("#mBody …")',
+       /document\.querySelectorAll\('#mBody \.choice\[data-ctype="asi"\]'\)/.test(refresh) && /document\.querySelectorAll\('#mBody \.choice\[data-ctype="option"\]'\)/.test(refresh)
+       && !/getElementById/.test(refresh) && !/document\.querySelector\(/.test(refresh), refresh.slice(0, 400));
+    ck('#171 ...and clears a stale second select (asiSecondStale) before it reads the steps, so "+1 to two" never shows one ability twice',
+       /steps\.forEach\(div=>\{if\(asiSecondStale\(asiReadStep\(div\)\)\)\{const b=div\.querySelector\("\[data-asi-b\]"\);if\(b\)b\.value="";\}\}\);[\s\S]*?const read=\(\)=>/.test(refresh), refresh.slice(0, 700));
+    ck('#171 ...and both choice windows reach it: runChoices and runExtraChoices call wireAsiFeats',
+       /wireAsiFeats\(_activeChoices\);/.test(fnBody('runChoices')) && /wireAsiFeats\(list\);/.test(fnBody('runExtraChoices')));
+  }
+
   // Escape/×/backdrop used to discard every pick silently, with no way to reopen
   // a chooser — which would make dismissing the easiest way past the new warning.
   ck('the three dismissals go through dismissModal, not closeModal',
