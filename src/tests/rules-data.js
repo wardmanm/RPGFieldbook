@@ -1283,6 +1283,30 @@ function block(html, needle, tag) {
      /data-note="proficiencies"[\s\S]*data-path="character.alignment"[\s\S]*id="bioLanguages"[\s\S]*id="bioSenses"[\s\S]*<div class="def-h">Tools<\/div><div id="bioTools"><\/div>[\s\S]*<div class="def-h">Other proficiencies<\/div>[\s\S]*id="rt-proficiencies"/.test(t));
 }
 
+// ---------- #120: the Bio and Defences chips get room to read and to tap
+// Scoped to .chips, so the bare .chip rule in 30-sheet.css (features' effect
+// chips, the pack badges) doesn't move. `rule()` finds a top-level rule whose
+// selector list names exactly `sel`, comments stripped.
+{
+  const strip = f => fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cards = strip('src/css/20-cards.css');
+  const rule = (css, sel) => { for (const chunk of css.split('}')) { const i = chunk.indexOf('{'); if (i < 0) continue;
+    if (chunk.slice(0, i).split(',').map(s => s.trim()).includes(sel)) return chunk.slice(i + 1); } return null; };
+  const px = (body, prop) => { const m = body && new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*([^;]+)').exec(body); return m ? m[1].trim().split(/\s+/).map(v => parseFloat(v)) : null; };
+  const chip = rule(cards, '.chips .chip'), row = rule(cards, '.chips'), xa = rule(cards, '.chip-x::after'), dh = rule(cards, '.def-h'), ask = rule(cards, '.chips .chip-ask');
+  ck('#120 a chip in a chip row is at least 28px tall', !!chip && (px(chip, 'min-height') || [0])[0] >= 28, chip);
+  const gap = px(row, 'gap') || [];
+  ck('#120 chips sit at least 8px apart, and so do wrapped rows', gap.length >= 1 && gap[0] >= 8 && (gap[1] === undefined ? gap[0] : gap[1]) >= 8, row);
+  ck('#120 a chip\'s × has a hit area at least 32px tall', /(^|;)\s*position\s*:\s*relative/.test(rule(cards, '.chip-x') || '') && !!xa && /position\s*:\s*absolute/.test(xa) && (px(xa, 'height') || [0])[0] >= 32, [rule(cards, '.chip-x'), xa]);
+  const m = px(dh, 'margin') || [];
+  ck('#120 each heading starts a clearly separate group: more space above it than below', m.length >= 3 && m[0] > m[2], dh);
+  ck('#120 a row keeps about 12px from the next heading', ((px(row, 'margin') || [])[2] || 0) >= 12 || ((px(row, 'margin-bottom') || [])[0] || 0) >= 12, row);
+  ck('#121 a placeholder chip is dashed', !!ask && /border[^;]*dashed/.test(ask), ask);
+  ck('#121 ...and its name is a plain button that keeps its own casing', /text-transform\s*:\s*none/.test(rule(cards, '.chip-name') || '') && /background\s*:\s*none/.test(rule(cards, '.chip-name') || ''), rule(cards, '.chip-name'));
+  ck('#120 the bare .chip rule in 30-sheet.css is unchanged, so effect chips don\'t move',
+     fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8').includes('.chip{font-family:var(--head);font-size:10px;letter-spacing:.03em;padding:3px 7px;border-radius:99px;\n  background:color-mix(in srgb,var(--accent-2) 16%,transparent);color:var(--accent-2);text-transform:uppercase;font-weight:700}'));
+}
+
 // ---------- #103: the new Sheet
 {
   const t = loadHTML();
