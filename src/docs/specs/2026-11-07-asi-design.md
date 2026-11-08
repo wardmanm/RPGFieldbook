@@ -1,6 +1,6 @@
 # ASI: every increase asked, none past 20 — design
 
-**Status:** draft 2026-11-07, design calls settled; awaiting Mike's approval of the document · wave 2 of [1.9.1](../wiki/roadmap/1.9.1.md), the ASI worktree
+**Status:** approved 2026-11-07 (Mike) · wave 2 of [1.9.1](../wiki/roadmap/1.9.1.md), the ASI worktree
 **Issues:** #172 (Fighting Style feats marked unqualified, P2) → #171 (a high-level start leaves every
 ASI on its default, past 20, P1). One branch, `issue/172-asi`, built in that order. From #146's
 checklist, S2-26 (the dismiss guard doesn't count a feat pick) is fixed by construction, and S2-24
