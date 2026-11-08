@@ -9794,8 +9794,19 @@ a band or AC on a familiar row (its AC is the familiar's); `irStart()` repaints 
 fill happened; `irStart()` finds a familiar's box with `attrSel()` (the harness has no `CSS.escape`).
 `45-combat.css` and `87-combat-end.js`, named by the roadmap row, needed no change.
 
-Not done in this run: the screenshots and the driven checks (plan Tasks 1 Step 1 and 7), pending
-one shared browser.
+Browser QA (plan Task 1 Step 1 and Task 7), in the project's Playwright MCP: Roll initiative at 390
+before (main's build: each monster's Init on a second line) and after (one line; 78px of name at
+320, measured), 1280, both skins; the familiar form, Roll initiative with an Own and an After
+familiar, the strip and table, a fallen familiar, its dialog and the paw's card, at 390 and 1280 in
+both skins, in `.claude/qa/in-progress/164-initiative/`. Driven by clicks: Start, Next to you with
+Wolf behind, Sprocket's HP down to 0 and back to 3 in its dialog (the paw's card read HP 3/7), Owl
+summoned from the paw mid-fight (row last, HP filled to 6/6, the toast), the acting Wolf dismissed
+(the marker to Owl, the round unchanged), the acting Owl dismissed at the bottom (the marker to the
+top, round 2), your initiative typed to 15 (Wolf followed), a Goblin typed to 15 tied after Wolf
+(offered Act earlier only; it went before you, then Act later put it back after Wolf), and a reload
+mid-fight (rows, familiar HP, marker and round all back). One fix: the join toast is an
+instruction, and at the default 1.9 s it was gone before it could be read beside the familiar's
+reopened window; it is the long toast now (6 s), checked in `sheet.js`.
 
 Tests: `sheet.js` gains the `#164 #163 Initiative` block above the async chain (107 checks:
 cleaning, the block tie rule, Next, building, health, chips, Roll initiative, Start, the dialog, HP

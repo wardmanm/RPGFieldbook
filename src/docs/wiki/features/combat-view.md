@@ -300,8 +300,8 @@ familiar, `familiarsChanged(id, wasActive)`: the paw's Summon / Dismiss (`setFam
 Delete (`deleteFamiliar()`), and the familiar form's Save, whose "Summoned (active)" tick is the
 same summon. In a fight with a list, in order: **join** (the familiar was just summoned and has no
 row: its blank current HP is filled from its max, on the familiar, and `famRow()` adds it; After
-goes straight behind you, Own last with a blank initiative and the toast "<name> joined the fight.
-Tap its chip to set its initiative."; the marker and the round stay); **fill** (a familiar already
+goes straight behind you, Own last with a blank initiative and the long toast (6 s) "<name> joined
+the fight. Tap its chip to set its initiative."; the marker and the round stay); **fill** (a familiar already
 in the fight saved with a blank current HP and a max takes the max); **copy and leave**
 (`syncFamiliarRows()`, then `initDropRow()` for each id, Remove's marker step without its repaint:
 the successor, and a wrap onto a living row advancing the round once); **settle**
@@ -519,6 +519,9 @@ XP; the fight itself had already ended and saved.
   needing 353px (a 120px name, "× [60]", "AC [60]", a 60px Init, three gaps) and a phone's dialog
   body gives 326, so each monster read as two lines. One grid under a Name · × · AC · Init heading
   now; `rules-data.js` refuses a row rule with `flex-wrap:wrap` or `min-width:120px`. → L9760
+- **The join toast was gone before it could be read (#163, browser QA).** Summoning from the paw
+  reopens the familiar's window, and at the default 1.9 s the toast's instruction to tap the chip
+  faded while the player was still looking at it. It is the long toast (6 s). → L9760
 - **The familiar form's record is a whitelist (#163).** Its Save builds the record from the fields
   it shows, so a key it doesn't name is dropped: forgetting `turn` would reset the switch to Own on
   every save. It carries `turn`; `sheet.js` checks an untouched save keeps "after". → L9760
