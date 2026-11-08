@@ -9828,8 +9828,19 @@ Builder's calls against the plan:
   shrink-to-fit width stopped at the half-screen to its right, short of its own `max-width:80vw`.
   It now has `width:max-content`: 312px on a phone, one line at 1280. `rules-data.js` checks it.
 
-Not done here: the screenshots and the drive (plan Task 5) wait for the shared browser. The smoke
-list's line 78 is Mike's; the spec's §10 proposes its new wording. Left open: the Credits page's
+Screenshots and drive (plan Task 5), in the project's Playwright MCP, both skins at 1280 and 390,
+in `.claude/qa/in-progress/133-skin-settings-saves/`: before on main's artifact, after on this
+branch's. Driven with real clicks: the Game system row to Humblewood holding 3 PP and 4 EP (Cancel,
+the control and `aria-pressed` unmoved, then Yes), to D&D with Strig on the sheet, Custom Lineage to
+Humblewood (Escape: nothing changed, Settings still open), and the error toast with
+`localStorage.setItem` refusing `hw-fb-settings`: Mode over Settings (one toast; dismissed, then
+borders: none) and, after a reload, Skin then borders on the home screen (one toast). Only seeded,
+not driven: the characters, coins and races (`newCharacter()`, stubbed Strig and Custom Lineage
+through `mergeRules()`, since no pack declares them publicly). Not done: real devices, touch, and
+Mike's own characters. Seen and left alone, the same on main: on a 390px screen the home setup
+panel's "Classic D&D" button clips to "Class D&D" under the Humblewood skin, and the Coins card's
+"Auto-convert" wraps to two lines. The smoke list's line 78 is Mike's; the spec's §10 proposes its
+new wording. Left open: the Credits page's
 `raceTerm()` line reads the old word until Settings is reopened.
 
 Pages: [theming & icons](../wiki/ui/theming-and-icons.md), [settings & updates](../wiki/features/settings-and-updates.md),

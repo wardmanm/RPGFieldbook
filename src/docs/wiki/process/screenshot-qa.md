@@ -45,8 +45,9 @@ project root as their working directory, which is all a relative path needs.
    **artifact**, not `src/`.
 2. `browser_navigate` to `file:///<absolute path to the repo>/dist/fieldbook.html`.
 3. Seed state with `browser_evaluate`. The one-line way into a sheet is
-   `newCharacter("QA", "dnd")`. It builds a blank character, stores it, sets the skin to match the
-   system, renders, and hides the home screen. Then `selectTab("spells")`, or whichever tab.
+   `newCharacter("QA", "dnd")`. It builds a blank character, stores it, renders it (the wordmark
+   and "+ Race" / "+ Ancestry" follow its system) and hides the home screen. It leaves the skin as
+   it was: set that on its own (below). Then `selectTab("spells")`, or whichever tab.
 4. `browser_take_screenshot` with `fullPage: true`, giving an **absolute** `filename`.
 5. For interactive changes, drive the flow (`browser_click`, `browser_type`, `browser_press_key`,
    `browser_drag`, `browser_hover`) and shoot the result.
@@ -94,7 +95,11 @@ as "fully tested".
   all of them, and leaves an intact top bar over an empty body. That looks like a working app, which
   is exactly the failure a screenshot catches and the test suite cannot.
 - **`newCharacter()` treats anything but `"dnd"` as Humblewood.** A typo such as `"DnD"` silently
-  gives you a Humblewood sheet in the Humblewood skin.
+  gives you a Humblewood sheet, reading Ancestry under a Humblewood wordmark.
+- **Every `file://` page shares one storage.** Main's `dist/fieldbook.html` and a worktree's read and
+  write the same `localStorage` and IndexedDB, so clear both (`localStorage.clear()`,
+  `indexedDB.deleteDatabase("hw-fb-cache")`) before a before-and-after pass, or one build's
+  characters and settings open in the other (#133's pass).
 - **A relative `filename` lands relative to the server's working directory** (the repo root), not in
   `--output-dir`.
 - **A plugin-provided Playwright server is not a substitute.** One may well be connected: its tools
@@ -133,4 +138,4 @@ as "fully tested".
 - 2026-09-24 — Launcher path made relative, and the server connects again. → ledger L3361
 - 2026-09-29 — The Notes tab is the Journal tab (`tab-journal`); the notes print as "Section notes". → ledger L4756, #39
 - 2026-10-25 — Shots are filed by issue, in `in-progress/` and `complete/` lanes. → ledger L7261
-- 2026-11-07 — Both skins are shot by setting the skin, which no character sets any more; a D&D and a Humblewood character cover the lines about the system. → ledger L9760, #133
+- 2026-11-07 — Both skins are shot by setting the skin, which no character sets any more (`newCharacter()` leaves it); a D&D and a Humblewood character cover the lines about the system; every `file://` build shares one storage. → ledger L9760, #133
