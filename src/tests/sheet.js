@@ -11016,3 +11016,76 @@ async function tBootStorage143() {
     .catch(err => { ck('1.9.1 boot & storage block ran without throwing', false, String(err && err.stack || err)); });
   ck.done = () => bsRun.then(() => bsDone());
 }
+
+/* ====== 1.9.1 Skin & settings saves: #133, #141 (block B) =====================
+   The checks that need a fresh app: #141's once-a-session memory has to start
+   empty, and blocked storage and the boot fold need the real boot(). Each case
+   is its own BS.app() context, never the shared X/ctx (const BS is initialised
+   just above, so this block has to come after it), with toast() replaced by a
+   recorder before anything runs. Synchronous: nothing here waits.
+   The handlers bound in openSettings() and wire() can't be clicked in the
+   harness, so each is pinned by rules-data.js's site check (every one calls
+   saveSettingsSaid()) plus the helper's behaviour below. */
+{
+  const FULL = "Couldn't save your settings: your browser's storage is full. Changes to settings last until you close Fieldbook.";
+  const PILL = "Couldn't save that you cleared the notice: your browser's storage is full.";
+  const fresh = (store, opts) => {
+    const rec = [];
+    const a = BS.app(store || {}, Object.assign({noBoot: true}, opts || {}, {before: x => {
+      x.ctx.toast = (m, act, o) => { rec.push({m: String(m), err: !!(o && o.err)}); };
+      if (opts && opts.before) opts.before(x);
+    }}));
+    a.toasts = rec;
+    return a;
+  };
+  try {
+    /* once a session, re-armed by a save that lands */
+    let a = fresh();
+    a.state.quotaFull = true;
+    const r1 = a.ctx.saveSettingsSaid(), r2 = a.ctx.saveSettingsSaid();
+    ck('#141 a refused settings save toasts once, as an error that stays',
+       a.toasts.length === 1 && a.toasts[0].m === FULL && a.toasts[0].err === true, a.toasts);
+    ck('#141 ...and returns why, both times', r1 === "your browser's storage is full" && r2 === r1, [r1, r2]);
+    a.ctx.saveSettingsSaid('that you cleared the notice');
+    ck('#141 ...the pill\'s own sentence is a second, different toast', a.toasts.length === 2 && a.toasts[1].m === PILL && a.toasts[1].err === true, a.toasts);
+    a.ctx.saveSettingsSaid('that you cleared the notice');
+    ck('#141 ...said once too', a.toasts.length === 2, a.toasts.length);
+    a.state.quotaFull = false;
+    const r3 = a.ctx.saveSettingsSaid();
+    ck('#141 ...a save that lands says nothing, and returns ""', a.toasts.length === 2 && r3 === '', [a.toasts.length, r3]);
+    a.state.quotaFull = true;
+    a.ctx.saveSettingsSaid();
+    ck('#141 ...and the next refusal is said again', a.toasts.length === 3 && a.toasts[2].m === FULL, a.toasts);
+
+    /* the Rules tab's category tap saves too, through the same helper */
+    a = fresh();
+    a.state.quotaFull = true;
+    a.ctx.rbOpenCat('glossary');
+    ck('#141 rbOpenCat with storage full raises the same one toast', a.toasts.length === 1 && a.toasts[0].m === FULL && a.toasts[0].err, a.toasts);
+    a.ctx.rbOpenCat('tables'); a.ctx.saveSettingsSaid();
+    ck('#141 ...and a second refusal, from it or another control, raises none', a.toasts.length === 1, a.toasts);
+
+    /* storage working: never a word */
+    a = fresh();
+    a.ctx.rbOpenCat('glossary'); a.ctx.saveSettingsSaid(); a.ctx.saveSettingsSaid('that you cleared the notice');
+    ck('#141 with storage working no toast at all', a.toasts.length === 0, a.toasts);
+
+    /* storage blocked: boot's one alert is all */
+    a = fresh({}, {ls: BS.denied(), noBoot: false});
+    ck('#141 blocked storage: boot runs and says so once', a.bootThrew === null && a.alerts.length === 1, [a.bootThrew && String(a.bootThrew), a.alerts]);
+    a.ctx.saveSettingsSaid(); a.ctx.rbOpenCat('glossary'); a.ctx.saveSettingsSaid('that you cleared the notice');
+    ck('#141 ...and no settings save toasts after it', a.toasts.length === 0, a.toasts);
+
+    /* the boot fold (old rulesSources into sources), refused: kept for the Extensions page */
+    a = fresh({'hw-fb-settings': JSON.stringify({rulesSources: ['https://example.org/rules.json']})},
+      {noBoot: false, before: x => { x.state.quotaFull = true; }});
+    ck('#141 a refused boot fold is kept for the Extensions page',
+       a.bootThrew === null && a.ctx.extSaveErrorText() === "your browser's storage is full", [a.bootThrew && String(a.bootThrew), a.ctx.extSaveErrorText()]);
+    ck('#141 ...said there, not in a toast over the first paint', a.toasts.length === 0 && a.alerts.length === 0, [a.toasts, a.alerts]);
+    a = fresh({'hw-fb-settings': JSON.stringify({rulesSources: ['https://example.org/rules.json']})}, {noBoot: false});
+    ck('#141 ...and a boot fold that lands leaves nothing to show', a.bootThrew === null && a.ctx.extSaveErrorText() === '' && a.toasts.length === 0,
+       [a.ctx.extSaveErrorText(), a.toasts]);
+  } catch (err) {
+    ck('#141 block B ran without throwing', false, String(err && err.stack || err));
+  }
+}

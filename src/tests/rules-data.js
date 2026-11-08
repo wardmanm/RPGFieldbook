@@ -2201,7 +2201,7 @@ function block(html, needle, tag) {
      /let settings=\{[^\n]*backdropClose:false[^\n]*\};/.test(js) && /settings\.backdropClose===true\)dismissModal/.test(js));
   ck('...Settings has its switch, which saves it, and a settings file carries it',
      /class="switch \$\{settings\.backdropClose===true\?"on":""\}" id="swBackdrop" role="switch" aria-checked="\$\{settings\.backdropClose===true\?"true":"false"\}"/.test(js) &&
-     /getElementById\("swBackdrop"\)\.addEventListener\("click",e=>\{settings\.backdropClose=settings\.backdropClose!==true;[^\n]*saveSettings\(\);\}\)/.test(js) &&
+     /getElementById\("swBackdrop"\)\.addEventListener\("click",e=>\{settings\.backdropClose=settings\.backdropClose!==true;[^\n]*saveSettingsSaid\(\);\}\)/.test(js) &&
      /const SETTINGS_KEYS=\[[^\]]*"backdropClose"/.test(js));
   /* #107: Settings opens wide. The class is set or cleared on EVERY open, as the
      emblem slot is, so a dialog opened from Settings never inherits the width. */
@@ -2499,7 +2499,7 @@ function block(html, needle, tag) {
      /openModal\("Import settings",settingsImportQuestionHTML\(imp\)\);/.test(src));
   ck('the arrow keys step over the SHOWN pages only', /setPageStep\(pages\.map\(p=>p\.k\),t\.dataset\.setpage,e\.key\)/.test(src));
   ck('switching a page shows it, remembers it and starts it at the top',
-     /p\.hidden=p\.dataset\.setpagebody!==k;/.test(src) && /settings\.setPage=k;saveSettings\(\);/.test(src) && /const pg=secs\.querySelector\("\.set-pages"\);if\(pg\)pg\.scrollTop=0;/.test(src));
+     /p\.hidden=p\.dataset\.setpagebody!==k;/.test(src) && /settings\.setPage=k;saveSettingsSaid\(\);/.test(src) && /const pg=secs\.querySelector\("\.set-pages"\);if\(pg\)pg\.scrollTop=0;/.test(src));
   /* spec §7: a duplicated id would let getElementById wire one copy and leave the
      other dead; the two-way check above collects ids into a Set, so count here */
   {
@@ -3330,6 +3330,35 @@ function block(html, needle, tag) {
   ck('#133 the Game system control moves its on class and aria-pressed only once confirmSystemChange() resolves true',
      then > 0 && segSystem.indexOf('classList.toggle("on"') > then && segSystem.indexOf('setAttribute("aria-pressed"') > then &&
      (segSystem.match(/classList\.toggle\("on"/g) || []).length === 1, segSystem);
+  /* ---- #141: every settings save says so. saveSettings() returns why a write
+     was refused; every call either goes through saveSettingsSaid(), which
+     toasts, or keeps the answer for its own line (Import settings' status, the
+     Extensions page, extSaveError, a returned why, an install's toast). */
+  const calls = [...code.matchAll(/\bsaveSettings\(\)/g)].map(m => ({pre: code.slice(Math.max(0, m.index - 48), m.index), at: m.index}));
+  const bare = calls.filter(x => !/function $/.test(x.pre) && !/(?:[=?]|\breturn |\bextSaveOk\()\s*$/.test(x.pre));
+  ck('#141 every saveSettings() call\'s answer is used: assigned, tested, returned or handed to extSaveOk()',
+     calls.length >= 10 && bare.length === 0, bare.map(x => x.pre + 'saveSettings()'));
+  ck('#141 ...so no bare saveSettings(); statement is left in src/js', !/(?:^|[;{}\s])saveSettings\(\);/m.test(code));
+  const persist = frag('70-persistence.js');
+  ck('#141 saveSettingsSaid() sits beside saveSettings() and calls it',
+     /function saveSettings\(\)\{[^\n]*\n(?:\/\*[\s\S]*?\*\/\n)?(?:const|let) _settingsSaid=new Set\(\);\nfunction saveSettingsSaid\(what\)\{[^\n]*\n?\s*const why=saveSettings\(\);/.test(persist));
+  const site = (name, re) => ck('#141 ' + name + ' saves through saveSettingsSaid()', re.test(code));
+  site('rbOpenCat()', /function rbOpenCat\(k,focus\)\{\s*if\(!rbCat\(k\)\)return;\s*settings\.rulesCat=k;saveSettingsSaid\(\);/);
+  site('a Settings page switch (showPage)', /settings\.setPage=k;saveSettingsSaid\(\);\s*\};/);
+  site('Settings → Skin', /getElementById\("segSkin"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('Settings → Mode', /getElementById\("segTheme"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('Settings → Hand-drawn borders', /getElementById\("swRough"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('Settings → Icon tabs', /getElementById\("swTabIcons"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('Settings → Tap outside to close dialogs', /getElementById\("swBackdrop"\)\.addEventListener\("click",[^\n]*saveSettingsSaid\(\);\}\);/);
+  site('the top bar\'s theme button', /getElementById\("btnTheme"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('the app pill\'s ×', /getElementById\("updatePillX"\);if\(x\)x\.addEventListener\("click",[\s\S]{0,240}?settings\.dismissedUpdates\.app=updateAvailable\.ver;saveSettingsSaid\("that you cleared the notice"\);/);
+  site('the Extensions pill\'s ×', /getElementById\("extPillX"\);if\(x\)x\.addEventListener\("click",\(\)=>\{dismissUpdates\(\);saveSettingsSaid\("that you cleared the notice"\);/);
+  site('the home screen\'s Skin', /getElementById\("homeSkin"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
+  site('the home screen\'s Mode', /getElementById\("homeMode"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
+  site('the home screen\'s borders', /getElementById\("homeRough"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
+  ck('#141 _pillSaved() is gone: the pills use the shared helper', !/_pillSaved/.test(js));
+  ck('#141 boot keeps a refused fold for the Extensions page, as the source check does',
+     /function boot\(\)\{[\s\S]{0,400}?\n\s*if\(foldLegacySettings\(\)\)extSaveError=saveSettings\(\)\|\|"";/.test(frag('90-boot.js')));
   ck('#133 confirmSystemChange() asks with askConfirm(), and redraws what reads the system on Yes',
      /function confirmSystemChange\(sys\)\{[\s\S]*?askConfirm\(\{title:[\s\S]*?changeSystem\(c,plan\);\s*applyTheme\(\);renderCoins\(\);renderInventory\(\);renderChipsAll\(\);renderFeatures\(\);recompute\(\);scheduleSave\(\);/.test(settingsSrc));
 }

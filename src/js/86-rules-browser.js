@@ -310,7 +310,7 @@ function renderRulesBrowser(){
 function rbRefreshBody(){const shown=rbShown(),k=rulesCatOf(settings,shown),it=shown.find(x=>x.cat.k===k);if(it)rbPaintBody(it);}
 function rbOpenCat(k,focus){
   if(!rbCat(k))return;
-  settings.rulesCat=k;saveSettings();
+  settings.rulesCat=k;saveSettingsSaid();
   rbUI.screen="table";
   renderRulesBrowser();
   if(focus){const h=document.getElementById("rbTitle");if(h&&h.focus)h.focus();}

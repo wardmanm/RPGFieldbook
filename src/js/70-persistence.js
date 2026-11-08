@@ -118,9 +118,29 @@ function leaveCharacterOk(){
   hideHome();
   return false;
 }
-/* Returns "" or why the write was refused (storageWhy). Most callers are one
-   toggle and still ignore it; Import settings reports it. */
+/* Returns "" or why the write was refused (storageWhy). Every caller uses the
+   answer (#141): through saveSettingsSaid() below, or on its own line (Import
+   settings' status, the Extensions page, extSaveError, an install's toast). */
 function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings));return "";}catch(e){return storageWhy(e);}}
+/* #141: a settings save that nothing else reports says so in an error toast,
+   which stays until tapped (#87) and shows over Settings and the home screen:
+   "Couldn't save your settings: why. Changes to settings last until you close
+   Fieldbook.", or with `what`, "Couldn't save what: why." Each sentence once a
+   session: a page switch and a Rules category tap save too, so a full disk
+   would otherwise toast at every ordinary tap. A save that lands forgets them,
+   so the next refusal is said again. Quiet where storageBlockedWhy() is set:
+   boot's alert has already said nothing will be kept. The memory is this
+   module's alone, never saved; a reload starts it empty. Returns
+   saveSettings()'s answer either way. */
+const _settingsSaid=new Set();
+function saveSettingsSaid(what){
+  const why=saveSettings();
+  if(!why){_settingsSaid.clear();return "";}
+  if(storageBlockedWhy())return why;
+  const msg=what?"Couldn't save "+what+": "+why+".":"Couldn't save your settings: "+why+". Changes to settings last until you close Fieldbook.";
+  if(!_settingsSaid.has(msg)){_settingsSaid.add(msg);toast(msg,null,{err:true});}
+  return why;
+}
 
 /* ================= the rules cache =================
    The rules pool outgrew localStorage. Five packs merge to ~2.3 MILLION
