@@ -104,7 +104,8 @@ is `systemChangeLines()`, read only from the plan, one sentence each, only when 
 7. always: "Classes, spells, feats and items from every loaded pack stay available. The look doesn't
    change: that's Skin, on Appearance."
 
-Yes applies that same plan with `changeSystem()`: `system`, then the default-language swap
+Yes applies that same plan with `changeSystem()`: `system`, then the plan's own default-language
+swap, as it stands, even if the loaded rules changed while the question was open
 ([Character model](../architecture/character-model.md)). The coins are not touched and nothing is
 logged ([Inventory](inventory.md)). It then redraws what reads the system: `applyTheme()` (wordmark,
 title, header), the coins and the inventory's weight, the language chips, the features list, then

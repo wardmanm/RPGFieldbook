@@ -9204,6 +9204,26 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       ck('#133 ...with no character open, nothing is asked', asked.length === 0 && c.system === 'dnd');
       none.r.then(v => ck('#133 ...and it resolves false', v === false, v));
 
+      /* review: Yes applies the plan the player saw, even if the rules change
+         while the question is open (a pack installed or removed meanwhile) */
+      const OTHER = {'Humblewood': ['Common', 'Humblefolk'], 'XPHB': ['Common', 'Gnomish']};
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      c = sheetFor(HW);
+      const seen = X.systemChangePlan(c, 'dnd');
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(OTHER));
+      const did2 = X.changeSystem(c, seen);
+      ck('#133 changeSystem() applies the plan\'s languages as planned, whatever the rules say by then',
+         langKey(c) === 'Common|system, Dwarvish|system, Elvish|, Sylvan|race:Elf' && JSON.stringify(did2) === JSON.stringify(seen.langs), [langKey(c), did2]);
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      c = sheetFor(HW); X.character = c; X.activeId = c.id; asked = [];
+      ctx.askConfirm = o => { asked.push(o); X.rules.defaultLanguages = JSON.parse(JSON.stringify(OTHER)); return now(true); };
+      let r2 = ask('dnd');
+      ck('#133 ...and so does Yes: the warning said Dwarvish is added, and Dwarvish is what arrives',
+         r2.got() === true && asked.length === 1 && /Dwarvish is added\./.test(asked[0].message) && !/Gnomish/.test(asked[0].message) &&
+         langKey(c) === 'Common|system, Dwarvish|system, Elvish|, Sylvan|race:Elf', [r2.got(), langKey(c)]);
+      ctx.askConfirm = o => { asked.push(o); return now(answer); };
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+
       /* the control, driven: it moves only on Yes (Review Focus 1) */
       const btn = sys => { const cls = new Set(); const at = {};
         return {dataset: {sys}, classList: {toggle: (k, on) => { if (on === undefined ? !cls.has(k) : on) cls.add(k); else cls.delete(k); }, contains: k => cls.has(k), add: k => cls.add(k), remove: k => cls.delete(k)},

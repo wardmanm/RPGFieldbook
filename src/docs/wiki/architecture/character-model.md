@@ -202,12 +202,14 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
   not be carried over: every sheet opened unlocked, by decision, and the old key stays unread.
 - **`system` is not a pack name.** It is `"dnd"` or `"humblewood"`, and `migrate()` enforces that.
   Supplements such as `XGE` and `TCE` are packs, never systems a character is created in.
-- **`system` changes in one place** (#133): Settings → Sheet display → Game system, through
-  `changeSystem()`, which sets it and then swaps the default languages with
-  `swapDefaultLanguages(c, sys)`. Each `system` chip the new ruleset doesn't list (case-blind,
-  `defaultLanguagesFor()`) goes, then each default the character lacks is added, stamped `system`.
-  Chips with `src:""` (the player's) and `race:`/`bg:` (grants) are never touched, whatever their
-  names, and nothing else changes: not the coins, not `invLog`, not the ancestry. The skin never
+- **`system` changes in one place** (#133): Settings → Sheet display → Game system. The swap of the
+  default languages is worked out when the question is asked, by `swapDefaultLanguages(c, sys)` on
+  a copy: each `system` chip the new ruleset doesn't list (case-blind, `defaultLanguagesFor()`) goes,
+  then each default the character lacks is added, stamped `system`. On Yes, `changeSystem()` sets
+  `system` and applies that worked-out swap as it stands, without asking the rules again, so a pack
+  installed or removed while the question was open can't make Yes differ from what it said. Chips
+  with `src:""` (the player's) and `race:`/`bg:` (grants) are never touched, whatever their names,
+  and nothing else changes: not the coins, not `invLog`, not the ancestry. The skin never
   writes `system`. No field is added, so nothing migrates.
 
 ## Decisions

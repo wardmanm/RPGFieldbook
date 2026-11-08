@@ -9807,9 +9807,11 @@ Builder's calls against the plan:
 - The plan's "Convert on a Humblewood sheet holding ep:50 folds it into sp (+250)" is not what the
   unchanged `convertCoins()` does: 2,500 cp re-issues as 25 GP. The check asserts that, and 1 PP
   3 EP as 11 GP 5 SP.
-- `changeSystem()` returns the swap's `{drop, add, keep}` (the plan said void), so a check compares
+- `changeSystem()` returns what it did, `{drop, add, keep}` (the plan said void), so a check compares
   it with the plan's `langs`. With no declared defaults `keep` is `["Common"]`: "every list empty"
-  is read as nothing dropped or added.
+  is read as nothing dropped or added. After review it applies the plan's `langs` as they stand,
+  not a fresh `swapDefaultLanguages()`, so rules that change while the question is open can't make
+  Yes differ from the warning; a check changes the rules between the plan and Yes.
 - On Yes, `confirmSystemChange()` also calls `renderFeatures()` (the features list's ancestry
   heading falls back to `raceTerm()`), and answers false if the open character was replaced while
   it asked.

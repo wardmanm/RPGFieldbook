@@ -196,12 +196,26 @@ function systemChangeLines(p){
   out.push("Classes, spells, feats and items from every loaded pack stay available. The look doesn't change: that's Skin, on Appearance.");
   return out;
 }
-/* Applies a plan to c alone: the system, then the default languages. Returns
-   what the swap did, which is the plan's langs. The coins are not touched and
-   nothing is logged (spec decision 10); the caller redraws and saves. */
+/* Applies a plan to c alone: the system, then the plan's own language swap,
+   exactly as the warning said it. It does not ask the rules again: a pack
+   installed or removed while the question was open must not change what Yes
+   does. Drops the planned "system" chips, adds the planned names the sheet
+   lacks (case-blind), and never touches the player's or a grant's chips.
+   Returns what it did. The coins are not touched and nothing is logged (spec
+   decision 10); the caller redraws and saves. */
 function changeSystem(c,plan){
-  if(!c||!plan)return {drop:[],add:[],keep:[]};
+  const out={drop:[],add:[],keep:[]};
+  if(!c||!plan)return out;
+  const L=plan.langs||{},list=a=>(Array.isArray(a)?a:[]).filter(n=>typeof n==="string"&&n.trim());
+  const drop=new Set(list(L.drop).map(n=>n.trim().toLowerCase()));
   c.system=plan.to;
-  return swapDefaultLanguages(c,plan.to);
+  const have=chipClean(c.languages,"languages",true).filter(x=>{
+    if(x.src==="system"&&drop.has(x.name.toLowerCase())){out.drop.push(x.name);return false;}
+    return true;});
+  const names=new Set(have.map(x=>x.name.toLowerCase()));
+  list(L.add).forEach(n=>{const k=n.trim().toLowerCase();if(!names.has(k)){have.push({id:uid(),name:n.trim(),src:"system"});names.add(k);out.add.push(n.trim());}});
+  out.keep=list(L.keep);
+  c.languages=have;
+  return out;
 }
 
