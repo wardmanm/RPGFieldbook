@@ -164,8 +164,11 @@ function systemChangePlan(c,sys){
   let coins=null;
   if(to==="dnd")coins={gain:true};
   else{const held=k=>Math.max(0,num(c&&c.coins&&c.coins[k]));const pp=held("pp"),ep=held("ep");if(pp>0||ep>0)coins={pp,ep};}
+  /* an ancestry the new system's + Race / + Ancestry list leaves out (the
+     picker's own rule, raceOfferedTo()) stays on the sheet, and the warning says so */
   const rn=c&&c.race&&typeof c.race.name==="string"?c.race.name.trim():"";
-  const ancestryStays=(rn&&systemOf(findRaceDef(rn))===from)?rn:"";
+  const def=rn?findRaceDef(rn):null;
+  const ancestryStays=(def&&!raceOfferedTo(def,to))?rn:"";
   const advDiffers=JSON.stringify(advancementFor({system:from}))!==JSON.stringify(advancementFor({system:to}));
   return {from,to,langs,coins,ancestryStays,advDiffers,
     term:to==="dnd"?"Race":"Ancestry",wordmark:to==="dnd"?"D&D Character Sheet":"Humblewood"};

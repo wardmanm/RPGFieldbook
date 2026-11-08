@@ -110,7 +110,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
   'raceTerm', 'applyTheme', 'finishSettingsImport', 'swapDefaultLanguages', 'tradeCoinsHTML',
-  'systemChangePlan', 'systemChangeLines', 'changeSystem', 'confirmSystemChange',
+  'systemChangePlan', 'systemChangeLines', 'changeSystem', 'confirmSystemChange', 'racesForCharacter',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -9072,7 +9072,10 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     const tail = ['Classes, spells, feats and items from every loaded pack stay available. The look doesn\'t change: that\'s Skin, on Appearance.'];
     try {
       X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
-      X.rules.races = [{name: 'Strig', _source: 'Humblewood'}, {name: 'Elf', _source: 'XPHB'}];
+      /* Custom Lineage is how a D&D supplement systemOf() can't place keeps out of
+         a Humblewood list: its pack's excludeSystems; Gribbly is homebrew, offered to both */
+      X.rules.races = [{name: 'Strig', _source: 'Humblewood'}, {name: 'Elf', _source: 'XPHB'},
+        {name: 'Custom Lineage', _source: 'TCE', _excludeSystems: ['humblewood']}, {name: 'Gribbly', _source: 'MyHomebrew'}];
       X.rules.advancement = undefined;
       /* the plan writes nothing, and the change does what it said */
       let c = sheetFor(HW, {coins: {cp: '', sp: '', ep: 4, gp: 10, pp: 3}, race: {name: 'Strig'}});
@@ -9118,6 +9121,17 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       ck('#133 ...a Humblewood ancestry going to D&D stays, and it says so', L.includes('Strig stays on the sheet.') && L.indexOf('Strig stays on the sheet.') === 2, L);
       const noStay = [lines(sheetFor('dnd', {race: {name: 'Strig'}}), 'humblewood'), lines(sheetFor(HW, {race: {name: 'Mapach the Bold'}}), 'dnd'), lines(sheetFor(HW), 'dnd')];
       ck('#133 ...not for an ancestry of the new system, a custom one, or none', noStay.every(l => !l.some(s => /stays on the sheet/.test(s))), noStay);
+      /* the same rule as the list a character of the new system is offered (racesForCharacter()) */
+      L = lines(sheetFor('dnd', {race: {name: 'Custom Lineage'}}), HW);
+      ck('#133 ...an ancestry the new system\'s list leaves out by excludeSystems stays, and it says so',
+         L.includes('Custom Lineage stays on the sheet.') && L.indexOf('Custom Lineage stays on the sheet.') === 1, L);
+      const offered = [lines(sheetFor(HW, {race: {name: 'Custom Lineage'}}), 'dnd'), lines(sheetFor('dnd', {race: {name: 'Gribbly'}}), HW), lines(sheetFor(HW, {race: {name: 'Gribbly'}}), 'dnd')];
+      ck('#133 ...not for one the new system\'s list offers: Custom Lineage going to D&D, homebrew either way',
+         offered.every(l => !l.some(s => /stays on the sheet/.test(s))), offered);
+      const listFor = sys => { const keepC = X.character; X.character = sheetFor(sys); try { return X.racesForCharacter().map(r => r.name); } finally { X.character = keepC; } };
+      const agree = ['dnd', HW].every(to => { const from = to === 'dnd' ? HW : 'dnd', names = listFor(to);
+        return X.rules.races.every(r => (X.systemChangePlan(sheetFor(from, {race: {name: r.name}}), to).ancestryStays === r.name) === !names.includes(r.name)); });
+      ck('#133 ...for every ancestry, the line is said exactly when the new system\'s list leaves it out', agree, [listFor('dnd'), listFor(HW)]);
       L = lines(sheetFor(HW), 'dnd');
       ck('#133 ...the languages when chips change: "Humblefolk (a Humblewood default) goes; Common stays." then "Dwarvish is added."',
          L.includes('Humblefolk (a Humblewood default) goes; Common stays.') && L.includes('Dwarvish is added.') &&

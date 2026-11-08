@@ -9817,12 +9817,16 @@ Builder's calls against the plan:
   pack read, so block A passes a `HW` constant and the `rules-data.js` regex spells the quote `\x22`.
 - Block A's asking checks stub `askConfirm()` with a thenable that answers at once, so they finish
   before the async chain borrows the shared character.
+- "*Name* stays on the sheet" follows the picker's rule, not only `systemOf()` (the coordinator's
+  call, within the spec's "an ancestry from the other system stays, and the warning says so"):
+  `raceOfferedTo()`, split out of `racesForCharacter()` in `52-race.js` and read by
+  `systemChangePlan()`, so an ancestry the new system's list leaves out by `excludeSystems` (Tasha's
+  Custom Lineage going to Humblewood) gets the line too. A check runs every stubbed ancestry both
+  ways against `racesForCharacter()`.
 
 Not done here: the screenshots and the drive (plan Task 5) wait for the shared browser. The smoke
-list's line 78 is Mike's; the spec's §10 proposes its new wording. Left open: an ancestry the new
-system's picker leaves out only by `excludeSystems` (Tasha's Custom Lineage going to Humblewood) gets
-no "stays on the sheet" sentence, since the spec's rule is `systemOf()` of its definition; the
-Credits page's `raceTerm()` line reads the old word until Settings is reopened.
+list's line 78 is Mike's; the spec's §10 proposes its new wording. Left open: the Credits page's
+`raceTerm()` line reads the old word until Settings is reopened.
 
 Pages: [theming & icons](../wiki/ui/theming-and-icons.md), [settings & updates](../wiki/features/settings-and-updates.md),
 [home & characters](../wiki/features/home-and-characters.md), [storage](../wiki/architecture/storage.md),

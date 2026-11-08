@@ -115,7 +115,10 @@ loaded rules and writes nothing. It returns:
 - `coins`: `{gain:true}` for a switch to D&D; `{pp, ep}` held for a switch to Humblewood while the
   sheet holds some; otherwise `null`. Nothing in the purse changes either way (decision 10).
 - `ancestryStays`: the sheet's ancestry name when its definition is from the other system
-  (`systemOf()` of `findRaceDef()` is `from`), else `""`.
+  (`systemOf()` of `findRaceDef()` is `from`), else `""`. *As built:* the picker's own rule,
+  `raceOfferedTo()` (`systemOf()` and the pack's `excludeSystems`), so Tasha's Custom Lineage going
+  to Humblewood gets the line too (coordinator's call, 2026-11-07; ledger "#133, #141: Skin is look
+  only").
 - `advDiffers`: whether `advancementFor()` differs between the two systems (inert today).
 - `term` and `wordmark`: the new "Race"/"Ancestry" and the top bar's words.
 

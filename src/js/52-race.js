@@ -27,10 +27,15 @@ function systemOf(entry){
    everyone. An explicit exclusion beats the name-based guess. */
 function racesForCharacter(){
   const sys=(character&&character.system==="dnd")?"dnd":"humblewood";
-  return (rules.races||[]).filter(r=>{
-    const ex=r&&r._excludeSystems;
-    if(Array.isArray(ex)&&ex.indexOf(sys)>=0)return false;
-    const s=systemOf(r);return !s||s===sys;});
+  return (rules.races||[]).filter(r=>raceOfferedTo(r,sys));
+}
+/* The picker's rule for one species and one system. A system change's warning
+   (systemChangePlan()) reads it too, so "Custom Lineage stays on the sheet" is
+   said exactly when the new system's list would leave it out (#133). */
+function raceOfferedTo(r,sys){
+  const ex=r&&r._excludeSystems;
+  if(Array.isArray(ex)&&ex.indexOf(sys)>=0)return false;
+  const s=systemOf(r);return !s||s===sys;
 }
 function raceOptions(){
   const list=racesForCharacter();

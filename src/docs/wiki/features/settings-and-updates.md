@@ -94,8 +94,9 @@ is `systemChangeLines()`, read only from the plan, one sentence each, only when 
 1. the coins: "Coins gain platinum and electrum." to D&D; to Humblewood while the sheet holds some,
    "Your 3 PP and 4 EP stay on the Coins card until you spend or convert them.";
 2. "The + Race list offers D&D species." / "The + Ancestry list offers Humblewood ancestries.";
-3. an ancestry whose definition is from the system being left (`systemOf()` of `findRaceDef()`):
-   "Strig stays on the sheet.";
+3. an ancestry the new system's list would leave out, by the picker's own rule (`raceOfferedTo()`:
+   its source's system, or its pack's `excludeSystems`, so Tasha's Custom Lineage going to
+   Humblewood counts): "Strig stays on the sheet.";
 4. languages, when chips change: "Humblefolk (a Humblewood default) goes; Common stays.", then
    "Dwarvish is added." (lists read "A and B", "A, B and C");
 5. "The XP bar uses D&D's table." when `advancementFor()` differs between the two;
