@@ -86,6 +86,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'removeBackground', 'removeRace', 'printSheet', 'nameToolChip',
   'CHIP_MULTI', 'CHIP_TITLE', 'addChips', 'chipAddLabel', 'openToolNamer', 'renderChipsAll',
   'SEED_FIELDS', 'seedsOf', 'playerOwns', 'seedField', 'unseedSource', 'handOnSpellAbility', 'setPlayerField', 'raceWould', 'sizeByHand',
+  'statRowsHTML', 'parseBaseSpeed', 'speedBase', 'speedWindowHTML', 'commitBaseSpeed', 'openSpeedWindow', 'dismissModal',
   'pawHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
   'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
   'isTabHidden', 'cleanHiddenTabs', 'setTabHidden', 'applyHiddenTabs', 'HIDEABLE_TABS', 'TAB_LABELS', 'selectTab',
@@ -9302,6 +9303,95 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       ck('#131 a string for seeds reads as none', JSON.stringify(X.migrate({abilities: {}, seeds: 'x'}).seeds) === '[]');
       fresh(); X.seedField(C(), 'speed', undefined, 'race:Q'); X.seedField(C(), 'speed', NaN, 'race:Q'); X.seedField(C(), 'speed', {walk: 30}, 'race:Q'); X.seedField(C(), 'hp', 5, 'race:Q');
       ck('#131 seedField stores nothing for a value it can\'t keep, or a field it doesn\'t know', C().seeds.length === 0 && C().speed === '', C().seeds);
+
+    // #131 decision 20: tap Speed for a Base speed box above today's breakdown
+    {
+      /* the other badges' windows, byte for byte as before (captured on the unchanged code) */
+      const bd = fresh(); bd.abilities.str = 14;
+      bd.inventory = [{id: 'gb', name: 'Belt of Might', qty: 1, equipped: true, effects: [{target: 'ability.str', value: 1}]}];
+      bd.features = [{id: 'al', name: 'Alert', enabled: true, effects: [{target: 'init', value: 2}]}];
+      ck('#131 statRowsHTML("init") is today\'s Initiative breakdown, unchanged', X.statRowsHTML('init', X.contributions()) ===
+         '<p style="margin-bottom:6px">DEX mod +0</p><div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Alert</span><b>+2</b></div>', X.statRowsHTML('init', X.contributions()));
+      ck('#131 statRowsHTML("ability.str") is today\'s STR breakdown, unchanged', X.statRowsHTML('ability.str', X.contributions()) ===
+         '<p style="margin-bottom:6px">Base score 14</p><div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Belt of Might</span><b>+1</b></div>', X.statRowsHTML('ability.str', X.contributions()));
+      let om = null; const keepOM = ctx.openModal; ctx.openModal = (t, h) => { om = {t, h}; return keepOM(t, h); };
+      try {
+        flow(() => { X.openStatBreakdown('init'); });
+        ck('#131 ...and the Initiative badge still opens it, titled as before', om && om.t === 'Initiative breakdown' && om.h === X.statRowsHTML('init', X.contributions()), om);
+      } finally { ctx.openModal = keepOM; }
+
+      const pb = X.parseBaseSpeed;
+      ck('#131 parseBaseSpeed takes a whole number of feet, 0 to 999', pb('35') === 35 && pb(' 40 ') === 40 && pb('0') === 0 && pb('999') === 999, [pb('35'), pb(' 40 '), pb('0')]);
+      ck('#131 ...blank is "" (give it back)', pb('') === '' && pb('   ') === '');
+      ck('#131 ...and refuses the rest', ['-5', '3.5', '30 ft', 'abc', '1000', '1e3', '0x10', '3 0', null, undefined].every(v => pb(v) === null), ['-5', '3.5', '30 ft', 'abc', '1000'].map(pb));
+
+      loadSeedPack();
+      fresh(); flow(() => { ctx.applyRace('Elf', null, {}); });
+      const sb = () => X.speedBase(C()), win = () => X.speedWindowHTML(X.contributions());
+      ck('#131 with Elf: the base is Elf\'s', JSON.stringify(sb()) === '{"value":30,"by":"race:Elf"}', sb());
+      let wh = win();
+      ck('#131 ...the window: a Base speed box, empty, Elf\'s 30 as its placeholder', /<label class="f" for="spdBase">Base speed<\/label><input id="spdBase" type="text" inputmode="numeric" autocomplete="off" value="" placeholder="30">/.test(wh), wh.slice(0, 400));
+      ck('#131 ...the hint names the species', /<p class="hint" id="spdHint">From Elf: 30 ft\. Type a number to set your own\.<\/p>/.test(wh), wh);
+      ck('#131 ...and the breakdown below names whose base it is', /<div id="spdRows"><p style="margin-bottom:6px">Base 30 ft, from Elf<\/p>/.test(wh), wh);
+      ck('#131 commitBaseSpeed("35"): taken, the player\'s', X.commitBaseSpeed('35') === true && C().speed === 35 && sb().by === 'player' && X.playerOwns(C(), 'speed'), [C().speed, seeds()]);
+      wh = win();
+      ck('#131 ...the box holds 35, the hint and the base line say yours', /id="spdBase"[^>]*value="35"/.test(wh) && /Your own\. Clear it to use your species&#39; speed\./.test(wh) && /Base 35 ft, yours/.test(wh), wh);
+      flow(() => { ctx.applyRace('Gnome', null, {}); });
+      ck('#131 ...a swap to Gnome keeps 35, and Gnome records null over it', C().speed === 35 && entry('race:Gnome', 'speed') && entry('race:Gnome', 'speed').value === null, seeds());
+      flow(() => { ctx.removeRace(); });
+      ck('#131 ...and removing the species keeps it', C().speed === 35 && sb().by === 'player');
+      fresh(); flow(() => { ctx.applyRace('Elf', null, {}); }); X.commitBaseSpeed('30');
+      flow(() => { ctx.applyRace('Gnome', null, {}); ctx.removeRace(); });
+      ck('#131 a typed 30, equal to Elf\'s own, survives the swap and the remove too (decision 21)', C().speed === 30 && X.playerOwns(C(), 'speed'), [C().speed, seeds()]);
+      fresh(); flow(() => { ctx.applyRace('Elf', null, {}); }); X.commitBaseSpeed('35');
+      ck('#131 clearing it gives Elf\'s speed back, under race:Elf', X.commitBaseSpeed('') === true && C().speed === '30 ft' && (entry('race:Elf', 'speed') || {}).value === '30 ft' && !X.playerOwns(C(), 'speed') && sb().by === 'race:Elf', [C().speed, seeds()]);
+      fresh(); X.commitBaseSpeed('35'); X.commitBaseSpeed('');
+      ck('#131 ...with no species it is empty, and the hint says so', C().speed === '' && sb().by === '' && /No species speed\. Type yours\./.test(win()) && /Base 0 ft</.test(win()), [C().speed, win()]);
+      fresh(); C().race = {name: 'Skyborn', subrace: null}; C().ancestry = 'Skyborn';
+      ck('#131 a custom ancestry: no placeholder, and the same hint', /id="spdBase"[^>]*value="" placeholder=""/.test(win()) && /No species speed\. Type yours\./.test(win()), win());
+      X.commitBaseSpeed('25');
+      C().features = [{id: 'boots', name: 'Swift', enabled: true, effects: [{target: 'speed', value: 10}]}];
+      flow(() => { X.recompute(); });
+      ck('#131 ...a custom ancestry\'s typed 25, with a +10 effect, shows 35 on the badge', el('speedDisp').textContent === '35', el('speedDisp').textContent);
+      ck('#131 ...the rows still list the effect', /<span>Swift<\/span><b>\+10<\/b>/.test(X.statRowsHTML('speed', X.contributions())), X.statRowsHTML('speed', X.contributions()));
+      fresh(); X.commitBaseSpeed('0');
+      flow(() => { ctx.applyRace('Elf', null, {}); });
+      ck('#131 a typed 0 is taken, and Elf\'s seed doesn\'t read it as empty (Review Focus 5)', C().speed === 0 && sb().by === 'player' && entry('race:Elf', 'speed').value === null, [C().speed, seeds()]);
+      flow(() => { ctx.applyRace('Gnome', null, {}); });
+      ck('#131 ...and a swap keeps it', C().speed === 0);
+
+      // the encumbrance row, last, as before
+      fresh(); flow(() => { ctx.applyRace('Elf', null, {}); });
+      C().encumbrance = 'standard'; C().inventory = [{id: 'anvil', name: 'Anvil', qty: 1, weight: 200, effects: []}];
+      ck('#131 the speed rows end with the encumbrance row', /Over capacity \(200 lb \/ 150 lb\)<\/span><b>5 ft<\/b><\/div><p class="hint"/.test(X.statRowsHTML('speed', X.contributions())), X.statRowsHTML('speed', X.contributions()));
+
+      // locked: read-only, as the AC window's Flat box is
+      fresh(); flow(() => { ctx.applyRace('Elf', null, {}); }); X.setVitalsLocked(true);
+      wh = win();
+      ck('#131 Vitals locked: the box is disabled and the hint says how to change it', /id="spdBase"[^>]*disabled/.test(wh) && /id="spdHint">Unlock Vitals to change it</.test(wh) && /Base 30 ft, from Elf/.test(wh), wh);
+      ck('#131 ...and a typed value is refused', X.commitBaseSpeed('40') === false && C().speed === '30 ft');
+      X.setVitalsLocked(false);
+
+      // driven: type, refuse, Escape
+      fresh(); flow(() => { ctx.applyRace('Elf', null, {}); });
+      let sw = null; const keepOM2 = ctx.openModal; ctx.openModal = (t, h) => { sw = {t, h}; return keepOM2(t, h); };
+      try {
+        err = flow(() => { X.openStatBreakdown('speed'); });
+        ck('#131 driven: the Speed badge opens the window titled "Speed"', !err && sw && sw.t === 'Speed' && /id="spdBase"/.test(sw.h), why(err) || sw);
+        el('spdBase').value = '35'; (el('spdBase')._on.change || []).forEach(fn => fn({}));
+        ck('#131 driven: typing 35 commits on change, and the window redraws in place', C().speed === 35 && el('spdBase').value === '35' &&
+           el('spdHint').textContent === 'Your own. Clear it to use your species\' speed.' && /Base 35 ft, yours/.test(screen('spdRows')), [C().speed, el('spdBase').value, el('spdHint').textContent, screen('spdRows')]);
+        el('spdBase').value = '30 ft'; (el('spdBase')._on.change || []).forEach(fn => fn({}));
+        ck('#131 driven: "30 ft" is refused, and the box shows its value again', C().speed === 35 && el('spdBase').value === '35', [C().speed, el('spdBase').value]);
+        el('spdBase').value = ''; (el('spdBase')._on.change || []).forEach(fn => fn({}));
+        ck('#131 driven: clearing it gives Elf\'s back, the box empty', C().speed === '30 ft' && el('spdBase').value === '' && /From Elf: 30 ft/.test(el('spdHint').textContent), [C().speed, el('spdBase').value]);
+        el('spdBase').value = '40'; X.dismissModal();
+        ck('#131 driven: Escape with 40 typed and not yet committed commits it', C().speed === 40 && X.playerOwns(C(), 'speed'), C().speed);
+        err = flow(() => { X.openStatBreakdown('speed'); });
+        el('spdBase').value = 'fast'; X.dismissModal();
+        ck('#131 driven: Escape with junk in the box closes and keeps the last number', C().speed === 40, C().speed);
+      } finally { ctx.openModal = keepOM2; }
+    }
     } finally { ctx.window.matchMedia = keepMM; ctx.luAbandon(); }
   } catch (e) {
     ck('#121 the Bio chips block ran without throwing', false, why(e));

@@ -1330,6 +1330,9 @@ function block(html, needle, tag) {
   ck('#131 the Size window\'s Save writes through setPlayerField()', /setPlayerField\(character,"size",sel\.value\)/.test(fn(forms, 'openSizePicker')) && !/character\.size=/.test(fn(forms, 'openSizePicker')));
   ck('#131 ...and so does Settings → Carrying\'s size select', /getElementById\("setSize"\);if\(s\)s\.addEventListener\("change",\(\)=>\{setPlayerField\(character,"size",s\.value\)/.test(set) && !/character\.size=s\.value/.test(set));
   ck('#131 the Size mark reads sizeByHand()', /mark\(szEl,sizeByHand\(character\)\)/.test(src('10-compute.js')));
+  /* decision 20: the Speed badge opens a window with a Base speed box */
+  ck('#131 openStatBreakdown() sends speed to openSpeedWindow(), as ac to openACWindow()', /if\(target==="speed"\)return openSpeedWindow\(\);/.test(fn(forms, 'openStatBreakdown')));
+  ck('#131 ...whose dismiss guard commits a typed #spdBase, as the AC window\'s does its Flat box', /setDismissGuard\(\(\)=>\{const b=document\.getElementById\("spdBase"\);[^}]*commitBaseSpeed\(b\.value\);return null;\}\)/.test(fn(forms, 'openSpeedWindow')));
 }
 
 // ---------- #103: the new Sheet
