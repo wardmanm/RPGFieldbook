@@ -3317,6 +3317,21 @@ function block(html, needle, tag) {
      settingsSrc.includes('setRowHTML("Skin","How Fieldbook looks: colours, lettering and frames. It doesn\'t change any character.",'));
   ck('#133 the New character hint says what the system really does',
      frag('75-home-theme.js').includes('<p class="hint">The game this character is for. It sets the coins, the ancestries you\'re offered and your starting languages. Classes, spells, feats and items from every loaded pack are offered either way. You can change it later in Settings → Sheet display.</p>'));
+  /* the Game system row: Sheet display's first group, and the control moves only on Yes */
+  const secDisplay = (settingsSrc.match(/const secDisplay=[\s\S]*?\n  const /) || [''])[0];
+  ck('#133 Sheet display\'s first group is "Game", holding the Game system row before the cards',
+     /^const secDisplay=hasChar\?setGroupHTML\("Game",\s*setRowHTML\("Game system",/.test(secDisplay) &&
+     secDisplay.indexOf('id="segSystem"') > 0 && secDisplay.indexOf('id="segSystem"') < secDisplay.indexOf('id="swHpColor"'), secDisplay.slice(0, 200));
+  ck('#133 ...its help is the spec\'s sentence, and its two buttons say which is pressed',
+     secDisplay.includes('setRowHTML("Game system","The game this character is for. It sets the coins, the ancestries you\'re offered and the default languages.",') &&
+     /id="segSystem">\$\{\[\[\x22humblewood\x22,"Humblewood"\],\["dnd","D&amp;D"\]\]\.map\(\(\[v,l\]\)=>`<button type="button" data-sys="\$\{esc\(v\)\}" class="\$\{[^`]*aria-pressed="\$\{/.test(secDisplay));
+  const segSystem = (settingsSrc.match(/getElementById\("segSystem"\);if\(g\)g\.addEventListener\("click",[^\n]*/) || [''])[0];
+  const then = segSystem.indexOf('confirmSystemChange(sys).then(ok=>{if(!ok)return;');
+  ck('#133 the Game system control moves its on class and aria-pressed only once confirmSystemChange() resolves true',
+     then > 0 && segSystem.indexOf('classList.toggle("on"') > then && segSystem.indexOf('setAttribute("aria-pressed"') > then &&
+     (segSystem.match(/classList\.toggle\("on"/g) || []).length === 1, segSystem);
+  ck('#133 confirmSystemChange() asks with askConfirm(), and redraws what reads the system on Yes',
+     /function confirmSystemChange\(sys\)\{[\s\S]*?askConfirm\(\{title:[\s\S]*?changeSystem\(c,plan\);\s*applyTheme\(\);renderCoins\(\);renderInventory\(\);renderChipsAll\(\);renderFeatures\(\);recompute\(\);scheduleSave\(\);/.test(settingsSrc));
 }
 
 /* ================= Fetch all never loses what is loaded (issue #65) ===========

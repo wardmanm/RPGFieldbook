@@ -150,3 +150,55 @@ function applyTheme(){
     :'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>';
 }
 
+/* ================= a character's game system (#133) =================
+   Changed from the Game system row on Settings → Sheet display, never by the
+   skin. A tap on the other system first works out everything the change would
+   do (systemChangePlan, pure: it writes nothing), the warning says it
+   (systemChangeLines, which reads only the plan), and Yes applies that same
+   plan (changeSystem), so the warning and the change can't disagree. Nothing
+   converts coins and nothing is logged: platinum and electrum stay in the
+   purse, and a Humblewood sheet shows them while it holds some (coinKeys()). */
+function systemChangePlan(c,sys){
+  const from=(c&&c.system==="dnd")?"dnd":"humblewood",to=sys==="dnd"?"dnd":"humblewood";
+  const langs=swapDefaultLanguages({system:from,languages:JSON.parse(JSON.stringify((c&&c.languages)||[]))},to);
+  let coins=null;
+  if(to==="dnd")coins={gain:true};
+  else{const held=k=>Math.max(0,num(c&&c.coins&&c.coins[k]));const pp=held("pp"),ep=held("ep");if(pp>0||ep>0)coins={pp,ep};}
+  const rn=c&&c.race&&typeof c.race.name==="string"?c.race.name.trim():"";
+  const ancestryStays=(rn&&systemOf(findRaceDef(rn))===from)?rn:"";
+  const advDiffers=JSON.stringify(advancementFor({system:from}))!==JSON.stringify(advancementFor({system:to}));
+  return {from,to,langs,coins,ancestryStays,advDiffers,
+    term:to==="dnd"?"Race":"Ancestry",wordmark:to==="dnd"?"D&D Character Sheet":"Humblewood"};
+}
+/* The warning's sentences, each only when it applies, in a fixed order: coins,
+   the ancestry list, an ancestry that stays, languages, the XP table, the
+   words, and always the last two. Plain text: askConfirm() sets textContent. */
+function systemChangeLines(p){
+  const game=s=>s==="dnd"?"D&D":"Humblewood";
+  const list=a=>a.length<2?a.join(""):a.slice(0,-1).join(", ")+" and "+a[a.length-1];
+  const out=[],L=p.langs||{drop:[],add:[],keep:[]};
+  if(p.coins&&p.coins.gain)out.push("Coins gain platinum and electrum.");
+  else if(p.coins){
+    const held=[["pp","PP"],["ep","EP"]].filter(([k])=>p.coins[k]>0).map(([k,l])=>p.coins[k]+" "+l);
+    const one=held.length===1&&(p.coins.pp===1||p.coins.ep===1);
+    if(held.length)out.push("Your "+list(held)+(one?" stays":" stay")+" on the Coins card until you spend or convert them.");
+  }
+  out.push(p.to==="dnd"?"The + Race list offers D&D species.":"The + Ancestry list offers Humblewood ancestries.");
+  if(p.ancestryStays)out.push(p.ancestryStays+" stays on the sheet.");
+  if(L.drop.length)out.push(list(L.drop)+(L.drop.length===1?" (a "+game(p.from)+" default) goes":" ("+game(p.from)+" defaults) go")+
+    (L.keep.length?"; "+list(L.keep)+(L.keep.length===1?" stays":" stay"):"")+".");
+  if(L.add.length)out.push(list(L.add)+(L.add.length===1?" is added.":" are added."));
+  if(p.advDiffers)out.push("The XP bar uses "+game(p.to)+"'s table.");
+  out.push("The sheet says "+p.term+", and the top bar reads "+p.wordmark+".");
+  out.push("Classes, spells, feats and items from every loaded pack stay available. The look doesn't change: that's Skin, on Appearance.");
+  return out;
+}
+/* Applies a plan to c alone: the system, then the default languages. Returns
+   what the swap did, which is the plan's langs. The coins are not touched and
+   nothing is logged (spec decision 10); the caller redraws and saves. */
+function changeSystem(c,plan){
+  if(!c||!plan)return {drop:[],add:[],keep:[]};
+  c.system=plan.to;
+  return swapDefaultLanguages(c,plan.to);
+}
+

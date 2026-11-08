@@ -110,6 +110,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
   'raceTerm', 'applyTheme', 'finishSettingsImport', 'swapDefaultLanguages', 'tradeCoinsHTML',
+  'systemChangePlan', 'systemChangeLines', 'changeSystem', 'confirmSystemChange',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -8922,6 +8923,9 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
    fresh app (#141's once-a-session memory, blocked storage, the boot fold) are
    block B, at the very end of the file. */
 {
+  /* the Humblewood system, never its private pack: docs.js's leak scan reads the
+     system's name as a call's first argument as a pack read, so calls take HW */
+  const HW = 'humblewood';
   const keep = {ch: X.character, id: X.activeId, rules: X.rules, skin: X.settings.skin, gid: ctx.document.getElementById,
     de: ctx.document.documentElement, title: ctx.document.title};
   /* a recorder for what applyTheme() writes: the wordmark, the theme glyph and
@@ -9057,6 +9061,159 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     const give = X.tradeCoinsHTML('give', {}, {ep: 50, gp: 0, sp: 0, cp: 0});
     ck('#133 the trade window\'s give side offers the held EP, capped at what is held',
        /data-trcoin="give:ep"[^>]*max="50"/.test(give) && !/give:pp/.test(give), give);
+
+    /* ---- #133 the Game system row: the plan, the warning's words, the change */
+    const keepRaces = X.rules.races, keepAdv = X.rules.advancement, keepAsk = ctx.askConfirm;
+    /* a sheet as ensureDefaultLanguages() leaves it under the defaults in force,
+       with one chip of the player's and one a species granted */
+    const sheetFor = (system, extra) => Object.assign(X.blankChar(), {system, name: 'Wren', id: 'sys133',
+      languages: X.defaultLanguagesFor({system}).map(n => chip(n, 'system')).concat([chip('Elvish', ''), chip('Sylvan', 'race:Elf')]),
+      coins: {cp: 7, sp: '', ep: '', gp: 10, pp: ''}, invLog: [{id: 'g1', t: 1, kind: 'coins', title: 'Found', delta: {gp: 10}}]}, extra || {});
+    const tail = ['Classes, spells, feats and items from every loaded pack stay available. The look doesn\'t change: that\'s Skin, on Appearance.'];
+    try {
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      X.rules.races = [{name: 'Strig', _source: 'Humblewood'}, {name: 'Elf', _source: 'XPHB'}];
+      X.rules.advancement = undefined;
+      /* the plan writes nothing, and the change does what it said */
+      let c = sheetFor(HW, {coins: {cp: '', sp: '', ep: 4, gp: 10, pp: 3}, race: {name: 'Strig'}});
+      const snap = JSON.stringify(c), logSnap = JSON.stringify(c.invLog);
+      let plan = X.systemChangePlan(c, 'dnd');
+      ck('#133 systemChangePlan writes nothing: the character and its inventory log are as they were',
+         JSON.stringify(c) === snap && JSON.stringify(c.invLog) === logSnap);
+      ck('#133 ...it names both systems, the words and the wordmark',
+         plan.from === 'humblewood' && plan.to === 'dnd' && plan.term === 'Race' && plan.wordmark === 'D&D Character Sheet', plan);
+      const coinsSnap = JSON.stringify(c.coins);
+      const did = X.changeSystem(c, plan);
+      ck('#133 ...its langs are what changeSystem() then does', JSON.stringify(plan.langs) === JSON.stringify(did) &&
+         JSON.stringify(did) === JSON.stringify({drop: ['Humblefolk'], add: ['Dwarvish'], keep: ['Common']}), [plan.langs, did]);
+      ck('#133 changeSystem() sets the system and swaps the languages',
+         c.system === 'dnd' && langKey(c) === 'Common|system, Dwarvish|system, Elvish|, Sylvan|race:Elf', [c.system, langKey(c)]);
+      ck('#133 ...and leaves the coins and the inventory log exactly as they were (nothing converted, nothing logged)',
+         JSON.stringify(c.coins) === coinsSnap && JSON.stringify(c.invLog) === logSnap, [c.coins, c.invLog]);
+
+      /* the coins in the plan */
+      c = sheetFor('dnd', {coins: {cp: '', sp: '', ep: 4, gp: '', pp: 3}});
+      ck('#133 plan coins: D&D → Humblewood holding 3 PP and 4 EP', JSON.stringify(X.systemChangePlan(c, 'humblewood').coins) === '{"pp":3,"ep":4}', X.systemChangePlan(c, 'humblewood').coins);
+      c = sheetFor('dnd');
+      ck('#133 ...holding neither: null', X.systemChangePlan(c, 'humblewood').coins === null, X.systemChangePlan(c, 'humblewood').coins);
+      c = sheetFor('dnd', {coins: {pp: 'abc', ep: '-2'}});
+      ck('#133 ...junk or negative counts: null', X.systemChangePlan(c, 'humblewood').coins === null, X.systemChangePlan(c, 'humblewood').coins);
+      c = sheetFor(HW);
+      ck('#133 ...→ D&D: the coins gain PP and EP', JSON.stringify(X.systemChangePlan(c, 'dnd').coins) === '{"gain":true}');
+
+      /* the warning's sentences, each only when it applies */
+      const lines = (cc, to) => X.systemChangeLines(X.systemChangePlan(cc, to));
+      let L = lines(sheetFor('dnd', {coins: {pp: 3, ep: 4}}), 'humblewood');
+      ck('#133 systemChangeLines: the coins held, named', L[0] === 'Your 3 PP and 4 EP stay on the Coins card until you spend or convert them.', L);
+      L = lines(sheetFor('dnd', {coins: {ep: 4}}), 'humblewood');
+      ck('#133 ...only the coins held', L[0] === 'Your 4 EP stay on the Coins card until you spend or convert them.', L);
+      L = lines(sheetFor('dnd'), 'humblewood');
+      ck('#133 ...no coin sentence to Humblewood holding neither', !L.some(s => /Coins|PP|EP/.test(s)), L);
+      L = lines(sheetFor(HW), 'dnd');
+      ck('#133 ...to D&D, the coins gain platinum and electrum, and the + Race list offers D&D species',
+         L[0] === 'Coins gain platinum and electrum.' && L[1] === 'The + Race list offers D&D species.', L);
+      L = lines(sheetFor('dnd'), 'humblewood');
+      ck('#133 ...to Humblewood, the + Ancestry list offers Humblewood ancestries', L[0] === 'The + Ancestry list offers Humblewood ancestries.', L);
+      L = lines(sheetFor(HW, {race: {name: 'Strig'}}), 'dnd');
+      ck('#133 ...a Humblewood ancestry going to D&D stays, and it says so', L.includes('Strig stays on the sheet.') && L.indexOf('Strig stays on the sheet.') === 2, L);
+      const noStay = [lines(sheetFor('dnd', {race: {name: 'Strig'}}), 'humblewood'), lines(sheetFor(HW, {race: {name: 'Mapach the Bold'}}), 'dnd'), lines(sheetFor(HW), 'dnd')];
+      ck('#133 ...not for an ancestry of the new system, a custom one, or none', noStay.every(l => !l.some(s => /stays on the sheet/.test(s))), noStay);
+      L = lines(sheetFor(HW), 'dnd');
+      ck('#133 ...the languages when chips change: "Humblefolk (a Humblewood default) goes; Common stays." then "Dwarvish is added."',
+         L.includes('Humblefolk (a Humblewood default) goes; Common stays.') && L.includes('Dwarvish is added.') &&
+         L.indexOf('Dwarvish is added.') === L.indexOf('Humblefolk (a Humblewood default) goes; Common stays.') + 1, L);
+      ck('#133 ...the words, and the closing sentences, always last',
+         JSON.stringify(L.slice(-2)) === JSON.stringify(['The sheet says Race, and the top bar reads D&D Character Sheet.'].concat(tail)), L.slice(-2));
+      L = lines(sheetFor('dnd'), 'humblewood');
+      ck('#133 ...the other way round', JSON.stringify(L.slice(-2)) === JSON.stringify(['The sheet says Ancestry, and the top bar reads Humblewood.'].concat(tail)) &&
+         L.includes('Dwarvish (a D&D default) goes; Common stays.') && L.includes('Humblefolk is added.'), L);
+      ck('#133 ...no XP sentence while both systems use the same table', !L.some(s => /XP bar/.test(s)), L);
+      X.rules.advancement = {'Humblewood': [[0, 1], [100, 2], [400, 3]]};
+      L = lines(sheetFor(HW), 'dnd');
+      ck('#133 ...and one when they differ', L.includes('The XP bar uses D&D\'s table.'), L);
+      X.rules.advancement = undefined;
+      X.rules.defaultLanguages = {};
+      L = lines(sheetFor(HW), 'dnd');
+      ck('#133 ...no language sentence when no chip changes', !L.some(s => / goes| go;| go\.| added\./.test(s)) && L.length === 4, L);
+      /* plurals and lists, from a plan written by hand */
+      const P = (drop, add, keep) => X.systemChangeLines({from: 'humblewood', to: 'dnd', langs: {drop, add, keep}, coins: null, ancestryStays: '', advDiffers: false, term: 'Race', wordmark: 'D&D Character Sheet'});
+      L = P(['A', 'B'], ['C', 'D'], []);
+      ck('#133 ...plurals: "A and B (Humblewood defaults) go." "C and D are added."', L.includes('A and B (Humblewood defaults) go.') && L.includes('C and D are added.'), L);
+      L = P(['A', 'B', 'C'], ['D'], ['E', 'F']);
+      ck('#133 ...three names, and two that stay', L.includes('A, B and C (Humblewood defaults) go; E and F stay.') && L.includes('D is added.'), L);
+      L = P([], ['D'], ['E']);
+      ck('#133 ...an add alone has no "goes" sentence', L.includes('D is added.') && !L.some(s => /stays\.|stay\./.test(s)), L);
+
+      /* Review Focus 4: a round trip leaves languages and coins as they were */
+      for (const [what, decl] of [['declared defaults', STUB], ['no declared defaults', {}]]) {
+        X.rules.defaultLanguages = JSON.parse(JSON.stringify(decl));
+        for (const start of ['dnd', 'humblewood']) {
+          c = sheetFor(start, {coins: {cp: 1, sp: 2, ep: 4, gp: 10, pp: 3}});
+          const other = start === 'dnd' ? 'humblewood' : 'dnd';
+          const l0 = langKey(c), c0 = JSON.stringify(c.coins), g0 = JSON.stringify(c.invLog);
+          X.changeSystem(c, X.systemChangePlan(c, other));
+          X.changeSystem(c, X.systemChangePlan(c, start));
+          ck('#133 a round trip from ' + start + ', ' + what + ': the languages, coins and log are as they were',
+             c.system === start && langKey(c) === l0 && JSON.stringify(c.coins) === c0 && JSON.stringify(c.invLog) === g0, [langKey(c), l0, c.coins]);
+        }
+      }
+
+      /* asking first: the warning, and Review Focus 1-2. askConfirm answers at
+         once (a thenable that calls back synchronously), so every check here
+         runs before the async chain below borrows the character. */
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      const now = v => ({then(f) { return now(f ? f(v) : v); }});
+      let asked = [], answer = false;
+      ctx.askConfirm = o => { asked.push(o); return now(answer); };
+      const ask = sys => { let got = 'pending'; const r = X.confirmSystemChange(sys); r.then(v => { got = v; }); return {r, got: () => got}; };
+      c = sheetFor(HW); X.character = c; X.activeId = c.id;
+      let snapC = JSON.stringify(c);
+      let r = ask('dnd');
+      ck('#133 confirmSystemChange(\'dnd\') on a Humblewood character asks: "Make Wren a D&D character?"',
+         asked.length === 1 && asked[0].title === 'Make Wren a D&D character?' && asked[0].ok === 'Make it D&D' && asked[0].cancel === 'Cancel', asked[0]);
+      ck('#133 ...with the plan\'s sentences as its message', asked[0].message === X.systemChangeLines(X.systemChangePlan(c, 'dnd')).join(' '), asked[0].message);
+      ck('#133 ...Cancel resolves false, and the character is exactly as it was', r.got() === false && JSON.stringify(c) === snapC, r.got());
+      answer = true; asked = [];
+      r = ask('dnd');
+      ck('#133 ...Yes resolves true, with the system D&D and the languages swapped',
+         r.got() === true && c.system === 'dnd' && langKey(c) === 'Common|system, Dwarvish|system, Elvish|, Sylvan|race:Elf', [r.got(), c.system, langKey(c)]);
+      c = sheetFor('dnd', {name: ''}); X.character = c; X.activeId = c.id; asked = []; answer = false;
+      ask(HW);
+      ck('#133 ...an unnamed sheet reads "Make this character a Humblewood character?"',
+         asked.length === 1 && asked[0].title === 'Make this character a Humblewood character?' && asked[0].ok === 'Make it Humblewood', asked[0]);
+      snapC = JSON.stringify(c); asked = []; answer = true;
+      const quiet = [ask('dnd'), ask('pathfinder'), ask('')];
+      ck('#133 ...the system it already has, or one that isn\'t a system, asks nothing and changes nothing', asked.length === 0 && JSON.stringify(c) === snapC, asked);
+      Promise.all(quiet.map(q => q.r)).then(vs => ck('#133 ...and each resolves false', vs.every(v => v === false), vs));
+      X.activeId = null; asked = [];
+      const none = ask('dnd');
+      ck('#133 ...with no character open, nothing is asked', asked.length === 0 && c.system === 'dnd');
+      none.r.then(v => ck('#133 ...and it resolves false', v === false, v));
+
+      /* the control, driven: it moves only on Yes (Review Focus 1) */
+      const btn = sys => { const cls = new Set(); const at = {};
+        return {dataset: {sys}, classList: {toggle: (k, on) => { if (on === undefined ? !cls.has(k) : on) cls.add(k); else cls.delete(k); }, contains: k => cls.has(k), add: k => cls.add(k), remove: k => cls.delete(k)},
+          setAttribute: (k, v) => { at[k] = v; }, getAttribute: k => at[k], on: () => cls.has('on')}; };
+      const bH = btn(HW), bD = btn('dnd');
+      bH.classList.add('on'); bH.setAttribute('aria-pressed', 'true'); bD.setAttribute('aria-pressed', 'false');
+      let onClick = null;
+      const seg = {addEventListener: (t, f) => { if (t === 'click') onClick = f; }, querySelectorAll: () => [bH, bD]};
+      c = sheetFor(HW); X.character = c; X.activeId = c.id; snapC = JSON.stringify(c);
+      ctx.document.getElementById = id => id === 'segSystem' ? seg : keep.gid(id);
+      try { ctx.openSettings(); } finally { undoDOM(); }
+      const ctl = () => [bH.on(), bH.getAttribute('aria-pressed'), bD.on(), bD.getAttribute('aria-pressed')].join();
+      ck('#133 openSettings wires the Game system control', typeof onClick === 'function');
+      answer = false; asked = [];
+      if (onClick) onClick({target: {closest: () => bD}});
+      ck('#133 driven: tapping D&D then Cancel leaves the control, its aria-pressed and the character as they were',
+         asked.length === 1 && ctl() === 'true,true,false,false' && JSON.stringify(c) === snapC, [ctl(), asked.length]);
+      answer = true;
+      if (onClick) onClick({target: {closest: () => bD}});
+      ck('#133 driven: ...then Yes moves the control and its aria-pressed, and the character is D&D',
+         ctl() === 'false,false,true,true' && c.system === 'dnd', ctl());
+    } finally {
+      X.rules.races = keepRaces; X.rules.advancement = keepAdv; X.rules.defaultLanguages = keepDL; ctx.askConfirm = keepAsk;
+    }
   } catch (err) {
     ck('#133 block A ran without throwing', false, String(err && err.stack || err));
   } finally {

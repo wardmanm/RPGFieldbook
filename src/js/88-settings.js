@@ -125,7 +125,13 @@ function openSettings(){
         `<button type="button" class="switch ${settings.tabIcons?"on":""}" id="swTabIcons" role="switch" aria-checked="${settings.tabIcons?"true":"false"}" aria-label="Icon tabs"></button>`,true)+
       setRowHTML("Tap outside to close dialogs","Leave off so a stray tap, or hiding your phone's keyboard, can't lose what you typed. ×, Cancel and Esc always close.",
         `<button type="button" class="switch ${settings.backdropClose===true?"on":""}" id="swBackdrop" role="switch" aria-checked="${settings.backdropClose===true?"true":"false"}" aria-label="Tap outside to close dialogs"></button>`,true));
-  const secDisplay=hasChar?setGroupHTML("Cards",
+  /* #133: the character's game, on its own page. The control moves only once
+     confirmSystemChange() says yes (the handler below). */
+  const sysOn=character.system==="dnd"?"dnd":"humblewood";
+  const secDisplay=hasChar?setGroupHTML("Game",
+      setRowHTML("Game system","The game this character is for. It sets the coins, the ancestries you're offered and the default languages.",
+        `<div class="seg" id="segSystem">${[["humblewood","Humblewood"],["dnd","D&amp;D"]].map(([v,l])=>`<button type="button" data-sys="${esc(v)}" class="${sysOn===v?"on":""}" aria-pressed="${sysOn===v?"true":"false"}">${l}</button>`).join("")}</div>`))+
+    setGroupHTML("Cards",
       setRowHTML("Colour current HP","Amber at half your maximum, red at a quarter.",
         `<button type="button" class="switch ${character.hpColor!==false?"on":""}" id="swHpColor" role="switch" aria-checked="${character.hpColor!==false?"true":"false"}" aria-label="Colour current HP"></button>`,true)+
       setRowHTML("Trackers card","Show it on the Journal tab. Hiding it keeps what you've counted.",
@@ -228,6 +234,10 @@ function openSettings(){
   {const ep=document.getElementById("extPage");if(ep)wireExtPage(ep);}
   /* the size / encumbrance / coin-weight block only exists when a character is
      open, so every one of these is guarded */
+  /* #133: asks first. The on class and aria-pressed move here, and only on yes:
+     the page's delegated listener above reads `on`, so Cancel, Escape or a
+     dismissal leave the control as it was. */
+  {const g=document.getElementById("segSystem");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-sys]");if(!b)return;const sys=b.dataset.sys;confirmSystemChange(sys).then(ok=>{if(!ok)return;g.querySelectorAll("button").forEach(x=>{const on=x.dataset.sys===sys;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on?"true":"false");});});});}
   {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
   {const g=document.getElementById("segEnc");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-enc]");if(!b)return;character.encumbrance=b.dataset.enc;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));encSettingsChanged();});}
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
@@ -264,6 +274,24 @@ function encSettingsChanged(){
   const s=document.getElementById("setSize");
   if(s&&s.options.length)s.options[0].textContent="From ancestry ("+(raceDefSize()||"Medium")+")";
   renderInventory();recompute();scheduleSave();
+}
+/* #133: the Game system row's question. Resolves false, asking nothing, with no
+   character open, for something that isn't a system, or for the system the
+   character already has. Otherwise it asks with the plan's sentences
+   (systemChangePlan/systemChangeLines, 75-home-theme.js) and, on yes, applies
+   that same plan and redraws what reads the system: the wordmark, title and
+   header (applyTheme), the coins and their weight, the language chips, and the
+   features list's ancestry heading. Settings stays open on Sheet display. */
+function confirmSystemChange(sys){
+  if(!activeId||(sys!=="dnd"&&sys!=="humblewood")||sys===character.system)return Promise.resolve(false);
+  const c=character,plan=systemChangePlan(c,sys),game=sys==="dnd"?"D&D":"Humblewood";
+  const who=(typeof c.name==="string"&&c.name.trim())||"this character";
+  return askConfirm({title:"Make "+who+" a "+game+" character?",message:systemChangeLines(plan).join(" "),cancel:"Cancel",ok:"Make it "+game}).then(yes=>{
+    if(!yes||character!==c)return false;   /* a sheet replaced while it asked (an Undo) is not the one asked about */
+    changeSystem(c,plan);
+    applyTheme();renderCoins();renderInventory();renderChipsAll();renderFeatures();recompute();scheduleSave();
+    return true;
+  });
 }
 /* ================= Import settings (#70) =================
    Export settings has always written {_type:"fieldbook-settings", settings,
