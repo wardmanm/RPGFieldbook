@@ -45,7 +45,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Which rules copy boot keeps** — The `localStorage` copy when there is a readable one; IndexedDB's otherwise (#134)
 - **How boot reports storage it can't use** — One alert once the home screen is up (#142)
 - **How a refused settings save is reported (#141)** — An error toast, through `saveSettingsSaid()` beside `saveSettings()`; callers with their own line keep it
-- **How often it is said (#141)** — Once per sentence a session, re-armed by a save that lands; quiet when `storageBlockedWhy()` is set
+- **How often it is said (#141)** — Once per sentence a session, re-armed by a save that lands; quiet once boot's alert has said storage is blocked
 - **The boot fold's refused save (#141)** — Kept in `extSaveError` for Settings → Extensions, as the boot source check's is
 
 ### [Character model](architecture/character-model.md)

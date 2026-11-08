@@ -19,7 +19,8 @@ write is how five loaded packs quietly came back as two.
 read-back, the refused-write paths and leaving a character), `sheet.js`'s boot & storage block (the
 real `boot()` with storage blocked, which cache copy boot keeps, the boot autoload's prompt, a
 refused removal; and #141's block at its end: a refused settings save said once, re-armed, quiet
-when blocked, the boot fold kept), `rules-data.js` again (every `saveSettings()` answer used, each
+after boot's blocked-storage alert but said when storage is blocked later, the boot fold kept and
+cleared), `rules-data.js` again (every `saveSettings()` answer used, each
 silent caller through `saveSettingsSaid()`) · **See also:** [Character model](character-model.md), [Rules packs](rules-packs.md),
 [Home & characters](../features/home-and-characters.md),
 [Rules-update tool](../features/rules-update-tool.md)
@@ -114,8 +115,9 @@ Changes to settings last until you close Fieldbook.", or with `what` "Couldn't s
 (the pills: "that you cleared the notice"). Each sentence is said **once a session**: a page switch
 and a category tap save too, so a full disk would otherwise toast at every ordinary tap. A save that
 lands forgets what was said, so the next refusal is said again; the memory is a module `Set` in
-`70-persistence.js`, never saved. It stays quiet where `storageBlockedWhy()` is set, because boot's
-alert has already said nothing will be kept. The boot source check stays quiet too, so a save
+`70-persistence.js`, never saved. It stays quiet once boot's alert has said storage is blocked and
+nothing will be kept (`storageBlockedSaid`, set where `boot()` alerts); storage that worked at boot
+and is blocked later had no alert, so its first refused save toasts why. The boot source check stays quiet too, so a save
 refused there is kept (`extSaveErrorText()`) and the page shows it as "Couldn't save your sources
 at the last check: …" until a later save lands; boot's own fold of old sources
 (`foldLegacySettings()`) keeps a refused save the same way. Any settings save that lands clears
@@ -253,7 +255,7 @@ real packs it measured 4.33 MiB → 0.83 MiB (19%), so all five fit even with no
 | Which rules copy boot keeps (#134) | The `localStorage` copy whenever there is a readable one, since a save IndexedDB takes deletes it; IndexedDB's only otherwise | A saved-at stamp on both copies: both stored formats change, and the `localStorage` stamp can't be written atomically with its copy. Deleting the IndexedDB copy when a save falls back: a delete whose open is slow can land after a later save and remove the newest copy (L9281) |
 | How boot reports storage it can't use (#142) | One alert once the home screen is up, as `migrateOldChar()`'s failure does | The save strip: no character is open for it to be about, and the home screen covers it (L9281) |
 | How a refused settings save is reported (#141) | An error toast, through one helper beside `saveSettings()`; callers that already report keep their own line | A status line on each Settings page: three pages and the home screen would each need one. The character save strip: it is about the open character, and its button saves the character to a file (L9760) |
-| How often it is said (#141) | Once per sentence a session, re-armed by a save that lands; quiet when `storageBlockedWhy()` is set | On every refused save: a page switch and a category tap each save, so a full disk would toast on every tap (L9760) |
+| How often it is said (#141) | Once per sentence a session, re-armed by a save that lands; quiet once boot's alert has said storage is blocked | On every refused save: a page switch and a category tap each save, so a full disk would toast on every tap (L9760) |
 | The boot fold's refused save (#141) | Kept in `extSaveError`, so Settings → Extensions shows it, as the boot source check's is | A toast at boot: it would sit over the first paint about a conversion the player never asked for (L9760) |
 
 ## Open

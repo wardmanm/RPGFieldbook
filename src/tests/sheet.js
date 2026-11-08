@@ -11126,6 +11126,17 @@ async function tBootStorage143() {
     ck('#141 blocked storage: boot runs and says so once', a.bootThrew === null && a.alerts.length === 1, [a.bootThrew && String(a.bootThrew), a.alerts]);
     a.ctx.saveSettingsSaid(); a.ctx.rbOpenCat('glossary'); a.ctx.saveSettingsSaid('that you cleared the notice');
     ck('#141 ...and no settings save toasts after it', a.toasts.length === 0, a.toasts);
+    /* review: quiet only because boot SAID so. Storage that worked at boot and is
+       blocked later had no alert, so its first refused save says why */
+    a = fresh({}, {noBoot: false});
+    ck('#141 storage that works at boot: no alert', a.bootThrew === null && a.alerts.length === 0, a.alerts);
+    a.ctx.localStorage = BS.denied();
+    a.ctx.saveSettingsSaid(); a.ctx.saveSettingsSaid();
+    ck('#141 ...blocked later, a refused settings save says why, once',
+       a.toasts.length === 1 && a.toasts[0].err && /^Couldn't save your settings: your browser is blocking storage for this page\. /.test(a.toasts[0].m), a.toasts);
+    a = fresh({}, {ls: BS.denied()});
+    a.ctx.saveSettingsSaid();
+    ck('#141 ...and with boot never run (no alert shown), a blocked save says so too', a.alerts.length === 0 && a.toasts.length === 1, [a.alerts, a.toasts]);
 
     /* the boot fold (old rulesSources into sources), refused: kept for the Extensions page */
     a = fresh({'hw-fb-settings': JSON.stringify({rulesSources: ['https://example.org/rules.json']})},

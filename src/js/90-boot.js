@@ -432,7 +432,7 @@ function boot(){
   /* #142: where the browser blocks storage, every read above failed quietly and
      this is a first run that keeps nothing. Said out loud, as the move above is:
      the save strip is for an open character, and the home screen covers it. */
-  {const why=storageBlockedWhy();if(why)alert("Fieldbook can't use this browser's storage — "+why+". Your characters and settings won't be kept when you close it: save each character to a file with Save before you leave, or allow this page to store data and open Fieldbook again.");}
+  {const why=storageBlockedWhy();if(why){storageBlockedSaid=true;alert("Fieldbook can't use this browser's storage — "+why+". Your characters and settings won't be kept when you close it: save each character to a file with Save before you leave, or allow this page to store data and open Fieldbook again.");}}
   /* After the first paint, not before it: the rules cache lives in IndexedDB now
      and reading it is async. Everything above drew with what localStorage had;
      when it had nothing, this brings the IndexedDB copy and redraws. A sheet

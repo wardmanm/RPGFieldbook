@@ -3341,7 +3341,7 @@ function block(html, needle, tag) {
   ck('#141 ...so no bare saveSettings(); statement is left in src/js', !/(?:^|[;{}\s])saveSettings\(\);/m.test(code));
   const persist = frag('70-persistence.js');
   ck('#141 saveSettingsSaid() sits beside saveSettings() and calls it',
-     /function saveSettings\(\)\{[^\n]*\n(?:\/\*[\s\S]*?\*\/\n)?(?:const|let) _settingsSaid=new Set\(\);\nfunction saveSettingsSaid\(what\)\{[^\n]*\n?\s*const why=saveSettings\(\);/.test(persist));
+     /function saveSettings\(\)\{[^\n]*\n(?:\/\*[\s\S]*?\*\/\n)?(?:const|let) _settingsSaid=new Set\(\);\nlet storageBlockedSaid=false;\nfunction saveSettingsSaid\(what\)\{[^\n]*\n?\s*const why=saveSettings\(\);/.test(persist));
   const site = (name, re) => ck('#141 ' + name + ' saves through saveSettingsSaid()', re.test(code));
   site('rbOpenCat()', /function rbOpenCat\(k,focus\)\{\s*if\(!rbCat\(k\)\)return;\s*settings\.rulesCat=k;saveSettingsSaid\(\);/);
   site('a Settings page switch (showPage)', /settings\.setPage=k;saveSettingsSaid\(\);\s*\};/);
@@ -3357,6 +3357,9 @@ function block(html, needle, tag) {
   site('the home screen\'s Mode', /getElementById\("homeMode"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
   site('the home screen\'s borders', /getElementById\("homeRough"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
   ck('#141 _pillSaved() is gone: the pills use the shared helper', !/_pillSaved/.test(js));
+  ck('#141 the helper is quiet only after boot has said storage is blocked: boot sets the flag where it alerts',
+     /if\(storageBlockedSaid\)return why;/.test(persist) && !/storageBlockedWhy\(\)/.test((persist.match(/function saveSettingsSaid\(what\)\{[\s\S]*?\n\}/) || [''])[0]) &&
+     /const why=storageBlockedWhy\(\);if\(why\)\{storageBlockedSaid=true;alert\("Fieldbook can't use this browser's storage/.test(frag('90-boot.js')));
   /* QA at 390 wide: the toast is fixed at left:50% and shifted back by half its
      width, so a width left to shrink-to-fit is capped at the half-viewport to
      the right of left:50% (195px on a phone), squeezing the settings sentence

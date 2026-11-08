@@ -9782,7 +9782,9 @@ also fixes older Humblewood sheets whose electrum was hidden but weighed.
 **#141, every settings save says so.** `saveSettingsSaid(what)`, beside `saveSettings()` in
 `70-persistence.js`, toasts a refused write as an error that stays ("Couldn't save your settings:
 *why*. Changes to settings last until you close Fieldbook.", or "Couldn't save *what*: *why*."), once
-per sentence a session, re-armed by a save that lands, and quiet when `storageBlockedWhy()` is set.
+per sentence a session, re-armed by a save that lands, and quiet once boot's alert has said storage
+is blocked (`storageBlockedSaid`, set where `boot()` alerts; after review, the test was
+`storageBlockedWhy()` at the refusal, which also hid storage blocked later with no alert).
 The eleven silent callers (Skin, Mode, borders, Icon tabs and Tap outside on Appearance; the top
 bar's theme button; a Settings page switch; a Rules category tap; the home screen's Skin, Mode and
 borders) and both pills' × use it; `_pillSaved()` goes. Boot's fold of old sources keeps a refused
