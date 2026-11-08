@@ -94,9 +94,12 @@ All new fields are optional. Nothing new at the top level of `blankChar()`.
   blank current HP with a max (decision 12 fills it everywhere else, so again only a hand-edited
   file) is copied as blank: the row shows "HP ? / 7" with the grey "?" bar, is not counted as
   fallen, and the familiar's next form save or tracker HP change fills it.
-- **Backward compatibility.** An older app drops a `familiar` row on load (unknown kind) and ignores
-  `turn`, so a save opened in 1.9.0 loses the familiar from a running fight and nothing else. A save
-  from before this change has no familiar rows, and its familiars read as Own.
+- **Backward compatibility.** An older app drops a `familiar` row on load (unknown kind), so a save
+  opened in 1.9.0 loses the familiar from a running fight. It keeps `turn` on load (its `migrate()`
+  keeps every key), but 1.9.0's familiar form builds its record from the fields it shows, so
+  editing a familiar there drops `turn`, and back in this version it reads as Own again. (Corrected
+  after review; the draft said 1.9.0 ignores `turn` and nothing else.) A save from before this
+  change has no familiar rows, and its familiars read as Own.
 - **A naming trap.** A familiar already has a `kind`: its creature type ("Owl"). The combatant's
   `kind` is the row's kind. The two never meet in code, but a reviewer will ask.
 
@@ -372,3 +375,22 @@ exact words within the shapes above, whether `syncFamiliarRows()` lives in `87-i
 beside the familiar functions (it must be callable from `migrate()` with `base`), how
 `removeCombatant()`'s marker step is shared so several leaving rows draw once, and how the block
 tie rule (decision 7) is coded, as long as the tests in §6 hold.
+
+## 11. As built
+
+Built on `issue/164-initiative` (2026-11-07). The builder's calls, and what review and the browser
+pass changed:
+
+- **The join toast is the long one (6 s).** At the default 1.9 s it was gone before it could be
+  read beside the familiar's reopened window (browser QA).
+- **Re-tapping the switch already pressed changes nothing.** `setCombatant(id, {after})` acts only
+  on a change; it used to wipe an Own roll and sort it last, and with the familiar acting the next
+  Next wrapped the round (review).
+- **Decision 12 also covers the tracker's own HP box:** clearing it, with a max set, writes the max
+  to the familiar and the row, so the card and the tracker never disagree (review).
+- **A negative familiar HP reads 0 in its row,** fallen, as the tracker's own entry stores it
+  (`famHP()`); the familiar keeps the number its form was given (review).
+- **One familiar per id.** `fightFamiliars()` keeps the first familiar with an id (a hand-edited
+  file can repeat one), as `famOfRow()` and the paw's handlers find it, so one familiar's damage is
+  never written to another's HP (review).
+- **Backward compatibility** is corrected in §3: 1.9.0 drops `turn` when a familiar is edited there.

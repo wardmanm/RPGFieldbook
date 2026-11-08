@@ -467,7 +467,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **Summoned, dismissed or deleted mid-fight (#163)** — Summon joins at once; Dismiss or Delete leaves, the marker moving on as Remove's does; the form's tick is the same summon
 - **A familiar edited mid-fight (#163)** — The familiar is the truth while it exists: its name, AC, switch and HP show at once
 - **A familiar's combatant dialog (#163)** — The HP stepper, the switch, Initiative on Own, AC as a line from the familiar, Remove for this fight only
-- **A familiar's blank current HP with a max (#163)** — Filled with the max on the familiar when it joins a fight and when its form is saved in one; never on load
+- **A familiar's blank current HP with a max (#163)** — Filled with the max on the familiar when it joins a fight, when its form is saved in one, and when the tracker's HP box is cleared; never on load
 - **XP split and Loot with familiars (#163)** — Unchanged: no XP share, and Loot names fallen foes only
 - **Roll initiative's monster row (#164)** — Column headings and one grid: Name · × · AC · Init once, three fixed columns
 - **A companion already typed into the Party card (#163)** — A release-note line saying it can be removed; no code

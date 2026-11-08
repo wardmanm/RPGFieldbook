@@ -96,8 +96,12 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    (`Object.assign({}, f, {turn: famTurn(f)})`: `"after"` kept, anything else `"own"`, every other
    key kept), and `syncFamiliarRows()` copies each familiar row's name, AC, switch and HP from its
    familiar; the rows whose familiar is gone or dismissed are dropped. `migrate()` never writes a
-   familiar: a blank current HP with a max stays blank, and its row reads "HP ? / 7". An older app
-   drops a `familiar` row (unknown kind) and ignores `turn`. `combatTurn` is `""` in Rounds mode; in Turns mode it keeps its id
+   familiar: a blank current HP with a max stays blank, and its row reads "HP ? / 7"; a negative
+   one reads 0 in the row (fallen) and stays as typed on the familiar. A later familiar repeating
+   an id never joins: the first with an id is that id's familiar. An older app (1.9.0) drops a
+   `familiar` row (unknown kind); it keeps `turn` on load, but its familiar form rebuilds the record
+   from the fields it shows, so editing a familiar there drops `turn`, which then reads as Own
+   here. `combatTurn` is `""` in Rounds mode; in Turns mode it keeps its id
    only if that row exists and is alive, else the first living row (so a marker on a dropped
    familiar row moves to the top, the round unchanged).
    Then the inventory log (#47): `invLogSize` keeps one of `INV_LOG_SIZES` or becomes `500`, and
@@ -272,3 +276,4 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - 2026-11-06 — `hp.locked` is retired: gone from `blankChar()`, kept unread on an old sheet; the Max HP lock is `editHide.vitals`, so every sheet opens unlocked. → ledger L9441, #115
 - 2026-11-06 — `acMode` (`"calc"`) joins `blankChar()`; `ac` becomes the Flat number only; `migrate()` makes a Flat with no whole number Calculated. Effects may carry `spells: true` (#129), kept as they are. → ledger L9537, #130
 - 2026-11-07 — A familiar's optional `turn` (Own unless `"after"`, normalized on a copy); the `familiar` combatant kind with `famId` and `after` on every row; `migrate()` brings familiar rows in step with their familiars and never writes one. → ledger L9760, #163
+- 2026-11-07 — Corrected: 1.9.0 drops a familiar's `turn` when the familiar is edited there; a negative familiar HP reads 0 in its row; one familiar per id joins a fight. → ledger L9760, #163

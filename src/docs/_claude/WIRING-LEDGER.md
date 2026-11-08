@@ -9808,6 +9808,25 @@ mid-fight (rows, familiar HP, marker and round all back). One fix: the join toas
 instruction, and at the default 1.9 s it was gone before it could be read beside the familiar's
 reopened window; it is the long toast now (6 s), checked in `sheet.js`.
 
+A fresh review (its fuzz of about 170k operations found nothing in the ordering, the marker, the HP
+mirror or load) asked for five fixes, each test-first. Re-tapping the switch already pressed in a
+familiar's dialog changed nothing visible but cleared an Own roll and sorted it last, so with the
+familiar acting the next Next wrapped the round; `setCombatant()` now acts on `after` only when it
+changes. Clearing the dialog's HP box wrote `""` to the familiar, which its card reads as 0 while
+the tracker read "?" and kept its turns; with a max set it takes the max (decision 12, extended). A
+negative typed on the familiar's form became `""` in the row ("HP ? / 7", still taking turns) while
+the tracker stores a typed negative as 0; the row now reads it as 0, fallen (`famHP()`, in
+`famRow()`, `syncFamiliarRows()` and `cleanCombatants()`), and the familiar keeps what was typed.
+`fightFamiliars()` keeps only the first familiar per id (hand-edited files), as `famOfRow()` and the
+paw's handlers already find it, so one familiar's damage can't land on another's HP. And the
+backward-compatibility claim was wrong: 1.9.0 keeps `turn` on load, but its familiar form rebuilds
+the record from what it shows, so editing a familiar there drops `turn`, which reads as Own again
+here; the spec (§3, and a new §11 As built) and the character model say so. The plan keeps its
+original wording, as the record of what was planned. The weak "a familiar Removed from the fight
+stays out" check (it dismissed an already-dismissed familiar) now drives another familiar joining,
+a dismiss and re-summon (it comes back, last, with the toast), and a form save while still summoned
+(it stays out). No screenshot changes: none of these alters what the shots show.
+
 Tests: `sheet.js` gains the `#164 #163 Initiative` block above the async chain (107 checks:
 cleaning, the block tie rule, Next, building, health, chips, Roll initiative, Start, the dialog, HP
 written through, summon/dismiss/delete/form mid-fight, load); `rules-data.js` pins the grid and no
