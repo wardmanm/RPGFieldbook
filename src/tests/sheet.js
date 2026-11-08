@@ -109,6 +109,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'featPendingIncreases', 'asiRowHidden',
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
+  'raceTerm', 'applyTheme', 'finishSettingsImport',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -8912,6 +8913,90 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
 }
 
 /* ---- end of the #130 · #129 · #132 block ---- */
+
+/* ====== 1.9.1 Skin & settings saves: #133, #141 (block A) =====================
+   The checks on the shared X/ctx. One synchronous block, here, above the async
+   chain at the end of the file: a synchronous block after that chain's first
+   line would run while t118EndToEnd() holds its mocks. The checks that need a
+   fresh app (#141's once-a-session memory, blocked storage, the boot fold) are
+   block B, at the very end of the file. */
+{
+  const keep = {ch: X.character, id: X.activeId, rules: X.rules, skin: X.settings.skin, gid: ctx.document.getElementById,
+    de: ctx.document.documentElement, title: ctx.document.title};
+  /* a recorder for what applyTheme() writes: the wordmark, the theme glyph and
+     <html>'s attributes. No #sheetHead, so it leaves the header alone. */
+  const themeDOM = () => {
+    const els = {wmMain: {textContent: ''}, wmSub: {textContent: ''}, themeIcon: {innerHTML: ''}};
+    const root = {dataset: {}};
+    ctx.document.getElementById = id => id === 'sheetHead' ? null : (els[id] || keep.gid(id));
+    ctx.document.documentElement = root;
+    return {els, root};
+  };
+  const undoDOM = () => { ctx.document.getElementById = keep.gid; ctx.document.documentElement = keep.de; };
+  try {
+    /* ---- #133 Skin is look only: opening, making or importing a character never writes it */
+    X.settings.skin = 'humblewood';
+    ctx.newCharacter('S', 'dnd');
+    const sid = X.character.id;
+    ck('#133 newCharacter(\'S\',\'dnd\') under the humblewood skin leaves settings.skin \'humblewood\'',
+       X.settings.skin === 'humblewood' && X.character.system === 'dnd', [X.settings.skin, X.character.system]);
+    X.character = X.blankChar(); X.activeId = null;
+    ctx.loadCharById(sid);
+    ck('#133 ...and so does loadCharById() of that sheet',
+       X.settings.skin === 'humblewood' && X.character.id === sid && X.character.system === 'dnd', [X.settings.skin, X.character.id]);
+    ctx.finishImport(X.migrate(Object.assign(X.blankChar(), {id: 'imp133', name: 'Imported', system: 'dnd'})));
+    ck('#133 ...and so does finishImport() of a D&D character',
+       X.settings.skin === 'humblewood' && X.character.id === 'imp133' && X.character.system === 'dnd', [X.settings.skin, X.character.id]);
+
+    /* ---- #133 what reads like the game follows the character's system */
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    X.settings.skin = 'humblewood'; const r1 = X.raceTerm();
+    X.settings.skin = 'classic'; const r2 = X.raceTerm();
+    ck('#133 raceTerm is \'Race\' for a D&D character under either skin', r1 === 'Race' && r2 === 'Race', [r1, r2]);
+    X.character.system = 'humblewood';
+    X.settings.skin = 'classic'; const r3 = X.raceTerm();
+    X.settings.skin = 'humblewood'; const r4 = X.raceTerm();
+    ck('#133 ...and \'Ancestry\' for a Humblewood one, under either skin', r3 === 'Ancestry' && r4 === 'Ancestry', [r3, r4]);
+
+    X.character = X.blankChar(); X.character.system = 'dnd'; X.character.id = 'dnd133'; X.activeId = 'dnd133';
+    X.settings.skin = 'humblewood';
+    let d = themeDOM();
+    try { X.applyTheme(); } finally { undoDOM(); }
+    ck('#133 applyTheme with a D&D character open under the humblewood skin: the wordmark and title follow the system',
+       d.els.wmMain.textContent === 'D&D' && d.els.wmSub.textContent === 'Character Sheet' && ctx.document.title === 'D&D Character Sheet',
+       [d.els.wmMain.textContent, d.els.wmSub.textContent, ctx.document.title]);
+    ck('#133 ...and data-skin the skin', d.root.dataset.skin === 'humblewood', d.root.dataset);
+    X.activeId = null;
+    d = themeDOM();
+    try { X.applyTheme(); } finally { undoDOM(); }
+    ck('#133 ...with no character open, the wordmark follows the skin',
+       d.els.wmMain.textContent === 'Humblewood' && d.els.wmSub.textContent === 'The Fieldbook' && ctx.document.title === 'Fieldbook — Humblewood',
+       [d.els.wmMain.textContent, ctx.document.title]);
+    X.settings.skin = 'classic';
+    d = themeDOM();
+    try { X.applyTheme(); } finally { undoDOM(); }
+    ck('#133 ...the Classic skin\'s, with none open', d.els.wmMain.textContent === 'D&D' && ctx.document.title === 'D&D Character Sheet' && d.root.dataset.skin === 'classic',
+       [d.els.wmMain.textContent, ctx.document.title, d.root.dataset.skin]);
+
+    /* Review Focus 5: a settings file's skin changes the look, not the open character */
+    X.character = X.blankChar(); X.character.system = 'humblewood'; X.character.id = 'hw133'; X.character.name = 'Wren'; X.activeId = 'hw133';
+    X.settings.skin = 'humblewood';
+    d = themeDOM();
+    try { X.finishSettingsImport({settings: {skin: 'classic'}, pool: null, used: 0, skipped: 0}, false); } finally { undoDOM(); }
+    ck('#133 Import settings carrying skin:"classic" with a Humblewood character open changes the skin',
+       X.settings.skin === 'classic' && d.root.dataset.skin === 'classic', [X.settings.skin, d.root.dataset.skin]);
+    ck('#133 ...but not the character\'s system, raceTerm() or the wordmark',
+       X.character.system === 'humblewood' && X.raceTerm() === 'Ancestry' && d.els.wmMain.textContent === 'Humblewood',
+       [X.character.system, X.raceTerm(), d.els.wmMain.textContent]);
+  } catch (err) {
+    ck('#133 block A ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    undoDOM();
+    X.character = keep.ch; X.activeId = keep.id; X.rules = keep.rules; X.settings.skin = keep.skin; ctx.document.title = keep.title;
+  }
+}
+
+/* ---- end of the 1.9.1 Skin & settings saves block A ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
    A real timer (Node's), borrowed for this block only: the harness's setTimeout

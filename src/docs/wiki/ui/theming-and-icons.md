@@ -9,7 +9,7 @@ map through a fetch script into a generated fragment, and they carry CC BY 3.0 o
 has to meet on its own. The **fonts** work the same way: three families, embedded in the stylesheet
 by a second fetch script so the page makes no font request, under the SIL Open Font License 1.1.
 
-**Code:** `applyTheme()`, `skinForSystem()`, `systemForSkin()` in `75-home-theme.js` · `raceTerm()`,
+**Code:** `applyTheme()` in `75-home-theme.js` · `raceTerm()`,
 `racesForCharacter()` in `52-race.js` · `iconSVG()`, `iconSlug()` in `50-classrace.js` ·
 `GAME_ICONS`, `ICON_MAP`, `ICON_ARTISTS` in `05-icons.js` (generated) · the credits in
 `88-settings.js` · `scripts/fetch-icons.js` · `css2Url()`, `parseLatinFaces()`, `licenceParts()`,
@@ -46,15 +46,9 @@ control.
 
 ### Skins follow the system
 
-A character's `system` is `dnd` or `humblewood`. `skinForSystem()` maps `dnd` to `classic` and
-anything else to `humblewood`, and `systemForSkin()` is its inverse. `loadCharById()`,
-`newCharacter()` and the import path all set `settings.skin` from the character's system before
-drawing. The link runs the other way too: the **skin control in Settings** writes
-`character.system` for the open character, then redraws coins, updates the library entry and saves.
-Changing the skin there therefore changes the system, which sets the coin set (PP GP EP SP CP or
-GP SP CP), the ancestries `racesForCharacter()` offers, and the badge on the home screen's
-character card. The skin buttons in the home screen's setup panel change only `settings.skin`.
-`settings.skin` is global, so opening a character of the other system switches the whole app.
+A character's `system` is `dnd` or `humblewood`. The skin is `settings.skin`, set by the Skin
+control in Settings and on the home screen, and nothing else writes it: opening, making or
+importing a character leaves it as it was (#133).
 
 ### Light, dark and system
 

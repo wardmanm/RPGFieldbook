@@ -1,6 +1,4 @@
 /* ================= character library + home ================= */
-function skinForSystem(sys){return sys==="dnd"?"classic":"humblewood";}
-function systemForSkin(skin){return skin==="classic"?"dnd":"humblewood";}
 /* Every path that replaces the open character asks leaveCharacterOk() first
    (70-persistence.js), and returns false, changing nothing, when told No. */
 function loadCharById(id){
@@ -12,7 +10,9 @@ function loadCharById(id){
   try{character=migrate(JSON.parse(raw));}catch(e){return false;}
   luAbandon();   /* #101: a level-up belongs to the sheet it started on */
   activeId=character.id||id;
-  settings.skin=skinForSystem(character.system);saveSettings();applyTheme();
+  /* the skin is the player's, never the character's (#133); applyTheme() still
+     runs, for the wordmark, the title and the header's + Race / + Ancestry */
+  applyTheme();
   renderAll();hideHome();
   /* the sheet on screen is the one in storage, so a warning about the character
      just left (or given up) no longer applies */
@@ -33,7 +33,7 @@ function newCharacter(name,system){
   /* as finishImport(): listed only once stored, and a refusal says so (#81) */
   let why="";try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){why=storageWhy(e);}
   if(!why)why=libTouch();
-  settings.skin=skinForSystem(c.system);saveSettings();applyTheme();
+  applyTheme();   /* the skin stays as chosen (#133): only the words follow the system */
   renderAll();hideHome();
   showSaveResult(why);
   return true;
@@ -115,7 +115,7 @@ function openNewCharacter(){
     <div class="field"><label class="f">Name</label><input id="ncName" placeholder="Character name" autocomplete="off"></div>
     <div class="field"><label class="f">System</label>
       <div class="seg" id="ncSys"><button type="button" data-sys="humblewood" class="on">Humblewood</button><button type="button" data-sys="dnd">D&amp;D</button></div>
-      <p class="hint">Sets the sheet's look and wordmark — you can change it later in Settings. All loaded rules stay available either way.</p></div>
+      <p class="hint">The game this character is for. It sets the coins, the ancestries you're offered and your starting languages. Classes, spells, feats and items from every loaded pack are offered either way. You can change it later in Settings → Sheet display.</p></div>
     <div class="m-actions"><button class="tbtn" id="ncCancel">Cancel</button><button class="tbtn primary" id="ncCreate">Create</button></div>`);
   let sys="humblewood";
   document.querySelectorAll("#ncSys button").forEach(b=>b.addEventListener("click",()=>{sys=b.dataset.sys;document.querySelectorAll("#ncSys button").forEach(x=>x.classList.toggle("on",x===b));}));
@@ -133,12 +133,16 @@ function applyTheme(){
   /* "icons" forces glyph tabs at any width; "labels" leaves it to the viewport,
      which switches on its own when seven words stop fitting. */
   document.documentElement.dataset.tabs=settings.tabIcons?"icons":"labels";
-  const wm=(settings.skin==="classic")?{main:"D&D",sub:"Character Sheet",title:"D&D Character Sheet"}
-                                       :{main:"Humblewood",sub:"The Fieldbook",title:"Fieldbook — Humblewood"};
+  /* The wordmark and the page title read like the game, so they follow the open
+     character's system, not the skin (#133). With no character open there is no
+     system to follow, and they follow the skin. */
+  const dnd=activeId?character.system==="dnd":settings.skin==="classic";
+  const wm=dnd?{main:"D&D",sub:"Character Sheet",title:"D&D Character Sheet"}
+              :{main:"Humblewood",sub:"The Fieldbook",title:"Fieldbook — Humblewood"};
   const wmM=document.getElementById("wmMain"),wmS=document.getElementById("wmSub");
   if(wmM)wmM.textContent=wm.main; if(wmS)wmS.textContent=wm.sub;
   document.title=wm.title;
-  /* the header's "+ Species" / "+ Race" follows the skin (raceTerm()) */
+  /* the header's "+ Race" / "+ Ancestry" follows the character's system (raceTerm()) */
   if(document.getElementById("sheetHead"))renderSheetHead();
   const on=t==="dark";
   document.getElementById("themeIcon").innerHTML=on

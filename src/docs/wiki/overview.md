@@ -156,7 +156,7 @@ name says where its first function came from, not everything it holds: `migrate(
 | `71-char-io.js` | the rules cache's boot reads (localStorage, then IDB hydration), `migrate()`, export/import, print | [Character model](architecture/character-model.md), [Home & characters](features/home-and-characters.md), [Storage](architecture/storage.md) |
 | `72-char-update.js` | pure diff of a sheet against its packs: `stampSrc()`, `diffCharacter()` | [Rules-update tool](features/rules-update-tool.md) |
 | `73-char-update-ui.js` | the review modal for that diff; the prompt on load, and after the boot hydration | [Rules-update tool](features/rules-update-tool.md), [Storage](architecture/storage.md) |
-| `75-home-theme.js` | home screen, `newCharacter()`, `skinForSystem()`, `applyTheme()` | [Home & characters](features/home-and-characters.md), [Theming & icons](ui/theming-and-icons.md) |
+| `75-home-theme.js` | home screen, `newCharacter()`, `applyTheme()` (the skin is `settings.skin`, set by the Skin control) | [Home & characters](features/home-and-characters.md), [Theming & icons](ui/theming-and-icons.md) |
 | `80-modal-forms.js` | `openModal()` with dismiss guards and focus; the item, feature, spell, status and familiar forms; the Armor Class window | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md), [Armor & AC](features/armor-and-ac.md) |
 | `85-browse.js` | `openBrowse()`, the full-screen finder; item, spell and feat pickers | [Shell](ui/shell.md), [Inventory](features/inventory.md), [Spells](features/spells.md), [Features & traits](features/features-and-traits.md) |
 | `86-tables.js` | `findTable()`, `tableHTML()` | [Rules & tables](features/rules-and-tables.md) |

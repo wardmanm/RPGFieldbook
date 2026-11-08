@@ -114,7 +114,7 @@ function openSettings(){
   const hasChar=!!activeId,who=character.name||"unnamed";
   const secAppearance=
     setGroupHTML("Look",
-      setRowHTML("Skin","The app's look. It also sets the open character's game system.",
+      setRowHTML("Skin","How Fieldbook looks: colours, lettering and frames. It doesn't change any character.",
         `<div class="seg" id="segSkin"><button type="button" data-skin="humblewood" class="${(settings.skin||"humblewood")==="humblewood"?"on":""}" aria-pressed="${(settings.skin||"humblewood")==="humblewood"?"true":"false"}">Humblewood</button><button type="button" data-skin="classic" class="${settings.skin==="classic"?"on":""}" aria-pressed="${settings.skin==="classic"?"true":"false"}">Classic D&amp;D</button></div>`)+
       setRowHTML("Mode","Light, dark, or follow your device.",
         `<div class="seg" id="segTheme"><button type="button" data-th="system" class="${settings.theme==="system"?"on":""}" aria-pressed="${settings.theme==="system"?"true":"false"}">System</button><button type="button" data-th="light" class="${settings.theme==="light"?"on":""}" aria-pressed="${settings.theme==="light"?"true":"false"}">Light</button><button type="button" data-th="dark" class="${settings.theme==="dark"?"on":""}" aria-pressed="${settings.theme==="dark"?"true":"false"}">Dark</button></div>`)+
@@ -218,7 +218,7 @@ function openSettings(){
     if(next===t.dataset.setpage)return;
     e.preventDefault();showPage(next,true);
   });
-  document.getElementById("segSkin").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;settings.skin=b.dataset.skin;document.querySelectorAll("#segSkin button").forEach(x=>x.classList.toggle("on",x===b));applyTheme();saveSettings();if(activeId){character.system=systemForSkin(settings.skin);renderCoins();libTouch();scheduleSave();}});
+  document.getElementById("segSkin").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;settings.skin=b.dataset.skin;document.querySelectorAll("#segSkin button").forEach(x=>x.classList.toggle("on",x===b));applyTheme();saveSettings();});
   document.getElementById("segTheme").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;document.querySelectorAll("#segTheme button").forEach(x=>x.classList.toggle("on",x===b));applyTheme();saveSettings();});
   document.getElementById("swHome").addEventListener("click",()=>{closeModal();showHome();});
   document.getElementById("swRough").addEventListener("click",e=>{settings.rough=!settings.rough;e.currentTarget.classList.toggle("on",settings.rough);applyTheme();saveSettings();});

@@ -8,7 +8,7 @@ press keys, so an interactive change should be driven through and then shot, not
 of this replaces Mike's pass in real browsers.
 
 **Code:** `.mcp.json`, `scripts/playwright-mcp.js`; `selectTab()` in `40-sheet.js`; `newCharacter()`,
-`skinForSystem()` in `75-home-theme.js` · **See also:** [Testing](testing.md),
+`applyTheme()` in `75-home-theme.js` · **See also:** [Testing](testing.md),
 [Building & CI](building-and-ci.md), [Shell](../ui/shell.md),
 [Theming & icons](../ui/theming-and-icons.md)
 
@@ -77,9 +77,8 @@ as "fully tested".
 
 - **Every PR and every merge that changes what a tab renders carries a screenshot of each affected
   tab,** with before and after for a change to existing UI. No screenshot, no claim that the UI works.
-- **Shoot both skins when a change touches themed CSS.** The skin follows the system
-  (`skinForSystem()`: `dnd` gives `classic`, anything else gives `humblewood`), so one `"dnd"` and one
-  `"humblewood"` character covers both.
+- **Shoot both skins when a change touches themed CSS.** The skin is `settings.skin`, set by the
+  Skin control, and no character sets it (#133).
 - **The launcher's flags stay in the launcher,** where the platform split can be expressed.
   `.mcp.json` spawns `node scripts/playwright-mcp.js` and nothing else.
 - **The server version is pinned.** Bump it deliberately. Never move to `@latest`, which re-resolves

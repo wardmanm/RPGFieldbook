@@ -3292,6 +3292,33 @@ function block(html, needle, tag) {
      /\.fxrow \.fx-sp\{[^}]*grid-column:1\/-1/.test(mc) && /\.fxrow \.fx-sp\[hidden\]\{display:none\}/.test(mc));
 }
 
+// ---------- #133 Skin is look only: nothing but the two skin controls writes it
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const frag = n => fs.readFileSync(path.join(ROOT, 'src/js', n), 'utf8');
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const code = js.replace(/\/\*[\s\S]*?\*\//g, '');
+  ck('#133 skinForSystem() and systemForSkin() are gone from every fragment', !/skinForSystem|systemForSkin/.test(js));
+  const writes = code.match(/settings\.skin=(?!=)/g) || [];
+  ck('#133 exactly two settings.skin= assignments: the Settings and home-screen skin controls',
+     writes.length === 2 && /getElementById\("segSkin"\)\.addEventListener\("click",[^\n]*settings\.skin=b\.dataset\.skin;/.test(code) &&
+     /getElementById\("homeSkin"\)\.addEventListener\("click",[^\n]*settings\.skin=b\.dataset\.skin;/.test(code), writes.length);
+  const segSkin = (code.match(/getElementById\("segSkin"\)\.addEventListener\("click",[^\n]*/) || [''])[0];
+  ck('#133 the Settings skin control writes nothing on the character', segSkin !== '' && !/character\./.test(segSkin) && !/scheduleSave|libTouch|renderCoins/.test(segSkin), segSkin);
+  const race = frag('52-race.js');
+  const raceTermSrc = (race.match(/function raceTerm\(\)\{[^\n]*/) || [''])[0];
+  ck('#133 raceTerm() reads the character\'s system, not the skin',
+     /character\.system/.test(raceTermSrc) && !/settings\.skin/.test(raceTermSrc), raceTermSrc);
+  const placeholder = (race.match(/id="raceCustom" placeholder="[^\n]*/) || [''])[0];
+  ck('#133 the picker\'s example name reads the system too',
+     /character\.system/.test(placeholder) && !/settings\.skin/.test(placeholder) && /"Elf"/.test(placeholder) && /"Strig"/.test(placeholder), placeholder);
+  const settingsSrc = frag('88-settings.js');
+  ck('#133 the Skin row says it is the look, and changes no character',
+     settingsSrc.includes('setRowHTML("Skin","How Fieldbook looks: colours, lettering and frames. It doesn\'t change any character.",'));
+  ck('#133 the New character hint says what the system really does',
+     frag('75-home-theme.js').includes('<p class="hint">The game this character is for. It sets the coins, the ancestries you\'re offered and your starting languages. Classes, spells, feats and items from every loaded pack are offered either way. You can change it later in Settings → Sheet display.</p>'));
+}
+
 /* ================= Fetch all never loses what is loaded (issue #65) ===========
    fetchAllRules() used to call resetRules() BEFORE fetching, so every pack
    imported from a file was discarded, and when the fetch then failed (offline,
