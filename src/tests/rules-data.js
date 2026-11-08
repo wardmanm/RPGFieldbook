@@ -1278,8 +1278,9 @@ function block(html, needle, tag) {
   // the {0,200} window the brief gave was too tight for the tab's own svg icon
   // (224 chars from the end of the opening tag to the label) — widened, not removed
   ck('#103 the Story tab reads Bio', /data-tab="story"[^>]*>[\s\S]{0,300}Bio/.test(t) && X.NOTE_TABS.story === 'Bio');
+  /* #121: Tools after Senses, then the prose under its own heading */
   ck('#103 the Bio card holds alignment and the chip rows',
-     /data-note="proficiencies"[\s\S]*data-path="character.alignment"[\s\S]*id="bioLanguages"[\s\S]*id="bioSenses"/.test(t));
+     /data-note="proficiencies"[\s\S]*data-path="character.alignment"[\s\S]*id="bioLanguages"[\s\S]*id="bioSenses"[\s\S]*<div class="def-h">Tools<\/div><div id="bioTools"><\/div>[\s\S]*<div class="def-h">Other proficiencies<\/div>[\s\S]*id="rt-proficiencies"/.test(t));
 }
 
 // ---------- #103: the new Sheet

@@ -248,7 +248,7 @@ html[data-rough="on"] .portrait::before{filter:url(#rough)}
 /* chips: defences, senses, languages (#103) */
 .chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:5px;font-family:var(--head);font-size:12px;font-weight:700;letter-spacing:.04em;background:var(--accent-2);color:#fff}
-.chip-languages,.chip-senses{background:var(--field);color:var(--ink);border:1.5px solid var(--line)}
+.chip-languages,.chip-senses,.chip-tools{background:var(--field);color:var(--ink);border:1.5px solid var(--line)}
 .chip-src{font-weight:400;opacity:.75;text-transform:none}
 .chip-x{background:none;border:0;color:inherit;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1}
 .chip-add{background:none;color:var(--ink-soft);border:1.5px dashed var(--line);cursor:pointer}

@@ -82,6 +82,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'grantLanguages', 'dropLanguages',
   'CHIP_SUGGEST', 'chipSrcLabel', 'chipsHTML', 'chipChooserHTML', 'openChipChooser', 'addChip', 'removeChip', 'renderDefences', 'renderBioChips',
   'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
+  'CHIP_SOURCED', 'TOOL_KINDS', 'TOOL_KIND_HEAD', 'toolParse', 'toolSuggestions', 'grantTools', 'dropChips', 'liftTools',
+  'removeBackground', 'removeRace', 'printSheet',
   'pawHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
   'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
   'isTabHidden', 'cleanHiddenTabs', 'setTabHidden', 'applyHiddenTabs', 'HIDEABLE_TABS', 'TAB_LABELS', 'selectTab',
@@ -4582,7 +4584,9 @@ const shippedItems = (dir, f) => JSON.parse(require('fs').readFileSync(require('
   ck('#103 the rest note merges into Vitals, created when absent', m.secNotes.vitals.text === '**Rest & Recovery:**\nShort rests at noon.', m.secNotes.vitals);
   ck('#103 the Languages line becomes chips', JSON.stringify(X.chipList(m, 'languages').map(l => l.name)) === '["Common","Elvish","Draconic"]' &&
      X.chipList(m, 'languages').every(l => l.src === ''));
-  ck('#103 ...and leaves the rest of the text', m.proficiencies === 'Light armor.\nTools: Thieves\' tools', JSON.stringify(m.proficiencies));
+  /* #121: the Tools line is lifted too, into the player's own tool chip */
+  ck('#103 ...and leaves the rest of the text', m.proficiencies === 'Light armor.', JSON.stringify(m.proficiencies));
+  ck('#121 ...its Tools line is the player\'s chip "Thieves\' tools"', X.chipList(m, 'tools').some(t => t.name === 'Thieves\' tools' && t.src === ''), X.chipList(m, 'tools'));
   ck('#103 a migrated Common is not doubled by the default', X.chipList(m, 'languages').filter(l => l.name.toLowerCase() === 'common').length === 1);
   ck('#103 rest in the combat view becomes vitals, once', JSON.stringify(m.combatSections) === '["vitals","statuses"]', m.combatSections);
   ck('#103 a character with a familiar shows the icon', m.showFamiliars === true && X.migrate({abilities: {}}).showFamiliars === false);
@@ -8912,6 +8916,174 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
 }
 
 /* ---- end of the #130 · #129 · #132 block ---- */
+
+/* ---------- 1.9.1 Bio chips: #121, #120, #119, #123, #131 ----------
+   Tools become Bio chips that come and go with their background, with a
+   choice asked when it is added and a placeholder otherwise (#121); the Add
+   window takes several at once (#119); removing or swapping a source takes
+   back what it seeded, never the player's own values, and Speed gets a Base
+   speed box (#131). The flows are driven against recorder elements, as the
+   #153 block does, and what is checked is what the screen holds afterwards.
+   Synchronous, and above the async chain, for the reason that block gives.
+   Everything swapped is put back. */
+{
+  const noop = () => {};
+  let els = {};
+  const rec = id => {
+    const t = {id: id || '', value: '', checked: false, disabled: false, textContent: '', title: '', placeholder: '',
+      _h: '', _kids: [], _on: {}, style: {setProperty: noop}, dataset: {}, children: [], options: [],
+      classList: {toggle: noop, add: noop, remove: noop, contains: () => false},
+      addEventListener: (type, fn) => { (t._on[type] = t._on[type] || []).push(fn); },
+      appendChild: c => { t._kids.push(c && typeof c.__html === 'string' ? c.__html : ''); return c; },
+      insertAdjacentHTML: (pos, h) => { t._kids.push(String(h)); },
+      querySelector: () => null, querySelectorAll: () => [], closest: () => null,
+      getBoundingClientRect: () => ({top: 0, bottom: 0, left: 0, right: 0, height: 0, width: 0}),
+      setAttribute: noop, removeAttribute: noop, hasAttribute: () => false, focus: noop, remove: noop};
+    const p = new Proxy(t, {
+      get: (o, k) => k === 'innerHTML' ? o._h : k === '__html' ? o._h + o._kids.join('')
+        : k === 'firstElementChild' ? p : (k in o ? o[k] : noop),
+      set: (o, k, v) => { if (k === 'innerHTML') { o._h = String(v); o._kids = []; } else o[k] = k === 'textContent' ? String(v) : v; return true; },
+    });
+    return p;
+  };
+  const el = id => els[id] || (els[id] = rec(id));
+  const screen = id => (els[id] ? els[id].__html : '');
+  const doc = ctx.document;
+  const keep = {gid: doc.getElementById, ce: doc.createElement, qsa: doc.querySelectorAll, ch: X.character, save: ctx.scheduleSave};
+  const why = e => e && String(e.stack || e).split('\n').slice(0, 3).join(' | ');
+  const flow = fn => { els = {}; let err = null; try { fn(); } catch (e) { err = e; } return err; };
+  const C = () => X.character;
+  const tools = () => X.chipList(C(), 'tools');
+  const BC_PACK = {system: 'T121',
+    races: [{name: 'Elf', speed: '30 ft', size: 'Medium', proficiencies: 'Longbows'}, {name: 'Gnome', speed: '30 ft', size: 'Small'},
+            {name: 'Tiefling', speed: '30 ft', size: ['Small', 'Medium']}, {name: 'Corvum', speed: 30}],
+    backgrounds: [{name: 'Criminal', tools: "Thieves' Tools"}, {name: 'Soldier', tools: 'Choose one kind of Gaming Set'},
+                  {name: 'Bandit Defector', tools: 'Disguise Kit, and one Gaming Set or Musical Instrument of your choice'}]};
+  const fresh = () => { X.character = X.blankChar(); X.character.system = 'dnd'; return X.character; };
+  try {
+    doc.getElementById = el; doc.createElement = () => rec(); doc.querySelectorAll = () => [];
+    ctx.scheduleSave = noop;
+
+    // #121 tools: the parser, on every wording the packs ship (spec §4)
+    const tp = s => X.toolParse(s);
+    const one = (s, kinds, name, ask) => { const r = tp(s); const c0 = r.choices[0] || {};
+      return r.fixed.length === 0 && r.choices.length === 1 && JSON.stringify(c0.kinds) === JSON.stringify(kinds) && c0.count === 1 && c0.name === name && (ask === undefined || c0.ask === ask); };
+    ck('#121 toolParse: a named tool is one fixed chip', JSON.stringify(tp("Calligrapher's Supplies")) === JSON.stringify({fixed: ["Calligrapher's Supplies"], choices: []}) &&
+       JSON.stringify(tp("Thieves' Tools").fixed) === JSON.stringify(["Thieves' Tools"]), [tp("Calligrapher's Supplies"), tp("Thieves' Tools")]);
+    ck('#121 toolParse: "Choose one kind of Gaming Set" is one Gaming Set choice', one('Choose one kind of Gaming Set', ['Gaming Set'], 'Gaming Set', 'Choose one kind of Gaming Set'), tp('Choose one kind of Gaming Set'));
+    ck('#121 toolParse: the 2024 Artisan\'s Tools and Musical Instrument choices', one("Choose one kind of Artisan's Tools", ["Artisan's Tools"], "Artisan's Tools") &&
+       one('Choose one kind of Musical Instrument', ['Musical Instrument'], 'Musical Instrument'), [tp("Choose one kind of Artisan's Tools"), tp('Choose one kind of Musical Instrument')]);
+    const bd = tp('Disguise Kit, and one Gaming Set or Musical Instrument of your choice');
+    ck('#121 toolParse: Bandit Defector is Disguise Kit, then a Gaming Set or Musical Instrument',
+       JSON.stringify(bd.fixed) === '["Disguise Kit"]' && bd.choices.length === 1 && JSON.stringify(bd.choices[0].kinds) === '["Gaming Set","Musical Instrument"]' &&
+       bd.choices[0].name === 'Gaming Set or Musical Instrument' && bd.choices[0].ask === 'one Gaming Set or Musical Instrument of your choice', bd);
+    ck('#121 toolParse: Grounded is an Artisan\'s Tools choice', one("one type of Artisan's Tools of your choice", ["Artisan's Tools"], "Artisan's Tools"), tp("one type of Artisan's Tools of your choice"));
+    ck('#121 toolParse: Wind-Touched keeps its wording for the step\'s label', one('one type of wind Musical Instrument', ['Musical Instrument'], 'Musical Instrument', 'one type of wind Musical Instrument'), tp('one type of wind Musical Instrument'));
+    ck('#121 toolParse: a choice naming no kind is a placeholder only', one('one tool of your choice', [], 'Tool of your choice'), tp('one tool of your choice'));
+    ck('#121 toolParse: "two ... of your choice" counts 2', (tp("two Artisan's Tools of your choice").choices[0] || {}).count === 2, tp("two Artisan's Tools of your choice"));
+    ck('#121 toolParse: junk reads as nothing', [5, '', ', and ;', null, {}].every(v => JSON.stringify(tp(v)) === '{"fixed":[],"choices":[]}'), [5, '', ', and ;'].map(tp));
+
+    // #121 the suggestion list: the pack's names win, the built-ins fill the gaps
+    X.resetRules();
+    X.rules.items = [{category: 'Tool', type: 'Gaming Set', name: 'Dice Set'}, {category: 'Tool', type: 'Tool', name: "thieves' tools"}];
+    const sug = X.toolSuggestions(), grp = k => (sug.find(g => g[0] === k) || [k, []])[1];
+    ck('#121 toolSuggestions: four kinds, in order', JSON.stringify(sug.map(g => g[0])) === JSON.stringify(["Artisan's Tools", 'Gaming Set', 'Musical Instrument', 'Other']), sug.map(g => g[0]));
+    ck('#121 ...the pack\'s Dice Set is the one Dice Set under Gaming Set', grp('Gaming Set').filter(n => n.toLowerCase() === 'dice set').length === 1 && grp('Gaming Set').length === 4, grp('Gaming Set'));
+    ck('#121 ...the pack\'s spelling wins, with no case-blind twin', grp('Other').includes("thieves' tools") && !grp('Other').includes("Thieves' Tools"), grp('Other'));
+    X.rules.items = [];
+    ck('#121 with no pack items, the built-in four gaming sets are there', JSON.stringify(X.toolSuggestions().find(g => g[0] === 'Gaming Set')[1]) === JSON.stringify(['Dice Set', 'Dragonchess Set', 'Playing Cards', 'Three-Dragon Ante Set']),
+       X.toolSuggestions().find(g => g[0] === 'Gaming Set'));
+    ck('#121 ...17 artisan\'s tools, 10 instruments and 6 other kits', X.toolSuggestions().map(g => g[1].length).join(',') === '17,4,10,6', X.toolSuggestions().map(g => g[1].length));
+    ck('#121 toolSuggestions(kinds) gives only those kinds', JSON.stringify(X.toolSuggestions(['Gaming Set']).map(g => g[0])) === '["Gaming Set"]');
+    ck('#121 the group headings', X.TOOL_KIND_HEAD['Gaming Set'] === 'Gaming Sets' && X.TOOL_KIND_HEAD['Musical Instrument'] === 'Musical Instruments' &&
+       X.TOOL_KIND_HEAD["Artisan's Tools"] === "Artisan's Tools" && X.TOOL_KIND_HEAD.Other === 'Other');
+
+    // #121 chipClean for tools
+    const cl = X.chipClean([{id: 'a', name: 'Dice Set', src: 'bg:Soldier'}, {id: 'b', name: 'Lute', src: '__proto__:x'},
+      {id: 'c', name: 'Gaming Set', src: 'bg:Soldier', ask: 'Choose one kind of Gaming Set'}, {id: 'd', name: 'Gaming Set', src: 'bg:Soldier', ask: 'Choose one kind of Gaming Set'},
+      {id: 'e', name: 'Flute', ask: 7}, {id: 'f', name: 'lute'}], 'tools', false);
+    ck('#121 chipClean keeps a tool\'s source', cl[0].src === 'bg:Soldier', cl);
+    ck('#121 ...an unknown source reads as the player\'s', cl[1].src === '', cl[1]);
+    ck('#121 ...a placeholder keeps its ask, and two placeholders are both kept', cl.filter(x => x.ask === 'Choose one kind of Gaming Set').length === 2, cl);
+    ck('#121 ...a non-string ask is dropped', cl.find(x => x.id === 'e') && !('ask' in cl.find(x => x.id === 'e')), cl.find(x => x.id === 'e'));
+    ck('#121 ...named duplicates are dropped case-blind', cl.filter(x => x.name.toLowerCase() === 'lute').length === 1, cl);
+    ck('#121 ...an ask on another chip list is not kept', !('ask' in X.chipClean([{name: 'Fire', ask: 'x'}], 'resists', false)[0]));
+    ck('#121 tools is a chip list', X.CHIP_KEYS.includes('tools') && JSON.stringify(X.CHIP_SOURCED) === '["languages","tools"]' && JSON.stringify(X.blankChar().tools) === '[]');
+
+    // Review Focus 1: a hand-edited file with junk in the list loads, renders, and migrates once
+    {
+      const j1 = X.migrate({abilities: {}, tools: 'x'}), j2 = X.migrate({abilities: {}, tools: [null, {name: 5}, {name: 'Lute', ask: 7}]});
+      let thrown = null; try { X.chipsHTML(j1, 'tools'); X.chipsHTML(j2, 'tools'); } catch (e) { thrown = e; }
+      ck('#121 junk tools: a string reads empty, junk entries drop, a bad ask goes', j1.tools.length === 0 && j2.tools.length === 1 && j2.tools[0].name === 'Lute' && !('ask' in j2.tools[0]), [j1.tools, j2.tools]);
+      ck('#121 ...the card renders', !thrown, why(thrown));
+      ck('#121 ...and a second migrate changes nothing', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(j2)))) === JSON.stringify(j2));
+    }
+
+    // #121 a background's fixed tool: a chip on the card at once, and gone with it
+    X.resetRules(); X.mergeRules(JSON.parse(JSON.stringify(BC_PACK)), 'test-121');
+    fresh();
+    let err = flow(() => { ctx.applyBackground('Criminal', {}); });
+    ck('#121 adding Criminal: THIEVES\' TOOLS · background on the Bio card at once', !err && /THIEVES&#39; TOOLS<span class="chip-src"> · background<\/span>/.test(screen('bioTools')), why(err) || screen('bioTools'));
+    ck('#121 ...with no × (the grant\'s to take back)', !/data-chipdel/.test(screen('bioTools')), screen('bioTools'));
+    ck('#121 ...and no "Tools:" line in Proficiencies', !/tools\s*:/i.test(C().proficiencies), C().proficiencies);
+    ck('#121 ...the chip carries the background', tools().length === 1 && tools()[0].name === "Thieves' Tools" && tools()[0].src === 'bg:Criminal', tools());
+    err = flow(() => { ctx.applyBackground('Criminal', {}); });
+    ck('#121 Criminal applied again: still one chip (Review Focus 2)', !err && tools().length === 1, why(err) || tools());
+    err = flow(() => { ctx.removeBackground(); });
+    ck('#121 removing it takes the chip off the card at once', !err && tools().length === 0 && !/THIEVES/.test(screen('bioTools')) && screen('bioTools') !== '', why(err) || screen('bioTools'));
+    flow(() => { ctx.applyBackground('Criminal', {}); });
+    err = flow(() => { ctx.applyBackground('Soldier', {}); });
+    ck('#121 a swap shows only the new background\'s tools', !err && !/THIEVES/.test(screen('bioTools')) && /GAMING SET · choose/.test(screen('bioTools')), why(err) || screen('bioTools'));
+
+    // #121 a choice: a placeholder and a queued tool step
+    fresh();
+    let q = null;
+    err = flow(() => { q = ctx.applyBackground('Soldier', {}); });
+    const ph = tools().filter(x => x.ask);
+    ck('#121 Soldier: one placeholder, GAMING SET · choose, carrying the background', !err && ph.length === 1 && ph[0].name === 'Gaming Set' && ph[0].src === 'bg:Soldier' && ph[0].ask === 'Choose one kind of Gaming Set', why(err) || tools());
+    ck('#121 ...drawn as a button that names it, its wording in the title', new RegExp('<button type="button" class="chip-name" data-chipask="' + (ph[0] || {}).id + '" title="Choose one kind of Gaming Set" aria-label="Name this tool: Choose one kind of Gaming Set">GAMING SET · choose</button><span class="chip-src"> · background</span>').test(screen('bioTools')), screen('bioTools'));
+    const tq = (q || []).filter(x => x && x.ch && x.ch.type === 'tool');
+    ck('#121 ...and the returned queue holds one tool step naming that placeholder', tq.length === 1 && JSON.stringify(tq[0].ch.chipIds) === JSON.stringify([(ph[0] || {}).id]) &&
+       JSON.stringify(tq[0].ch.kinds) === '["Gaming Set"]' && tq[0].ch.choose === 1 && tq[0].ch.label === 'Choose one kind of Gaming Set' && tq[0].sid === 'bg:Soldier' && tq[0].ch._sid === 'bg:Soldier', q);
+    err = flow(() => { ctx.removeBackground(); });
+    ck('#121 removing Soldier removes its placeholder', !err && tools().length === 0, why(err) || tools());
+    fresh();
+    err = flow(() => { q = ctx.applyBackground('Bandit Defector', {}); });
+    ck('#121 Bandit Defector: Disguise Kit, and a Gaming Set or Musical Instrument placeholder with its step',
+       !err && tools().some(x => x.name === 'Disguise Kit' && !x.ask) && tools().some(x => x.name === 'Gaming Set or Musical Instrument' && x.ask) &&
+       (q || []).filter(x => x.ch && x.ch.type === 'tool').length === 1, why(err) || [tools(), q]);
+    /* a player's own placeholder (lifted) has the ×, a granted one doesn't */
+    const own = X.chipsHTML({tools: [{id: 'p', name: 'Gaming Set', src: '', ask: 'one Gaming Set of your choice'}]}, 'tools');
+    ck('#121 the player\'s own placeholder has its ×, after the name button', /data-chipask="p"[^>]*>GAMING SET · choose<\/button><button type="button" class="chip-x ed" data-chipdel="tools" data-chipid="p"/.test(own), own);
+
+    // #121 the lift: an old sheet's "Tools:" lines become the player's chips, once
+    const lifted = X.migrate({abilities: {}, proficiencies: "Light armor.\nTools: Thieves' tools, one Gaming Set of your choice"});
+    const lt = X.chipList(lifted, 'tools');
+    ck('#121 liftTools: the line leaves Proficiencies', lifted.proficiencies === 'Light armor.', JSON.stringify(lifted.proficiencies));
+    ck('#121 ...a named tool is the player\'s chip', lt.some(x => x.name === "Thieves' tools" && x.src === '' && !x.ask), lt);
+    ck('#121 ...a choice is the player\'s placeholder', lt.some(x => x.name === 'Gaming Set' && x.src === '' && x.ask === 'one Gaming Set of your choice'), lt);
+    ck('#121 ...it is recorded as done', lifted.toolsLifted === true);
+    ck('#121 ...migrating again changes nothing', JSON.stringify(X.migrate(JSON.parse(JSON.stringify(lifted)))) === JSON.stringify(lifted));
+    const later = JSON.parse(JSON.stringify(lifted)); later.proficiencies += '\nTools: Lute';
+    ck('#121 ...a Tools: line typed later stays text', /Tools: Lute/.test(X.migrate(later).proficiencies) && X.chipList(X.migrate(later), 'tools').length === lt.length);
+    ck('#121 blankChar() never sets toolsLifted', !('toolsLifted' in X.blankChar()));
+    err = flow(() => { ctx.newCharacter('Fresh', 'dnd'); });
+    ck('#121 newCharacter() sets toolsLifted', !err && C().toolsLifted === true, why(err) || C().toolsLifted);
+
+    // #121 the print sheet has a Tools line, and a placeholder prints its wording
+    fresh();
+    C().tools = [{id: 't1', name: "Thieves' Tools", src: 'bg:Criminal'}, {id: 't2', name: 'Gaming Set', src: 'bg:Soldier', ask: 'Choose one kind of Gaming Set'}];
+    err = flow(() => { ctx.printSheet(); });
+    ck('#121 printSheet: a Tools line, the placeholder as its wording', !err && /Tools: <b>THIEVES&#39; TOOLS, Choose one kind of Gaming Set<\/b>/.test(screen('printArea')), why(err) || (screen('printArea').match(/Tools:[^<]*<b>[^<]*/) || [screen('printArea').slice(0, 300)])[0]);
+  } catch (e) {
+    ck('#121 the Bio chips block ran without throwing', false, why(e));
+  } finally {
+    doc.getElementById = keep.gid; doc.createElement = keep.ce; doc.querySelectorAll = keep.qsa;
+    ctx.scheduleSave = keep.save; X.character = keep.ch; X.resetRules();
+  }
+}
+
+/* ---- end of the Bio chips block ---- */
 
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
    A real timer (Node's), borrowed for this block only: the harness's setTimeout

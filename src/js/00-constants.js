@@ -79,8 +79,11 @@ function blankChar(){
        above), and this is a different thing entirely. */
     secNotes:{}, noteCollapse:{},
     /* #103: chips (41-chips.js), read only through chipList(); default
-       languages are added at runtime (ensureDefaultLanguages), never here. */
-    resists:[], immunes:[], senses:[], languages:[],
+       languages are added at runtime (ensureDefaultLanguages), never here.
+       #121: tools, a background's stamped with its sid as languages are; a
+       placeholder (a choice not yet named) also carries `ask`. The one-time
+       lift's flag, toolsLifted, is never set here (see langLifted). */
+    resists:[], immunes:[], senses:[], languages:[], tools:[],
     advancement:"xp", showFamiliars:false, hiddenTabs:[],
     /* #118: offer a feat instead of an Ability Score Improvement (Settings → Sheet display) */
     featsAllowed:true,

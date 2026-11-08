@@ -76,10 +76,8 @@ function applyBackground(sel,opts){
     // background feature
     if(d.feature&&d.feature.name)addFeatureFromDef({name:d.feature.name,description:d.feature.description||""},{kind:"background",name});
     applyEquipGrants(d.equipmentGrants,"bg:"+name,_bgPending);
-    // tools / languages / equipment → proficiencies notes
-    const notes=[];
-    if(d.tools)notes.push("Tools: "+d.tools);
-    if(notes.length)character.proficiencies=(character.proficiencies?character.proficiencies+"\n":"")+notes.join("\n");
+    // tools and languages → chips stamped with this background (#121, #103)
+    grantTools(character,"bg:"+name,d.tools,_bgPending);
     if(d.languages)grantLanguages(character,"bg:"+name,d.languages);
   }
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
@@ -90,6 +88,7 @@ function removeBackground(doRender){
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="background"&&f.origin.name===name);
   removeGrants(g=>g.sid==="bg:"+name);
   dropLanguages(character,"bg:"+name);
+  dropChips(character,"tools","bg:"+name);   /* #121: its placeholders too, named or not */
   revertEquipmentGrants("bg:"+name);
   character.bg=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}

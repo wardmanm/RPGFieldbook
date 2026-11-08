@@ -139,7 +139,9 @@ function removeRace(doRender){
   const name=character.race&&character.race.name;
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="race"&&f.origin.name===name);
   removeGrants(g=>g.sid==="race:"+name);
-  character.languages=chipClean(character.languages,"languages",true).filter(x=>!(x.src==="race:"+name||x.src.indexOf("race:"+name+" (")===0));
+  const mine=x=>x.src==="race:"+name||x.src.indexOf("race:"+name+" (")===0;
+  character.languages=chipClean(character.languages,"languages",true).filter(x=>!mine(x));
+  character.tools=chipClean(character.tools,"tools",true).filter(x=>!mine(x));   /* none granted today (#121); #137 may */
   revertEquipmentGrants("race:"+name);
   character.race=null;
   if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}

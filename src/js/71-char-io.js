@@ -93,6 +93,21 @@ function liftLanguages(c){
   found.forEach(n=>{if(!names.has(n.toLowerCase())){have.push({id:uid(),name:n,src:""});names.add(n.toLowerCase());}});
   c.languages=have;
 }
+/* "Tools: …" lines in Proficiencies become the player's own chips (#121): a
+   named tool a chip, a choice ("one Gaming Set of your choice") the player's
+   placeholder. The player's, as lifted languages are: without the pack, this
+   can't tell a background's line from one the player typed. */
+function liftTools(c){
+  const p=typeof c.proficiencies==="string"?c.proficiencies:"";
+  if(!/^\s*tools\s*:/im.test(p))return;
+  const fixed=[],choices=[],keep=[];
+  p.split("\n").forEach(line=>{const mm=/^\s*tools\s*:(.*)$/i.exec(line);if(mm){const r=toolParse(mm[1]);fixed.push(...r.fixed);choices.push(...r.choices);}else keep.push(line);});
+  c.proficiencies=keep.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+  const have=chipClean(c.tools,"tools",true),names=new Set(have.filter(x=>!x.ask).map(x=>x.name.toLowerCase()));
+  fixed.forEach(n=>{if(!names.has(n.toLowerCase())){have.push({id:uid(),name:n,src:""});names.add(n.toLowerCase());}});
+  choices.forEach(ch=>{for(let i=0;i<ch.count;i++)have.push({id:uid(),name:ch.name,src:"",ask:ch.ask});});
+  c.tools=have;
+}
 function migrateSheet103(c){
   CHIP_KEYS.forEach(k=>{c[k]=chipClean(c[k],k,true);});
   c.advancement=advancementOf(c);
@@ -110,6 +125,7 @@ function migrateSheet103(c){
      migration, after which a player's own "Languages:" line in Proficiencies
      stays theirs to type. */
   if(c.langLifted!==true){liftLanguages(c);c.langLifted=true;}
+  if(c.toolsLifted!==true){liftTools(c);c.toolsLifted=true;}   /* #121, the same once-only rule */
   ensureDefaultLanguages(c);
 }
 /* #105: which End of combat rows are open — key -> true; any other value is
@@ -239,14 +255,15 @@ function printSheet(){
   const inv=(character.inventory||[]).map(it=>`<div class="p-item"><b>${esc(it.name)}</b>${itemQty(it)!==1?` ×${itemQty(it)}`:""}${it.equipped?" (equipped)":""}${it.description?`<div>${esc(printStrip(it.description)).replace(/\n/g,"<br>")}</div>`:""}</div>`).join("");
   const coins=["pp","gp","ep","sp","cp"].map(k=>num(character.coins[k])?`${num(character.coins[k])} ${k.toUpperCase()}`:"").filter(Boolean).join(" · ");
   const bio=BIO.map(([k,lbl])=>character[k]?`<div class="p-item"><b>${lbl}</b><div>${esc(printStrip(character[k])).replace(/\n/g,"<br>")}</div></div>`:"").join("");
-  /* Defences, Senses and Languages (#103): one line per list, each only when
+  /* Defences, Senses, Languages (#103) and Tools (#121): one line per list, each only when
      non-empty, escaped like the vitals/resources lines beside it. */
   const chipLine=(label,key,withRange)=>{
     const l=chipList(character,key);if(!l.length)return"";
-    const names=l.map(x=>esc(x.name.toUpperCase())+(withRange&&x.range!==""?` (${esc(String(x.range))} ft)`:"")).join(", ");
+    /* a tool still to choose (#121) prints as the pack's wording */
+    const names=l.map(x=>x.ask?esc(x.ask):esc(x.name.toUpperCase())+(withRange&&x.range!==""?` (${esc(String(x.range))} ft)`:"")).join(", ");
     return `<span class="p-stat">${label}: <b>${names}</b></span>`;
   };
-  const defLines=[chipLine("Resistances","resists"),chipLine("Immunities","immunes"),chipLine("Senses","senses",true),chipLine("Languages","languages")].filter(Boolean).join(" ");
+  const defLines=[chipLine("Resistances","resists"),chipLine("Immunities","immunes"),chipLine("Senses","senses",true),chipLine("Languages","languages"),chipLine("Tools","tools")].filter(Boolean).join(" ");
   /* Section notes print as PLAIN TEXT — the markdown markers stay visible rather
      than being rendered. Print escapes everything (see the bio line above); it
      is not the place to start emitting markup from user input. */
