@@ -192,14 +192,28 @@ function chipsHTML(c,key){
   }).join("");
   return `<div class="chips">${chips||`<span class="chip-none">None</span>`}<button type="button" class="chip chip-add" data-chipadd="${esc(key)}">+ Add</button></div>`;
 }
-function chipChooserHTML(c,key){
-  const have=new Set(chipList(c,key).map(x=>x.name.toLowerCase()));
-  const sug=key==="languages"?chipPackLanguages():(CHIP_SUGGEST[key]||[]);
-  const pills=sug.map(n=>{const on=have.has(n.toLowerCase());return `<button type="button" class="fpill${on?" on":""}" data-chippick="${esc(n)}"${on?" disabled":""}>${esc(n)}${on?" ✓":""}</button>`;}).join("");
-  return (pills?`<div class="fgrp chip-sug">${pills}</div>`:"")+
-    `<div class="field"><label class="f" for="chipName">Or type one</label><input id="chipName" autocomplete="off"></div>`+
+/* The lists whose Add window takes several at once (#119): a pill toggles,
+   and Add takes every pressed one plus the typed name. Senses stay one at a
+   time, since each carries its own range. */
+const CHIP_MULTI=["resists","immunes","languages","tools"];
+function chipAddLabel(n){return num(n)>1?"Add "+num(n):"Add";}
+/* `opts.single` (the tool namer, #121): instant pills, of `opts.kinds` only
+   (every kind when none), and a #chipMsg line for a refusal. Tools are grouped
+   by kind under a heading each. A pill already on the sheet is disabled ✓; a
+   placeholder isn't a tool yet, so it holds no pill. */
+function chipChooserHTML(c,key,opts){
+  const o=opts||{},single=!!o.single,multi=!single&&CHIP_MULTI.indexOf(key)>=0;
+  const have=new Set(chipList(c,key).filter(x=>!x.ask).map(x=>x.name.toLowerCase()));
+  const pill=n=>{const on=have.has(n.toLowerCase());
+    return `<button type="button" class="fpill${on?" on":""}" data-chippick="${esc(n)}"${on?" disabled":(multi?` aria-pressed="false"`:"")}>${esc(n)}${on?" ✓":""}</button>`;};
+  let sug="";
+  if(key==="tools")sug=toolSuggestions(single?o.kinds:null).map(([k,names])=>`<div class="chip-sug-h">${esc(TOOL_KIND_HEAD[k]||k)}</div><div class="fgrp chip-sug">${names.map(pill).join("")}</div>`).join("");
+  else{const pills=(key==="languages"?chipPackLanguages():(CHIP_SUGGEST[key]||[])).map(pill).join("");if(pills)sug=`<div class="fgrp chip-sug">${pills}</div>`;}
+  return sug+
+    `<div class="field chip-type"><label class="f" for="chipName">Or type one</label><input id="chipName" autocomplete="off"></div>`+
     (key==="senses"?`<div class="field"><label class="f" for="chipRange">Range (feet)</label><input id="chipRange" inputmode="numeric" placeholder="60"></div>`:"")+
-    `<div class="rowbtns"><button type="button" class="tbtn primary" id="chipOk">Add</button><button type="button" class="tbtn" id="chipCancel">Cancel</button></div>`;
+    (single?`<p class="hint" id="chipMsg" role="status"></p>`:"")+
+    `<div class="rowbtns"><button type="button" class="tbtn primary" id="chipOk">${chipAddLabel(0)}</button><button type="button" class="tbtn" id="chipCancel">Cancel</button></div>`;
 }
 /* the languages the loaded packs name, for the chooser's pills */
 function chipPackLanguages(){
@@ -218,15 +232,61 @@ function addChip(c,key,name,range){
   if(CHIP_SOURCED.indexOf(key)>=0)e.src="";
   list.push(e);c[key]=list;return true;
 }
+/* Several names at once (#119): blanks and case-blind duplicates skipped —
+   of the sheet's named chips and within `names` — and the count added. */
+function addChips(c,key,names){
+  const list=chipClean(c[key],key,true),have=new Set(list.filter(x=>!x.ask).map(x=>x.name.toLowerCase()));let n=0;
+  (Array.isArray(names)?names:[]).forEach(raw=>{
+    const nm=String(raw==null?"":raw).trim();if(!nm||have.has(nm.toLowerCase()))return;
+    const e={id:uid(),name:nm};if(CHIP_SOURCED.indexOf(key)>=0)e.src="";
+    list.push(e);have.add(nm.toLowerCase());n++;
+  });
+  if(n)c[key]=list;
+  return n;
+}
 /* a granted language or tool is the grant's to take back, not the player's */
 function removeChip(c,key,id){c[key]=chipClean(c[key],key,true).filter(x=>!(x.id===id&&!(CHIP_SOURCED.indexOf(key)>=0&&x.src)));}
-const CHIP_TITLE={resists:"Add a resistance",immunes:"Add an immunity",senses:"Add a sense",languages:"Add a language"};
+const CHIP_TITLE={resists:"Add resistances",immunes:"Add immunities",senses:"Add a sense",languages:"Add languages",tools:"Add tools"};
 function openChipChooser(key){
   openModal(CHIP_TITLE[key]||"Add",chipChooserHTML(character,key));
-  const done=(name)=>{const rng=document.getElementById("chipRange");if(addChip(character,key,name,rng?rng.value:"")){closeModal();renderChipsAll();scheduleSave();}};
+  const ok=document.getElementById("chipOk"),inp=document.getElementById("chipName"),cn=document.getElementById("chipCancel");
+  if(cn)cn.addEventListener("click",closeModal);
+  const finish=()=>{closeModal();renderChipsAll();scheduleSave();};
+  if(CHIP_MULTI.indexOf(key)<0){
+    /* senses: a pill adds at once, with the Range box's value */
+    const done=(name)=>{const rng=document.getElementById("chipRange");if(addChip(character,key,name,rng?rng.value:""))finish();};
+    document.querySelectorAll("[data-chippick]").forEach(b=>b.addEventListener("click",()=>done(b.dataset.chippick)));
+    if(ok)ok.addEventListener("click",()=>done(inp?inp.value:""));
+    return;
+  }
+  /* #119: pills toggle; the button counts what Add will take */
+  const picked=[];
+  const typed=()=>String(inp?inp.value:"").trim();
+  const relabel=()=>{if(ok)ok.textContent=chipAddLabel(picked.length+(typed()?1:0));};
+  document.querySelectorAll("[data-chippick]").forEach(b=>b.addEventListener("click",()=>{
+    if(b.disabled)return;
+    const n=b.dataset.chippick,i=picked.indexOf(n);
+    if(i>=0)picked.splice(i,1);else picked.push(n);
+    b.classList.toggle("on",i<0);b.setAttribute("aria-pressed",i<0?"true":"false");relabel();
+  }));
+  if(inp)inp.addEventListener("input",relabel);
+  if(ok)ok.addEventListener("click",()=>{
+    const names=picked.slice();if(typed())names.push(typed());
+    if(names.length&&addChips(character,key,names))finish();
+  });
+}
+/* A tap on a placeholder tool (#121): the Add window in single-pick mode,
+   offering the kinds its wording names, and Or type one. A name the sheet
+   already has is refused in the window, which stays open. */
+function openToolNamer(id){
+  const ph=chipList(character,"tools").find(x=>x.id===id&&x.ask);if(!ph)return;
+  const kinds=((toolParse(ph.ask).choices[0])||{}).kinds||[];
+  openModal("Name this tool",`<p class="hint">${esc(ph.ask)}</p>`+chipChooserHTML(character,"tools",{single:true,kinds}));
+  const ok=document.getElementById("chipOk"),inp=document.getElementById("chipName"),cn=document.getElementById("chipCancel"),msg=document.getElementById("chipMsg");
+  const done=name=>{const why=nameToolChip(character,id,name);if(!why){closeModal();renderChipsAll();scheduleSave();}else if(msg)msg.textContent=why;};
   document.querySelectorAll("[data-chippick]").forEach(b=>b.addEventListener("click",()=>done(b.dataset.chippick)));
-  const ok=document.getElementById("chipOk");if(ok)ok.addEventListener("click",()=>{const i=document.getElementById("chipName");done(i?i.value:"");});
-  const cn=document.getElementById("chipCancel");if(cn)cn.addEventListener("click",closeModal);
+  if(ok)ok.addEventListener("click",()=>done(inp?inp.value:""));
+  if(cn)cn.addEventListener("click",closeModal);
 }
 /* Name a placeholder tool (#121): the choices window's pick, or the namer's.
    "" when it took the name — its source stays, its `ask` goes — else why not.

@@ -173,6 +173,7 @@ function wire(){
     if(t.closest("#iniAdd"))return openAddCombatant();
     if((m=t.closest("[data-edtoggle]")))return toggleEditCard(m.dataset.edtoggle);
     // chips: defences, senses, languages (#103)
+    if((m=t.closest("[data-chipask]")))return openToolNamer(m.dataset.chipask);   /* #121: name a placeholder tool */
     if((m=t.closest("[data-chipadd]")))return openChipChooser(m.dataset.chipadd);
     if((m=t.closest("[data-chipdel]"))){removeChip(character,m.dataset.chipdel,m.dataset.chipid);renderChipsAll();scheduleSave();return;}
     if((m=t.closest("[data-combatbtn]")))return toggleCombatSection(m.dataset.combatbtn,e.detail===0);

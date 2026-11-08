@@ -84,6 +84,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
   'CHIP_SOURCED', 'TOOL_KINDS', 'TOOL_KIND_HEAD', 'toolParse', 'toolSuggestions', 'grantTools', 'dropChips', 'liftTools',
   'removeBackground', 'removeRace', 'printSheet', 'nameToolChip',
+  'CHIP_MULTI', 'CHIP_TITLE', 'addChips', 'chipAddLabel', 'openToolNamer', 'renderChipsAll',
   'pawHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
   'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
   'isTabHidden', 'cleanHiddenTabs', 'setTabHidden', 'applyHiddenTabs', 'HIDEABLE_TABS', 'TAB_LABELS', 'selectTab',
@@ -9114,6 +9115,68 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     // Review Focus 3: the player's own Dice Set outlives the background whose placeholder was named
     flow(() => { ctx.removeBackground(); });
     ck('#121 removing Soldier: the player\'s Dice Set stays, its Playing Cards go', JSON.stringify(tools().map(x => [x.name, x.src])) === '[["Dice Set",""]]', tools());
+
+    // #119 the Add window takes several at once (resistances, immunities, languages, tools); senses stay one at a time
+    fresh();
+    ck('#119 addChips: several at once, case-blind duplicates and blanks skipped, the count returned',
+       X.addChips(C(), 'resists', ['Fire', 'fire', 'Cold', '']) === 2 && JSON.stringify(X.chipList(C(), 'resists').map(x => x.name)) === '["Fire","Cold"]', X.chipList(C(), 'resists'));
+    ck('#119 ...one already held is skipped too', X.addChips(C(), 'resists', ['cold', 'Acid']) === 1 && X.chipList(C(), 'resists').length === 3);
+    ck('#119 ...a tool or language added is the player\'s', X.addChips(C(), 'tools', ['Lute']) === 1 && X.chipList(C(), 'tools')[0].src === '' &&
+       X.addChips(C(), 'languages', ['Elvish']) === 1 && X.chipList(C(), 'languages').find(x => x.name === 'Elvish').src === '');
+    ck('#119 the Add button counts', X.chipAddLabel(0) === 'Add' && X.chipAddLabel(1) === 'Add' && X.chipAddLabel(3) === 'Add 3');
+    ck('#119 the four multi-select lists, and their titles', JSON.stringify(X.CHIP_MULTI) === '["resists","immunes","languages","tools"]' &&
+       X.CHIP_TITLE.resists === 'Add resistances' && X.CHIP_TITLE.immunes === 'Add immunities' && X.CHIP_TITLE.languages === 'Add languages' && X.CHIP_TITLE.tools === 'Add tools' && X.CHIP_TITLE.senses === 'Add a sense');
+    let hh = X.chipChooserHTML(C(), 'resists');
+    ck('#119 resistances: the pills are toggles', /<button type="button" class="fpill" data-chippick="Bludgeoning" aria-pressed="false">Bludgeoning<\/button>/.test(hh), hh.slice(0, 300));
+    ck('#119 ...one already held is disabled with ✓', /data-chippick="Fire" disabled>Fire ✓<\/button>/.test(hh), (hh.match(/[^<]*data-chippick="Fire"[^<]*/) || [''])[0]);
+    hh = X.chipChooserHTML(C(), 'senses');
+    ck('#119 senses keep today\'s instant pills and the Range box', !/aria-pressed/.test(hh) && /id="chipRange"/.test(hh) && /data-chippick="Darkvision"/.test(hh), hh.slice(0, 300));
+    X.resetRules();
+    hh = X.chipChooserHTML(C(), 'tools');
+    const heads = (hh.match(/<div class="chip-sug-h">([^<]*)<\/div>/g) || []).map(s => s.replace(/<[^>]+>/g, '').replace(/&#39;/g, "'"));
+    ck('#119 tools are grouped by kind, headed, in order', JSON.stringify(heads) === JSON.stringify(["Artisan's Tools", 'Gaming Sets', 'Musical Instruments', 'Other']), heads);
+    ck('#119 ...the Lute already held is disabled ✓, the rest toggles', /data-chippick="Lute" disabled>Lute ✓/.test(hh) && /data-chippick="Drum" aria-pressed="false"/.test(hh));
+    hh = X.chipChooserHTML(C(), 'tools', {single: true, kinds: ['Gaming Set']});
+    ck('#121 the namer\'s list for a Gaming Set: the four sets, instant pills, no lute', (hh.match(/data-chippick=/g) || []).length === 4 && !/Lute/.test(hh) && !/aria-pressed/.test(hh) && /id="chipMsg"/.test(hh), hh.slice(0, 400));
+    ck('#121 ...with no kinds, every kind', (X.chipChooserHTML(C(), 'tools', {single: true, kinds: []}).match(/class="chip-sug-h"/g) || []).length === 4);
+
+    // driven: three pills pressed, "Add 3", then Add takes them and the typed one
+    fresh();
+    const pills = ['Fire', 'Cold', 'Acid'].map(n => { const p = rec('pill-' + n); p.dataset.chippick = n; return p; });
+    doc.querySelectorAll = sel => sel === '[data-chippick]' ? pills : [];
+    try {
+      err = flow(() => {
+        ctx.openChipChooser('resists');
+        pills.forEach(p => (p._on.click || []).forEach(fn => fn({target: p})));
+      });
+      ck('#119 driven: three pills pressed, the button reads Add 3', !err && el('chipOk').textContent === 'Add 3', why(err) || el('chipOk').textContent);
+      (pills[2]._on.click || []).forEach(fn => fn({target: pills[2]}));
+      ck('#119 ...pressing one again lets it go: Add 2', el('chipOk').textContent === 'Add 2', el('chipOk').textContent);
+      el('chipName').value = 'Thunder'; (el('chipName')._on.input || []).forEach(fn => fn({}));
+      ck('#119 ...a typed name counts too: Add 3', el('chipOk').textContent === 'Add 3', el('chipOk').textContent);
+      (el('chipOk')._on.click || []).forEach(fn => fn({}));
+      ck('#119 ...and Add takes the pressed ones and the typed one, and the card shows them',
+         JSON.stringify(X.chipList(C(), 'resists').map(x => x.name)) === '["Fire","Cold","Thunder"]' && /THUNDER/.test(screen('defResists')), [X.chipList(C(), 'resists'), screen('defResists')]);
+      fresh();
+      err = flow(() => { ctx.openChipChooser('immunes'); (el('chipOk')._on.click || []).forEach(fn => fn({})); });
+      ck('#119 ...with nothing pressed or typed, Add does nothing', !err && X.chipList(C(), 'immunes').length === 0, why(err));
+    } finally { doc.querySelectorAll = () => []; }
+
+    // #121 the namer: a tap on a placeholder names it; a name already held is refused, and the window stays
+    X.resetRules(); X.mergeRules(JSON.parse(JSON.stringify(BC_PACK)), 'test-121');
+    fresh(); flow(() => { ctx.applyBackground('Soldier', {}); });
+    C().tools = X.chipList(C(), 'tools').concat([{id: 'mine', name: 'Dice Set', src: ''}]);
+    pid = (tools().find(x => x.ask) || {}).id;
+    let opened = null; const keepOpen = ctx.openModal;
+    ctx.openModal = (t, h) => { opened = {t, h}; return keepOpen(t, h); };
+    try {
+      err = flow(() => { ctx.openToolNamer(pid); el('chipName').value = 'dice set'; (el('chipOk')._on.click || []).forEach(fn => fn({})); });
+      ck('#121 the namer opens titled "Name this tool", the pack\'s wording above the gaming sets', !err && opened && opened.t === 'Name this tool' && /Choose one kind of Gaming Set/.test(opened.h) && /data-chippick="Dragonchess Set"/.test(opened.h) && !/Lute/.test(opened.h), why(err) || opened);
+      ck('#121 ...a name already held is refused in #chipMsg, the placeholder unchanged', el('chipMsg').textContent === 'You already have Dice Set.' && (tools().find(x => x.id === pid) || {}).ask === 'Choose one kind of Gaming Set', [el('chipMsg').textContent, tools()]);
+      el('chipName').value = 'Playing Cards'; (el('chipOk')._on.click || []).forEach(fn => fn({}));
+      ck('#121 ...a new one names it, keeping its source, and the card shows it at once', (tools().find(x => x.id === pid) || {}).name === 'Playing Cards' && (tools().find(x => x.id === pid) || {}).src === 'bg:Soldier' &&
+         /PLAYING CARDS<span class="chip-src"> · background/.test(screen('bioTools')), [tools(), screen('bioTools')]);
+    } finally { ctx.openModal = keepOpen; }
   } catch (e) {
     ck('#121 the Bio chips block ran without throwing', false, why(e));
   } finally {

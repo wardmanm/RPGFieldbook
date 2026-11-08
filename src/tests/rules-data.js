@@ -1303,6 +1303,14 @@ function block(html, needle, tag) {
   ck('#120 a row keeps about 12px from the next heading', ((px(row, 'margin') || [])[2] || 0) >= 12 || ((px(row, 'margin-bottom') || [])[0] || 0) >= 12, row);
   ck('#121 a placeholder chip is dashed', !!ask && /border[^;]*dashed/.test(ask), ask);
   ck('#121 ...and its name is a plain button that keeps its own casing', /text-transform\s*:\s*none/.test(rule(cards, '.chip-name') || '') && /background\s*:\s*none/.test(rule(cards, '.chip-name') || ''), rule(cards, '.chip-name'));
+  /* #123: the Add window's pills, scoped to .chip-sug — the browse picker's
+     filter pills share .fgrp and .fpill and stay as they are */
+  const sugG = rule(cards, '.fgrp.chip-sug'), sugP = rule(cards, '.chip-sug .fpill'), typ = rule(cards, '.field.chip-type');
+  ck('#123 the Add window\'s pills sit at least 8px apart', ((px(sugG, 'gap') || [0])[0]) >= 8, sugG);
+  ck('#123 ...each at least 32px tall', ((px(sugP, 'min-height') || [0])[0]) >= 32, sugP);
+  ck('#123 ...with at least 14px above "Or type one"', ((px(typ, 'margin-top') || [0])[0]) >= 14, typ);
+  ck('#123 ...and the shared filter pills are unchanged', /\.fgrp\{display:flex;flex-wrap:wrap;gap:5px;align-items:center\}/.test(cards) && /\.fpill\{font-family:var\(--head\);font-size:11px;font-weight:700;padding:3px 10px;/.test(cards));
+  ck('#121 a placeholder chip opens the namer', /closest\("\[data-chipask\]"\)\)\)return openToolNamer\(m\.dataset\.chipask\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8')));
   ck('#120 the bare .chip rule in 30-sheet.css is unchanged, so effect chips don\'t move',
      fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8').includes('.chip{font-family:var(--head);font-size:10px;letter-spacing:.03em;padding:3px 7px;border-radius:99px;\n  background:color-mix(in srgb,var(--accent-2) 16%,transparent);color:var(--accent-2);text-transform:uppercase;font-weight:700}'));
 }

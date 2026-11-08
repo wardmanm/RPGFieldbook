@@ -472,7 +472,7 @@ function choiceFieldHTML(ch,ci,d){
     chooseAttr=` data-choose="${esc(target)}"`;
     extraAttr=` data-chipids="${esc((Array.isArray(ch.chipIds)?ch.chipIds:[]).join(","))}"`;
     inner=`<label class="f">${esc(ch.label||"Choose a tool")} — <span data-chcount>0 of ${target} chosen</span></label>`+
-      groups.map(([k,names])=>`<p class="choice-h">${esc(TOOL_KIND_HEAD[k]||k)}</p>`+names.map(n=>{
+      groups.map(([k,names])=>`<div class="choice-h">${esc(TOOL_KIND_HEAD[k]||k)}</div>`+names.map(n=>{
         const on=have.has(n.toLowerCase());
         return `<label class="opt"><input type="checkbox" data-tool-opt="${esc(n)}"${on?" checked disabled data-fixed":""}>${esc(n)}${on?" (already yours)":""}</label>`;
       }).join("")).join("");
