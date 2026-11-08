@@ -9113,6 +9113,7 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#171 cap: a blank or junk score reads 0, and every score is a number (Review Focus 2)', sBlank === 0 && sJunk === 0 && Object.values(X.asiScores()).every(Number.isFinite), [sBlank, sJunk]);
   const GWM = feat('Great Weapon Master'), BOON = feat('Boon of Combat Prowess'), STG = feat('Sturdy Grip'), CAN = feat('Canopy Runner');
   const S = (sel, f) => X.asiStepIncreases(sel, f || null);
+  const B0 = () => ({str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10});
   const asi2 = k => S({pick: '__asi__', mode: '2', a: k});
   const asi11 = (a, b) => S({pick: '__asi__', mode: '1', a, b});
   const gwmS = S({pick: 'Great Weapon Master', plus: []}, GWM);
@@ -9132,6 +9133,14 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   const nullS = S({pick: 'Nowhere Feat'}, null);
   ck('#171 cap: a feat with no loaded rules adds nothing, set by its pick (Review Focus 5)', nullS.route === 'feat' && nullS.incs.length === 0 && nullS.complete === true);
   ck('#171 cap: no pick is no route', S({pick: null}).route === 'none' && S({pick: null}).incs.length === 0);
+  /* decision 5: the increase's own `max`, a fixed entry's included (rules-schema §6.6's
+     `{"cha": 1, "max": 30}`); featAbilityChoices() used to drop it from a fixed entry */
+  const fixedBoon = {name: 'Boon of Testing Charm', description: 'Epic Boon · Prerequisite: Level 19+\nCharm: x', ability: [{cha: 1, max: 30}]};
+  ck('#171 cap: a fixed increase keeps its own max', JSON.stringify(X.featAbilityChoices(fixedBoon)) === JSON.stringify([{fixed: {cha: 1}, max: 30}]) && X.featPendingIncreases(fixedBoon)[0].max === 30, X.featAbilityChoices(fixedBoon));
+  const fbS = S({pick: 'Boon of Testing Charm', plus: []}, fixedBoon);
+  ck('#171 cap: ...so a fixed Epic Boon +1 is capped at 30, not 20', fbS.incs.length === 1 && fbS.incs[0].cap === 30 && fbS.incs[0].fixed === true);
+  ck('#171 cap: ...and at CHA 20 it still lands', X.asiLedger(Object.assign(B0(), {cha: 20}), [fbS])[0].adds.cha === 1);
+  ck('#171 cap: ...at CHA 30 it is skipped, not invalid', (L => !L.adds.cha && L.invalid.length === 0)(X.asiLedger(Object.assign(B0(), {cha: 30}), [fbS])[0]));
   const canS = S({pick: 'Canopy Runner', plus: []}, CAN);
   ck('#171 cap: a +1 the feat carries as its own effect is counted, once, as landing (it is granted with the feat)',
      canS.incs.length === 1 && canS.incs[0].k === 'dex' && canS.incs[0].own === true && canS.complete === true, canS);
@@ -9202,6 +9211,12 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#171 panel: ...and with room, just the increase', />\+1 Strength<\/p>/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master', {str: 19, dex: 10, con: 10, int: 10, wis: 10, cha: 10})));
   sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 20;
   ck('#171 panel: ...read from the sheet when no scores are given', X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master').includes('(already 20: no increase)'));
+  {
+    const kr = X.rules.feats; X.rules.feats = kr.concat([fixedBoon]);
+    ck('#171 panel: a fixed Epic Boon +1 at CHA 20 has room (its own max, 30)', />\+1 Charisma<\/p>/.test(X.asiPanelHTML({type: 'asi', boon: true}, 0, 'Boon of Testing Charm', Object.assign(B0(), {cha: 20}))));
+    ck('#171 panel: ...and at CHA 30 says so with its own number', X.asiPanelHTML({type: 'asi', boon: true}, 0, 'Boon of Testing Charm', Object.assign(B0(), {cha: 30})).includes('+1 Charisma (already 30: no increase)'));
+    X.rules.feats = kr;
+  }
 
   // ---- #171 the live window's slots and its words (asiRefresh fills them; driven in the browser)
   sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 16;

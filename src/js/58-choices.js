@@ -194,7 +194,7 @@ const FEAT_ABIL_KEYS=["str","dex","con","int","wis","cha"];
 function featAbilityChoices(f){
   if(f&&Array.isArray(f.ability)&&f.ability.length)return f.ability.map(a=>a&&Array.isArray(a.choose)
     ?Object.assign({choose:a.choose.filter(k=>FEAT_ABIL_KEYS.includes(k)),amount:Math.max(1,num(a.amount)||1)},a.max?{max:num(a.max)}:{})
-    :{fixed:Object.fromEntries(Object.entries(a||{}).filter(([k])=>FEAT_ABIL_KEYS.includes(k)).map(([k,v])=>[k,num(v)]))}).filter(x=>x.fixed?Object.keys(x.fixed).length:x.choose.length);
+    :Object.assign({fixed:Object.fromEntries(Object.entries(a||{}).filter(([k])=>FEAT_ABIL_KEYS.includes(k)).map(([k,v])=>[k,num(v)]))},a&&a.max?{max:num(a.max)}:{})).filter(x=>x.fixed?Object.keys(x.fixed).length:x.choose.length);
   const m=/Increase your ((?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma)(?:,? (?:or )?(?:Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma))*) score by (\d)/i.exec(String((f&&f.description)||""));
   if(!m)return [];
   const keys=m[1].split(/,?\s+or\s+|,\s*/).map(w=>FEAT_ABIL[w.trim().toLowerCase()]).filter(Boolean);
@@ -261,7 +261,7 @@ function asiControlsHTML(ci,heading){
 function featPendingIncreases(f){
   const have=new Set(((f&&Array.isArray(f.effects))?f.effects:[]).map(e=>{const m=/^ability\.(\w+)$/.exec(String((e&&e.target)||""));return m&&num(e.value)>0?m[1]:"";}).filter(Boolean));
   return featAbilityChoices(f).map((a,i)=>{
-    if(a.fixed){const fixed=Object.fromEntries(Object.entries(a.fixed).filter(([k])=>!have.has(k)));return Object.keys(fixed).length?{fixed,i}:null;}
+    if(a.fixed){const fixed=Object.fromEntries(Object.entries(a.fixed).filter(([k])=>!have.has(k)));return Object.keys(fixed).length?Object.assign({fixed,i},a.max?{max:a.max}:{}):null;}
     return a.choose.some(k=>have.has(k))?null:Object.assign({},a,{i});
   }).filter(Boolean);
 }
@@ -322,7 +322,7 @@ function asiPanelHTML(ch,ci,pick,before){
   const sc=before||asiScores();
   const body=featBodyLines(f).join("\n");
   const plus=featPendingIncreases(f).map(a=>a.fixed
-    ?`<p class="hint" data-ft-fixed="${esc(String(a.i))}">${esc(asiFixedText(a.fixed,sc))}</p>`
+    ?`<p class="hint" data-ft-fixed="${esc(String(a.i))}">${esc(asiFixedText(a.fixed,sc,a.max))}</p>`
     :`<div class="ft-plus" role="group" aria-label="+${esc(String(a.amount))} to" data-ft-group="${esc(String(a.i))}">+${esc(String(a.amount))} to: ${a.choose.map(k=>`<button type="button" class="ft-chip" data-ft-plus="${esc(String(a.i))}" data-k="${esc(k)}" aria-pressed="false">${esc(featAbilName(k))}</button>`).join("")}<span class="hint ft-capnote" data-ft-capnote hidden>no increase: all at the maximum</span></div>`).join("");
   return `<div class="ft-desc">${body.split(/\n\s*\n|\n/).filter(s=>s.trim()).map(p=>`<p>${esc(p)}</p>`).join("")}</div>${plus}`;
 }
@@ -369,8 +369,9 @@ function asiScores(){return asiScoresFrom(contributions());}
 /* What one step would add, as increases {k, n, cap, fixed, i}:
    - the ASI: "+2 to one" one +2, "+1 to two" a +1 for each ability chosen,
      capped at 20; `complete` is asiStepDone();
-   - a feat: each fixed increase of featPendingIncreases() (cap 20), each
-     ANSWERED "+1 to:" group at its index `i`, capped at the group's `max` or 20.
+   - a feat: each fixed increase of featPendingIncreases(), and each ANSWERED
+     "+1 to:" group at its index `i`, capped at the entry's own `max` (an Epic
+     Boon's 30) or 20.
      A +1 the feat carries as its own effect (the Humblewood shape) is granted
      with the feat whatever the cap — the cap was never applied there — so it is
      listed `own`, always landing, which keeps the next step's room true to what
@@ -388,7 +389,7 @@ function asiStepIncreases(sel,feat){
     (Array.isArray(feat.effects)?feat.effects:[]).forEach(e=>{const m=/^ability\.(\w+)$/.exec(String((e&&e.target)||""));if(m&&FEAT_ABIL_KEYS.includes(m[1])&&num(e.value)>0)incs.push({k:m[1],n:num(e.value),cap:Infinity,fixed:true,own:true});});
     const plus=sel.plus||[];
     featPendingIncreases(feat).forEach(a=>{
-      if(a.fixed)Object.entries(a.fixed).forEach(([k,v])=>{if(num(v))incs.push({k,n:num(v),cap:20,fixed:true,i:a.i});});
+      if(a.fixed)Object.entries(a.fixed).forEach(([k,v])=>{if(num(v))incs.push({k,n:num(v),cap:a.max||20,fixed:true,i:a.i});});
       else{const k=plus[a.i];if(a.choose.includes(k))incs.push({k,n:a.amount,cap:a.max||20,fixed:false,i:a.i});}
     });
   }
@@ -421,7 +422,8 @@ function asiLedger(base,steps){
   });
 }
 /* A fixed increase as the panel shows it, from the scores before the step:
-   "+1 Strength", or "+1 Strength (already 20: no increase)" when it has no room */
+   "+1 Strength", or "+1 Strength (already 20: no increase)" when it has no room
+   under `cap`, the entry's own `max` or 20 */
 function asiFixedText(fixed,before,cap){
   const c=cap||20;
   return Object.entries(fixed||{}).map(([k,v])=>"+"+v+" "+featAbilName(k)+(num(before&&before[k])+num(v)>c?` (already ${c}: no increase)`:"")).join(", ");
@@ -536,12 +538,12 @@ function asiRefresh(src){
     div.querySelectorAll("[data-ft-fixed]").forEach(p=>{
       const gi=num(p.dataset.ftFixed),a=pend.find(q=>q.i===gi&&q.fixed);if(!a)return;
       const pre=asiStepPre(x,gi),bf={};FEAT_ABIL_KEYS.forEach(k=>{bf[k]=x.before[k]+(pre[k]||0);});
-      p.textContent=asiFixedText(a.fixed,bf);
+      p.textContent=asiFixedText(a.fixed,bf,a.max);
     });
     /* the scores after this step; 30 marks the max only under an Epic Boon's own increase */
     const after={};FEAT_ABIL_KEYS.forEach(k=>{after[k]=x.before[k]+(x.adds[k]||0);});
     const ln=div.querySelector("[data-asi-line]");
-    if(ln)ln.textContent=asiLineText(after,sel.level,pend.reduce((m,a)=>!a.fixed&&num(a.max)>m?num(a.max):m,20));
+    if(ln)ln.textContent=asiLineText(after,sel.level,pend.reduce((m,a)=>num(a.max)>m?num(a.max):m,20));
     /* one feat per window: a row picked at another step can't be pressed */
     const taken=asiTakenElsewhere(picks,sel.ci);
     div.querySelectorAll("[data-ft-pick]").forEach(b=>{
