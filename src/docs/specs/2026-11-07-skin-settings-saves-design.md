@@ -1,6 +1,6 @@
 # Skin is look only, and every settings save says so — design
 
-**Status:** draft 2026-11-07, design calls settled; awaiting Mike's approval of the document · wave 2 of [1.9.1](../wiki/roadmap/1.9.1.md), the Skin & settings saves worktree
+**Status:** approved 2026-11-07 (Mike) · wave 2 of [1.9.1](../wiki/roadmap/1.9.1.md), the Skin & settings saves worktree
 **Issues:** #133 (changing the skin silently changes the character's system) → #141 (a refused
 settings save is not reported). One branch, built in that order: #141 then touches the skin
 handlers that #133 rewrites.
