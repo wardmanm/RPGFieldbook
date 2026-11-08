@@ -187,6 +187,15 @@ input.autoslot{opacity:.7;cursor:not-allowed;border-style:dashed}
 .fpill{font-family:var(--head);font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;border:1.5px solid var(--line);background:var(--field);color:var(--ink-soft);cursor:pointer}
 .fpill.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .fpill.clear{border-style:dashed}
+/* the Add window's suggestions (#119, #123): pills 32px tall and 8px apart,
+   headed by kind for tools, with clear space above "Or type one". Scoped:
+   the browse picker's filter pills share .fgrp and .fpill and stay as they are. */
+.fgrp.chip-sug{gap:8px}
+.chip-sug .fpill{min-height:32px;padding:5px 13px;font-size:12px}
+.chip-sug .fpill:disabled{opacity:.6;cursor:default}
+.chip-sug-h{font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--ink-soft);margin:12px 0 6px}
+.chip-sug-h:first-child{margin-top:2px}
+.field.chip-type{margin-top:14px}
 .browse-count{font-family:var(--head);font-size:11px;color:var(--ink-soft);padding:4px 2px;text-transform:uppercase;letter-spacing:.04em}
 .browse-list{flex:1;overflow:auto;border-top:1px solid var(--hair);-webkit-overflow-scrolling:touch}
 /* flex so the count pill's margin-left:auto can push it to the right edge */
@@ -245,13 +254,37 @@ html[data-rough="on"] .portrait::before{filter:url(#rough)}
 .mini.danger{color:var(--brick)}
 .mini svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2}
 
-/* chips: defences, senses, languages (#103) */
-.chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+/* chips: defences, senses, languages, tools (#103, #121)
+   #120: the rows get room to read and to tap on a phone — a chip about 28px
+   tall with more padding sideways, 8px between chips and between wrapped rows,
+   12px down to the next heading, and a × whose hit area is 32px tall. Scoped
+   to .chips: the bare .chip rule in 30-sheet.css (features' effect chips, the
+   pack badges) comes later and wins everywhere else, and must not move. */
+.chips{display:flex;flex-wrap:wrap;gap:8px 8px;align-items:center;margin:8px 0 12px}
 .chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:5px;font-family:var(--head);font-size:12px;font-weight:700;letter-spacing:.04em;background:var(--accent-2);color:#fff}
-.chip-languages,.chip-senses{background:var(--field);color:var(--ink);border:1.5px solid var(--line)}
+.chips .chip{min-height:28px;padding:3px 12px;gap:6px;font-size:12px;line-height:1.2}
+.chip-languages,.chip-senses,.chip-tools{background:var(--field);color:var(--ink);border:1.5px solid var(--line)}
 .chip-src{font-weight:400;opacity:.75;text-transform:none}
-.chip-x{background:none;border:0;color:inherit;cursor:pointer;padding:0 0 0 2px;font-size:14px;line-height:1}
+/* the hit area reaches up and down the row, and right into the chip's own
+   padding, never left over the name: a tap on the name's last letter is not
+   a remove */
+.chip-x{position:relative;background:none;border:0;color:inherit;cursor:pointer;padding:0 0 0 4px;font-size:16px;line-height:1}
+.chip-x::after{content:"";position:absolute;left:0;right:-10px;top:50%;height:32px;transform:translateY(-50%)}
 .chip-add{background:none;color:var(--ink-soft);border:1.5px dashed var(--line);cursor:pointer}
+/* a tool still to choose (#121): dashed like + Add, since it is unfinished,
+   and its name is the button that names it */
+/* The name button's ::after fills the chip (its nearest positioned box), so a
+   tap anywhere on it names the tool; the × comes later and is positioned, so
+   it stays on top and keeps its own hit area. The name itself is not
+   positioned, or the ::after would shrink to it. */
+.chips .chip-ask{border:1.5px dashed var(--accent-2);position:relative}
+.chip-name{background:none;border:0;padding:0;margin:0;font:inherit;letter-spacing:inherit;color:inherit;text-transform:none;cursor:pointer;min-height:0;width:auto}
+.chip-name::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;border-radius:inherit}
+/* .chip-src's opacity makes it its own layer, painted above that ::after, so
+   it took a tap on "· background" for itself (QA): it lets taps through */
+.chip-ask .chip-src{pointer-events:none}
+.chip-name:hover{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 .chip-none{color:var(--ink-soft);font-size:13px}
-.def-h{font-family:var(--head);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin:6px 0 4px;border-bottom:1.5px solid var(--line)}
+.def-h{font-family:var(--head);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin:14px 0 4px;padding-bottom:3px;border-bottom:1.5px solid var(--line)}
+.label+.def-h{margin-top:4px}
 

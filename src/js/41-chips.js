@@ -1,10 +1,12 @@
-/* ================= chips: defences, senses, languages (#103) =================
+/* ================= chips: defences, senses, languages, tools (#103, #121) =================
    Simple named items the player keeps in a list — resistances, immunities,
-   senses (with a range), languages (with a source when a grant or the ruleset
-   added them). Read only through chipList(): a list in a saved sheet may hold
-   anything someone typed. Also here: the two ruleset-specific helpers #103
-   adds, the advancement table and the default languages. */
-const CHIP_KEYS=["resists","immunes","senses","languages"];
+   senses (with a range), languages and tools (with a source when a grant or
+   the ruleset added them). Read only through chipList(): a list in a saved
+   sheet may hold anything someone typed. Also here: the two ruleset-specific
+   helpers #103 adds, the advancement table and the default languages. */
+const CHIP_KEYS=["resists","immunes","senses","languages","tools"];
+/* the lists whose entries keep a source (`src`): a grant can stamp them */
+const CHIP_SOURCED=["languages","tools"];
 /* A language's source: "system" (the ruleset's default), "race:<Name>" or
    "bg:<Name>" (a grant's sid), or "" (the player's). Looked up as an OWN key:
    "constructor" or "__proto__:x" in a hand-edited file would otherwise find
@@ -14,16 +16,22 @@ const CHIP_SRC={system:"rules",race:"species",bg:"background"};
 function chipSrcKey(src){const k=String(src||"").split(":")[0];return Object.prototype.hasOwnProperty.call(CHIP_SRC,k)?k:"";}
 function chipSrcLabel(src){const k=chipSrcKey(src);return k?CHIP_SRC[k]:"";}
 /* `mint`: migrate() gives an entry with no id one; a read never invents one,
-   so reading is pure. */
+   so reading is pure.
+   A tool may be a PLACEHOLDER (#121): a choice not yet named, "Gaming Set",
+   carrying the pack's wording in `ask` (a non-empty string, else it is an
+   ordinary chip). Duplicates are dropped by name among named chips only, so
+   "two Artisan's Tools of your choice" can hold two placeholders. */
 function chipClean(list,key,mint){
-  const out=[],seen=new Set();
+  const out=[],seen=new Set(),sourced=CHIP_SOURCED.indexOf(key)>=0;
   (Array.isArray(list)?list:[]).forEach(x=>{
     if(!x||typeof x!=="object"||Array.isArray(x)||typeof x.name!=="string")return;
     const name=x.name.trim();if(!name)return;
-    const k=name.toLowerCase();if(seen.has(k))return;seen.add(k);
+    const ask=key==="tools"&&typeof x.ask==="string"&&x.ask.trim()?x.ask.trim():"";
+    if(!ask){const k=name.toLowerCase();if(seen.has(k))return;seen.add(k);}
     const e={id:(typeof x.id==="string"&&x.id)?x.id:(mint?uid():""),name};
     if(key==="senses"){const r=typeof x.range==="number"?x.range:(typeof x.range==="string"&&/^\s*\d+\s*$/.test(x.range)?parseInt(x.range,10):NaN);e.range=(isFinite(r)&&r>0)?Math.round(r):"";}
-    if(key==="languages")e.src=typeof x.src==="string"&&chipSrcKey(x.src)?x.src:"";
+    if(sourced)e.src=typeof x.src==="string"&&chipSrcKey(x.src)?x.src:"";
+    if(ask)e.ask=ask;
     out.push(e);
   });
   return out;
@@ -93,7 +101,93 @@ function grantLanguages(c,src,str){
   langParse(str).forEach(n=>{if(!names.has(n.toLowerCase())){have.push({id:uid(),name:n,src});names.add(n.toLowerCase());}});
   c.languages=have;
 }
-function dropLanguages(c,src){c.languages=chipClean(c.languages,"languages",true).filter(x=>x.src!==src);}
+/* What a source granted leaves with it: every chip in that list stamped with
+   its sid, a tool's placeholders included. */
+function dropChips(c,key,src){c[key]=chipClean(c[key],key,true).filter(x=>x.src!==src);}
+function dropLanguages(c,src){dropChips(c,"languages",src);}
+
+/* ---- tools (#121) ----
+   The kinds a background's choice can name, and what fills each when the
+   loaded packs don't: Humblewood has no tools at all, and a homebrew pack may
+   have some kinds and not others, so a gaming set would have no pick without
+   these. Their names are also how toolParse() knows a tool from a choice. */
+const TOOL_KINDS=[
+  ["Artisan's Tools",["Alchemist's Supplies","Brewer's Supplies","Calligrapher's Supplies","Carpenter's Tools","Cartographer's Tools","Cobbler's Tools","Cook's Utensils","Glassblower's Tools","Jeweler's Tools","Leatherworker's Tools","Mason's Tools","Painter's Supplies","Potter's Tools","Smith's Tools","Tinker's Tools","Weaver's Tools","Woodcarver's Tools"]],
+  ["Gaming Set",["Dice Set","Dragonchess Set","Playing Cards","Three-Dragon Ante Set"]],
+  ["Musical Instrument",["Bagpipes","Drum","Dulcimer","Flute","Horn","Lute","Lyre","Pan Flute","Shawm","Viol"]],
+  ["Other",["Disguise Kit","Forgery Kit","Herbalism Kit","Navigator's Tools","Poisoner's Kit","Thieves' Tools"]]
+];
+const TOOL_KIND_HEAD={"Artisan's Tools":"Artisan's Tools","Gaming Set":"Gaming Sets","Musical Instrument":"Musical Instruments","Other":"Other"};
+/* The tool names the app knows, lower-cased: the built-in list and the loaded
+   packs' Tool items. A fragment that IS one of them is that tool, whatever
+   words it holds ("Three-Dragon Ante Set", a pack's "Any Key"). */
+function toolKnownNames(){
+  const out=new Set();
+  TOOL_KINDS.forEach(([,names])=>names.forEach(n=>out.add(n.toLowerCase())));
+  (Array.isArray(rules.items)?rules.items:[]).forEach(i=>{if(i&&i.category==="Tool"&&typeof i.name==="string"&&i.name.trim())out.add(i.name.trim().toLowerCase());});
+  return out;
+}
+const TOOL_CHOICE_WORDS=["choose","choice","any","one","two","three","kind","type"];
+/* A pack's `tools` text → {fixed:[names], choices:[{kinds, count, ask, name}]}.
+   An array of strings reads as one list. Split as langParse() splits. A
+   fragment that is a known tool's name is that tool. Otherwise one naming a
+   choice ("Choose one kind of Gaming Set", "one type of wind Musical
+   Instrument") is a choice: the kinds it names, how many, its own wording
+   (`ask`), and the placeholder's name — the kinds, or "Tool of your choice"
+   when it names none (chipClean() drops a chip with no name). Anything else is
+   a tool by name. The words are whole words split on spaces, so a hyphenated
+   one ("Three-Dragon", "two-handed") is never a count or a choice word: \b
+   reads a hyphen as a word's edge, and "Three-Dragon Ante Set" once read as a
+   choice of three. */
+function toolParse(str){
+  const out={fixed:[],choices:[]};
+  if(Array.isArray(str))str=str.filter(x=>typeof x==="string"&&x.trim()).join(", ");
+  if(typeof str!=="string")return out;
+  const known=toolKnownNames();
+  str.split(/,|\band\b|;/i).map(s=>s.trim()).filter(Boolean).forEach(s=>{
+    const words=s.toLowerCase().split(/\s+/).map(w=>w.replace(/^[^a-z0-9'’-]+|[^a-z0-9'’-]+$/g,""));
+    if(known.has(s.toLowerCase())||!words.some(w=>TOOL_CHOICE_WORDS.indexOf(w)>=0)){out.fixed.push(s);return;}
+    const kinds=[];
+    if(/artisan['’]s tools/i.test(s))kinds.push("Artisan's Tools");
+    if(/gaming set/i.test(s))kinds.push("Gaming Set");
+    if(/instrument/i.test(s))kinds.push("Musical Instrument");
+    const count=words.indexOf("two")>=0?2:(words.indexOf("three")>=0?3:1);
+    out.choices.push({kinds,count,ask:s,name:kinds.length?kinds.join(" or "):"Tool of your choice"});
+  });
+  return out;
+}
+/* [[kind, names]] in TOOL_KINDS order: the loaded packs' Tool items filed by
+   their type, then the built-in names they lack (case-blind, so the pack's
+   spelling wins and nothing shows twice), each kind sorted. `kinds` limits it. */
+function toolSuggestions(kinds){
+  const want=Array.isArray(kinds)&&kinds.length?kinds:null;
+  const by={};TOOL_KINDS.forEach(([k])=>{by[k]=[];});
+  const kindOf=t=>{const s=String(t||"").trim().toLowerCase();
+    return s==="artisan's tools"?"Artisan's Tools":(s==="instrument"||s==="musical instrument")?"Musical Instrument":s==="gaming set"?"Gaming Set":"Other";};
+  const seen=new Set();
+  (Array.isArray(rules.items)?rules.items:[]).forEach(i=>{
+    if(!i||i.category!=="Tool"||typeof i.name!=="string")return;
+    const n=i.name.trim(),l=n.toLowerCase();if(!n||seen.has(l))return;
+    seen.add(l);by[kindOf(i.type)].push(n);
+  });
+  TOOL_KINDS.forEach(([k,names])=>names.forEach(n=>{const l=n.toLowerCase();if(!seen.has(l)){seen.add(l);by[k].push(n);}}));
+  return TOOL_KINDS.map(([k])=>k).filter(k=>!want||want.indexOf(k)>=0).map(k=>[k,by[k].sort((a,b)=>a.localeCompare(b))]);
+}
+/* A background's tools (#121), stamped with its sid as its languages are. A
+   named tool the sheet already has keeps its own source. Each choice adds its
+   placeholders and, when it names a kind to pick from, queues a `tool` step
+   for runExtraChoices() carrying their ids, so the pick names exactly them. */
+function grantTools(c,src,str,pending){
+  const p=toolParse(str);if(!p.fixed.length&&!p.choices.length)return;
+  const have=chipClean(c.tools,"tools",true),names=new Set(have.filter(x=>!x.ask).map(x=>x.name.toLowerCase()));
+  p.fixed.forEach(n=>{if(!names.has(n.toLowerCase())){have.push({id:uid(),name:n,src});names.add(n.toLowerCase());}});
+  p.choices.forEach(ch=>{
+    const ids=[];
+    for(let i=0;i<ch.count;i++){const id=uid();ids.push(id);have.push({id,name:ch.name,src,ask:ch.ask});}
+    if(ch.kinds.length&&Array.isArray(pending))pending.push({ch:{type:"tool",kinds:ch.kinds.slice(),choose:ch.count,label:ch.ask,chipIds:ids,_sid:src},sid:src,label:ch.ask});
+  });
+  c.tools=have;
+}
 
 /* ---- the component ---- */
 const CHIP_SUGGEST={
@@ -103,23 +197,42 @@ const CHIP_SUGGEST={
   senses:["Blindsight","Darkvision","Tremorsense","Truesight"]
 };
 function chipsHTML(c,key){
-  const list=chipList(c,key);
+  const list=chipList(c,key),sourced=CHIP_SOURCED.indexOf(key)>=0;
   const chips=list.map(x=>{
-    const src=key==="languages"?chipSrcLabel(x.src):"";
+    const src=sourced?chipSrcLabel(x.src):"";
     const range=key==="senses"&&x.range!==""?` · ${esc(String(x.range))} ft`:"";
     const del=src?"":`<button type="button" class="chip-x ed" data-chipdel="${esc(key)}" data-chipid="${esc(x.id)}" aria-label="${esc("Remove "+x.name)}">×</button>`;
-    return `<span class="chip chip-${esc(key)}">${esc(x.name.toUpperCase())}${range}${src?`<span class="chip-src"> · ${esc(src)}</span>`:""}${del}</span>`;
+    const srcH=src?`<span class="chip-src"> · ${esc(src)}</span>`:"";
+    /* a placeholder (#121) is a button that names it — never hidden by the
+       pencil, which hides removal, not play; its × sits beside it, since a
+       button may not hold another */
+    if(key==="tools"&&x.ask)return `<span class="chip chip-tools chip-ask"><button type="button" class="chip-name" data-chipask="${esc(x.id)}" title="${esc(x.ask)}" aria-label="${esc("Name this tool: "+x.ask)}">${esc(x.name.toUpperCase())} · choose</button>${srcH}${del}</span>`;
+    return `<span class="chip chip-${esc(key)}">${esc(x.name.toUpperCase())}${range}${srcH}${del}</span>`;
   }).join("");
   return `<div class="chips">${chips||`<span class="chip-none">None</span>`}<button type="button" class="chip chip-add" data-chipadd="${esc(key)}">+ Add</button></div>`;
 }
-function chipChooserHTML(c,key){
-  const have=new Set(chipList(c,key).map(x=>x.name.toLowerCase()));
-  const sug=key==="languages"?chipPackLanguages():(CHIP_SUGGEST[key]||[]);
-  const pills=sug.map(n=>{const on=have.has(n.toLowerCase());return `<button type="button" class="fpill${on?" on":""}" data-chippick="${esc(n)}"${on?" disabled":""}>${esc(n)}${on?" ✓":""}</button>`;}).join("");
-  return (pills?`<div class="fgrp chip-sug">${pills}</div>`:"")+
-    `<div class="field"><label class="f" for="chipName">Or type one</label><input id="chipName" autocomplete="off"></div>`+
+/* The lists whose Add window takes several at once (#119): a pill toggles,
+   and Add takes every pressed one plus the typed name. Senses stay one at a
+   time, since each carries its own range. */
+const CHIP_MULTI=["resists","immunes","languages","tools"];
+function chipAddLabel(n){return num(n)>1?"Add "+num(n):"Add";}
+/* `opts.single` (the tool namer, #121): instant pills, of `opts.kinds` only
+   (every kind when none), and a #chipMsg line for a refusal. Tools are grouped
+   by kind under a heading each. A pill already on the sheet is disabled ✓; a
+   placeholder isn't a tool yet, so it holds no pill. */
+function chipChooserHTML(c,key,opts){
+  const o=opts||{},single=!!o.single,multi=!single&&CHIP_MULTI.indexOf(key)>=0;
+  const have=new Set(chipList(c,key).filter(x=>!x.ask).map(x=>x.name.toLowerCase()));
+  const pill=n=>{const on=have.has(n.toLowerCase());
+    return `<button type="button" class="fpill${on?" on":""}" data-chippick="${esc(n)}"${on?" disabled":(multi?` aria-pressed="false"`:"")}>${esc(n)}${on?" ✓":""}</button>`;};
+  let sug="";
+  if(key==="tools")sug=toolSuggestions(single?o.kinds:null).map(([k,names])=>`<div class="chip-sug-h">${esc(TOOL_KIND_HEAD[k]||k)}</div><div class="fgrp chip-sug">${names.map(pill).join("")}</div>`).join("");
+  else{const pills=(key==="languages"?chipPackLanguages():(CHIP_SUGGEST[key]||[])).map(pill).join("");if(pills)sug=`<div class="fgrp chip-sug">${pills}</div>`;}
+  return sug+
+    `<div class="field chip-type"><label class="f" for="chipName">Or type one</label><input id="chipName" autocomplete="off"></div>`+
     (key==="senses"?`<div class="field"><label class="f" for="chipRange">Range (feet)</label><input id="chipRange" inputmode="numeric" placeholder="60"></div>`:"")+
-    `<div class="rowbtns"><button type="button" class="tbtn primary" id="chipOk">Add</button><button type="button" class="tbtn" id="chipCancel">Cancel</button></div>`;
+    (single?`<p class="hint" id="chipMsg" role="status"></p>`:"")+
+    `<div class="rowbtns"><button type="button" class="tbtn primary" id="chipOk">${chipAddLabel(0)}</button><button type="button" class="tbtn" id="chipCancel">Cancel</button></div>`;
 }
 /* the languages the loaded packs name, for the chooser's pills */
 function chipPackLanguages(){
@@ -131,21 +244,80 @@ function chipPackLanguages(){
 function addChip(c,key,name,range){
   const n=String(name==null?"":name).trim();if(!n)return false;
   const list=chipClean(c[key],key,true);
-  if(list.some(x=>x.name.toLowerCase()===n.toLowerCase()))return false;
+  /* a placeholder isn't a tool yet: "Gaming Set" can still be typed beside one */
+  if(list.some(x=>!x.ask&&x.name.toLowerCase()===n.toLowerCase()))return false;
   const e={id:uid(),name:n};
   if(key==="senses"){const r=parseInt(String(range==null?"":range).trim(),10);e.range=(isFinite(r)&&r>0)?r:"";}
-  if(key==="languages")e.src="";
+  if(CHIP_SOURCED.indexOf(key)>=0)e.src="";
   list.push(e);c[key]=list;return true;
 }
-/* a granted language is the grant's to take back, not the player's */
-function removeChip(c,key,id){c[key]=chipClean(c[key],key,true).filter(x=>!(x.id===id&&!(key==="languages"&&x.src)));}
-const CHIP_TITLE={resists:"Add a resistance",immunes:"Add an immunity",senses:"Add a sense",languages:"Add a language"};
+/* Several names at once (#119): blanks and case-blind duplicates skipped —
+   of the sheet's named chips and within `names` — and the count added. */
+function addChips(c,key,names){
+  const list=chipClean(c[key],key,true),have=new Set(list.filter(x=>!x.ask).map(x=>x.name.toLowerCase()));let n=0;
+  (Array.isArray(names)?names:[]).forEach(raw=>{
+    const nm=String(raw==null?"":raw).trim();if(!nm||have.has(nm.toLowerCase()))return;
+    const e={id:uid(),name:nm};if(CHIP_SOURCED.indexOf(key)>=0)e.src="";
+    list.push(e);have.add(nm.toLowerCase());n++;
+  });
+  if(n)c[key]=list;
+  return n;
+}
+/* a granted language or tool is the grant's to take back, not the player's */
+function removeChip(c,key,id){c[key]=chipClean(c[key],key,true).filter(x=>!(x.id===id&&!(CHIP_SOURCED.indexOf(key)>=0&&x.src)));}
+const CHIP_TITLE={resists:"Add resistances",immunes:"Add immunities",senses:"Add a sense",languages:"Add languages",tools:"Add tools"};
 function openChipChooser(key){
   openModal(CHIP_TITLE[key]||"Add",chipChooserHTML(character,key));
-  const done=(name)=>{const rng=document.getElementById("chipRange");if(addChip(character,key,name,rng?rng.value:"")){closeModal();renderChipsAll();scheduleSave();}};
+  const ok=document.getElementById("chipOk"),inp=document.getElementById("chipName"),cn=document.getElementById("chipCancel");
+  if(cn)cn.addEventListener("click",closeModal);
+  const finish=()=>{closeModal();renderChipsAll();scheduleSave();};
+  if(CHIP_MULTI.indexOf(key)<0){
+    /* senses: a pill adds at once, with the Range box's value */
+    const done=(name)=>{const rng=document.getElementById("chipRange");if(addChip(character,key,name,rng?rng.value:""))finish();};
+    document.querySelectorAll("[data-chippick]").forEach(b=>b.addEventListener("click",()=>done(b.dataset.chippick)));
+    if(ok)ok.addEventListener("click",()=>done(inp?inp.value:""));
+    return;
+  }
+  /* #119: pills toggle; the button counts what Add will take */
+  const picked=[];
+  const typed=()=>String(inp?inp.value:"").trim();
+  const relabel=()=>{if(ok)ok.textContent=chipAddLabel(picked.length+(typed()?1:0));};
+  document.querySelectorAll("[data-chippick]").forEach(b=>b.addEventListener("click",()=>{
+    if(b.disabled)return;
+    const n=b.dataset.chippick,i=picked.indexOf(n);
+    if(i>=0)picked.splice(i,1);else picked.push(n);
+    b.classList.toggle("on",i<0);b.setAttribute("aria-pressed",i<0?"true":"false");relabel();
+  }));
+  if(inp)inp.addEventListener("input",relabel);
+  if(ok)ok.addEventListener("click",()=>{
+    const names=picked.slice();if(typed())names.push(typed());
+    if(names.length&&addChips(character,key,names))finish();
+  });
+}
+/* A tap on a placeholder tool (#121): the Add window in single-pick mode,
+   offering the kinds its wording names, and Or type one. A name the sheet
+   already has is refused in the window, which stays open. */
+function openToolNamer(id){
+  const ph=chipList(character,"tools").find(x=>x.id===id&&x.ask);if(!ph)return;
+  const kinds=((toolParse(ph.ask).choices[0])||{}).kinds||[];
+  openModal("Name this tool",`<p class="hint">${esc(ph.ask)}</p>`+chipChooserHTML(character,"tools",{single:true,kinds}));
+  const ok=document.getElementById("chipOk"),inp=document.getElementById("chipName"),cn=document.getElementById("chipCancel"),msg=document.getElementById("chipMsg");
+  const done=name=>{const why=nameToolChip(character,id,name);if(!why){closeModal();renderChipsAll();scheduleSave();}else if(msg)msg.textContent=why;};
   document.querySelectorAll("[data-chippick]").forEach(b=>b.addEventListener("click",()=>done(b.dataset.chippick)));
-  const ok=document.getElementById("chipOk");if(ok)ok.addEventListener("click",()=>{const i=document.getElementById("chipName");done(i?i.value:"");});
-  const cn=document.getElementById("chipCancel");if(cn)cn.addEventListener("click",closeModal);
+  if(ok)ok.addEventListener("click",()=>done(inp?inp.value:""));
+  if(cn)cn.addEventListener("click",closeModal);
+}
+/* Name a placeholder tool (#121): the choices window's pick, or the namer's.
+   "" when it took the name — its source stays, its `ask` goes — else why not.
+   A name the sheet already has is refused, so a tool is never held twice. */
+function nameToolChip(c,id,name){
+  const n=String(name==null?"":name).trim();
+  const list=chipClean(c.tools,"tools",true),ph=list.find(x=>x.id===id&&x.ask);
+  if(!ph)return "No such tool chip.";
+  if(!n)return "Pick a tool or type one.";
+  const dup=list.find(x=>!x.ask&&x.name.toLowerCase()===n.toLowerCase());
+  if(dup)return "You already have "+dup.name+".";
+  ph.name=n;delete ph.ask;c.tools=list;return "";
 }
 function renderDefences(){
   const r=document.getElementById("defResists"),i=document.getElementById("defImmunes");
@@ -153,8 +325,9 @@ function renderDefences(){
   if(i)i.innerHTML=chipsHTML(character,"immunes");
 }
 function renderBioChips(){
-  const l=document.getElementById("bioLanguages"),s=document.getElementById("bioSenses");
+  const l=document.getElementById("bioLanguages"),s=document.getElementById("bioSenses"),t=document.getElementById("bioTools");
   if(l)l.innerHTML=chipsHTML(character,"languages");
   if(s)s.innerHTML=chipsHTML(character,"senses");
+  if(t)t.innerHTML=chipsHTML(character,"tools");
 }
 function renderChipsAll(){renderDefences();renderBioChips();}

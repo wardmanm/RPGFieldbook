@@ -238,22 +238,31 @@ function openSizePicker(){
       (mult===1?"":` (${mult>1?"double":"half"} a Medium character's)`)+
       (sz?"":" · taken from your ancestry");
   };
+  const was=sizePickValue(character);   /* #131: a seeded size shows as From ancestry */
   openModal("Size",`
-    <div class="field"><label class="f">Creature size</label><select id="szSel">${sizeOptionsHTML(character.size)}</select></div>
-    <p class="hint" id="szHint">${esc(line(character.size))}</p>
+    <div class="field"><label class="f">Creature size</label><select id="szSel">${sizeOptionsHTML(was)}</select></div>
+    <p class="hint" id="szHint">${esc(line(was))}</p>
     <p class="hint">Size sets how much you can carry. It only changes anything on the sheet while Encumbrance is switched on, in Settings.</p>
     <div class="m-actions"><button class="tbtn" id="szCancel">Cancel</button><button class="tbtn primary" id="szSave">Save</button></div>`);
   const sel=document.getElementById("szSel"), hint=document.getElementById("szHint");
   sel.addEventListener("change",()=>{hint.textContent=line(sel.value);});
   document.getElementById("szCancel").addEventListener("click",closeModal);
   document.getElementById("szSave").addEventListener("click",()=>{
-    character.size=sel.value;
+    /* the player's own, which no swap or remove touches; "" gives it back
+       (#131). Save with nothing changed writes nothing: it must not make the
+       species' size the player's. */
+    if(sel.value!==was)setPlayerField(character,"size",sel.value);
     closeModal();renderInventory();recompute();scheduleSave();
   });
 }
 function openStatBreakdown(target){
   if(target==="ac")return openACWindow();
-  const c=contributions();
+  if(target==="speed")return openSpeedWindow();   /* #131: a Base speed box above the breakdown */
+  openModal((FX_LABEL[target]||target)+" breakdown",statRowsHTML(target,contributions()));
+}
+/* A badge's breakdown, every line of it: what openStatBreakdown() shows, and
+   what the Speed window shows below its box. `c` is contributions(). */
+function statRowsHTML(target,c){
   /* a bonus to every ability check (#79) is part of each skill and of
      initiative, so it is listed there by source; on an ability it is what a
      plain check with that ability adds, listed apart from the score */
@@ -262,13 +271,13 @@ function openStatBreakdown(target){
   /* the card's spell attack lists what spellAtkBonus() adds: spell.attack and
      the ticked "all attacks" effects (#129) */
   const contr=(target==="spell.attack"?spellFxList(c,"attack"):c.filter(x=>x.target===target)).concat(onCheck?ckRows:[]);
-  let base="", label=FX_LABEL[target]||target, grantLines="";
+  let base="", grantLines="";
   const mods={};ABIL.forEach(([k])=>mods[k]=Math.floor((abilFinal(k,c)-10)/2));const pb=pbValue(c);
   if(target.startsWith("ability.")){const k=target.split(".")[1];base=`Base score ${num(character.abilities[k])}`;}
   else if(target.startsWith("save.")){const k=target.split(".")[1];const prof=effSaveProf(k);base=`Ability mod ${fmt(mods[k])}${prof?` + prof ${fmt(pb)}`:""}`;const src=grantSources("save",k);if(src.length)grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency from ${esc(src.join(", "))}</span><b>${fmt(pb)}</b></div>`;else if(character.saves[k])grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency (manual)</span><b>${fmt(pb)}</b></div>`;}
   else if(target.startsWith("skill.")){const key=target.split(".")[1];const ab=SKILLS.find(s=>s[0]===key)[2];const lvl=effSkill(key);base=`${ab.toUpperCase()} mod ${fmt(mods[ab])}${lvl>0?` + prof ${fmt(pb)}`:""}${lvl>1?` + expertise ${fmt(pb)}`:""}`;const src=grantSources("skill",key);if(src.length)grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency from ${esc(src.join(", "))}</span><b>${fmt(pb)}</b></div>`;else if((character.skills[key]||0)>0)grantLines+=`<div style="display:flex;justify-content:space-between;border-top:1px dotted var(--hair);padding:5px 0"><span>Proficiency (manual)</span><b>${fmt(pb)}</b></div>`;}
   else if(target==="init")base=character.init===""?`DEX mod ${fmt(mods.dex)}`:`Base ${fmt(num(character.init))}`;
-  else if(target==="speed")base=`Base ${num(character.speed)}`;
+  else if(target==="speed")base=speedBaseLine(character);
   else if(target==="profBonus")base=`Level ${Math.max(1,num(character.level)||1)}: ${fmt(pb-sumFx("profBonus",c))}`;
   else if(target==="spell.dc"||target==="spell.attack"){const sa=character.spellAbility;base=sa?`${target==="spell.dc"?"8 + ":""}prof ${fmt(pb)} + ${sa.toUpperCase()} mod ${fmt(mods[sa])}`:"No spellcasting ability chosen";}
   let rows=`<p style="margin-bottom:6px">${esc(base)}</p>`+grantLines;
@@ -288,7 +297,78 @@ function openStatBreakdown(target){
       rows+=`<p class="hint" style="margin-top:6px">${esc(encTierNote(st))}</p>`;
     }
   }
-  openModal(label+" breakdown",rows);
+  return rows;
+}
+
+/* ---- the Speed window (#131, decision 20) ----
+   Tapping the Speed badge opens this: a Base speed box above the breakdown,
+   as the AC window puts its switch and Flat box above its lines. A speed
+   typed there is the player's (setPlayerField()'s "player" entry): no species
+   swap or remove touches it, and a custom ancestry gets a speed at last.
+   Blank gives the species' speed back. Read-only while Vitals is locked. */
+/* a whole number of feet, 0 to 999, as typed; "" for blank; null refused */
+function parseBaseSpeed(raw){
+  if(typeof raw!=="string"&&typeof raw!=="number")return null;
+  const s=String(raw).trim();
+  if(s==="")return "";
+  if(!/^\d{1,3}$/.test(s))return null;
+  return parseInt(s,10);
+}
+/* {value, by}: the base in feet, and whose it is — "player", the species'
+   sid ("race:Elf"), or "" when nothing says (no speed, or one the sheet can't
+   trace). An old sheet's speed counts as the species' when it equals what the
+   species' loaded definition seeds. */
+function speedBase(c){
+  const value=num(c&&c.speed);
+  if(!c)return {value,by:""};
+  if(playerOwns(c,"speed"))return {value,by:"player"};
+  if(!seedBlank(c.speed)){
+    const e=seedsOf(c).find(x=>x.field==="speed"&&x.sid.indexOf("race:")===0&&x.value!==null&&String(x.value)===String(c.speed));
+    if(e)return {value,by:e.sid};
+    const w=raceWould(c);
+    if(w&&!seedBlank(w.speed)&&String(w.speed)===String(c.speed))return {value,by:"race:"+c.race.name};
+  }
+  return {value,by:""};
+}
+function speedBaseLine(c){
+  const b=speedBase(c);
+  return `Base ${b.value} ft`+(b.by==="player"?", yours":(b.by.indexOf("race:")===0?", from "+b.by.slice(5):""));
+}
+function speedHint(c){
+  if(vitalsLocked(c))return "Unlock Vitals to change it";
+  const b=speedBase(c);
+  if(b.by==="player")return "Your own. Clear it to use your species' speed.";
+  if(b.by.indexOf("race:")===0)return `From ${b.by.slice(5)}: ${b.value} ft. Type a number to set your own.`;
+  return seedBlank(c.speed)?"No species speed. Type yours.":"Type a number to set your own.";
+}
+/* what the box holds: the player's own number, else nothing */
+function speedBoxValue(c){return playerOwns(c,"speed")?String(num(c.speed)):"";}
+function speedWindowHTML(c){
+  const w=raceWould(character),ph=w&&!seedBlank(w.speed)?String(num(w.speed)):"";
+  return `<div class="field"><label class="f" for="spdBase">Base speed</label><input id="spdBase" type="text" inputmode="numeric" autocomplete="off" value="${esc(speedBoxValue(character))}" placeholder="${esc(ph)}"${vitalsLocked(character)?" disabled":""}></div>`+
+    `<p class="hint" id="spdHint">${esc(speedHint(character))}</p>`+
+    `<div id="spdRows">${statRowsHTML("speed",c)}</div>`;
+}
+/* false while Vitals is locked or for a value the box refuses */
+function commitBaseSpeed(raw){
+  if(vitalsLocked(character))return false;
+  const v=parseBaseSpeed(raw);if(v===null)return false;
+  setPlayerField(character,"speed",v);
+  recompute();scheduleSave();return true;
+}
+function openSpeedWindow(){
+  openModal("Speed",speedWindowHTML(contributions()));
+  /* Escape closes without blurring the box, so its change never fires: a
+     number (or a blank) typed but not yet committed is committed here, as the
+     AC window's Flat box is. Junk closes as it is. */
+  setDismissGuard(()=>{const b=document.getElementById("spdBase");if(b&&!b.disabled&&String(b.value).trim()!==speedBoxValue(character)&&parseBaseSpeed(b.value)!==null)commitBaseSpeed(b.value);return null;});
+  const box=document.getElementById("spdBase");
+  if(box)box.addEventListener("change",()=>{
+    /* taken or refused, the box then shows what the sheet holds */
+    commitBaseSpeed(box.value);box.value=speedBoxValue(character);
+    const h=document.getElementById("spdHint");if(h)h.textContent=speedHint(character);
+    const r=document.getElementById("spdRows");if(r)r.innerHTML=statRowsHTML("speed",contributions());
+  });
 }
 
 /* ---- the Armor Class window (#130) ----

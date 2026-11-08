@@ -20,8 +20,10 @@ the hit-dice bar and its spend box, the level badge, and what each rest gives ba
 `hdSpendHTML()`, `hdFootHTML()`, `hdBoxOpen()`, `hdRefresh()`, `hdDiceEdited()`, `toggleHdMode()`,
 `openHdSpend()`, `hdConMod()`, `hdHeal()`, `hdSpendCheck()`, `spendHitDie()`,
 `rollHitDie()`, `recoverHitDice()`, `renderDeath()` in `65-resources.js`; `level1HP()`, `seedLevel1HP()`,
-`resyncLevel1HP()`, `hitDieMax()` in `56-class.js`; `charSize()`, `sizeOptionsHTML()`,
-`capacityFor()` in `25-origins-items.js`; `openSizePicker()` in `80-modal-forms.js`; `bumpHP()`,
+`resyncLevel1HP()`, `hitDieMax()` in `56-class.js`; `charSize()`, `sizeByHand()`, `sizeOptionsHTML()`,
+`capacityFor()`, `sizePickValue()` in `25-origins-items.js`; `openSizePicker()`, `openStatBreakdown()`, `statRowsHTML()`,
+and the Speed window's `parseBaseSpeed()`, `speedBase()`, `speedWindowHTML()`, `commitBaseSpeed()`,
+`openSpeedWindow()` in `80-modal-forms.js`; `setPlayerField()`, `playerOwns()` in `50-classrace.js`; `bumpHP()`,
 the HP bar's tap, death-save and hit-dice handlers in `90-boot.js` · `xpProgress()`, `xpNumber()`,
 `advancementFor()`, `advancementOf()` in `41-chips.js` · `levelBadgeHTML()`, `levelRingHTML()`,
 `xpBarHTML()`, `renderLevelBadge()`, `renderSheetHead()` in `40-sheet.js` · `toggleInspiration()`
@@ -37,14 +39,43 @@ tinted in dark mode while the cards' own rules draw it ([Sections & layout](../u
 Every id `recompute()`, `renderHP()` and the death-save code paint kept its id when it moved here.
 At ≤700px the portrait sits small at the left with the rest of the rail beside it.
 
-**The badges.** AC (the shield), Initiative, Speed and the proficiency bonus tap through to their breakdowns (`data-stat`); AC
-opens the Armor Class window instead, with its Calculated / Flat switch, and its shield reads FLAT
-while it is Flat ([Armor & AC](armor-and-ac.md)). Speed is its base plus `speed` effects, then encumbrance.
+**The badges.** AC (the shield), Initiative, Speed and the proficiency bonus tap through to their
+windows (`data-stat`, `openStatBreakdown()`). Initiative and the proficiency bonus open their
+breakdowns (`statRowsHTML()`, titled "… breakdown"). AC opens the Armor Class window instead, with
+its Calculated / Flat switch, and its shield reads FLAT while it is Flat ([Armor & AC](armor-and-ac.md)).
+Speed is its base plus `speed` effects, then encumbrance, and opens the **Speed window** (below).
 **Size** is `charSize()`: the size the player chose, else the ancestry's (`raceDefSize()`), else
 Medium. Tapping it (or Enter/Space) opens `openSizePicker()` — a chooser, not a breakdown, with
 "From ancestry (…)" first and a carrying-capacity preview from `capacityFor()`. The same list,
-`sizeOptionsHTML()`, is in Settings → Carrying. Size changes nothing but carrying capacity,
-and that only while Encumbrance is on. Passive Perception is covered in
+`sizeOptionsHTML()`, is in Settings → Carrying. Both write through `setPlayerField()` (#131): a
+picked size is the player's, marked by a `player` entry in `seeds`, so no species swap or remove
+touches it, and "From ancestry" gives it back
+([Grants & provenance](../architecture/grants-and-provenance.md)). Both lists show "From ancestry"
+selected unless the size is the player's (`sizePickValue()`), and the Size window's Save writes
+nothing when nothing changed, so opening it and pressing Save never makes the species' size the
+player's. Size is marked as set by hand
+only when it is the player's (`sizeByHand()`): a `player` entry, or, on a sheet from before the
+record, a size that matches neither a source's record nor the species' own. A size the species
+seeded is not marked. Size changes nothing but carrying capacity, and that only while Encumbrance
+is on.
+
+**The Speed window** (#131). Tapping Speed opens `openSpeedWindow()`, titled "Speed": a **Base
+speed** box at the top, as the AC window puts its switch and Flat box above its lines, then the
+breakdown it showed before. The box holds the player's own speed when there is one, else it is
+empty with the species' speed as its placeholder ("30"). Under it a hint: "From Elf: 30 ft. Type a
+number to set your own." when the base is a species' seed, "Your own. Clear it to use your
+species' speed." when it is the player's, "No species speed. Type yours." when there is none, and
+"Unlock Vitals to change it" while Vitals is locked, when the box is read-only and dimmed. It commits on
+`change` and on the window's dismissal, since Escape doesn't blur it (`setDismissGuard()`, the AC
+window's pattern): `parseBaseSpeed()` takes a whole number of feet 0–999, trimmed, gives `""` for
+blank and refuses anything else ("30 ft", "-5", "3.5", "3 0"), and the box then shows what the
+sheet holds again. `commitBaseSpeed()` writes it through `setPlayerField()`, so a typed speed is
+the player's: no swap or remove touches it, a later species records `null` over it, and a custom
+ancestry gets a speed. A blank removes it and seeds the current species' speed again, or leaves 0
+with none. A typed 0 is a speed (a creature that can't walk), not an empty box. The rows below are
+redrawn in place: the base line names whose it is (`speedBase()`: "Base 35 ft, yours", "Base 30 ft,
+from Elf", "Base 0 ft"), then each `speed` effect, then encumbrance. The badge's own mark is
+unchanged: it marks effects and encumbrance. Passive Perception is covered in
 [Abilities & skills](abilities-and-skills.md). The ✦ star (`#starBtn`) is in the header;
 `toggleInspiration()` flips `character.inspiration`, and `recompute()` paints `#starBtn` and the
 combat view's own `[data-inspire]` star together.
@@ -136,7 +167,7 @@ has ([Sections & layout](../ui/sections-and-layout.md)): `vitals` is in `EDIT_CA
 `character.editHide.vitals`, `true` when locked. Locked, the portrait's add and remove buttons
 (`#btnPortrait`, `#btnPortraitDel`, which carry `ed`) are hidden, Max can't be changed, and the
 Armor Class window's Calculated / Flat switch and Flat box are disabled, so a flat AC can't be
-changed either ([Armor & AC](armor-and-ac.md), #130); Current, Temp, −/+, the death saves, the hit
+changed either ([Armor & AC](armor-and-ac.md), #130), and so is the Speed window's Base speed box (#131); Current, Temp, −/+, the death saves, the hit
 dice, Size and the badges work either way, and AC still opens its window. Every sheet starts
 unlocked. Its title is "Lock Vitals" or "Unlock Vitals" and its aria-label says what that does ("Lock
 Vitals — hides the portrait buttons and locks Max HP and a flat AC"). **One reader:** `vitalsLocked(c)`, which is
@@ -330,6 +361,9 @@ came back.
 - **The layout guards once encoded nesting.** `rules-data.js` sliced "to the next card" and "to the
   first `</div>`"; moving a block broke them for reasons unrelated to what they guarded. They now
   use a `block` helper that counts divs, and each was mutation-tested.
+- **Save with nothing changed made the species' size the player's** (review of #131): the Size
+  window pre-selected the seeded size and Save always wrote it, so the next species swap kept it.
+  It pre-selects From ancestry now, and writes only a change.
 
 ## Decisions
 
@@ -339,7 +373,7 @@ came back.
 | How HP boxes commit | On `change`, outside `data-path` | `data-path`: commits every keystroke, storing a bare sign |
 | Where the lock lives (#115) | The Vitals pencil, `editHide.vitals`, read by `vitalsLocked()` | `hp.locked` behind a padlock beside "Max" (the 2026-08-14 answer): small, cluttered, and the one lock on the sheet that wasn't the cards' pencil |
 | Does Vitals start locked? (#115, Mike) | Unlocked, like every card's pencil | Locked, reusing `hp.locked`: keeps "Max locked by default" but hides Add portrait on a new character and makes Vitals the one card whose pencil works backwards |
-| What the pencil covers (#115) | The portrait's add and remove buttons, and Max HP; and since #130, how AC is set (the AC window's switch and Flat box) | Hiding more: Current, Temp, −/+, death saves, hit dice, Size and the badges are play controls. AC always editable: the one rail number left open (#130) |
+| What the pencil covers (#115) | The portrait's add and remove buttons, and Max HP; and since #130, how AC is set (the AC window's switch and Flat box); since #131, the Base speed box | Hiding more: Current, Temp, −/+, death saves, hit dice, Size and the badges are play controls. AC always editable: the one rail number left open (#130) |
 | Existing sheets (#115) | All open unlocked; `hp.locked` is kept, unread | Carrying `hp.locked` over: every sheet would open locked, since that was the default |
 | Whether the lock confirms | No confirm | Confirming like the manual Hit Dice switch: that is a mode change with consequences, this is undone by a second tap |
 | How HP is typed on a touchscreen (#112, Mike) | Tapping the bar opens Hit points | Typing into the bar: three small boxes under a finger are the issue |
@@ -367,12 +401,12 @@ came back.
 | How a hit die is spent (#103) | Pick, then either auto-roll or type your own roll, live-validated | Auto-roll only (the old `rollHitDie()`): a roll made at the table has to go in by hand somewhere, and a second "override HP by hand" path after the fact is worse than typing the roll itself |
 | Death saves filling outward | CSS `row-reverse` off `data-kind="succ"` (successes now sit left of the skull, #103) | `buildDeath()` counting backwards: the click handler and `.on` toggling would have to change |
 | Size on tap | A chooser | A breakdown like the other boxes: size is a choice, not a derived number |
+| Speed on tap (#131) | A window with a Base speed box above the breakdown; a speed typed there is the player's and is never reverted or overwritten (Mike) | Keeping the outgoing speed when the incoming species sets none: a removed species' speed stays behind, #131's leftover. Accepting Speed 0 after a remove or with a custom ancestry: looks broken, with no way to fix it |
+| The Base speed box while Vitals is locked (#131) | Read-only, as the AC window's Flat box is; the breakdown still shows | Always editable: Base speed would be the one rail number the pencil doesn't lock |
+| Size marked "set by hand" (#131, #146) | Only when it is the player's | Whenever `character.size` is set: the species' own seed read as set by hand |
 
 ## Open
 
-- There is no box to type a base Speed: `character.speed` is only ever written by the ancestry seed,
-  so a custom ancestry reads 0 plus effects. Swapping ancestry keeps the first one's speed and size
-  ([Character building](character-building.md)).
 - The level-1 resync stops at level 2 by design; from there Max is a total the app never computed.
 - `removeClass()` un-seeds only a level-1 class. A first class added at level 3 and then removed
   keeps the Max its window added (seed plus levels 2–3), as a levelled-up class always has, so
@@ -421,3 +455,5 @@ came back.
   17px step went. → ledger L9501, #113
 - 2026-11-06 — Tapping AC opens the Armor Class window (Calculated / Flat); the shield reads FLAT for a Flat AC. → ledger L9537, #130
 - 2026-11-06 — The Vitals pencil locks how AC is set too: the AC window's switch and Flat box; its label says so. → ledger L9597, #130
+- 2026-11-07 — Tapping Speed opens the Speed window, a Base speed box above the breakdown, the player's own speed through `setPlayerField()`; Size picks are the player's too, and Size is marked only when it is theirs; a swap or remove takes back the species' speed and size. → ledger L9760, #131
+- 2026-11-08 — A Base speed box the Vitals pencil locks is dimmed, so it looks locked. → ledger L9760, #131

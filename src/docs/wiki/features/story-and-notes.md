@@ -13,7 +13,9 @@ the same markdown-on-top-of-glossary grammar.
 `saveNote()`, `noteWhen()`, `noteBtnHTML()`, `notePreview()`, `renderNoteIcons()`, `notesHTML()`,
 `noteEntryHTML()`, `renderNotes()`, `toggleNoteGroup()`, `jumpToNote()` (#52), `openNoteEditor()` in
 `87-notes.js` · `mergeNoteInto()`, `migrateSheet103()` in `71-char-io.js` · `chipsHTML()`,
-`renderBioChips()` in `41-chips.js` · `selectTab()`, `scrollToCard()` in `40-sheet.js` ·
+`renderBioChips()`, `chipChooserHTML()`, `openChipChooser()`, `addChips()`, `chipAddLabel()`,
+`toolParse()`, `toolSuggestions()`, `grantTools()`, `nameToolChip()`, `openToolNamer()` in `41-chips.js` ·
+`liftTools()` in `71-char-io.js` · `selectTab()`, `scrollToCard()` in `40-sheet.js` ·
 **the Party card** (#91), in `87-initiative.js`: `partyRowsHTML()`, `renderParty()`,
 `savePartyMember()`, `removePartyMember()`, `openPartyForm()` · markup `src/html/30-story.html`,
 `src/html/60-journal.html` · **Tests:** `rules-data.js` (registry ↔ template, storage guards, the pure
@@ -39,15 +41,48 @@ fields, and when nothing would change.
 
 **Proficiencies, Senses & Languages** (the `proficiencies` section) sits in its own card at the
 top of the Bio tab, and — unlike the bio cards — takes a section note. It holds, top to bottom:
-**Alignment** (`character.alignment`, moved here from the Sheet), **Languages** and **Senses** as
-chip rows (`renderBioChips()`, `chipsHTML()`; a sense may carry a range, "DARKVISION · 60 FT"; a
-granted language shows its source, "· species", and has no ×; it appears, and leaves with its
-source, at once, since every species, background and class change redraws the chips through
-`renderClassRace()`, #154), and the Proficiencies prose
-(`character.proficiencies`, the same `renderRT()`). The chips, their grants and the default
-language are on [Character model](../architecture/character-model.md) and
+**Alignment** (`character.alignment`, moved here from the Sheet), then **Languages**, **Senses** and
+**Tools** as chip rows (`renderBioChips()`, `chipsHTML()`; `#bioLanguages`, `#bioSenses`,
+`#bioTools`), then the prose under its own heading, **Other proficiencies** (`character.proficiencies`,
+the same `renderRT()`, its "Nothing yet — tap Edit." empty state showing when there is none). Each
+heading is a `.def-h` with a rule under it. A sense may carry a range, "DARKVISION · 60 FT". A
+granted language or tool shows its source ("· species", "· background") and has no ×; it appears,
+and leaves with its source, at once, since every species, background and class change redraws the
+chips through `renderClassRace()` (#154). The chips, their grants and the default language are on
+[Character model](../architecture/character-model.md) and
 [Grants & provenance](../architecture/grants-and-provenance.md). #97's pencil on this card hides
 the chips' ×.
+
+**Tools** (#121). A background's tools arrive as chips stamped `bg:<Name>`
+(`grantTools()`, from the pack's `tools` text through `toolParse()`). A choice in that text
+("Choose one kind of Gaming Set") is a **placeholder**: a dashed chip, "GAMING SET · choose · background",
+carrying the pack's wording in `ask` (its title and accessible name). It is asked for in the
+choices window that opens after Add background ([Character building](character-building.md)); one
+left unpicked, or one whose wording names no kind the app knows ("Tool of your choice"), stays on
+the card. Its name is a button (`data-chipask`) whose hit area fills the whole chip but its × (a
+positioned `::after`; the × comes later and stays on top, and the dimmed "· background" lets taps
+through), and opens `openToolNamer()`: the Add window with
+the kinds its wording names, instant pills and Or type one, refusing a tool the sheet already has
+("You already have Dice Set.") in `#chipMsg` and staying open. The pencil doesn't hide it: it hides
+removal, not naming. A player's own placeholder (one lifted from old text) also has its ×.
+
+**The Add window** (`openChipChooser()`, the chips' **+ Add**). For resistances, immunities,
+languages and tools the suggestion pills toggle (`aria-pressed`), and **Add** takes every pressed one
+plus the typed name at once (`addChips()`, case-blind duplicates skipped), its label counting them
+("Add", "Add 3", `chipAddLabel()`); with nothing pressed or typed it does nothing. A pill already on
+the sheet is disabled with ✓. The titles read "Add resistances", "Add immunities", "Add languages",
+"Add tools". Tools' pills are grouped by kind under a heading each (Artisan's Tools, Gaming Sets,
+Musical Instruments, Other), from `toolSuggestions()`: the loaded packs' `Tool` items merged with a
+built-in list, so a Humblewood character (whose pack has no tools), or one whose packs lack a kind,
+still has gaming sets to pick. **Senses** stay one at a
+time ("Add a sense"): a pill adds at once with the Range box's value.
+
+**Room to read and tap** (#120, #123). In a chip row a chip is 28px tall, chips and wrapped rows
+8px apart, 12px down to the next heading, and a ×'s hit area 32px tall, reaching into the chip's
+padding but never over its name. The Add window's pills are 32px tall and 8px apart, with 14px
+above "Or type one". Both are scoped (`.chips .chip`, `.chip-sug`): the bare `.chip` of the effect
+chips and pack badges, and the browse picker's `.fgrp`/`.fpill` filter pills, are unchanged. The
+Sheet's Defences card shares the chip rules.
 
 **The name.** The tab's label and the Section Notes card's group heading read **Bio**
 (`NOTE_TABS.story`); the id stays `story`, because saved Section Notes fold state (`noteCollapse`)
@@ -140,6 +175,10 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - **A preview that flattened everything** showed a note reading `**bold**` / `- bullet` as plain
   "bold bulleted", with no sign either marker worked; the note card itself had rendered correctly all
   along. → L3035
+- **A dimmed label took a tap meant for the chip.** A placeholder's "· background" (`.chip-src`) has
+  `opacity`, which makes it its own layer, painted above the name button's positioned `::after`, so
+  a tap on it did nothing. It has `pointer-events:none` there. The browser pass found it; a hit-test
+  (`elementFromPoint`) shows it, a screenshot doesn't. → L9760
 - **The Bio tab's "Notes" card formatted nothing** — no markup, not even line breaks — while the
   section notes rendered the whole grammar. One renderer for every field fixed it. → L3035
 
@@ -155,6 +194,10 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 | What the hover preview renders | Phrasing markup only, block markers represented, chips unwrapped | The full `noteHTML()` output: blocks and `role="button"` chips are illegal in a button, and a chip on a hover card vanishes as you reach for it |
 | A jump into a hidden tab (#52) | Unhides the tab, saves, and toasts "*Label* tab shown again; hide it in Settings → Sheet display." before carrying on | Refusing the jump: the note's own link would do nothing |
 | The party (#91) | A Party card on the Bio tab: name, optional AC and max HP per member; every fight the player starts adds them, and the player | Typing the party each fight: the issue asked for it to join automatically |
+| The leftover Proficiencies text (#121) | Under an **Other proficiencies** heading styled like the chip rows, shown even when empty (Mike) | No heading: the issue's style mismatch. Hidden when empty |
+| The card's row order (#121) | Alignment, Languages, Senses, Tools, Other proficiencies | Tools first: it splits Languages from the card's title order |
+| Naming a placeholder tool while the pencil is locked (#121) | Still works: the pencil hides removal, not naming | Hidden with the pencil: a granted placeholder could never be named on a locked card |
+| Which Add windows take several at once (#119) | Resistances, immunities, languages and tools; senses one at a time (Mike) | Senses too: each sense needs its own range |
 
 ## Open
 
@@ -179,3 +222,5 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - 2026-10-25 — `jumpToNote()` unhides the note's tab first when it is hidden, toasts the tab's own label, then jumps as before. → ledger L6989, #52
 - 2026-10-25 — The Party card: a roster of companions that joins every fight the player starts; 19 sections. → ledger L7097, #91
 - 2026-11-06 — A granted language's pill appears and leaves at once with its species or background, on add, change and remove. → ledger L9101, #154
+- 2026-11-07 — Tools are a chip row with placeholders to name; the prose sits under Other proficiencies; the Add window takes several at once, tools grouped by kind; the chips and pills get room. → ledger L9760, #121, #120, #119, #123
+- 2026-11-08 — The browser pass: a tap on a placeholder's "· background" now names it too. → ledger L9760, #121

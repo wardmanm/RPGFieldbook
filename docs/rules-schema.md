@@ -288,7 +288,7 @@ normal.
   "abilityScores": { "dex": 2, "con": 1 },
   "skills": ["Sleight of Hand"],
   "saves": ["dex"],
-  "proficiencies": "Thieves' Tools",
+  "proficiencies": "Light armor",
   "languages": "Common, plus one of your choice",
   "traits": [
     { "name": "Clever Paws", "description": "…", "effects": [ { "target": "skill.sleight", "value": 0 } ], "skills": ["Sleight of Hand"] }
@@ -302,9 +302,15 @@ normal.
 - `size` is one of `Tiny`, `Small`, `Medium`, `Large`, `Huge`, `Gargantuan` — or an **array** of them
   for a species that offers a choice (`["Small","Medium"]`), which the app shows as "Small or Medium".
   It seeds the character's Size the same way `speed` seeds their speed: only when it isn't already
-  set, so a subrace never overrides its parent and the player's own choice always wins. Size is what
-  drives carrying capacity (Large and up carry double, Tiny half). Omit it and the character reads as
-  Medium; a character can always set their own in **Settings**.
+  set, so a subrace never overrides its parent and the player's own choice always wins. Removing or
+  changing the species takes back a speed or size it set, unless the player has changed it since.
+  Size is what drives carrying capacity (Large and up carry double, Tiny half). Omit it and the
+  character reads as Medium; a character can always set their own size (tap Size on the Sheet, or
+  **Settings**) and their own base speed (tap Speed).
+- `proficiencies` is display text, such as armor or weapon training. It is added under **Other
+  proficiencies** on the Bio tab, and removing or changing the species takes it back out unless the
+  player has edited it. It is not read as tools: a species grants no tool chips (a background's
+  `tools` do, §6.4).
 - `abilityScores` is a map of `abbr → +N`. **2024 races usually omit it** (ability boosts come
   from backgrounds); include it only for older/ancestry-boost content. For a *player-chosen*
   racial increase (older-style "+2 to any, +1 to any"), use `abilityChoice` instead (below).
@@ -464,8 +470,16 @@ the converter applies — mirroring `overlay.json` for feats.
   the player to distribute **+2/+1** (two of them) or **+1/+1/+1** (all three).
 - **`feat`** — a string, or an **array** `["Woodwise","Speech of the Ancient Beasts"]` to offer a
   choice. If the name matches a `feats` entry, its effects are applied.
-- **`skills`** (granted), **`tools`/`languages`** (added as proficiency notes), **`equipment`**
-  (text). **`feature`** is optional (2024 XPHB backgrounds have none; some settings do).
+- **`skills`** (granted), **`equipment`** (text). **`feature`** is optional (2024 XPHB backgrounds
+  have none; some settings do).
+- **`tools`** and **`languages`** become chips on the Bio tab, marked "· background", and leave with
+  the background when it is removed or changed. Separate them with commas or "and", or give a list of
+strings. A tool's own name is always read as that tool ("Three-Dragon Ante Set"). A part that offers
+  a choice ("Choose one kind of Gaming Set", "one type of Artisan's Tools of your choice") is asked for
+  when the background is added, from the kinds it names: **Artisan's Tools**, **Gaming Set** and
+  **Musical Instrument** (or **Instrument**). A choice that names none of them, or one the player
+  leaves unpicked, stays on the card as a chip the player taps to name later. A language choice
+  ("one of your choice") is the player's to add.
 
 ### 6.5 `subclasses` (attach to a class by name)
 

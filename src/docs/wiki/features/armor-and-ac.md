@@ -85,7 +85,8 @@ and a total (`#acTotal`, the number on the sheet).
   blur the box first, so `change` has already committed it and the guard finds nothing to do.
 - **The Vitals lock** ([Vitals & rest](vitals-and-rest.md)): while `vitalsLocked(character)`,
   `setACMode()` and `setACFlat()` refuse, and the window says "Vitals is locked — unlock it to
-  change your AC" with both halves of the switch and the box disabled. The number still shows and
+  change your AC" with both halves of the switch and the box disabled, and dimmed so they look it
+  (the box since #131's browser pass, with the Speed window's Base speed box). The number still shows and
   counts, Calculated or Flat; only how it is set is locked, as for Max HP.
 
 **Equipping.** `isEquippable()` is true for anything `itemArmor()` recognises, so parsed armor gets an
@@ -195,3 +196,4 @@ prose becomes fields at that moment. With the toggle off, an existing `armor` is
 - 2026-11-06 — The AC window follows the Vitals lock; Escape keeps a typed Flat number; the Flat seed is never below 0; the struck line's wording. → ledger L9597, #130
 - 2026-11-06 — A switch the Vitals lock holds looks held; only Escape needs the dismiss guard (× and the backdrop blur the box first). → ledger L9632, #130
 - 2026-11-06 — The Flat box shows the number it took, tidied (" 18 " reads 18). → ledger L9645, #130
+- 2026-11-08 — A Flat box the Vitals lock holds is dimmed too, as the switch is. → ledger L9760, #131

@@ -212,7 +212,7 @@ function addClass(name,lvl){
       grantClassSaves(d,name);
       (d.skills||[]).forEach(nm=>{const k=skillKey(nm);if(k)grantProf(sid,"skill",k,1);});
     }
-    if(d.spellcasting&&!character.spellAbility)character.spellAbility=d.spellcasting;
+    seedField(character,"spellAbility",d.spellcasting,sid);   /* #131: recorded, so it leaves with the class */
   }
   let choices=[],notes=[];const _eq=[];
   if(d&&first)applyEquipGrants(d.equipmentGrants,sid,_eq);
@@ -262,7 +262,16 @@ function removeClass(idx){
   /* #118: its level records go with it, or a class added again later would be
      offered hit points and features this run never gave */
   if(Array.isArray(character.levelLog))character.levelLog=character.levelLog.filter(r=>!(r&&r.class===c.name));
+  /* #131: the spellcasting ability it or its subclass seeded, while still theirs */
+  const cdef=findClassDef(c.name),subSid="subclass:"+c.name+":";
+  const emptied=unseedSource(character,"class:"+c.name,cdef?{spellAbility:cdef.spellcasting}:null);
+  if(c.subclass){const sc=cdef&&subclassesFor(cdef)[c.subclass];emptied.push(...unseedSource(character,subSid+c.subclass,sc?{spellAbility:sc.spellcasting}:null));}
+  seedsOf(character).filter(e=>e.sid.indexOf(subSid)===0).forEach(e=>emptied.push(...unseedSource(character,e.sid,null)));
   character.classes.splice(idx,1);
+  /* ...and the next caster takes it (decision 12), only when this revert
+     emptied it: a "—" the player chose is theirs */
+  if(emptied.indexOf("spellAbility")>=0)handOnSpellAbility(character);
+  const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   /* Saving throws came from the class just removed if it was the first. The
      one now first takes its own, tagged to it so they leave with it — without
      this a Fighter/Wizard who drops Fighter has no save proficiencies at all.
@@ -426,14 +435,18 @@ function applyLevelDown(idx,remove,expect){
 function selectSubclass(className,subName,pending){
   const entry=character.classes.find(c=>c.name===className);if(!entry)return;
   const d=findClassDef(className);
-  const oldSub=entry.subclass;
+  const oldSub=entry.subclass;let emptied=[];
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="class"&&f.origin.class===className&&f.origin.subclass);
-  if(oldSub)removeGrants(g=>g.sid==="subclass:"+className+":"+oldSub);
+  if(oldSub){
+    removeGrants(g=>g.sid==="subclass:"+className+":"+oldSub);
+    /* #131: the old subclass's spellcasting ability goes with it */
+    const osc=subclassesFor(d)[oldSub];emptied=unseedSource(character,"subclass:"+className+":"+oldSub,osc?{spellAbility:osc.spellcasting}:null);
+  }
   entry.subclass=subName;
   const sc=subclassesFor(d)[subName];
   let choices=[],notes=[];
   if(sc){
-    if(sc.spellcasting&&!character.spellAbility){character.spellAbility=sc.spellcasting;const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;}
+    seedField(character,"spellAbility",sc.spellcasting,"subclass:"+className+":"+subName);
     if(sc.levels)Object.keys(sc.levels).map(Number).filter(L=>L<=num(entry.level)).sort((a,b)=>a-b).forEach(L=>{
       const lv=sc.levels[String(L)];
       (lv.traits||[]).forEach(t=>addFeatureFromDef(t,{kind:"class",class:className,level:L,subclass:subName}));
@@ -441,6 +454,11 @@ function selectSubclass(className,subName,pending){
       if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can know up to ${lv.spells.known} ${subName} spell(s).`:null);if(n)notes.push({text:n,_level:L});}
     });
   }
+  /* an ability the old subclass's revert emptied passes to the next caster
+     (decision 12): a Fighter/Wizard whose Eldritch Knight is swapped keeps a
+     spell DC, the Wizard's; a "—" the player chose stays */
+  if(emptied.indexOf("spellAbility")>=0)handOnSpellAbility(character);
+  {const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;}
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
   runChoices(className,choices,notes,pending);
 }

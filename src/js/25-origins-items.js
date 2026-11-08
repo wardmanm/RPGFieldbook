@@ -99,6 +99,20 @@ function sizeName(sz){
    the page even though sizeName() has to settle on one for the maths. */
 function sizeLabel(sz){return (Array.isArray(sz)?sz:[sz]).filter(Boolean).join(" or ");}
 function charSize(){return character.size||raceDefSize()||"Medium";}
+/* The Size mark, "set by hand" (#131): a size is the player's when they set it
+   (a "player" entry), or — a sheet from before the record — when it matches
+   neither what a source recorded nor the species' own. Not when the species
+   set it, which #146 found marked. */
+/* What a size list shows selected: the player's own size, else From ancestry
+   (""), so a size the species seeded is never offered as if picked. */
+function sizePickValue(c){return sizeByHand(c)?c.size:"";}
+function sizeByHand(c){
+  if(!c||!c.size)return false;
+  if(playerOwns(c,"size"))return true;
+  if(seedsOf(c).some(e=>e.field==="size"&&e.value!==null&&String(e.value)===String(c.size)))return false;
+  const w=raceWould(c);
+  return !(w&&w.size&&String(w.size)===String(c.size));
+}
 /* One list of size options, shared by the Vitals picker and Settings, so the two
    can't drift. "" is the from-ancestry default, and it names what that resolves
    to rather than leaving you to guess. */

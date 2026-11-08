@@ -70,3 +70,15 @@ Bullets below this line — leave the heading in place.
   Archery's +2, for one, now goes only on ranged weapons, as the rules say, and no longer on a
   spell like Fire Bolt.
 - Editing a feature or an item no longer stops its uses growing with your level.
+- Tool proficiencies are chips on the Bio tab, like languages. A background's tools arrive with
+  it and leave with it. When a background lets you choose ("one kind of Gaming Set"), you pick
+  it as you add the background, or later by tapping its chip. Tools already written in your
+  Proficiencies text become chips the first time you open the sheet.
+- The Add window for resistances, immunities, languages and tools lets you pick several at once.
+- Chips on the Sheet and Bio tabs, and the choices in their Add window, have more room and are
+  easier to tap on a phone.
+- Removing or changing your species, background or class now takes back the speed, size,
+  spellcasting ability and proficiency text it gave you, unless you changed them yourself. Size
+  no longer shows as set by hand when your species set it.
+- Tap Speed to set your own base speed. A speed you type stays when you change species, and a
+  custom species can have a speed at last.

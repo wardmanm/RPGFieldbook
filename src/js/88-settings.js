@@ -146,7 +146,7 @@ function openSettings(){
     tabsGroupHTML(character):"";
   const secCarrying=hasChar?setGroupHTML("Size and weight",
       setRowHTML("Size","From your ancestry unless you choose one. It sets your carrying capacity.",
-        `<select id="setSize" aria-label="Size">${sizeOptionsHTML(character.size)}</select>`)+
+        `<select id="setSize" aria-label="Size">${sizeOptionsHTML(sizePickValue(character))}</select>`)+
       setRowHTML("Encumbrance","Off shows weight only. Standard limits you at capacity; Variant slows you in tiers before that.",
         `<div class="seg" id="segEnc">${[["none","Off"],["standard","Standard"],["variant","Variant"]].map(([v,l])=>`<button type="button" data-enc="${esc(v)}" class="${encMode()===v?"on":""}" aria-pressed="${encMode()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
       setRowHTML("Coins count as weight","50 coins to the pound, the way the rules have it.",
@@ -228,7 +228,7 @@ function openSettings(){
   {const ep=document.getElementById("extPage");if(ep)wireExtPage(ep);}
   /* the size / encumbrance / coin-weight block only exists when a character is
      open, so every one of these is guarded */
-  {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{character.size=s.value;encSettingsChanged();});}
+  {const s=document.getElementById("setSize");if(s)s.addEventListener("change",()=>{setPlayerField(character,"size",s.value);encSettingsChanged();});}
   {const g=document.getElementById("segEnc");if(g)g.addEventListener("click",e=>{const b=e.target.closest("[data-enc]");if(!b)return;character.encumbrance=b.dataset.enc;g.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));encSettingsChanged();});}
   {const b=document.getElementById("swCoinWeight");if(b)b.addEventListener("click",()=>{character.coinWeight=(character.coinWeight===false);b.classList.toggle("on",character.coinWeight!==false);encSettingsChanged();});}
   {const b=document.getElementById("swHpColor");if(b)b.addEventListener("click",()=>{character.hpColor=(character.hpColor===false);b.classList.toggle("on",character.hpColor!==false);renderHP();scheduleSave();});}

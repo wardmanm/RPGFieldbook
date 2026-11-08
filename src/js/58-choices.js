@@ -38,15 +38,17 @@ function syncChoiceLimits(div){
   if(cnt)cnt.textContent=picked+" of "+target+" chosen";
   div.dataset.full=(picked>=target)?"1":"0";
 }
-/* Read every choice block on screen as {label,picked,target} — the shape
-   choiceShortfall wants. data-choose is the ONLY place the target lives for the
-   race/background modal, which never populates _activeChoices. */
+/* Read every choice block on screen as {label,picked,target,kind} — the shape
+   choiceShortfall wants, plus the block's data-ctype, so the dismiss guard can
+   leave out a tool step (#121). data-choose is the ONLY place the target lives
+   for the race/background modal, which never populates _activeChoices. */
 function choiceBlocks(){
   return Array.prototype.slice.call(document.querySelectorAll(".choice[data-choose]")).map(div=>{
     const lab=div.querySelector("label.f");
     return {label:lab?String(lab.textContent).split("—")[0].trim():"Choose",
             target:num(div.dataset.choose),
-            picked:choiceBlockPicked(div)};
+            picked:choiceBlockPicked(div),
+            kind:String(div.dataset.ctype||"")};
   });
 }
 /* A block's own picks: its ticked boxes, or — a species or background feat
@@ -365,7 +367,7 @@ function commitAsiPick(sel,origin,pending){
   if(fx.length)ft.effects=(Array.isArray(ft.effects)?ft.effects:[]).concat(fx);
 }
 function choiceFieldHTML(ch,ci,d){
-  const t=ch.type;let inner="",chooseAttr="",ctype=t;
+  const t=ch.type;let inner="",chooseAttr="",ctype=t,extraAttr="";
   if(t==="skill"){
     const from=ch.from||SKILLS.map(s=>s[1]);
     /* Two passes: the options have to be counted before the heading can say how
@@ -458,10 +460,26 @@ function choiceFieldHTML(ch,ci,d){
       const fixed=owned[i]?(single?" disabled":" checked disabled data-fixed"):"";
       return `<label class="opt" style="align-items:flex-start"><input type="${single?"radio":"checkbox"}" ${single?`name="opt-${esc(ci)}"`:""} data-opt-i="${esc(i)}"${fixed}><span><b>${esc(o.name||("Option "+(i+1)))}</b>${owned[i]?" (already yours)":""}${o.description?` — ${esc(o.description)}`:""}${fx?` <span style="color:var(--accent-2)">(${esc(fx)})</span>`:""}</span></label>`;
     }).join("");
+  }else if(t==="tool"){
+    /* #121: a background's tool choice, from the kinds it names, grouped
+       under a small heading each. A tool the sheet already has is shown as
+       yours, as a granted skill is, and spends none of the picks. The pick
+       names the placeholders whose ids ride on data-chipids. */
+    const groups=toolSuggestions(Array.isArray(ch.kinds)?ch.kinds:[]);
+    const have=new Set(chipList(character,"tools").filter(x=>!x.ask).map(x=>x.name.toLowerCase()));
+    const all=[].concat(...groups.map(g=>g[1])),had=all.filter(n=>have.has(n.toLowerCase())).length;
+    const target=effectiveChoose(ch.choose,all.length,had);
+    chooseAttr=` data-choose="${esc(target)}"`;
+    extraAttr=` data-chipids="${esc((Array.isArray(ch.chipIds)?ch.chipIds:[]).join(","))}"`;
+    inner=`<label class="f">${esc(ch.label||"Choose a tool")} — <span data-chcount>0 of ${target} chosen</span></label>`+
+      groups.map(([k,names])=>`<div class="choice-h">${esc(TOOL_KIND_HEAD[k]||k)}</div>`+names.map(n=>{
+        const on=have.has(n.toLowerCase());
+        return `<label class="opt"><input type="checkbox" data-tool-opt="${esc(n)}"${on?" checked disabled data-fixed":""}>${esc(n)}${on?" (already yours)":""}</label>`;
+      }).join("")).join("");
   }else{
     inner=`<p class="hint">${esc(ch.label||ch.note||"A choice is available at your table.")}</p>`;
   }
-  return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(ctype||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
+  return `<div class="choice" data-ci="${esc(ci)}" data-ctype="${esc(ctype||"note")}" data-sid="${esc(ch._sid||"")}"${chooseAttr}${extraAttr} style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px">${inner}</div>`;
 }
 let _activeChoices=[];
 /* ---- a choice window's title (#69) ----
@@ -562,7 +580,10 @@ function hpPending(){
 function armChoiceDismissGuard(pending){
   const then=(pending&&pending.length)?()=>runExtraChoices(pending):null;
   setDismissGuard(()=>{
-    const blocks=choiceBlocks();
+    /* A tool step (#121) loses nothing: its placeholder stays on the card and
+       a tap names it, so "no way to reopen" would be untrue of it. Done still
+       counts it in Picks left. */
+    const blocks=choiceBlocks().filter(b=>b.kind!=="tool");
     const picked=blocks.reduce((a,b)=>a+num(b.picked),0);
     const short=choiceShortfall(blocks);
     const hp=hpPending();
@@ -595,6 +616,8 @@ function gatherChoices(){
     else if(t==="feat"){const sel=div.querySelector('[data-feat-opt]');out.push({type:"feat",name:sel?sel.value:"",sid:div.dataset.sid||""});}
     else if(t==="option")out.push({type:"option",ci:num(div.dataset.ci),sid:div.dataset.sid||"",idxs:Array.from(div.querySelectorAll('[data-opt-i]:checked:not(:disabled)')).map(cb=>num(cb.dataset.optI))});
     else if(t==="hp"){const b=div.querySelector('[data-hp-dice]');out.push({type:"hp",ci:num(div.dataset.ci),dice:b?String(b.value).trim():""});}
+    else if(t==="tool")out.push({type:"tool",sid:div.dataset.sid||"",chipIds:String(div.dataset.chipids||"").split(",").filter(Boolean),
+      names:Array.from(div.querySelectorAll('[data-tool-opt]:checked:not(:disabled)')).map(cb=>cb.dataset.toolOpt).filter(Boolean)});
   });
   return out;
 }
@@ -620,7 +643,7 @@ function commitChoices(className,selections,pending){
   if(pendingSub)selectSubclass(className,pendingSub,next);
   else runExtraChoices(next);
 }
-/* runExtraChoices()'s Done for the picks that grant (#118): skills to their
+/* runExtraChoices()'s Done for the picks that grant (#118, #121): skills to their
    source, and each feat — the category list or a feat select — with the origin
    its sid names, so removing that species or background takes it back out.
    A feat's own skill choices go on `pending`, for the next window. */
@@ -629,5 +652,7 @@ function commitExtraChoices(selections,pending){
     if(s.type==="skill")s.keys.forEach(k=>grantProf(s.sid,"skill",k,1));
     else if(s.type==="asi"&&s.sid)commitAsiPick(s,sidToOrigin(s.sid),pending);
     else if(s.type==="feat"&&s.sid&&s.name)grantFeatDef(s.name,sidToOrigin(s.sid),pending);
+    /* #121: each pick names the next placeholder; one left unpicked stays */
+    else if(s.type==="tool")(Array.isArray(s.names)?s.names:[]).forEach((n,i)=>{const id=(s.chipIds||[])[i];if(id)nameToolChip(character,id,n);});
   });
 }

@@ -1278,8 +1278,75 @@ function block(html, needle, tag) {
   // the {0,200} window the brief gave was too tight for the tab's own svg icon
   // (224 chars from the end of the opening tag to the label) — widened, not removed
   ck('#103 the Story tab reads Bio', /data-tab="story"[^>]*>[\s\S]{0,300}Bio/.test(t) && X.NOTE_TABS.story === 'Bio');
+  /* #121: Tools after Senses, then the prose under its own heading */
   ck('#103 the Bio card holds alignment and the chip rows',
-     /data-note="proficiencies"[\s\S]*data-path="character.alignment"[\s\S]*id="bioLanguages"[\s\S]*id="bioSenses"/.test(t));
+     /data-note="proficiencies"[\s\S]*data-path="character.alignment"[\s\S]*id="bioLanguages"[\s\S]*id="bioSenses"[\s\S]*<div class="def-h">Tools<\/div><div id="bioTools"><\/div>[\s\S]*<div class="def-h">Other proficiencies<\/div>[\s\S]*id="rt-proficiencies"/.test(t));
+}
+
+// ---------- #120: the Bio and Defences chips get room to read and to tap
+// Scoped to .chips, so the bare .chip rule in 30-sheet.css (features' effect
+// chips, the pack badges) doesn't move. `rule()` finds a top-level rule whose
+// selector list names exactly `sel`, comments stripped.
+{
+  const strip = f => fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cards = strip('src/css/20-cards.css');
+  const rule = (css, sel) => { for (const chunk of css.split('}')) { const i = chunk.indexOf('{'); if (i < 0) continue;
+    if (chunk.slice(0, i).split(',').map(s => s.trim()).includes(sel)) return chunk.slice(i + 1); } return null; };
+  const px = (body, prop) => { const m = body && new RegExp('(?:^|;)\\s*' + prop + '\\s*:\\s*([^;]+)').exec(body); return m ? m[1].trim().split(/\s+/).map(v => parseFloat(v)) : null; };
+  const chip = rule(cards, '.chips .chip'), row = rule(cards, '.chips'), xa = rule(cards, '.chip-x::after'), dh = rule(cards, '.def-h'), ask = rule(cards, '.chips .chip-ask');
+  ck('#120 a chip in a chip row is at least 28px tall', !!chip && (px(chip, 'min-height') || [0])[0] >= 28, chip);
+  const gap = px(row, 'gap') || [];
+  ck('#120 chips sit at least 8px apart, and so do wrapped rows', gap.length >= 1 && gap[0] >= 8 && (gap[1] === undefined ? gap[0] : gap[1]) >= 8, row);
+  ck('#120 a chip\'s × has a hit area at least 32px tall', /(^|;)\s*position\s*:\s*relative/.test(rule(cards, '.chip-x') || '') && !!xa && /position\s*:\s*absolute/.test(xa) && (px(xa, 'height') || [0])[0] >= 32, [rule(cards, '.chip-x'), xa]);
+  const m = px(dh, 'margin') || [];
+  ck('#120 each heading starts a clearly separate group: more space above it than below', m.length >= 3 && m[0] > m[2], dh);
+  ck('#120 a row keeps about 12px from the next heading', ((px(row, 'margin') || [])[2] || 0) >= 12 || ((px(row, 'margin-bottom') || [])[0] || 0) >= 12, row);
+  ck('#121 a placeholder chip is dashed', !!ask && /border[^;]*dashed/.test(ask), ask);
+  /* review: the whole placeholder chip, but its ×, names it — not only the 14px name inside */
+  const askName = rule(cards, '.chip-name::after');
+  ck('#121 a placeholder is positioned, so its name\'s hit area can fill it', !!ask && /position\s*:\s*relative/.test(ask), ask);
+  ck('#121 ...the name button has a ::after covering the chip', !!askName && /position\s*:\s*absolute/.test(askName) && (/inset\s*:\s*0/.test(askName) || ['top', 'right', 'bottom', 'left'].every(k => new RegExp('(^|;)\\s*' + k + '\\s*:\\s*0').test(askName))), askName);
+  ck('#121 ...and the name itself is not positioned, so that ::after spans the chip, not the name', !/position\s*:/.test(rule(cards, '.chip-name') || ''), rule(cards, '.chip-name'));
+  /* QA: the dimmed "· background" has opacity, so it paints above the name's ::after and took
+     the tap for itself; it lets the tap through */
+  ck('#121 ...and its "· background" lets a tap through to the name', /pointer-events\s*:\s*none/.test(rule(cards, '.chip-ask .chip-src') || ''), rule(cards, '.chip-ask .chip-src'));
+  ck('#121 ...and its name is a plain button that keeps its own casing', /text-transform\s*:\s*none/.test(rule(cards, '.chip-name') || '') && /background\s*:\s*none/.test(rule(cards, '.chip-name') || ''), rule(cards, '.chip-name'));
+  /* #123: the Add window's pills, scoped to .chip-sug — the browse picker's
+     filter pills share .fgrp and .fpill and stay as they are */
+  const sugG = rule(cards, '.fgrp.chip-sug'), sugP = rule(cards, '.chip-sug .fpill'), typ = rule(cards, '.field.chip-type');
+  ck('#123 the Add window\'s pills sit at least 8px apart', ((px(sugG, 'gap') || [0])[0]) >= 8, sugG);
+  ck('#123 ...each at least 32px tall', ((px(sugP, 'min-height') || [0])[0]) >= 32, sugP);
+  ck('#123 ...with at least 14px above "Or type one"', ((px(typ, 'margin-top') || [0])[0]) >= 14, typ);
+  ck('#123 ...and the shared filter pills are unchanged', /\.fgrp\{display:flex;flex-wrap:wrap;gap:5px;align-items:center\}/.test(cards) && /\.fpill\{font-family:var\(--head\);font-size:11px;font-weight:700;padding:3px 10px;/.test(cards));
+  ck('#121 a placeholder chip opens the namer', /closest\("\[data-chipask\]"\)\)\)return openToolNamer\(m\.dataset\.chipask\)/.test(fs.readFileSync(path.join(ROOT, 'src/js/90-boot.js'), 'utf8')));
+  ck('#120 the bare .chip rule in 30-sheet.css is unchanged, so effect chips don\'t move',
+     fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8').includes('.chip{font-family:var(--head);font-size:10px;letter-spacing:.03em;padding:3px 7px;border-radius:99px;\n  background:color-mix(in srgb,var(--accent-2) 16%,transparent);color:var(--accent-2);text-transform:uppercase;font-weight:700}'));
+}
+
+// ---------- #131: every seed goes through seedField(), every size the player picks through setPlayerField()
+{
+  const src = f => fs.readFileSync(path.join(ROOT, 'src/js/' + f), 'utf8');
+  const fn = (code, name) => { const i = code.indexOf('function ' + name + '('); if (i < 0) return ''; const j = code.indexOf('\nfunction ', i + 1); return code.slice(i, j < 0 ? undefined : j); };
+  const race = src('52-race.js'), cls = src('56-class.js'), forms = src('80-modal-forms.js'), set = src('88-settings.js');
+  ck('#131 applyRace() no longer queries the dead [data-path="character.speed"]', !!fn(race, 'applyRace') && !/data-path="character\.speed"/.test(fn(race, 'applyRace')));
+  ck('#131 ...it seeds speed, size and proficiencies through seedField()', /seedField\(character,"speed"/.test(fn(race, 'applyRace')) && /seedField\(character,"size"/.test(fn(race, 'applyRace')) && /seedField\(character,"proficiencies"/.test(fn(race, 'applyRace')) &&
+     !/character\.speed=|character\.size=|character\.proficiencies=/.test(fn(race, 'applyRace')));
+  ck('#131 addClass() and selectSubclass() seed spellAbility through seedField()', /seedField\(character,"spellAbility"/.test(fn(cls, 'addClass')) && /seedField\(character,"spellAbility"/.test(fn(cls, 'selectSubclass')) &&
+     !/character\.spellAbility=/.test(fn(cls, 'addClass') + fn(cls, 'selectSubclass')));
+  ck('#131 removeClass() and selectSubclass() unseed, then hand the ability on', /unseedSource\(/.test(fn(cls, 'removeClass')) && /handOnSpellAbility\(character\)/.test(fn(cls, 'removeClass')) &&
+     /unseedSource\(/.test(fn(cls, 'selectSubclass')) && /handOnSpellAbility\(character\)/.test(fn(cls, 'selectSubclass')));
+  ck('#131 the Size window\'s Save writes through setPlayerField()', /setPlayerField\(character,"size",sel\.value\)/.test(fn(forms, 'openSizePicker')) && !/character\.size=/.test(fn(forms, 'openSizePicker')));
+  ck('#131 ...and so does Settings → Carrying\'s size select', /getElementById\("setSize"\);if\(s\)s\.addEventListener\("change",\(\)=>\{setPlayerField\(character,"size",s\.value\)/.test(set) && !/character\.size=s\.value/.test(set));
+  ck('#131 the Size mark reads sizeByHand()', /mark\(szEl,sizeByHand\(character\)\)/.test(src('10-compute.js')));
+  /* decision 20: the Speed badge opens a window with a Base speed box */
+  ck('#131 openStatBreakdown() sends speed to openSpeedWindow(), as ac to openACWindow()', /if\(target==="speed"\)return openSpeedWindow\(\);/.test(fn(forms, 'openStatBreakdown')));
+  /* QA: a box Vitals locks looked as editable as ever; the Speed window's and the AC window's Flat box look locked */
+  {
+    const modalCss = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const m = /([^{}]*#spdBase:disabled[^{}]*)\{([^}]*)\}/.exec(modalCss);
+    ck('#131 a locked Base speed box, and the AC window\'s locked Flat box, look locked', !!m && /#acFlat:disabled/.test(m[1]) && /opacity\s*:\s*\.?[0-9]/.test(m[2]) && parseFloat((/opacity\s*:\s*([.0-9]+)/.exec(m[2]) || [0, 1])[1]) < 1, m && m[0]);
+  }
+  ck('#131 ...whose dismiss guard commits a typed #spdBase, as the AC window\'s does its Flat box', /setDismissGuard\(\(\)=>\{const b=document\.getElementById\("spdBase"\);[^}]*commitBaseSpeed\(b\.value\);return null;\}\)/.test(fn(forms, 'openSpeedWindow')));
 }
 
 // ---------- #103: the new Sheet

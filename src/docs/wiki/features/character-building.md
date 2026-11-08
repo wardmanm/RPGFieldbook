@@ -13,7 +13,7 @@ so removing the source takes it back out; that mechanism is
 `seedLevel1HP()`, `grantClassSaves()`, `multiclassChoices()`, `multiclassNote()`,
 `levelRecordFor()`, `levelDownHTML()`, `applyLevelDown()` in
 `56-class.js`; `choiceFieldHTML()`, `runChoices()`, `gatherChoices()`, `commitChoices()`,
-`effectiveChoose()`, `choiceShortfall()`, `choiceDoneHandler()`, `choiceWarningsConfirmed()`,
+`effectiveChoose()`, `choiceShortfall()`, `choiceBlocks()`, `choiceDoneHandler()`, `choiceWarningsConfirmed()`,
 `armChoiceDismissGuard()`, `choiceWindowTitle()`,
 `choiceLevelSpan()`, `choiceNoteText()`, and for feats (#118) `featCategory()`, `featPrereq()`,
 `featUnmet()`, `featOfferable()`, `featAbilityChoices()`, `featPendingIncreases()`,
@@ -24,7 +24,7 @@ so removing the source takes it back out; that mechanism is
 `grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
 `setDismissGuard()`, `askConfirm()` in `80-modal-forms.js`; `classLineHTML()`, `classFlyHTML()`, `openShFly()` in
 `40-sheet.js`; `raceInfoFoot()` in `52-race.js`, `bgInfoFoot()` in `54-background.js`;
-`grantLanguages()`, `dropLanguages()` in `41-chips.js` · `levelSnapshot()`, `levelGains()`,
+`grantLanguages()`, `dropLanguages()`, `grantTools()`, `toolSuggestions()`, `nameToolChip()` in `41-chips.js` · `levelSnapshot()`, `levelGains()`,
 `luHPCheck()`, `openLevelUp()`, `levelUpCardHTML()`, `levelUpHPHTML()`, `luSetHP()`, `luFinish()`,
 `luDismissed()`, `playLevelUpFx()`, `luSkip()`, `undoLevelUp()`, `undoLevelUpAvailable()`,
 `luUndoCard()`, `levelLogRecord()`, `luMaybeSettle()`, `luSettle()` in `57-levelup.js` · **Data:** `choices` on class, subclass and race
@@ -59,9 +59,11 @@ picked. If it (or the subrace) carries `abilityChoice`, the modal offers +2/+1, 
 (the 2024 rule puts the increase on the background). `applyRace()` removes any current ancestry,
 then grants from the species and then the subrace: fixed `abilityScores` as a feature, skills and
 saves as grants, each trait as a feature, any `choices` (skill) queued, `equipmentGrants`, and speed
-and size **only if those boxes are empty**. `proficiencies` is appended to the free-text
-Proficiencies box; `languages` become chips stamped `race:<Name>` (`grantLanguages()`), which
-removing or changing the species takes back ([Grants & provenance](../architecture/grants-and-provenance.md)).
+and size **only if those boxes are empty**, through `seedField()`, which records what it wrote.
+`proficiencies` is appended to the free-text Proficiencies box, recorded the same way; `languages`
+become chips stamped `race:<Name>` (`grantLanguages()`). Removing or changing the species takes all
+of it back, a speed, size or text the player changed since excepted
+([Grants & provenance](../architecture/grants-and-provenance.md)).
 A species grants feats the way a background does (#118):
 - **A fixed `feat`** (a string, or a one-item array) is granted through `grantFeatDef()` with the
   race origin.
@@ -83,8 +85,13 @@ backgrounds are the older shape, with no ability increase and no feat, and get n
 the pickers only for a background with `abilityScores`, so it never refuses two absent selects as
 "the same ability". `openBackgroundInfo()` leaves out an empty Ability Scores or Feat line the same
 way. `applyBackground()` adds the ability feature, the skill grants, the feat through
-`grantFeatDef()`, the single background `feature`, `equipmentGrants`, appends tools to
-Proficiencies, and grants its `languages` as chips stamped `bg:<Name>`. A `{type:"feat"}` in a
+`grantFeatDef()`, the single background `feature`, `equipmentGrants`, and grants its `tools`
+(`grantTools()`, #121) and `languages` as chips stamped `bg:<Name>`. A tool **choice** in the
+pack's wording ("Choose one kind of Gaming Set", Humblewood's "one type of wind Musical
+Instrument") adds a placeholder chip per pick and queues a `tool` step, so the choices window that
+opens after Add asks for it; the pick names the placeholder. A choice whose wording names no kind
+the app knows gets the placeholder only, named later by tapping it
+([Story & notes](story-and-notes.md)). A `{type:"feat"}` in a
 background's `choices` is queued with the `bg:` sid and opens the same list as a species' (#118).
 No shipped background carries one yet. `openBackgroundInfo(idOrName,opts)` opens by id as well as by name, and
 the Rules tab's Backgrounds rows open it with `{ref:true}` (#99): the window shows the background's
@@ -241,6 +248,7 @@ pack is keyed "Name (PACK)" and offered alongside, and `subSourceTag()` tags the
 | `feat` | on a species or background, or with a `category` and no `from`: the ASI step's list with no ASI row. On a class level: a select over `from`, or every loaded feat | `commitAsiPick()` with the species or background origin; a class level's select through `grantFeatDef()` |
 | `subclass` | radios with pack and description | `selectSubclass()` after the rest commits |
 | `hp` | a dice box, Roll for me, and the working ("Average 6 + 2 CON = 8 HP") — creation only now: a level-up or a second class gets the level-up card's own HP step instead (#101) | `commitHPChoice()` |
+| `tool` | a background's tool choice (#121), in `runExtraChoices()` only, after the feats and before the equipment: the pack's wording as its label with the counter, then checkboxes from `toolSuggestions()` for the kinds it names, grouped under a heading per kind; a tool the sheet already has is ticked, disabled, `data-fixed` and "(already yours)". The placeholders' ids ride on `data-chipids` | `commitExtraChoices()` names each placeholder in turn (`nameToolChip()`); one left unpicked stays on the card |
 
 `effectiveChoose()` sets how many new picks a block asks for: granted options do not spend the
 budget, but it never asks for more than remain. The target is written as `data-choose` on the
@@ -358,7 +366,12 @@ picks) passes the queue straight on.
 **Dismissing.** Closing wipes `#mBody` and a chooser cannot be reopened. `armChoiceDismissGuard()`
 registers a guard (via `setDismissGuard()`) that ✕, Escape and a backdrop click (only when
 Settings → Appearance allows it, #106) all consult through `dismissModal()`: it warns that picks will be discarded, or asks a milder question when only hit
-points are at stake (`hpPending()`), since Vitals, and so Max, is unlocked. The guard also carries the window's
+points are at stake (`hpPending()`), since Vitals, and so Max, is unlocked. It leaves **tool
+blocks** out (#121): `choiceBlocks()` returns each block's `kind`, and the guard counts the rest.
+Nothing is lost by dismissing a tool step, since its placeholder stays on the card and a tap names
+it, so "There is no way to reopen this later" speaks only of what is. A window holding only tool
+steps closes with no question; one with a skill step beside it warns of the skill only. Done's Picks
+left still counts a tool step. The guard also carries the window's
 `pending` as `then`, so a dismissed window still opens the ones queued behind it: dismissing costs
 that window's own picks, never the starting equipment of a class already on the sheet.
 `openModal()` and `closeModal()` clear the guard and `then`, so an ordinary form's Escape stays
@@ -483,10 +496,11 @@ they are built: [Converter](../data/converter.md).
   Warlock, which counts only for "Spellcasting or Pact Magic". Reading the class's own
   `spellcasting` field instead missed Eldritch Knights and Arcane Tricksters, whose casting lives
   on the subclass.
-- **Not everything reverts.** Tools and languages go into the free-text Proficiencies box and stay
-  there when the ancestry or background is removed. Speed and size are seeded only into empty boxes
-  and are not cleared by `removeRace()`, so swapping ancestry keeps the first one's values (traced in
-  the code).
+- **Prose and empty-only seeds never reverted.** Tools and languages went into the free-text
+  Proficiencies box and stayed when their source went, and speed and size were seeded only into
+  empty boxes and never cleared, so a swapped ancestry kept the first one's values. Languages became
+  chips with #103, tools with #121, and the seeds are recorded and taken back since #131
+  ([Grants & provenance](../architecture/grants-and-provenance.md)).
 
 ## Decisions
 
@@ -507,6 +521,8 @@ they are built: [Converter](../data/converter.md).
 | An option already on the sheet | Ticked and `data-fixed` in checkboxes; just disabled in radios | A tick in a radio group, which reads as this level's pick |
 | Where the equipment picker waits | Passed to `runChoices()` and on to its own Done | A module global: it outlived a dismissed window |
 | When a picked subclass has choices of its own | Its window opens first; feat skill choices and the equipment picker wait behind it | Opening each window as soon as it is known: one modal, so the last one opened replaced the subclass's picks (#63) |
+| A background's tool choice (#121) | A `tool` step in `runExtraChoices()`, asked when the background is added (Mike) | A placeholder to name later as the only path: the pick belongs with the add (L9760) |
+| Dismissing a window with a tool step unpicked (#121) | No warning for it: the guard leaves tool blocks out; Done's Picks left still counts them | The guard's "There is no way to reopen this later": untrue for a tool, whose placeholder stays to be named |
 | What a dismissed choice window does with the windows behind it | Hands them on (`then`) | Drops them with it: a notes-only subclass window arms no warning, so Escape would silently cost a class already on the sheet its equipment |
 | Student of War's tool | An `option` that becomes a feature | The free-text Proficiencies box: it would not revert with the subclass |
 | What a multiclass add grants (#66) | Level-1 features and non-skill choices, the pack's `multiclass` skills, an HP step; no saves, no equipment or gold | Everything, as for the first class: 2024 multiclassing gives neither saves nor equipment, and only a subset of skills |
@@ -610,3 +626,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-11-04 — A background with no ability scores or feat (seven Humblewood ones) previews and adds without empty pickers, and Add no longer refuses it; its info card drops the empty lines. → ledger L8474, #159
 - 2026-11-04 — Undo on a second class's level-up card restores the sheet from before Add class: `addClass()` takes the Undo copy, as `doLevelUp()` does. → ledger L8893, #181
 - 2026-11-06 — A level-up and Add class unlock Vitals (its pencil is the Max HP lock now) and the HP step puts it back as it was, through `setVitalsLocked()`; `LU_HP_CLOSE` says Vitals is unlocked. → ledger L9441, #115
+- 2026-11-07 — A background's tools are chips, and its tool choice a `tool` step in the choices window that names a placeholder; the dismiss guard leaves tool steps out; a species' speed, size and text are seeded through `seedField()` and taken back on a swap. → ledger L9760, #121, #131

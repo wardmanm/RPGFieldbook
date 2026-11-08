@@ -9756,3 +9756,108 @@ side window's row formats (P2, P0, a feature's `—`, `(noted)`, `(priority not 
 `recordProblem()` and `parseRecord()`.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md).
+
+## Bio chips: tools as chips, roomier chips, multi-select, clean swaps (#121, #120, #119, #123, #131; 2026-11-07)
+
+Built from the approved spec (`src/docs/specs/2026-11-07-bio-chips-design.md`, Mike 2026-11-07) and
+its plan, on `issue/121-bio-chips`, in the spec's order. Decision numbers are the spec's.
+
+- **#121, tools as chips.** A fifth chip list, `tools` (`[{id, name, src}]`, plus `ask` on a
+  placeholder), read through `chipList()`/`chipClean()`. `CHIP_SOURCED` names the lists that keep a
+  `src` (languages, tools), and a placeholder is never deduplicated. `toolParse()` reads a pack's
+  wording into named tools and choices (kinds Artisan's Tools, Gaming Set, Musical Instrument; every
+  shipped wording checked), `toolSuggestions()` merges the packs' Tool items with a built-in
+  `TOOL_KINDS` list (the pack's spelling wins), and `applyBackground()`'s "Tools:" note became one
+  `grantTools()` call. A choice queues a `tool` step in `runExtraChoices()` (decision 1) carrying the
+  placeholders' ids; `commitExtraChoices()` names them through `nameToolChip()`. The dismiss guard
+  leaves tool blocks out (decision 15b): `choiceBlocks()` returns each block's `kind`. A placeholder
+  is a dashed chip, "GAMING SET · choose", whose name is a button that opens `openToolNamer()`, still
+  live under the pencil (decision 18). Old "Tools:" lines are lifted once into the player's own chips
+  (`liftTools()`, flag `toolsLifted`, decisions 3–5). The Bio card is Alignment, Languages, Senses,
+  Tools, then an **Other proficiencies** heading over the prose (decisions 7, 17). Print gains a
+  Tools line.
+- **#120.** Chip rows' chips are 28px tall, 8px apart within and between rows, 12px above the next
+  heading, with a 32px-tall × hit area that never reaches over the name. Scoped to `.chips`, so the
+  bare `.chip` rule in `30-sheet.css` is unchanged.
+- **#119, #123.** For resistances, immunities, languages and tools the Add window's pills toggle and
+  Add takes them all plus the typed name (`addChips()`, `chipAddLabel()`: "Add 3"); senses stay one
+  at a time (decision 8). Tools are grouped by kind. The pills are 32px tall and 8px apart, with
+  14px above "Or type one", scoped to `.chip-sug`: the browse picker's filter pills share `.fgrp`
+  and `.fpill`, so the plan's wording ("`.fgrp`", "`.fpill`") was read as the chooser's own.
+- **#131, clean swaps.** `character.seeds` records what each source seeded into speed, size,
+  `spellAbility` and Proficiencies (decision 10): `seedField()` writes into an empty field and
+  records the value as given, or `null` over a full one (10a); `unseedSource()` reverts a field only
+  while it still equals the record (decision 9), and with no entry at all falls back to the outgoing
+  source's loaded definition (decision 11, `raceWould()` for a species). One builder-level rule the
+  spec didn't state: a species and its subrace seed under one sid, so a later `null` never replaces
+  the same sid's recorded value, and their two Proficiencies lines are recorded as one text. A
+  `player` entry (decision 21), written by `setPlayerField()` from the Size window, Settings →
+  Carrying and the Speed window, makes both helpers skip the field. An emptied spellcasting ability
+  passes to the next caster (`handOnSpellAbility()`, decision 12) after `removeClass()` and a subclass
+  swap. `removeRace()` and `removeBackground()` clear the legacy `ancestry`/`background` strings.
+  Size is marked "set by hand" only when it is the player's (`sizeByHand()`, #146's item, decision
+  16). `applyRace()`'s dead `[data-path="character.speed"]` query went.
+- **#131, decision 20: the Speed window.** Tapping Speed opens "Speed": a Base speed box
+  (`parseBaseSpeed()`, a whole number 0–999, blank gives the species' speed back; inner spaces are
+  refused, as the HP grammar refuses them) above the breakdown, whose base line names its source
+  (`speedBase()`: "Base 35 ft, yours", "Base 30 ft, from Elf"). It commits on change and on Escape
+  (the AC window's pattern) and is read-only while Vitals is locked (decision 22). The other badges'
+  breakdowns moved into `statRowsHTML()` byte for byte.
+
+**Review fixes** (a fresh reviewer's pass over the branch, each test-first):
+1. `toolParse()` read "Three-Dragon Ante Set" as a choice of three: `\b` treats the hyphen as a
+   word's edge, so "Three" matched the count word, and the lift would have turned a player's old
+   "Tools: Three-Dragon Ante Set" line into three placeholders for good. A fragment that is a known
+   tool's name (`toolKnownNames()`: `TOOL_KINDS` and the loaded packs' Tool items) is that tool, and
+   the choice and count words are matched as whole space-split words, never part of a hyphenated one.
+2. The Size window pre-selected the seeded size and Save always wrote it, so Save with nothing
+   changed made the species' size the player's. Both size lists now pre-select From ancestry unless
+   the size is the player's (`sizePickValue()`), and Save writes only a change.
+3. `removeRace()` and `removeBackground()` now call `renderAllRT()`, so the Proficiencies text a
+   species takes back leaves the Bio card at once (`removeClass()` changes no text field).
+4. A placeholder's tap target was its 14px name button: the button's `::after` now fills the chip,
+   which is positioned; the × comes later and stays on top.
+5. `handOnSpellAbility()` ran whenever `spellAbility` was blank, so a "—" the player chose was
+   overwritten on the next subclass pick. `unseedSource()` now answers which fields it emptied, and
+   `removeClass()` and `selectSubclass()` hand on only when theirs emptied `spellAbility`
+   (decision 12 as written).
+6. A species and subrace's Proficiencies lines, recorded as one text, are taken back line by line,
+   so editing only one keeps only that one. The null-overwrite guard above is unchanged.
+7. A pack's `tools` given as an array of strings reads as one list (it granted nothing).
+8. Spec decision 15 said the SRD pack had only artisan's tools and instruments; its
+   `items-magic.json` has all four gaming sets and six kits too. Corrected there and on Story &
+   notes; the built-in list still serves Humblewood and any pack without a kind.
+
+Tests: a new `sheet.js` block below the #130 block drives the flows against recorders (the card,
+the tool step, the namer, the multi-select window, seeds, swaps, the Speed window); `char-update.js`
+covers the tool step's window and guard and the spellcasting hand-on; `rules-data.js` pins the Bio
+card's order, the chip and chooser CSS, and the seed and Speed wiring. Scratchpad checks: every
+shipped `tools` wording through `toolParse()`; 55,986 sequences of apply, swap, pick a size, clear,
+remove and reload with no picked size lost and no seed outliving its species; `parseBaseSpeed()` over
+0–1000 and junk.
+
+**Browser pass** (2026-11-08, the project's Playwright MCP; 102 shots in
+`.claude/qa/in-progress/121-bio-chips/`). Before: main's artifact (equal to this branch's base), storage
+cleared; after: this branch's build, storage cleared again. Bio card, Defences, the Add windows, the
+tool step, the namer and the Speed window in both skins at 1280 and 390, light and dark for the
+cards and the Speed window, seeded through `evaluate` with the plan's inline pack. Driven with real
+clicks: pressing three resistance pills and Add 3; Add background → Soldier, the tool step, a pick,
+the named chip; Remove (its native confirm accepted) and Soldier again with the step dismissed by
+Escape (no question); the placeholder tapped on its "· background" text and its padding corner, the
+namer refusing a tool already held, then naming it; Change to Bandit Defector, its two-kind step, the
+swap taking Soldier's tool; Size: Save unchanged (stays the species'), Elf → Tiefling, pick Small
+(marked), swap to Gnome (kept, marked); Woodfolk (a species with Proficiencies text, added through
+`evaluate`) then Remove, its line leaving the card at once; a custom ancestry, a typed 25 on the
+badge, a swap to Elf keeping it, clearing it, 35, "30 ft" refused, Escape committing 40, and the
+Vitals pencil locking the box. The console stayed clean.
+Found and fixed (test first): a tap on a placeholder's "· background" did nothing, because
+`.chip-src`'s opacity makes it its own layer above the name's `::after` (now `pointer-events:none`);
+and a box the Vitals pencil locks looked editable (the Base speed box and, beside it, the AC window's
+Flat box now dim when disabled, as the AC switch does). The Task 3 chip values were kept: at 390 the
+rows fit and read well; at 1280 the Bio column is 320px wide, so **+ Add** wraps to its own row.
+Not driven: a real phone and touch, print, and Mike's own characters.
+
+Pages: [story & notes](../wiki/features/story-and-notes.md), [grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[character model](../wiki/architecture/character-model.md), [character building](../wiki/features/character-building.md),
+[vitals & rest](../wiki/features/vitals-and-rest.md), [sections & layout](../wiki/ui/sections-and-layout.md),
+[armor & AC](../wiki/features/armor-and-ac.md), [known issues](../wiki/roadmap/known-issues.md), [1.9.1](../wiki/roadmap/1.9.1.md), [decisions](../wiki/decisions.md).
