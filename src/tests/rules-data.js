@@ -2268,7 +2268,7 @@ function block(html, needle, tag) {
      /let settings=\{[^\n]*backdropClose:false[^\n]*\};/.test(js) && /settings\.backdropClose===true\)dismissModal/.test(js));
   ck('...Settings has its switch, which saves it, and a settings file carries it',
      /class="switch \$\{settings\.backdropClose===true\?"on":""\}" id="swBackdrop" role="switch" aria-checked="\$\{settings\.backdropClose===true\?"true":"false"\}"/.test(js) &&
-     /getElementById\("swBackdrop"\)\.addEventListener\("click",e=>\{settings\.backdropClose=settings\.backdropClose!==true;[^\n]*saveSettings\(\);\}\)/.test(js) &&
+     /getElementById\("swBackdrop"\)\.addEventListener\("click",e=>\{settings\.backdropClose=settings\.backdropClose!==true;[^\n]*saveSettingsSaid\(\);\}\)/.test(js) &&
      /const SETTINGS_KEYS=\[[^\]]*"backdropClose"/.test(js));
   /* #107: Settings opens wide. The class is set or cleared on EVERY open, as the
      emblem slot is, so a dialog opened from Settings never inherits the width. */
@@ -2566,7 +2566,7 @@ function block(html, needle, tag) {
      /openModal\("Import settings",settingsImportQuestionHTML\(imp\)\);/.test(src));
   ck('the arrow keys step over the SHOWN pages only', /setPageStep\(pages\.map\(p=>p\.k\),t\.dataset\.setpage,e\.key\)/.test(src));
   ck('switching a page shows it, remembers it and starts it at the top',
-     /p\.hidden=p\.dataset\.setpagebody!==k;/.test(src) && /settings\.setPage=k;saveSettings\(\);/.test(src) && /const pg=secs\.querySelector\("\.set-pages"\);if\(pg\)pg\.scrollTop=0;/.test(src));
+     /p\.hidden=p\.dataset\.setpagebody!==k;/.test(src) && /settings\.setPage=k;saveSettingsSaid\(\);/.test(src) && /const pg=secs\.querySelector\("\.set-pages"\);if\(pg\)pg\.scrollTop=0;/.test(src));
   /* spec §7: a duplicated id would let getElementById wire one copy and leave the
      other dead; the two-way check above collects ids into a Set, so count here */
   {
@@ -3357,6 +3357,88 @@ function block(html, needle, tag) {
   const mc = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8');
   ck('#129 the tick takes its own line in the row, and hidden means hidden',
      /\.fxrow \.fx-sp\{[^}]*grid-column:1\/-1/.test(mc) && /\.fxrow \.fx-sp\[hidden\]\{display:none\}/.test(mc));
+}
+
+// ---------- #133 Skin is look only: nothing but the two skin controls writes it
+{
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/manifest.json'), 'utf8'));
+  const frag = n => fs.readFileSync(path.join(ROOT, 'src/js', n), 'utf8');
+  const js = manifest.js.map(p => fs.readFileSync(path.join(ROOT, p), 'utf8')).join('\n');
+  const code = js.replace(/\/\*[\s\S]*?\*\//g, '');
+  ck('#133 skinForSystem() and systemForSkin() are gone from every fragment', !/skinForSystem|systemForSkin/.test(js));
+  const writes = code.match(/settings\.skin=(?!=)/g) || [];
+  ck('#133 exactly two settings.skin= assignments: the Settings and home-screen skin controls',
+     writes.length === 2 && /getElementById\("segSkin"\)\.addEventListener\("click",[^\n]*settings\.skin=b\.dataset\.skin;/.test(code) &&
+     /getElementById\("homeSkin"\)\.addEventListener\("click",[^\n]*settings\.skin=b\.dataset\.skin;/.test(code), writes.length);
+  const segSkin = (code.match(/getElementById\("segSkin"\)\.addEventListener\("click",[^\n]*/) || [''])[0];
+  ck('#133 the Settings skin control writes nothing on the character', segSkin !== '' && !/character\./.test(segSkin) && !/scheduleSave|libTouch|renderCoins/.test(segSkin), segSkin);
+  const race = frag('52-race.js');
+  const raceTermSrc = (race.match(/function raceTerm\(\)\{[^\n]*/) || [''])[0];
+  ck('#133 raceTerm() reads the character\'s system, not the skin',
+     /character\.system/.test(raceTermSrc) && !/settings\.skin/.test(raceTermSrc), raceTermSrc);
+  const placeholder = (race.match(/id="raceCustom" placeholder="[^\n]*/) || [''])[0];
+  ck('#133 the picker\'s example name reads the system too',
+     /character\.system/.test(placeholder) && !/settings\.skin/.test(placeholder) && /"Elf"/.test(placeholder) && /"Strig"/.test(placeholder), placeholder);
+  const settingsSrc = frag('88-settings.js');
+  ck('#133 the Skin row says it is the look, and changes no character',
+     settingsSrc.includes('setRowHTML("Skin","How Fieldbook looks: colours, lettering and frames. It doesn\'t change any character.",'));
+  ck('#133 the New character hint says what the system really does',
+     frag('75-home-theme.js').includes('<p class="hint">The game this character is for. It sets the coins, the ancestries you\'re offered and your starting languages. Classes, spells, feats and items from every loaded pack are offered either way. You can change it later in Settings → Sheet display.</p>'));
+  /* the Game system row: Sheet display's first group, and the control moves only on Yes */
+  const secDisplay = (settingsSrc.match(/const secDisplay=[\s\S]*?\n  const /) || [''])[0];
+  ck('#133 Sheet display\'s first group is "Game", holding the Game system row before the cards',
+     /^const secDisplay=hasChar\?setGroupHTML\("Game",\s*setRowHTML\("Game system",/.test(secDisplay) &&
+     secDisplay.indexOf('id="segSystem"') > 0 && secDisplay.indexOf('id="segSystem"') < secDisplay.indexOf('id="swHpColor"'), secDisplay.slice(0, 200));
+  ck('#133 ...its help is the spec\'s sentence, and its two buttons say which is pressed',
+     secDisplay.includes('setRowHTML("Game system","The game this character is for. It sets the coins, the ancestries you\'re offered and the default languages.",') &&
+     /id="segSystem">\$\{\[\[\x22humblewood\x22,"Humblewood"\],\["dnd","D&amp;D"\]\]\.map\(\(\[v,l\]\)=>`<button type="button" data-sys="\$\{esc\(v\)\}" class="\$\{[^`]*aria-pressed="\$\{/.test(secDisplay));
+  const segSystem = (settingsSrc.match(/getElementById\("segSystem"\);if\(g\)g\.addEventListener\("click",[^\n]*/) || [''])[0];
+  const then = segSystem.indexOf('confirmSystemChange(sys).then(ok=>{if(!ok)return;');
+  ck('#133 the Game system control moves its on class and aria-pressed only once confirmSystemChange() resolves true',
+     then > 0 && segSystem.indexOf('classList.toggle("on"') > then && segSystem.indexOf('setAttribute("aria-pressed"') > then &&
+     (segSystem.match(/classList\.toggle\("on"/g) || []).length === 1, segSystem);
+  /* ---- #141: every settings save says so. saveSettings() returns why a write
+     was refused; every call either goes through saveSettingsSaid(), which
+     toasts, or keeps the answer for its own line (Import settings' status, the
+     Extensions page, extSaveError, a returned why, an install's toast). */
+  const calls = [...code.matchAll(/\bsaveSettings\(\)/g)].map(m => ({pre: code.slice(Math.max(0, m.index - 48), m.index), at: m.index}));
+  const bare = calls.filter(x => !/function $/.test(x.pre) && !/(?:[=?]|\breturn |\bextSaveOk\()\s*$/.test(x.pre));
+  ck('#141 every saveSettings() call\'s answer is used: assigned, tested, returned or handed to extSaveOk()',
+     calls.length >= 10 && bare.length === 0, bare.map(x => x.pre + 'saveSettings()'));
+  ck('#141 ...so no bare saveSettings(); statement is left in src/js', !/(?:^|[;{}\s])saveSettings\(\);/m.test(code));
+  const persist = frag('70-persistence.js');
+  ck('#141 saveSettingsSaid() sits beside saveSettings() and calls it',
+     /function saveSettings\(\)\{[^\n]*\n(?:\/\*[\s\S]*?\*\/\n)?(?:const|let) _settingsSaid=new Set\(\);\nlet storageBlockedSaid=false;\nfunction saveSettingsSaid\(what\)\{[^\n]*\n?\s*const why=saveSettings\(\);/.test(persist));
+  const site = (name, re) => ck('#141 ' + name + ' saves through saveSettingsSaid()', re.test(code));
+  site('rbOpenCat()', /function rbOpenCat\(k,focus\)\{\s*if\(!rbCat\(k\)\)return;\s*settings\.rulesCat=k;saveSettingsSaid\(\);/);
+  site('a Settings page switch (showPage)', /settings\.setPage=k;saveSettingsSaid\(\);\s*\};/);
+  site('Settings → Skin', /getElementById\("segSkin"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('Settings → Mode', /getElementById\("segTheme"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('Settings → Hand-drawn borders', /getElementById\("swRough"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('Settings → Icon tabs', /getElementById\("swTabIcons"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('Settings → Tap outside to close dialogs', /getElementById\("swBackdrop"\)\.addEventListener\("click",[^\n]*saveSettingsSaid\(\);\}\);/);
+  site('the top bar\'s theme button', /getElementById\("btnTheme"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);\}\);/);
+  site('the app pill\'s ×', /getElementById\("updatePillX"\);if\(x\)x\.addEventListener\("click",[\s\S]{0,240}?settings\.dismissedUpdates\.app=updateAvailable\.ver;saveSettingsSaid\("that you cleared the notice"\);/);
+  site('the Extensions pill\'s ×', /getElementById\("extPillX"\);if\(x\)x\.addEventListener\("click",\(\)=>\{dismissUpdates\(\);saveSettingsSaid\("that you cleared the notice"\);/);
+  site('the home screen\'s Skin', /getElementById\("homeSkin"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
+  site('the home screen\'s Mode', /getElementById\("homeMode"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
+  site('the home screen\'s borders', /getElementById\("homeRough"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
+  ck('#141 _pillSaved() is gone: the pills use the shared helper', !/_pillSaved/.test(js));
+  ck('#141 the helper is quiet only after boot has said storage is blocked: boot sets the flag where it alerts',
+     /if\(storageBlockedSaid\)return why;/.test(persist) && !/storageBlockedWhy\(\)/.test((persist.match(/function saveSettingsSaid\(what\)\{[\s\S]*?\n\}/) || [''])[0]) &&
+     /const why=storageBlockedWhy\(\);if\(why\)\{storageBlockedSaid=true;alert\("Fieldbook can't use this browser's storage/.test(frag('90-boot.js')));
+  /* QA at 390 wide: the toast is fixed at left:50% and shifted back by half its
+     width, so a width left to shrink-to-fit is capped at the half-viewport to
+     the right of left:50% (195px on a phone), squeezing the settings sentence
+     into seven lines. It sizes to its content, up to its own 80vw. */
+  const sheetCss = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8');
+  const toastRule = (sheetCss.match(/\n\.toast\{[^}]*\}/) || [''])[0];
+  ck('#141 the toast sizes to its words up to 80vw, not to the half-screen right of left:50%',
+     /[{;]width:max-content[;}]/.test(toastRule) && /[{;]max-width:80vw[;}]/.test(toastRule) && /left:50%/.test(toastRule), toastRule);
+  ck('#141 boot keeps a refused fold for the Extensions page, as the source check does',
+     /function boot\(\)\{[\s\S]{0,400}?\n\s*if\(foldLegacySettings\(\)\)extSaveError=saveSettings\(\)\|\|"";/.test(frag('90-boot.js')));
+  ck('#133 confirmSystemChange() asks with askConfirm(), and redraws what reads the system on Yes',
+     /function confirmSystemChange\(sys\)\{[\s\S]*?askConfirm\(\{title:[\s\S]*?changeSystem\(c,plan\);\s*applyTheme\(\);renderCoins\(\);renderInventory\(\);renderChipsAll\(\);renderFeatures\(\);recompute\(\);scheduleSave\(\);/.test(settingsSrc));
 }
 
 /* ================= Fetch all never loses what is loaded (issue #65) ===========

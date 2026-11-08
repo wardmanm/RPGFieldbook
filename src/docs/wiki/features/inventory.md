@@ -272,8 +272,14 @@ under it when the maximum grows (`usesScaleHint()`, `#iUsesHint`), and saves thr
 `usesFromForm()`: an unchanged box keeps a `byLevel` or formula maximum, as the feature form does
 ([Features & traits](features-and-traits.md), #132).
 
-**Coins.** The card lists `coinKeys()` high to low — PP GP EP SP CP (D&D), GP SP CP (Humblewood);
-display order only. Each box takes `signedEntry()` grammar: a number sets, `+10` adds, `-5` spends,
+**Coins.** The card lists `coinKeys()` high to low — PP GP EP SP CP (D&D), GP SP CP (Humblewood),
+and on a Humblewood sheet PP and EP too, in their places, while it holds some (a whole number above
+0: `""`, `0`, `-2` and `abc` show no row). That is a sheet from D&D (a system change converts
+nothing, #133) or an imported one; older Humblewood sheets whose electrum was hidden but weighed show
+it from their first load, with no migration. Adjust coins and both sides of the trade window take
+the same rows, so the give side can pay with a held PP or EP, and Convert folds them into gold and
+silver, after which their rows go. A row whose count reaches 0 goes at the next redraw. Display
+order only. Each box takes `signedEntry()` grammar: a number sets, `+10` adds, `-5` spends,
 empty clears, anything else is rejected and the old value restored; never below zero. Boxes are
 `type="text" inputmode="tel"`, **not** `data-path`, and commit on change or Enter (`applyCoinInput()`).
 **Adjust** (`openCoinAdjust()`) takes a signed amount per coin, previews the totals, and plans the
@@ -377,6 +383,7 @@ the inventory and recompute, because coins have weight.
 | Auto-detecting charges ("7 charges") | No | Phrasing varies too much; a wrong guess is worse than a blank box |
 | Coins: inline entry and Adjust | Both | Either alone: each covers the other's weakness |
 | Reading `"1 2"` in a coin box | Rejected | Coercing to 12: quietly rewrites someone's gold |
+| Platinum and electrum on a Humblewood sheet (#133) | Never converted: shown while held, until spent or converted (Mike, 2026-11-07) | Converting at a system change: it changes the player's numbers, its log line couldn't carry a clean Undo, and the weight goes up. Keeping them hidden: they vanished from the card and the trade window but still weighed (L9865) |
 | What the inventory log records (#47) | Every item and coin change: trades, adds, edits (only when something changed), deletes, Use, coin changes, grants, and one ammunition line per kind per fight | Adds and removes only: an edited quantity would leave no trace. One line per shot: floods the log |
 | Where the log lives (#47) | A Log button on the Equipment card, opening a dialog | A collapsible card at the bottom of Inventory: the tab is already long |
 | How long the log is (#47) | Per character, `invLogSize` 100 · 250 · 500 · 1,000 · 2,500, default 500 | A fixed 1,000: Mike wants it settable. Everything: grows forever |
@@ -440,3 +447,4 @@ the inventory and recompute, because coins have weight.
 - 2026-11-04 — Balance trade; coins split to pay (typed or balanced), each split a receipt line; Complete warns, in the warning window, when short or giving more. → ledger L8780, #168
 - 2026-11-06 — Granted items and gold show at once, on add, change and remove (`renderClassRace()`); a granted weapon, or a new one on the form, arrives equipped with its attack row. → ledger L9101, #153, #128
 - 2026-11-06 — Editing an item keeps a use count that scales (`usesFromForm()`), with the hint under the box. → ledger L9597, #132
+- 2026-11-07 — A Humblewood sheet shows PP and EP while it holds some, on the Coins card, in Adjust and in the trade window. → ledger L9865, #133

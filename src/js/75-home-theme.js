@@ -1,6 +1,4 @@
 /* ================= character library + home ================= */
-function skinForSystem(sys){return sys==="dnd"?"classic":"humblewood";}
-function systemForSkin(skin){return skin==="classic"?"dnd":"humblewood";}
 /* Every path that replaces the open character asks leaveCharacterOk() first
    (70-persistence.js), and returns false, changing nothing, when told No. */
 function loadCharById(id){
@@ -12,7 +10,9 @@ function loadCharById(id){
   try{character=migrate(JSON.parse(raw));}catch(e){return false;}
   luAbandon();   /* #101: a level-up belongs to the sheet it started on */
   activeId=character.id||id;
-  settings.skin=skinForSystem(character.system);saveSettings();applyTheme();
+  /* the skin is the player's, never the character's (#133); applyTheme() still
+     runs, for the wordmark, the title and the header's + Race / + Ancestry */
+  applyTheme();
   renderAll();hideHome();
   /* the sheet on screen is the one in storage, so a warning about the character
      just left (or given up) no longer applies */
@@ -34,7 +34,7 @@ function newCharacter(name,system){
   /* as finishImport(): listed only once stored, and a refusal says so (#81) */
   let why="";try{localStorage.setItem(charKey(c.id),JSON.stringify(c));}catch(e){why=storageWhy(e);}
   if(!why)why=libTouch();
-  settings.skin=skinForSystem(c.system);saveSettings();applyTheme();
+  applyTheme();   /* the skin stays as chosen (#133): only the words follow the system */
   renderAll();hideHome();
   showSaveResult(why);
   return true;
@@ -48,7 +48,8 @@ function deleteCharacter(id){
   const why=libSave(lib);
   if(why){alert("That character couldn't be deleted — "+why+". It is still in your library.");renderHome();return why;}
   try{localStorage.removeItem(charKey(id));}catch(e){}
-  if(activeId===id)activeId=null;
+  /* no character open now, so the title and wordmark follow the skin again (#133) */
+  if(activeId===id){activeId=null;applyTheme();}
   renderHome();return "";
 }
 function setAutoload(id){const lib=libLoad();lib.autoload=(lib.autoload===id)?null:id;const why=libSave(lib);renderHome();if(why)alert("Couldn't change which character opens first — "+why+".");return why;}
@@ -116,7 +117,7 @@ function openNewCharacter(){
     <div class="field"><label class="f">Name</label><input id="ncName" placeholder="Character name" autocomplete="off"></div>
     <div class="field"><label class="f">System</label>
       <div class="seg" id="ncSys"><button type="button" data-sys="humblewood" class="on">Humblewood</button><button type="button" data-sys="dnd">D&amp;D</button></div>
-      <p class="hint">Sets the sheet's look and wordmark — you can change it later in Settings. All loaded rules stay available either way.</p></div>
+      <p class="hint">The game this character is for. It sets the coins, the ancestries you're offered and your starting languages. Classes, spells, feats and items from every loaded pack are offered either way. You can change it later in Settings → Sheet display.</p></div>
     <div class="m-actions"><button class="tbtn" id="ncCancel">Cancel</button><button class="tbtn primary" id="ncCreate">Create</button></div>`);
   let sys="humblewood";
   document.querySelectorAll("#ncSys button").forEach(b=>b.addEventListener("click",()=>{sys=b.dataset.sys;document.querySelectorAll("#ncSys button").forEach(x=>x.classList.toggle("on",x===b));}));
@@ -134,16 +135,89 @@ function applyTheme(){
   /* "icons" forces glyph tabs at any width; "labels" leaves it to the viewport,
      which switches on its own when seven words stop fitting. */
   document.documentElement.dataset.tabs=settings.tabIcons?"icons":"labels";
-  const wm=(settings.skin==="classic")?{main:"D&D",sub:"Character Sheet",title:"D&D Character Sheet"}
-                                       :{main:"Humblewood",sub:"The Fieldbook",title:"Fieldbook — Humblewood"};
+  /* The wordmark and the page title read like the game, so they follow the open
+     character's system, not the skin (#133). With no character open there is no
+     system to follow, and they follow the skin. */
+  const dnd=activeId?character.system==="dnd":settings.skin==="classic";
+  const wm=dnd?{main:"D&D",sub:"Character Sheet",title:"D&D Character Sheet"}
+              :{main:"Humblewood",sub:"The Fieldbook",title:"Fieldbook — Humblewood"};
   const wmM=document.getElementById("wmMain"),wmS=document.getElementById("wmSub");
   if(wmM)wmM.textContent=wm.main; if(wmS)wmS.textContent=wm.sub;
   document.title=wm.title;
-  /* the header's "+ Species" / "+ Race" follows the skin (raceTerm()) */
+  /* the header's "+ Race" / "+ Ancestry" follows the character's system (raceTerm()) */
   if(document.getElementById("sheetHead"))renderSheetHead();
   const on=t==="dark";
   document.getElementById("themeIcon").innerHTML=on
     ?'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'
     :'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>';
+}
+
+/* ================= a character's game system (#133) =================
+   Changed from the Game system row on Settings → Sheet display, never by the
+   skin. A tap on the other system first works out everything the change would
+   do (systemChangePlan, pure: it writes nothing), the warning says it
+   (systemChangeLines, which reads only the plan), and Yes applies that same
+   plan (changeSystem), so the warning and the change can't disagree. Nothing
+   converts coins and nothing is logged: platinum and electrum stay in the
+   purse, and a Humblewood sheet shows them while it holds some (coinKeys()). */
+function systemChangePlan(c,sys){
+  const from=(c&&c.system==="dnd")?"dnd":"humblewood",to=sys==="dnd"?"dnd":"humblewood";
+  const langs=swapDefaultLanguages({system:from,languages:JSON.parse(JSON.stringify((c&&c.languages)||[]))},to);
+  let coins=null;
+  if(to==="dnd")coins={gain:true};
+  else{const held=k=>Math.max(0,num(c&&c.coins&&c.coins[k]));const pp=held("pp"),ep=held("ep");if(pp>0||ep>0)coins={pp,ep};}
+  /* an ancestry the new system's + Race / + Ancestry list leaves out (the
+     picker's own rule, raceOfferedTo()) stays on the sheet, and the warning says so */
+  const rn=c&&c.race&&typeof c.race.name==="string"?c.race.name.trim():"";
+  const def=rn?findRaceDef(rn):null;
+  const ancestryStays=(def&&!raceOfferedTo(def,to))?rn:"";
+  const advDiffers=JSON.stringify(advancementFor({system:from}))!==JSON.stringify(advancementFor({system:to}));
+  return {from,to,langs,coins,ancestryStays,advDiffers,
+    term:to==="dnd"?"Race":"Ancestry",wordmark:to==="dnd"?"D&D Character Sheet":"Humblewood"};
+}
+/* The warning's sentences, each only when it applies, in a fixed order: coins,
+   the ancestry list, an ancestry that stays, languages, the XP table, the
+   words, and always the last two. Plain text: askConfirm() sets textContent. */
+function systemChangeLines(p){
+  const game=s=>s==="dnd"?"D&D":"Humblewood";
+  const list=a=>a.length<2?a.join(""):a.slice(0,-1).join(", ")+" and "+a[a.length-1];
+  const out=[],L=p.langs||{drop:[],add:[],keep:[]};
+  if(p.coins&&p.coins.gain)out.push("Coins gain platinum and electrum.");
+  else if(p.coins){
+    const held=[["pp","PP"],["ep","EP"]].filter(([k])=>p.coins[k]>0).map(([k,l])=>p.coins[k]+" "+l);
+    const one=held.length===1&&(p.coins.pp===1||p.coins.ep===1);
+    if(held.length)out.push("Your "+list(held)+(one?" stays":" stay")+" on the Coins card until you spend or convert them.");
+  }
+  out.push(p.to==="dnd"?"The + Race list offers D&D species.":"The + Ancestry list offers Humblewood ancestries.");
+  if(p.ancestryStays)out.push(p.ancestryStays+" stays on the sheet.");
+  if(L.drop.length)out.push(list(L.drop)+(L.drop.length===1?" (a "+game(p.from)+" default) goes":" ("+game(p.from)+" defaults) go")+
+    (L.keep.length?"; "+list(L.keep)+(L.keep.length===1?" stays":" stay"):"")+".");
+  if(L.add.length)out.push(list(L.add)+(L.add.length===1?" is added.":" are added."));
+  if(p.advDiffers)out.push("The XP bar uses "+game(p.to)+"'s table.");
+  out.push("The sheet says "+p.term+", and the top bar reads "+p.wordmark+".");
+  out.push("Classes, spells, feats and items from every loaded pack stay available. The look doesn't change: that's Skin, on Appearance.");
+  return out;
+}
+/* Applies a plan to c alone: the system, then the plan's own language swap,
+   exactly as the warning said it. It does not ask the rules again: a pack
+   installed or removed while the question was open must not change what Yes
+   does. Drops the planned "system" chips, adds the planned names the sheet
+   lacks (case-blind), and never touches the player's or a grant's chips.
+   Returns what it did. The coins are not touched and nothing is logged (spec
+   decision 10); the caller redraws and saves. */
+function changeSystem(c,plan){
+  const out={drop:[],add:[],keep:[]};
+  if(!c||!plan)return out;
+  const L=plan.langs||{},list=a=>(Array.isArray(a)?a:[]).filter(n=>typeof n==="string"&&n.trim());
+  const drop=new Set(list(L.drop).map(n=>n.trim().toLowerCase()));
+  c.system=plan.to;
+  const have=chipClean(c.languages,"languages",true).filter(x=>{
+    if(x.src==="system"&&drop.has(x.name.toLowerCase())){out.drop.push(x.name);return false;}
+    return true;});
+  const names=new Set(have.map(x=>x.name.toLowerCase()));
+  list(L.add).forEach(n=>{const k=n.trim().toLowerCase();if(!names.has(k)){have.push({id:uid(),name:n.trim(),src:"system"});names.add(k);out.add.push(n.trim());}});
+  out.keep=list(L.keep);
+  c.languages=have;
+  return out;
 }
 

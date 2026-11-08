@@ -20,7 +20,9 @@ backup of settings and rules, and the credits that the icons, the fonts and the 
 `extFocusTargets()`, `wireExtPage()`, `extGithubLink()`, `extGhApi()`, `extGhHeaders()`, `extGhPickTag()`, `extGhTags()`, `extGhWhy()`, `addSource()`, `openChangeToken()`, `extSettingsForExport()`, `extKeepTokens()`, `extUpdateFromRows()`, `extPlanHTML()`, `extPlanRow()`, `openInstallPlan()`,
 `extInstalledText()`, `openManualInstall()`, `extManualPlan()`, `extSkippedNote()`, `extWireDrop()`, `extDropZone()`,
 `renderExtPill()`, `extPillCount()`, `dismissUpdates()`, `extPillFocusBack()`, `extTooNewWhy()` in
-`89-extensions.js` · `rulesUpdatePending()` in `88-settings.js` · `saveSettings()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
+`89-extensions.js` · `rulesUpdatePending()`, `confirmSystemChange()` in `88-settings.js` ·
+`systemChangePlan()`, `systemChangeLines()`, `changeSystem()` in `75-home-theme.js` ·
+`swapDefaultLanguages()` in `41-chips.js` · `saveSettings()`, `saveSettingsSaid()` in `70-persistence.js` · `APP_VERSION`, `DATA_VERSIONS`, `UPDATE_REPO`, `CHANGELOG`, `cmpVer()`,
 `cmpDataVer()`, `checkForUpdate()`, `showUpdatePill()`, `updBannerHTML()`, `openChangelog()`,
 `pickDataRelease()`, `dataUpdateFrom()`, `checkForDataUpdate()` in `30-version.js` ·
 `boot()`, `wire()` in `90-boot.js` · `release.js`, `data-release.js`, `gen-changelog.js` in
@@ -31,7 +33,8 @@ driven through its real handler), `data-archive.js` (the #102 page, dialog, plan
 pill sections against a fake DOM and a stubbed network, every manifest string escaped, the
 `update` state, the hint line, the badge's suffix, `pickDataRelease()`, `dataUpdateFrom()`,
 `checkForDataUpdate()` against a stubbed network, and the credits list escaping hostile text),
-`char-update.js` (`cmpVer()`, `updBannerHTML()`) · **See also:**
+`char-update.js` (`cmpVer()`, `updBannerHTML()`), `sheet.js` (#133: the Game system plan, its
+sentences, the question and the control driven through Cancel and Yes) · **See also:**
 [Rules packs](../architecture/rules-packs.md), [Data archive](../architecture/data-archive.md),
 [Storage](../architecture/storage.md),
 [Rules-update tool](rules-update-tool.md), [Ammunition](ammunition.md),
@@ -50,8 +53,8 @@ and actions are buttons.
 
 | Page | Groups and settings |
 |---|---|
-| **Appearance** | *Look:* skin (changing it with a character open also sets its `system`), mode (system/light/dark), hand-drawn borders. *Interface:* icon tabs, "Tap outside to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)) |
-| **Sheet display** | Only with a character open, titled "For *name*". *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card. *Levels and companions*: Advancement (XP or Milestone, #103); **Feats allowed** (#118), the switch `swFeats`, which writes `character.featsAllowed` and reads "Offer a feat instead of an Ability Score Improvement. Turning it off keeps the feats you have." Off, the next ASI step draws only the +2 / +1+1 controls ([Character building](character-building.md)); then the Familiars & companions icon. *Ammunition* (#104): "Ammo recovery" — Half (rules as written) / All / Hits only / None, writing `character.ammoRecovery`. *Inventory* (#47): "Inventory log size" — 100 / 250 / 500 / 1,000 / 2,500 (`INV_LOG_SIZES`), through `setInvLogSize()`, which writes `character.invLogSize` and trims `character.invLog` at once: a smaller size that would drop lines first asks "Keep the newest 100? This removes 2,400 older lines.", and declined, the size and the select stay as they were (see [Inventory](inventory.md)). *Tabs* (#52): one switch per word tab, writing `character.hiddenTabs` |
+| **Appearance** | *Look:* skin ("How Fieldbook looks: colours, lettering and frames. It doesn't change any character.", #133), mode (system/light/dark), hand-drawn borders. *Interface:* icon tabs, "Tap outside to close dialogs" (`settings.backdropClose`, off by default, #106; see [Shell](../ui/shell.md)) |
+| **Sheet display** | Only with a character open, titled "For *name*". *Game* (#133): **Game system**, Humblewood or D&D (`#segSystem`), "The game this character is for. It sets the coins, the ancestries you're offered and the default languages." It asks first (below). *Cards:* skills display, Hit Dice display, colour current HP, the Trackers card. *Levels and companions*: Advancement (XP or Milestone, #103); **Feats allowed** (#118), the switch `swFeats`, which writes `character.featsAllowed` and reads "Offer a feat instead of an Ability Score Improvement. Turning it off keeps the feats you have." Off, the next ASI step draws only the +2 / +1+1 controls ([Character building](character-building.md)); then the Familiars & companions icon. *Ammunition* (#104): "Ammo recovery" — Half (rules as written) / All / Hits only / None, writing `character.ammoRecovery`. *Inventory* (#47): "Inventory log size" — 100 / 250 / 500 / 1,000 / 2,500 (`INV_LOG_SIZES`), through `setInvLogSize()`, which writes `character.invLogSize` and trims `character.invLog` at once: a smaller size that would drop lines first asks "Keep the newest 100? This removes 2,400 older lines.", and declined, the size and the select stay as they were (see [Inventory](inventory.md)). *Tabs* (#52): one switch per word tab, writing `character.hiddenTabs` |
 | **Carrying** | Only with a character open, titled "For *name*". *Size and weight:* size (a dropdown), encumbrance (segmented: Off, Standard, Variant), coins count as weight, and the live "carrying X of Y" line (`encSettingsHint()`) |
 | **Extensions** (Rules data until #102; a stored `setPage:"rules"` opens it) | The updates banner, *Rules data*, *Unsupported* (only when something is in it) and *Sources*, each a folding section (below); then the status line, and *This sheet* (with a character open): the rules-update check, with the version the sheet was last checked against |
 | **Backup** | *Characters:* the character library. *Settings file:* Export and Import, and the status line that says what an import did (`#setImpStatus`) |
@@ -79,6 +82,38 @@ their own. The Sheet and the combat swords are not listed; they can't be hidden
 ([Shell](../ui/shell.md)). Its id is `swTab-<name>`, `data-tabsw="<name>"`, and a per-button click
 handler (`88-settings.js:228-232`) calls `setTabHidden()`, which updates `character.hiddenTabs`,
 repaints the bar (`applyHiddenTabs()`) and saves — the `swFamiliars` pattern.
+
+**The Game system row (#133).** A tap on the system the character already has does nothing. A tap
+on the other one calls `confirmSystemChange()`, which works the change out first with
+`systemChangePlan()`: pure, it reads the character and the loaded rules and writes nothing, and its
+`langs` come from running `swapDefaultLanguages()` on a scratch copy, so there is one swap rule.
+`askConfirm()` then asks, over Settings, which stays open: "Make *name* a D&D character?" (or "a
+Humblewood character?", "this character" for an unnamed sheet), Cancel / "Make it D&D". The message
+is `systemChangeLines()`, read only from the plan, one sentence each, only when it applies:
+
+1. the coins: "Coins gain platinum and electrum." to D&D; to Humblewood while the sheet holds some,
+   "Your 3 PP and 4 EP stay on the Coins card until you spend or convert them.";
+2. "The + Race list offers D&D species." / "The + Ancestry list offers Humblewood ancestries.";
+3. an ancestry the new system's list would leave out, by the picker's own rule (`raceOfferedTo()`:
+   its source's system, or its pack's `excludeSystems`, so Tasha's Custom Lineage going to
+   Humblewood counts): "Strig stays on the sheet.";
+4. languages, when chips change: "Humblefolk (a Humblewood default) goes; Common stays.", then
+   "Dwarvish is added." (lists read "A and B", "A, B and C");
+5. "The XP bar uses D&D's table." when `advancementFor()` differs between the two;
+6. "The sheet says Race, and the top bar reads D&D Character Sheet." (or Ancestry / Humblewood);
+7. always: "Classes, spells, feats and items from every loaded pack stay available. The look doesn't
+   change: that's Skin, on Appearance."
+
+Yes applies that same plan with `changeSystem()`: `system`, then the plan's own default-language
+swap, as it stands, even if the loaded rules changed while the question was open
+([Character model](../architecture/character-model.md)). The coins are not touched and nothing is
+logged ([Inventory](inventory.md)). It then redraws what reads the system: `applyTheme()` (wordmark,
+title, header), the coins and the inventory's weight, the language chips, the features list, then
+`recompute()` and `scheduleSave()`, whose `libTouch()` updates the home card's badge. Only then does
+the control's handler move its `on` class and `aria-pressed`: the page's delegated listener reads
+`on`, so Cancel, Escape or a dismissal leave the control and the character exactly as they were.
+Languages, ancestry data and the XP table are inert with today's packs, which declare no
+`defaultLanguages` or `advancement`.
 
 **Which page opens.** Every shown page is built when the dialog opens and all but one are
 `hidden`, so every control keeps its id and its handler, and the lists keep refreshing behind any
@@ -210,7 +245,9 @@ version never hides anything. The page's rows, banner and Update all are unaffec
 `renderExtPill()` runs at wire time, from the manifests saved at the last check, and after every
 repaint. Up to 560px, the notices move after the top bar's buttons, onto a row of their own (see
 [Shell](../ui/shell.md)). After either ×, focus goes to the version button if it shows, else Home
-(`extPillFocusBack()`), and a save that doesn't land toasts the error.
+(`extPillFocusBack()`), and a save that doesn't land says so through `saveSettingsSaid()`, in its own
+sentence: "Couldn't save that you cleared the notice: *why*." (once a session, as every settings
+toast is; see [Storage](../architecture/storage.md)).
 
 **Pack badges.** `dataStatus(g)` compares the pack's `_dataVersion` (its `dataVersion`, stamped at
 merge by `mergeRules()`) with `cmpDataVer()`, first against `DATA_VERSIONS[source]` and then against
@@ -401,6 +438,9 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 | Get templates (#102) | Removed | — |
 | The plan while it installs (#102, Ruling 14) | Can't be dismissed; × and Escape say to wait | Dismissed but still running, toasting later: more confusing than a wait bounded by the file timeout (L7428) |
 | Where a player hides a tab (#52) | Settings → Sheet display gets a Tabs group, one switch per word tab | A long-press on the tab itself to unhide it: invisible, and clashes with the phone's own long-press gesture |
+| How a character's system is changed (#133) | A Game system row on the character's Settings page that says what will change and asks first (Mike, 2026-11-07) | Skin doing it: a control about looks rewrote the character's coins, ancestry list and languages without a word (L9865) |
+| Where the Game system row is (#133) | Sheet display, in a new first group "Game": the page headed "For *name*", where per-character choices go | Appearance: that page is app-wide, and a per-character control there is what caused #133 (L9865) |
+| What the warning says (#133) | Only what changes for this character, a sentence each, from one pure plan the change also applies | A fixed paragraph: it names changes that don't apply, so players learn to skip it. Working out the warning and the change apart: they could disagree (L9865) |
 | Feats allowed's default (#118, decision 4) | On for every character: feats are core in 2024 and SRD 5.2, and Humblewood's own text offers them | Off for Humblewood: its text says otherwise. Asked once per character: one more dialog |
 | Who makes a player's token (#182) | The owner, one read-only fine-grained token per player (their account as resource owner, one repo, Contents read-only, an expiry); players need no GitHub account | Players as collaborators making their own: a fine-grained token has one resource owner, and the only way round is a classic token that reads and writes every repo the player reaches |
 | How an owner publishes (#182) | Numbered releases tagged `data-vX.Y.Z-N` in the repo, made with the kit's `release`; pushing `main` publishes nothing | "Push and the table sees it": no versions to match against the app |
@@ -477,3 +517,4 @@ hasn't loaded are never mentioned. Every failure is silent; the link, like the p
 - 2026-11-05 — A link holding a token is refused unfetched; a source whose token is refused offers nothing. → ledger L9046, #182
 - 2026-11-06 — Remove and Remove all say on their status line, and the home screen's, when the change couldn't be saved. → ledger L9281, #143
 - 2026-11-06 — Credits gains the fonts' line, beside the icons'. → ledger L9357, #144
+- 2026-11-07 — Skin is look only; Sheet display opens with a Game group whose Game system row asks first, in sentences from one plan, and applies that plan on Yes; a refused settings save toasts once a session through `saveSettingsSaid()`, the pills' × included. → ledger L9865, #133, #141

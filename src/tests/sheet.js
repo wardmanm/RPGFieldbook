@@ -114,6 +114,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'featPendingIncreases', 'asiRowHidden',
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
+  'raceTerm', 'applyTheme', 'finishSettingsImport', 'swapDefaultLanguages', 'tradeCoinsHTML',
+  'systemChangePlan', 'systemChangeLines', 'changeSystem', 'confirmSystemChange', 'racesForCharacter',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -841,10 +843,11 @@ sheet({coins: {cp: '', sp: '', ep: '', gp: '', pp: ''}});
 ck('an empty purse weighs nothing', X.coinsWeight() === 0);
 sheet({coins: {gp: 500}, coinWeight: false});
 ck('the coin-weight switch turns it off', X.coinsWeight() === 0);
-// electrum is D&D-only, so coinKeys() hides it on a Humblewood sheet — but an
-// imported character can still be carrying some, and it is still in the purse.
+// a Humblewood sheet has no electrum of its own, but an imported or switched
+// character can be carrying some: it is in the purse, so it weighs, and since
+// #133 coinKeys() shows its row while it is held.
 sheet({system: 'humblewood', coins: {cp: '', sp: '', ep: 50, gp: '', pp: ''}});
-ck('electrum counts even when the skin does not show it', X.coinsWeight() === 1);
+ck('electrum counts on a Humblewood sheet, which shows it while held', X.coinsWeight() === 1);
 
 // ---------- the total
 sheet({coins: {gp: 100}, inventory: [item({weight: 3}), item({weight: 0.05, qty: 20})]});
@@ -9475,6 +9478,373 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
 
 /* ---- end of the Bio chips block ---- */
 
+/* ====== 1.9.1 Skin & settings saves: #133, #141 (block A) =====================
+   The checks on the shared X/ctx. One synchronous block, here, above the async
+   chain at the end of the file: a synchronous block after that chain's first
+   line would run while t118EndToEnd() holds its mocks. The checks that need a
+   fresh app (#141's once-a-session memory, blocked storage, the boot fold) are
+   block B, at the very end of the file. */
+{
+  /* the Humblewood system, never its private pack: docs.js's leak scan reads the
+     system's name as a call's first argument as a pack read, so calls take HW */
+  const HW = 'humblewood';
+  const keep = {ch: X.character, id: X.activeId, rules: X.rules, skin: X.settings.skin, gid: ctx.document.getElementById,
+    de: ctx.document.documentElement, title: ctx.document.title};
+  /* a recorder for what applyTheme() writes: the wordmark, the theme glyph and
+     <html>'s attributes. No #sheetHead, so it leaves the header alone. */
+  const themeDOM = () => {
+    const els = {wmMain: {textContent: ''}, wmSub: {textContent: ''}, themeIcon: {innerHTML: ''}};
+    const root = {dataset: {}};
+    ctx.document.getElementById = id => id === 'sheetHead' ? null : (els[id] || keep.gid(id));
+    ctx.document.documentElement = root;
+    return {els, root};
+  };
+  const undoDOM = () => { ctx.document.getElementById = keep.gid; ctx.document.documentElement = keep.de; };
+  try {
+    /* ---- #133 Skin is look only: opening, making or importing a character never writes it */
+    X.settings.skin = 'humblewood';
+    ctx.newCharacter('S', 'dnd');
+    const sid = X.character.id;
+    ck('#133 newCharacter(\'S\',\'dnd\') under the humblewood skin leaves settings.skin \'humblewood\'',
+       X.settings.skin === 'humblewood' && X.character.system === 'dnd', [X.settings.skin, X.character.system]);
+    X.character = X.blankChar(); X.activeId = null;
+    ctx.loadCharById(sid);
+    ck('#133 ...and so does loadCharById() of that sheet',
+       X.settings.skin === 'humblewood' && X.character.id === sid && X.character.system === 'dnd', [X.settings.skin, X.character.id]);
+    ctx.finishImport(X.migrate(Object.assign(X.blankChar(), {id: 'imp133', name: 'Imported', system: 'dnd'})));
+    ck('#133 ...and so does finishImport() of a D&D character',
+       X.settings.skin === 'humblewood' && X.character.id === 'imp133' && X.character.system === 'dnd', [X.settings.skin, X.character.id]);
+
+    /* ---- #133 what reads like the game follows the character's system */
+    X.character = X.blankChar(); X.character.system = 'dnd';
+    X.settings.skin = 'humblewood'; const r1 = X.raceTerm();
+    X.settings.skin = 'classic'; const r2 = X.raceTerm();
+    ck('#133 raceTerm is \'Race\' for a D&D character under either skin', r1 === 'Race' && r2 === 'Race', [r1, r2]);
+    X.character.system = 'humblewood';
+    X.settings.skin = 'classic'; const r3 = X.raceTerm();
+    X.settings.skin = 'humblewood'; const r4 = X.raceTerm();
+    ck('#133 ...and \'Ancestry\' for a Humblewood one, under either skin', r3 === 'Ancestry' && r4 === 'Ancestry', [r3, r4]);
+
+    X.character = X.blankChar(); X.character.system = 'dnd'; X.character.id = 'dnd133'; X.activeId = 'dnd133';
+    X.settings.skin = 'humblewood';
+    let d = themeDOM();
+    try { X.applyTheme(); } finally { undoDOM(); }
+    ck('#133 applyTheme with a D&D character open under the humblewood skin: the wordmark and title follow the system',
+       d.els.wmMain.textContent === 'D&D' && d.els.wmSub.textContent === 'Character Sheet' && ctx.document.title === 'D&D Character Sheet',
+       [d.els.wmMain.textContent, d.els.wmSub.textContent, ctx.document.title]);
+    ck('#133 ...and data-skin the skin', d.root.dataset.skin === 'humblewood', d.root.dataset);
+    X.activeId = null;
+    d = themeDOM();
+    try { X.applyTheme(); } finally { undoDOM(); }
+    ck('#133 ...with no character open, the wordmark follows the skin',
+       d.els.wmMain.textContent === 'Humblewood' && d.els.wmSub.textContent === 'The Fieldbook' && ctx.document.title === 'Fieldbook — Humblewood',
+       [d.els.wmMain.textContent, ctx.document.title]);
+    X.settings.skin = 'classic';
+    d = themeDOM();
+    try { X.applyTheme(); } finally { undoDOM(); }
+    ck('#133 ...the Classic skin\'s, with none open', d.els.wmMain.textContent === 'D&D' && ctx.document.title === 'D&D Character Sheet' && d.root.dataset.skin === 'classic',
+       [d.els.wmMain.textContent, ctx.document.title, d.root.dataset.skin]);
+
+    /* review: deleting the open character leaves no character open, so the
+       title and wordmark go back to the skin's (decision 6) */
+    X.settings.skin = 'humblewood';
+    ctx.newCharacter('Gone', 'dnd');
+    const goneId = X.character.id;
+    ctx.newCharacter('Kept', 'dnd');
+    const keptId = X.character.id;
+    d = themeDOM();
+    try { ctx.deleteCharacter(goneId); } finally { undoDOM(); }
+    ck('#133 deleting a character that isn\'t open leaves the open one and its title alone',
+       X.activeId === keptId && d.els.wmMain.textContent === '', [X.activeId, d.els.wmMain.textContent]);
+    d = themeDOM();
+    try { ctx.deleteCharacter(keptId); } finally { undoDOM(); }
+    ck('#133 deleting the open D&D character under the humblewood skin: the title and wordmark follow the skin again',
+       X.activeId == null && d.els.wmMain.textContent === 'Humblewood' && ctx.document.title === 'Fieldbook — Humblewood',
+       [X.activeId, d.els.wmMain.textContent, ctx.document.title]);
+
+    /* Review Focus 5: a settings file's skin changes the look, not the open character */
+    X.character = X.blankChar(); X.character.system = 'humblewood'; X.character.id = 'hw133'; X.character.name = 'Wren'; X.activeId = 'hw133';
+    X.settings.skin = 'humblewood';
+    d = themeDOM();
+    try { X.finishSettingsImport({settings: {skin: 'classic'}, pool: null, used: 0, skipped: 0}, false); } finally { undoDOM(); }
+    ck('#133 Import settings carrying skin:"classic" with a Humblewood character open changes the skin',
+       X.settings.skin === 'classic' && d.root.dataset.skin === 'classic', [X.settings.skin, d.root.dataset.skin]);
+    ck('#133 ...but not the character\'s system, raceTerm() or the wordmark',
+       X.character.system === 'humblewood' && X.raceTerm() === 'Ancestry' && d.els.wmMain.textContent === 'Humblewood',
+       [X.character.system, X.raceTerm(), d.els.wmMain.textContent]);
+    X.settings.skin = 'humblewood';
+
+    /* ---- #133 the default-language swap. No shipped pack declares
+       defaultLanguages, so it is stubbed: one list per ruleset. */
+    const chip = (name, src, id) => ({id: id || 'l-' + name, name, src});
+    const langKey = c => (c.languages || []).map(x => x.name + '|' + x.src).sort().join(', ');
+    const STUB = {'Humblewood': ['Common', 'Humblefolk'], 'XPHB': ['Common', 'Dwarvish']};
+    const keepDL = X.rules.defaultLanguages;
+    try {
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      let c = {system: 'humblewood', languages: [chip('Common', 'system'), chip('Humblefolk', 'system'), chip('Elvish', ''), chip('Sylvan', 'race:Elf')]};
+      let got = X.swapDefaultLanguages(c, 'dnd');
+      ck('#133 swapDefaultLanguages to dnd: drops the default the new ruleset lacks, adds its own, says which stayed',
+         JSON.stringify(got) === JSON.stringify({drop: ['Humblefolk'], add: ['Dwarvish'], keep: ['Common']}), got);
+      ck('#133 ...the player\'s Elvish and the species\' Sylvan are untouched',
+         c.languages.some(x => x.id === 'l-Elvish' && x.name === 'Elvish' && x.src === '') &&
+         c.languages.some(x => x.id === 'l-Sylvan' && x.name === 'Sylvan' && x.src === 'race:Elf'), c.languages);
+      const dw = c.languages.find(x => x.name === 'Dwarvish');
+      ck('#133 ...Dwarvish arrives stamped system, with an id', !!dw && dw.src === 'system' && typeof dw.id === 'string' && dw.id !== '', dw);
+      ck('#133 ...and Common keeps its own chip', c.languages.filter(x => x.name === 'Common').length === 1 && c.languages.find(x => x.name === 'Common').id === 'l-Common');
+      ck('#133 ...c.system is not the swap\'s to change', c.system === 'humblewood');
+      /* the player's chips and the grants' are never dropped, whatever their names */
+      c = {system: 'humblewood', languages: [chip('Common', 'system'), chip('humblefolk', ''), chip('Dwarvish', 'bg:Sage')]};
+      got = X.swapDefaultLanguages(c, 'dnd');
+      ck('#133 ...a player chip named like an old default stays, and a grant naming a new one is not doubled',
+         JSON.stringify(got) === JSON.stringify({drop: [], add: [], keep: ['Common']}) && langKey(c) === 'Common|system, Dwarvish|bg:Sage, humblefolk|', [got, langKey(c)]);
+      /* the other way, case-blind */
+      c = {system: 'dnd', languages: [chip('common', 'system'), chip('Dwarvish', 'system')]};
+      got = X.swapDefaultLanguages(c, 'humblewood');
+      ck('#133 ...to humblewood, matched case-blind',
+         JSON.stringify(got) === JSON.stringify({drop: ['Dwarvish'], add: ['Humblefolk'], keep: ['common']}), got);
+      /* no declared defaults: every ruleset's default is Common, so nothing moves */
+      X.rules.defaultLanguages = {};
+      c = {system: 'humblewood', languages: [chip('Common', 'system'), chip('Elvish', ''), chip('Sylvan', 'race:Elf')]};
+      const before = JSON.stringify(c.languages);
+      got = X.swapDefaultLanguages(c, 'dnd');
+      ck('#133 swapDefaultLanguages with no declared defaults: languages unchanged, nothing dropped or added',
+         JSON.stringify(c.languages) === before && got.drop.length === 0 && got.add.length === 0, [got, c.languages]);
+    } finally { X.rules.defaultLanguages = keepDL; }
+
+    /* ---- coins: a Humblewood sheet shows PP or EP while it holds some (decision 10) */
+    const purse = (coins, system) => { X.character = X.blankChar(); X.character.system = system || 'humblewood'; X.character.coins = Object.assign({cp: '', sp: '', ep: '', gp: '', pp: ''}, coins); return X.character; };
+    const keys = () => JSON.stringify(X.coinKeys());
+    purse({ep: 50});
+    ck('#133 coinKeys on a Humblewood sheet holding EP: EP between GP and SP', keys() === '["gp","ep","sp","cp"]', X.coinKeys());
+    purse({pp: 3, ep: 4});
+    ck('#133 ...holding PP and EP: PP first', keys() === '["pp","gp","ep","sp","cp"]', X.coinKeys());
+    const junk = ['abc', '-2', 0, ''].map(v => { purse({ep: v, pp: v}); return keys(); });
+    ck('#133 ...junk, negative, 0 or empty PP and EP show no row', junk.every(k => k === '["gp","sp","cp"]'), junk);
+    purse({ep: '3'});
+    ck('#133 ...while "3" does', keys() === '["gp","ep","sp","cp"]', X.coinKeys());
+    purse({});
+    ck('#133 ...an empty Humblewood purse is GP SP CP, as before', keys() === '["gp","sp","cp"]', X.coinKeys());
+    const dndKeys = [{}, {pp: 0, ep: ''}, {ep: 9}].map(cs => { purse(cs, 'dnd'); return keys(); });
+    ck('#133 a D&D sheet gives all five, whatever it holds', dndKeys.every(k => k === '["pp","gp","ep","sp","cp"]'), dndKeys);
+    /* Convert keeps its own rule: the value, in the highest coins this system uses */
+    let p = purse({ep: 50});
+    X.convertCoins();
+    ck('#133 Convert on a Humblewood sheet holding ep:50 folds it into gold (2,500 cp is 25 gp), and EP leaves coinKeys()',
+       p.coins.gp === 25 && p.coins.ep === '' && p.coins.sp === '' && keys() === '["gp","sp","cp"]', [p.coins, X.coinKeys()]);
+    p = purse({ep: 3, pp: 1});
+    X.convertCoins();
+    ck('#133 ...and an odd count into gold and silver: 1 PP and 3 EP make 11 GP 5 SP',
+       p.coins.gp === 11 && p.coins.sp === 5 && p.coins.pp === '' && p.coins.ep === '' && keys() === '["gp","sp","cp"]', p.coins);
+    /* the trade window, on a Humblewood sheet holding 3 PP and 4 EP: each give box
+       capped by tradeGiveCap() as tradeHTML() builds them, and a payment in gold
+       broken from the held platinum (#168's split reads coinKeys()) */
+    const tch = purse({pp: 3, ep: 4});
+    const caps = Object.fromEntries(X.coinKeys().map(k => [k, X.tradeGiveCap(X.newTradeDraft(), tch, k)]));
+    const give = X.tradeCoinsHTML('give', {}, caps);
+    ck('#133 the trade window\'s give side offers the held PP and EP, each capped by tradeGiveCap()',
+       JSON.stringify(caps) === '{"pp":3,"gp":30,"ep":4,"sp":320,"cp":3200}' &&
+       /data-trcoin="give:pp"[^>]*max="3"/.test(give) && /data-trcoin="give:ep"[^>]*max="4"/.test(give) && /data-trcoin="give:gp"[^>]*max="30"/.test(give), [caps, give]);
+    const split = X.tradeSplitPlan({gp: 15}, tch.coins);
+    ck('#133 ...and 15 GP is paid by splitting 2 of the held PP',
+       JSON.stringify(split) === '[{"from":"pp","into":"gp","n":2}]' && JSON.stringify(X.tradeSplitText(split)) === '["2 PP into 20 GP"]', [split, X.tradeSplitText(split)]);
+
+    /* ---- #133 the Game system row: the plan, the warning's words, the change */
+    const keepRaces = X.rules.races, keepAdv = X.rules.advancement, keepAsk = ctx.askConfirm;
+    /* a sheet as ensureDefaultLanguages() leaves it under the defaults in force,
+       with one chip of the player's and one a species granted */
+    const sheetFor = (system, extra) => Object.assign(X.blankChar(), {system, name: 'Wren', id: 'sys133',
+      languages: X.defaultLanguagesFor({system}).map(n => chip(n, 'system')).concat([chip('Elvish', ''), chip('Sylvan', 'race:Elf')]),
+      coins: {cp: 7, sp: '', ep: '', gp: 10, pp: ''}, invLog: [{id: 'g1', t: 1, kind: 'coins', title: 'Found', delta: {gp: 10}}]}, extra || {});
+    const tail = ['Classes, spells, feats and items from every loaded pack stay available. The look doesn\'t change: that\'s Skin, on Appearance.'];
+    try {
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      /* Custom Lineage is how a D&D supplement systemOf() can't place keeps out of
+         a Humblewood list: its pack's excludeSystems; Gribbly is homebrew, offered to both */
+      X.rules.races = [{name: 'Strig', _source: 'Humblewood'}, {name: 'Elf', _source: 'XPHB'},
+        {name: 'Custom Lineage', _source: 'TCE', _excludeSystems: ['humblewood']}, {name: 'Gribbly', _source: 'MyHomebrew'}];
+      X.rules.advancement = undefined;
+      /* the plan writes nothing, and the change does what it said */
+      let c = sheetFor(HW, {coins: {cp: '', sp: '', ep: 4, gp: 10, pp: 3}, race: {name: 'Strig'}});
+      const snap = JSON.stringify(c), logSnap = JSON.stringify(c.invLog);
+      let plan = X.systemChangePlan(c, 'dnd');
+      ck('#133 systemChangePlan writes nothing: the character and its inventory log are as they were',
+         JSON.stringify(c) === snap && JSON.stringify(c.invLog) === logSnap);
+      ck('#133 ...it names both systems, the words and the wordmark',
+         plan.from === 'humblewood' && plan.to === 'dnd' && plan.term === 'Race' && plan.wordmark === 'D&D Character Sheet', plan);
+      const coinsSnap = JSON.stringify(c.coins);
+      const did = X.changeSystem(c, plan);
+      ck('#133 ...its langs are what changeSystem() then does', JSON.stringify(plan.langs) === JSON.stringify(did) &&
+         JSON.stringify(did) === JSON.stringify({drop: ['Humblefolk'], add: ['Dwarvish'], keep: ['Common']}), [plan.langs, did]);
+      ck('#133 changeSystem() sets the system and swaps the languages',
+         c.system === 'dnd' && langKey(c) === 'Common|system, Dwarvish|system, Elvish|, Sylvan|race:Elf', [c.system, langKey(c)]);
+      ck('#133 ...and leaves the coins and the inventory log exactly as they were (nothing converted, nothing logged)',
+         JSON.stringify(c.coins) === coinsSnap && JSON.stringify(c.invLog) === logSnap, [c.coins, c.invLog]);
+
+      /* the coins in the plan */
+      c = sheetFor('dnd', {coins: {cp: '', sp: '', ep: 4, gp: '', pp: 3}});
+      ck('#133 plan coins: D&D → Humblewood holding 3 PP and 4 EP', JSON.stringify(X.systemChangePlan(c, 'humblewood').coins) === '{"pp":3,"ep":4}', X.systemChangePlan(c, 'humblewood').coins);
+      c = sheetFor('dnd');
+      ck('#133 ...holding neither: null', X.systemChangePlan(c, 'humblewood').coins === null, X.systemChangePlan(c, 'humblewood').coins);
+      c = sheetFor('dnd', {coins: {pp: 'abc', ep: '-2'}});
+      ck('#133 ...junk or negative counts: null', X.systemChangePlan(c, 'humblewood').coins === null, X.systemChangePlan(c, 'humblewood').coins);
+      c = sheetFor(HW);
+      ck('#133 ...→ D&D: the coins gain PP and EP', JSON.stringify(X.systemChangePlan(c, 'dnd').coins) === '{"gain":true}');
+
+      /* the warning's sentences, each only when it applies */
+      const lines = (cc, to) => X.systemChangeLines(X.systemChangePlan(cc, to));
+      let L = lines(sheetFor('dnd', {coins: {pp: 3, ep: 4}}), 'humblewood');
+      ck('#133 systemChangeLines: the coins held, named', L[0] === 'Your 3 PP and 4 EP stay on the Coins card until you spend or convert them.', L);
+      L = lines(sheetFor('dnd', {coins: {ep: 4}}), 'humblewood');
+      ck('#133 ...only the coins held', L[0] === 'Your 4 EP stay on the Coins card until you spend or convert them.', L);
+      L = lines(sheetFor('dnd'), 'humblewood');
+      ck('#133 ...no coin sentence to Humblewood holding neither', !L.some(s => /Coins|PP|EP/.test(s)), L);
+      L = lines(sheetFor(HW), 'dnd');
+      ck('#133 ...to D&D, the coins gain platinum and electrum, and the + Race list offers D&D species',
+         L[0] === 'Coins gain platinum and electrum.' && L[1] === 'The + Race list offers D&D species.', L);
+      L = lines(sheetFor('dnd'), 'humblewood');
+      ck('#133 ...to Humblewood, the + Ancestry list offers Humblewood ancestries', L[0] === 'The + Ancestry list offers Humblewood ancestries.', L);
+      L = lines(sheetFor(HW, {race: {name: 'Strig'}}), 'dnd');
+      ck('#133 ...a Humblewood ancestry going to D&D stays, and it says so', L.includes('Strig stays on the sheet.') && L.indexOf('Strig stays on the sheet.') === 2, L);
+      const noStay = [lines(sheetFor('dnd', {race: {name: 'Strig'}}), 'humblewood'), lines(sheetFor(HW, {race: {name: 'Mapach the Bold'}}), 'dnd'), lines(sheetFor(HW), 'dnd')];
+      ck('#133 ...not for an ancestry of the new system, a custom one, or none', noStay.every(l => !l.some(s => /stays on the sheet/.test(s))), noStay);
+      /* the same rule as the list a character of the new system is offered (racesForCharacter()) */
+      L = lines(sheetFor('dnd', {race: {name: 'Custom Lineage'}}), HW);
+      ck('#133 ...an ancestry the new system\'s list leaves out by excludeSystems stays, and it says so',
+         L.includes('Custom Lineage stays on the sheet.') && L.indexOf('Custom Lineage stays on the sheet.') === 1, L);
+      const offered = [lines(sheetFor(HW, {race: {name: 'Custom Lineage'}}), 'dnd'), lines(sheetFor('dnd', {race: {name: 'Gribbly'}}), HW), lines(sheetFor(HW, {race: {name: 'Gribbly'}}), 'dnd')];
+      ck('#133 ...not for one the new system\'s list offers: Custom Lineage going to D&D, homebrew either way',
+         offered.every(l => !l.some(s => /stays on the sheet/.test(s))), offered);
+      const listFor = sys => { const keepC = X.character; X.character = sheetFor(sys); try { return X.racesForCharacter().map(r => r.name); } finally { X.character = keepC; } };
+      const agree = ['dnd', HW].every(to => { const from = to === 'dnd' ? HW : 'dnd', names = listFor(to);
+        return X.rules.races.every(r => (X.systemChangePlan(sheetFor(from, {race: {name: r.name}}), to).ancestryStays === r.name) === !names.includes(r.name)); });
+      ck('#133 ...for every ancestry, the line is said exactly when the new system\'s list leaves it out', agree, [listFor('dnd'), listFor(HW)]);
+      L = lines(sheetFor(HW), 'dnd');
+      ck('#133 ...the languages when chips change: "Humblefolk (a Humblewood default) goes; Common stays." then "Dwarvish is added."',
+         L.includes('Humblefolk (a Humblewood default) goes; Common stays.') && L.includes('Dwarvish is added.') &&
+         L.indexOf('Dwarvish is added.') === L.indexOf('Humblefolk (a Humblewood default) goes; Common stays.') + 1, L);
+      ck('#133 ...the words, and the closing sentences, always last',
+         JSON.stringify(L.slice(-2)) === JSON.stringify(['The sheet says Race, and the top bar reads D&D Character Sheet.'].concat(tail)), L.slice(-2));
+      L = lines(sheetFor('dnd'), 'humblewood');
+      ck('#133 ...the other way round', JSON.stringify(L.slice(-2)) === JSON.stringify(['The sheet says Ancestry, and the top bar reads Humblewood.'].concat(tail)) &&
+         L.includes('Dwarvish (a D&D default) goes; Common stays.') && L.includes('Humblefolk is added.'), L);
+      ck('#133 ...no XP sentence while both systems use the same table', !L.some(s => /XP bar/.test(s)), L);
+      X.rules.advancement = {'Humblewood': [[0, 1], [100, 2], [400, 3]]};
+      L = lines(sheetFor(HW), 'dnd');
+      ck('#133 ...and one when they differ', L.includes('The XP bar uses D&D\'s table.'), L);
+      X.rules.advancement = undefined;
+      X.rules.defaultLanguages = {};
+      L = lines(sheetFor(HW), 'dnd');
+      ck('#133 ...no language sentence when no chip changes', !L.some(s => / goes| go;| go\.| added\./.test(s)) && L.length === 4, L);
+      /* plurals and lists, from a plan written by hand */
+      const P = (drop, add, keep) => X.systemChangeLines({from: 'humblewood', to: 'dnd', langs: {drop, add, keep}, coins: null, ancestryStays: '', advDiffers: false, term: 'Race', wordmark: 'D&D Character Sheet'});
+      L = P(['A', 'B'], ['C', 'D'], []);
+      ck('#133 ...plurals: "A and B (Humblewood defaults) go." "C and D are added."', L.includes('A and B (Humblewood defaults) go.') && L.includes('C and D are added.'), L);
+      L = P(['A', 'B', 'C'], ['D'], ['E', 'F']);
+      ck('#133 ...three names, and two that stay', L.includes('A, B and C (Humblewood defaults) go; E and F stay.') && L.includes('D is added.'), L);
+      L = P([], ['D'], ['E']);
+      ck('#133 ...an add alone has no "goes" sentence', L.includes('D is added.') && !L.some(s => /stays\.|stay\./.test(s)), L);
+
+      /* Review Focus 4: a round trip leaves languages and coins as they were */
+      for (const [what, decl] of [['declared defaults', STUB], ['no declared defaults', {}]]) {
+        X.rules.defaultLanguages = JSON.parse(JSON.stringify(decl));
+        for (const start of ['dnd', 'humblewood']) {
+          c = sheetFor(start, {coins: {cp: 1, sp: 2, ep: 4, gp: 10, pp: 3}});
+          const other = start === 'dnd' ? 'humblewood' : 'dnd';
+          const l0 = langKey(c), c0 = JSON.stringify(c.coins), g0 = JSON.stringify(c.invLog);
+          X.changeSystem(c, X.systemChangePlan(c, other));
+          X.changeSystem(c, X.systemChangePlan(c, start));
+          ck('#133 a round trip from ' + start + ', ' + what + ': the languages, coins and log are as they were',
+             c.system === start && langKey(c) === l0 && JSON.stringify(c.coins) === c0 && JSON.stringify(c.invLog) === g0, [langKey(c), l0, c.coins]);
+        }
+      }
+
+      /* asking first: the warning, and Review Focus 1-2. askConfirm answers at
+         once (a thenable that calls back synchronously), so every check here
+         runs before the async chain below borrows the character. */
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      const now = v => ({then(f) { return now(f ? f(v) : v); }});
+      let asked = [], answer = false;
+      ctx.askConfirm = o => { asked.push(o); return now(answer); };
+      const ask = sys => { let got = 'pending'; const r = X.confirmSystemChange(sys); r.then(v => { got = v; }); return {r, got: () => got}; };
+      c = sheetFor(HW); X.character = c; X.activeId = c.id;
+      let snapC = JSON.stringify(c);
+      let r = ask('dnd');
+      ck('#133 confirmSystemChange(\'dnd\') on a Humblewood character asks: "Make Wren a D&D character?"',
+         asked.length === 1 && asked[0].title === 'Make Wren a D&D character?' && asked[0].ok === 'Make it D&D' && asked[0].cancel === 'Cancel', asked[0]);
+      ck('#133 ...with the plan\'s sentences as its message', asked[0].message === X.systemChangeLines(X.systemChangePlan(c, 'dnd')).join(' '), asked[0].message);
+      ck('#133 ...Cancel resolves false, and the character is exactly as it was', r.got() === false && JSON.stringify(c) === snapC, r.got());
+      answer = true; asked = [];
+      r = ask('dnd');
+      ck('#133 ...Yes resolves true, with the system D&D and the languages swapped',
+         r.got() === true && c.system === 'dnd' && langKey(c) === 'Common|system, Dwarvish|system, Elvish|, Sylvan|race:Elf', [r.got(), c.system, langKey(c)]);
+      c = sheetFor('dnd', {name: ''}); X.character = c; X.activeId = c.id; asked = []; answer = false;
+      ask(HW);
+      ck('#133 ...an unnamed sheet reads "Make this character a Humblewood character?"',
+         asked.length === 1 && asked[0].title === 'Make this character a Humblewood character?' && asked[0].ok === 'Make it Humblewood', asked[0]);
+      snapC = JSON.stringify(c); asked = []; answer = true;
+      const quiet = [ask('dnd'), ask('pathfinder'), ask('')];
+      ck('#133 ...the system it already has, or one that isn\'t a system, asks nothing and changes nothing', asked.length === 0 && JSON.stringify(c) === snapC, asked);
+      Promise.all(quiet.map(q => q.r)).then(vs => ck('#133 ...and each resolves false', vs.every(v => v === false), vs));
+      X.activeId = null; asked = [];
+      const none = ask('dnd');
+      ck('#133 ...with no character open, nothing is asked', asked.length === 0 && c.system === 'dnd');
+      none.r.then(v => ck('#133 ...and it resolves false', v === false, v));
+
+      /* review: Yes applies the plan the player saw, even if the rules change
+         while the question is open (a pack installed or removed meanwhile) */
+      const OTHER = {'Humblewood': ['Common', 'Humblefolk'], 'XPHB': ['Common', 'Gnomish']};
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      c = sheetFor(HW);
+      const seen = X.systemChangePlan(c, 'dnd');
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(OTHER));
+      const did2 = X.changeSystem(c, seen);
+      ck('#133 changeSystem() applies the plan\'s languages as planned, whatever the rules say by then',
+         langKey(c) === 'Common|system, Dwarvish|system, Elvish|, Sylvan|race:Elf' && JSON.stringify(did2) === JSON.stringify(seen.langs), [langKey(c), did2]);
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      c = sheetFor(HW); X.character = c; X.activeId = c.id; asked = [];
+      ctx.askConfirm = o => { asked.push(o); X.rules.defaultLanguages = JSON.parse(JSON.stringify(OTHER)); return now(true); };
+      let r2 = ask('dnd');
+      ck('#133 ...and so does Yes: the warning said Dwarvish is added, and Dwarvish is what arrives',
+         r2.got() === true && asked.length === 1 && /Dwarvish is added\./.test(asked[0].message) && !/Gnomish/.test(asked[0].message) &&
+         langKey(c) === 'Common|system, Dwarvish|system, Elvish|, Sylvan|race:Elf', [r2.got(), langKey(c)]);
+      ctx.askConfirm = o => { asked.push(o); return now(answer); };
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+
+      /* the control, driven: it moves only on Yes (Review Focus 1) */
+      const btn = sys => { const cls = new Set(); const at = {};
+        return {dataset: {sys}, classList: {toggle: (k, on) => { if (on === undefined ? !cls.has(k) : on) cls.add(k); else cls.delete(k); }, contains: k => cls.has(k), add: k => cls.add(k), remove: k => cls.delete(k)},
+          setAttribute: (k, v) => { at[k] = v; }, getAttribute: k => at[k], on: () => cls.has('on')}; };
+      const bH = btn(HW), bD = btn('dnd');
+      bH.classList.add('on'); bH.setAttribute('aria-pressed', 'true'); bD.setAttribute('aria-pressed', 'false');
+      let onClick = null;
+      const seg = {addEventListener: (t, f) => { if (t === 'click') onClick = f; }, querySelectorAll: () => [bH, bD]};
+      c = sheetFor(HW); X.character = c; X.activeId = c.id; snapC = JSON.stringify(c);
+      ctx.document.getElementById = id => id === 'segSystem' ? seg : keep.gid(id);
+      try { ctx.openSettings(); } finally { undoDOM(); }
+      const ctl = () => [bH.on(), bH.getAttribute('aria-pressed'), bD.on(), bD.getAttribute('aria-pressed')].join();
+      ck('#133 openSettings wires the Game system control', typeof onClick === 'function');
+      answer = false; asked = [];
+      if (onClick) onClick({target: {closest: () => bD}});
+      ck('#133 driven: tapping D&D then Cancel leaves the control, its aria-pressed and the character as they were',
+         asked.length === 1 && ctl() === 'true,true,false,false' && JSON.stringify(c) === snapC, [ctl(), asked.length]);
+      answer = true;
+      if (onClick) onClick({target: {closest: () => bD}});
+      ck('#133 driven: ...then Yes moves the control and its aria-pressed, and the character is D&D',
+         ctl() === 'false,false,true,true' && c.system === 'dnd', ctl());
+    } finally {
+      X.rules.races = keepRaces; X.rules.advancement = keepAdv; X.rules.defaultLanguages = keepDL; ctx.askConfirm = keepAsk;
+    }
+  } catch (err) {
+    ck('#133 block A ran without throwing', false, String(err && err.stack || err));
+  } finally {
+    undoDOM();
+    X.character = keep.ch; X.activeId = keep.id; X.rules = keep.rules; X.settings.skin = keep.skin; ctx.document.title = keep.title;
+  }
+}
+
+/* ---- end of the 1.9.1 Skin & settings saves block A ---- */
+
 /* ---------- #118 the whole level-up, end to end: settle once, after the last window
    A real timer (Node's), borrowed for this block only: the harness's setTimeout
    never fires, and settling is a setTimeout(0). The modal's open state is
@@ -11266,4 +11636,97 @@ async function tBootStorage143() {
   const bsRun = tBootStorage142().then(tBootStorage134).then(tBootStorage135).then(tBootStorage143)
     .catch(err => { ck('1.9.1 boot & storage block ran without throwing', false, String(err && err.stack || err)); });
   ck.done = () => bsRun.then(() => bsDone());
+}
+
+/* ====== 1.9.1 Skin & settings saves: #133, #141 (block B) =====================
+   The checks that need a fresh app: #141's once-a-session memory has to start
+   empty, and blocked storage and the boot fold need the real boot(). Each case
+   is its own BS.app() context, never the shared X/ctx (const BS is initialised
+   just above, so this block has to come after it), with toast() replaced by a
+   recorder before anything runs. Synchronous: nothing here waits.
+   The handlers bound in openSettings() and wire() can't be clicked in the
+   harness, so each is pinned by rules-data.js's site check (every one calls
+   saveSettingsSaid()) plus the helper's behaviour below. */
+{
+  const FULL = "Couldn't save your settings: your browser's storage is full. Changes to settings last until you close Fieldbook.";
+  const PILL = "Couldn't save that you cleared the notice: your browser's storage is full.";
+  const fresh = (store, opts) => {
+    const rec = [];
+    const a = BS.app(store || {}, Object.assign({noBoot: true}, opts || {}, {before: x => {
+      x.ctx.toast = (m, act, o) => { rec.push({m: String(m), err: !!(o && o.err)}); };
+      if (opts && opts.before) opts.before(x);
+    }}));
+    a.toasts = rec;
+    return a;
+  };
+  try {
+    /* once a session, re-armed by a save that lands */
+    let a = fresh();
+    a.state.quotaFull = true;
+    const r1 = a.ctx.saveSettingsSaid(), r2 = a.ctx.saveSettingsSaid();
+    ck('#141 a refused settings save toasts once, as an error that stays',
+       a.toasts.length === 1 && a.toasts[0].m === FULL && a.toasts[0].err === true, a.toasts);
+    ck('#141 ...and returns why, both times', r1 === "your browser's storage is full" && r2 === r1, [r1, r2]);
+    a.ctx.saveSettingsSaid('that you cleared the notice');
+    ck('#141 ...the pill\'s own sentence is a second, different toast', a.toasts.length === 2 && a.toasts[1].m === PILL && a.toasts[1].err === true, a.toasts);
+    a.ctx.saveSettingsSaid('that you cleared the notice');
+    ck('#141 ...said once too', a.toasts.length === 2, a.toasts.length);
+    a.state.quotaFull = false;
+    const r3 = a.ctx.saveSettingsSaid();
+    ck('#141 ...a save that lands says nothing, and returns ""', a.toasts.length === 2 && r3 === '', [a.toasts.length, r3]);
+    a.state.quotaFull = true;
+    a.ctx.saveSettingsSaid();
+    ck('#141 ...and the next refusal is said again', a.toasts.length === 3 && a.toasts[2].m === FULL, a.toasts);
+
+    /* the Rules tab's category tap saves too, through the same helper */
+    a = fresh();
+    a.state.quotaFull = true;
+    a.ctx.rbOpenCat('glossary');
+    ck('#141 rbOpenCat with storage full raises the same one toast', a.toasts.length === 1 && a.toasts[0].m === FULL && a.toasts[0].err, a.toasts);
+    a.ctx.rbOpenCat('tables'); a.ctx.saveSettingsSaid();
+    ck('#141 ...and a second refusal, from it or another control, raises none', a.toasts.length === 1, a.toasts);
+
+    /* storage working: never a word */
+    a = fresh();
+    a.ctx.rbOpenCat('glossary'); a.ctx.saveSettingsSaid(); a.ctx.saveSettingsSaid('that you cleared the notice');
+    ck('#141 with storage working no toast at all', a.toasts.length === 0, a.toasts);
+
+    /* storage blocked: boot's one alert is all */
+    a = fresh({}, {ls: BS.denied(), noBoot: false});
+    ck('#141 blocked storage: boot runs and says so once', a.bootThrew === null && a.alerts.length === 1, [a.bootThrew && String(a.bootThrew), a.alerts]);
+    a.ctx.saveSettingsSaid(); a.ctx.rbOpenCat('glossary'); a.ctx.saveSettingsSaid('that you cleared the notice');
+    ck('#141 ...and no settings save toasts after it', a.toasts.length === 0, a.toasts);
+    /* review: quiet only because boot SAID so. Storage that worked at boot and is
+       blocked later had no alert, so its first refused save says why */
+    a = fresh({}, {noBoot: false});
+    ck('#141 storage that works at boot: no alert', a.bootThrew === null && a.alerts.length === 0, a.alerts);
+    a.ctx.localStorage = BS.denied();
+    a.ctx.saveSettingsSaid(); a.ctx.saveSettingsSaid();
+    ck('#141 ...blocked later, a refused settings save says why, once',
+       a.toasts.length === 1 && a.toasts[0].err && /^Couldn't save your settings: your browser is blocking storage for this page\. /.test(a.toasts[0].m), a.toasts);
+    a = fresh({}, {ls: BS.denied()});
+    a.ctx.saveSettingsSaid();
+    ck('#141 ...and with boot never run (no alert shown), a blocked save says so too', a.alerts.length === 0 && a.toasts.length === 1, [a.alerts, a.toasts]);
+
+    /* the boot fold (old rulesSources into sources), refused: kept for the Extensions page */
+    a = fresh({'hw-fb-settings': JSON.stringify({rulesSources: ['https://example.org/rules.json']})},
+      {noBoot: false, before: x => { x.state.quotaFull = true; }});
+    ck('#141 a refused boot fold is kept for the Extensions page',
+       a.bootThrew === null && a.ctx.extSaveErrorText() === "your browser's storage is full", [a.bootThrew && String(a.bootThrew), a.ctx.extSaveErrorText()]);
+    ck('#141 ...said there, not in a toast over the first paint', a.toasts.length === 0 && a.alerts.length === 0, [a.toasts, a.alerts]);
+    /* storage frees up and any setting is saved: the page's line was true "until
+       a later save lands", so that save clears it, and the page repaints */
+    let repaints = 0; a.ctx.renderExtUI = () => { repaints++; };
+    a.state.quotaFull = false;
+    a.ctx.saveSettingsSaid();
+    ck('#141 ...a settings save that lands later clears it, and repaints the Extensions page',
+       a.ctx.extSaveErrorText() === '' && repaints === 1 && a.toasts.length === 0, [a.ctx.extSaveErrorText(), repaints]);
+    a.ctx.saveSettingsSaid();
+    ck('#141 ...and with nothing to clear, a landed save repaints nothing', repaints === 1, repaints);
+    a = fresh({'hw-fb-settings': JSON.stringify({rulesSources: ['https://example.org/rules.json']})}, {noBoot: false});
+    ck('#141 ...and a boot fold that lands leaves nothing to show', a.bootThrew === null && a.ctx.extSaveErrorText() === '' && a.toasts.length === 0,
+       [a.ctx.extSaveErrorText(), a.toasts]);
+  } catch (err) {
+    ck('#141 block B ran without throwing', false, String(err && err.stack || err));
+  }
 }

@@ -256,6 +256,9 @@ button hides the toast and focuses what `action.back` returns. A third argument,
 forms (#87): `{err:true}` is a failure the player must read — the danger colour (`.toast.err`), led
 by "!" (Classic's danger and accent colours are the same red), `role="alert"`, a Dismiss button, a tap anywhere hides it, and no auto-hide at all; `{long:true}` is a
 notice of a sentence or two, given the 6 s an action gets. Every other caller passes neither.
+It is fixed at `left:50%` and shifted back by half its width, so it sets `width:max-content`
+(up to `max-width:80vw`): left to shrink to fit, its width stopped at the half-screen to the right
+of `left:50%`, and on a phone the settings-save sentence (#141) ran to seven lines in 195px.
 
 ### Back to top
 
@@ -493,3 +496,4 @@ QA.
 - 2026-10-29 — `askConfirm()` gains two users, End combat and the End of combat window's "Add N XP?"; that window's guard is the first to answer a dismissal through it, returning `true` and closing the window itself on the answer. → ledger L7921, #105
 - 2026-11-04 — The wide dialog is for windows that scroll their own panes; Roll initiative left it (#161), and a test counts the wide callers. → ledger L8514
 - 2026-11-06 — `boot()` survives storage the browser blocks and says so, keeps the newest rules copy, and asks the autoloaded sheet about updates once the packs are back; it now runs under test. → ledger L9281, #142, #134, #135
+- 2026-11-07 — The toast sizes to its words up to 80vw: on a phone it had been squeezed into the half-screen right of `left:50%`. → ledger L9865, #141

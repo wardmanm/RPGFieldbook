@@ -1,5 +1,6 @@
 /* ---- ancestry / race ---- */
-function raceTerm(){return (settings.skin==="classic")?"Race":"Ancestry";}
+/* the game's word, so it follows the character's system, never the skin (#133) */
+function raceTerm(){return (character&&character.system==="dnd")?"Race":"Ancestry";}
 /* Which system a rules entry belongs to, or "" when we can't tell.
    Species are the one category the two systems don't share — a Humblewood
    character is never an elf — unlike classes/spells, where Humblewood content
@@ -26,10 +27,15 @@ function systemOf(entry){
    everyone. An explicit exclusion beats the name-based guess. */
 function racesForCharacter(){
   const sys=(character&&character.system==="dnd")?"dnd":"humblewood";
-  return (rules.races||[]).filter(r=>{
-    const ex=r&&r._excludeSystems;
-    if(Array.isArray(ex)&&ex.indexOf(sys)>=0)return false;
-    const s=systemOf(r);return !s||s===sys;});
+  return (rules.races||[]).filter(r=>raceOfferedTo(r,sys));
+}
+/* The picker's rule for one species and one system. A system change's warning
+   (systemChangePlan()) reads it too, so "Custom Lineage stays on the sheet" is
+   said exactly when the new system's list would leave it out (#133). */
+function raceOfferedTo(r,sys){
+  const ex=r&&r._excludeSystems;
+  if(Array.isArray(ex)&&ex.indexOf(sys)>=0)return false;
+  const s=systemOf(r);return !s||s===sys;
 }
 function raceOptions(){
   const list=racesForCharacter();
@@ -49,7 +55,7 @@ function openAddRace(){
   openModal("Add "+term.toLowerCase(),`
     ${list.length?`<div class="field"><label class="f">${esc(term)} from rules</label><select id="raceSel"><option value="">— choose —</option>${raceOptions()}</select></div>`:`<p class="hint">No ${term.toLowerCase()} entries in the loaded rules. Enter a custom name; no traits will be auto-applied.</p>`}
     <div class="field" id="subWrap" style="display:none"><label class="f">Subrace</label><select id="subSel"></select></div>
-    <div class="field"><label class="f">Or custom name</label><input id="raceCustom" placeholder="e.g. ${(settings.skin==="classic")?"Elf":"Strig"}"></div>
+    <div class="field"><label class="f">Or custom name</label><input id="raceCustom" placeholder="e.g. ${(character&&character.system==="dnd")?"Elf":"Strig"}"></div>
     <div id="racePrev"></div>
     <div id="raceAbil"></div>
     <div class="m-actions"><button class="tbtn" id="rCancel">Cancel</button><button class="tbtn primary" id="rAdd">Add</button></div>`);

@@ -327,7 +327,8 @@ What differs from the sections above, and why:
 - **§4, a system change replacing `system` chips: not needed** (#133) — a character's system never changes
   (ruled at plan time). Settings → Skin does still rewrite the open character's `system`, which
   leaves its `system` chips; inert today, because every ruleset falls back to Common, and recorded in
-  [Known issues](../../wiki/roadmap/known-issues.md).
+  [Known issues](../../wiki/roadmap/known-issues.md). Since built in 1.9.1, with the Game system row:
+  [the Skin & settings saves design](../2026-11-07-skin-settings-saves-design.md).
 - **§4, a new character before a cold rules cache** (#146) gets the fallback Common even where a pack would
   declare other defaults (parked in Task 2; inert, no pack declares `defaultLanguages`; known issues).
 - **§5, the Languages lift runs once**, flagged by `langLifted` (set by `newCharacter()`, never in

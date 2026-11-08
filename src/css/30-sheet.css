@@ -396,7 +396,9 @@ html[data-rough="on"] .item::before{filter:url(#rough)}
 .item .row-meta>.qty,.item .row-meta>.atk-hit{white-space:nowrap}
 .orig-b{font:600 10px/1 var(--head);min-width:17px;height:17px;padding:0 4px;border-radius:9px;border:1px solid var(--hair);background:var(--panel);color:var(--ink-soft);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .orig-b:hover{color:var(--accent);border-color:var(--accent)}
-.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:var(--on-accent);padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s,visibility 0s .18s;visibility:hidden;pointer-events:none;max-width:80vw;text-align:center}
+/* width:max-content: fixed at left:50%, a shrink-to-fit width stops at the
+   half-screen to its right, 195px on a phone; it sizes to its words, up to 80vw */
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--accent);color:var(--on-accent);padding:10px 18px;border-radius:12px;font-family:var(--head);font-size:14px;letter-spacing:.02em;box-shadow:0 8px 28px rgba(0,0,0,.28);z-index:9999;opacity:0;transition:opacity .18s,transform .18s,visibility 0s .18s;visibility:hidden;pointer-events:none;width:max-content;max-width:80vw;text-align:center}
 .toast.show{opacity:1;visibility:visible;transition:opacity .18s,transform .18s;transform:translateX(-50%) translateY(0)}
 /* a failure the player must read (#87): the danger colour, and it takes taps —
    it stays until one lands on it or on its Dismiss button */

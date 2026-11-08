@@ -325,23 +325,23 @@ function wire(){
   document.getElementById("rbMain").addEventListener("input",e=>{if(e.target.id!=="rbCatSearch")return;const st=rbState(rbCurKey());st.q=e.target.value;st.shown=RB_PAGE;rbRefreshBody();});
   document.getElementById("addFamiliarLink").addEventListener("click",()=>openFamiliarForm());
   // theme / settings / save / load
-  document.getElementById("btnTheme").addEventListener("click",()=>{let t=settings.theme;if(t==="system")t=document.documentElement.dataset.theme;settings.theme=(t==="dark")?"light":"dark";applyTheme();saveSettings();});
+  document.getElementById("btnTheme").addEventListener("click",()=>{let t=settings.theme;if(t==="system")t=document.documentElement.dataset.theme;settings.theme=(t==="dark")?"light":"dark";applyTheme();saveSettingsSaid();});
   document.getElementById("btnSettings").addEventListener("click",openSettings);
   const _vb=document.getElementById("btnVer");if(_vb){_vb.textContent="v"+APP_VERSION;_vb.addEventListener("click",openChangelog);}
   /* same target as the version button it replaces — the changelog, which carries
      the download link while an update is pending */
   const _up=document.getElementById("updatePill");if(_up)_up.addEventListener("click",openChangelog);
   /* #102: each pill's × clears its notice until a newer version arrives
-     (spec decision 9). A save that doesn't land says so (constraint 2). */
-  const _pillSaved=()=>{const err=saveSettings();if(err)toast("Couldn't save that you cleared the notice: "+err,null,{err:true});};
+     (spec decision 9). A save that doesn't land says so (constraint 2), in the
+     shared helper's toast with the pill's own sentence (#141). */
   {const x=document.getElementById("updatePillX");if(x)x.addEventListener("click",()=>{
     if(!updateAvailable)return;
     if(!settings.dismissedUpdates||typeof settings.dismissedUpdates!=="object")settings.dismissedUpdates={};
-    settings.dismissedUpdates.app=updateAvailable.ver;_pillSaved();
+    settings.dismissedUpdates.app=updateAvailable.ver;saveSettingsSaid("that you cleared the notice");
     const p=document.getElementById("updatePill");if(p)p.style.display="none";x.hidden=true;
     const v=document.getElementById("btnVer");if(v)v.style.display="";extPillFocusBack();});}
   {const g=document.getElementById("extPillGo");if(g)g.addEventListener("click",()=>{settings.setPage="extensions";openSettings();});}
-  {const x=document.getElementById("extPillX");if(x)x.addEventListener("click",()=>{dismissUpdates();_pillSaved();renderExtPill();extPillFocusBack();});}
+  {const x=document.getElementById("extPillX");if(x)x.addEventListener("click",()=>{dismissUpdates();saveSettingsSaid("that you cleared the notice");renderExtPill();extPillFocusBack();});}
   renderExtPill();
   {const s=document.getElementById("sizeDisp");if(s){s.addEventListener("click",openSizePicker);
     s.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openSizePicker();}});}}
@@ -383,9 +383,9 @@ function wire(){
   document.getElementById("homeBack").addEventListener("click",()=>{if(activeId)hideHome();});
   document.getElementById("homeNew").addEventListener("click",openNewCharacter);
   document.getElementById("homeLoadChar").addEventListener("click",()=>document.getElementById("fileLoad").click());
-  document.getElementById("homeSkin").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;settings.skin=b.dataset.skin;applyTheme();saveSettings();syncHomeSetupControls();});
-  document.getElementById("homeMode").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;applyTheme();saveSettings();syncHomeSetupControls();});
-  document.getElementById("homeRough").addEventListener("click",()=>{settings.rough=!settings.rough;applyTheme();saveSettings();syncHomeSetupControls();});
+  document.getElementById("homeSkin").addEventListener("click",e=>{const b=e.target.closest("[data-skin]");if(!b)return;settings.skin=b.dataset.skin;applyTheme();saveSettingsSaid();syncHomeSetupControls();});
+  document.getElementById("homeMode").addEventListener("click",e=>{const b=e.target.closest("[data-th]");if(!b)return;settings.theme=b.dataset.th;applyTheme();saveSettingsSaid();syncHomeSetupControls();});
+  document.getElementById("homeRough").addEventListener("click",()=>{settings.rough=!settings.rough;applyTheme();saveSettingsSaid();syncHomeSetupControls();});
   document.getElementById("homeImportBtn").addEventListener("click",()=>document.getElementById("homeRulesFiles").click());
   document.getElementById("homeRulesFiles").addEventListener("change",e=>{if(e.target.files.length)manualInstallFiles(e.target.files);e.target.value="";});
   document.getElementById("rbRulesFiles").addEventListener("change",e=>{if(e.target.files.length)manualInstallFiles(e.target.files);e.target.value="";});
@@ -407,7 +407,9 @@ function wire(){
 /* ================= boot ================= */
 function boot(){
   try{const s=localStorage.getItem(K_SET);if(s)settings=Object.assign(settings,JSON.parse(s));}catch(e){}
-  if(foldLegacySettings())saveSettings();
+  /* a refused fold is kept the way the boot source check keeps its refusal
+     (#141): Settings → Extensions says it. Blocked storage is said below. */
+  if(foldLegacySettings())extSaveError=saveSettings()||"";
   /* localStorage first and synchronously, so the sheet draws with rules already
      in hand. It is the FALLBACK store and the migration source; IndexedDB holds
      the pool otherwise, because five packs no longer fit in localStorage. A
@@ -431,7 +433,7 @@ function boot(){
   /* #142: where the browser blocks storage, every read above failed quietly and
      this is a first run that keeps nothing. Said out loud, as the move above is:
      the save strip is for an open character, and the home screen covers it. */
-  {const why=storageBlockedWhy();if(why)alert("Fieldbook can't use this browser's storage — "+why+". Your characters and settings won't be kept when you close it: save each character to a file with Save before you leave, or allow this page to store data and open Fieldbook again.");}
+  {const why=storageBlockedWhy();if(why){storageBlockedSaid=true;alert("Fieldbook can't use this browser's storage — "+why+". Your characters and settings won't be kept when you close it: save each character to a file with Save before you leave, or allow this page to store data and open Fieldbook again.");}}
   /* After the first paint, not before it: the rules cache lives in IndexedDB now
      and reading it is async. Everything above drew with what localStorage had;
      when it had nothing, this brings the IndexedDB copy and redraws. A sheet

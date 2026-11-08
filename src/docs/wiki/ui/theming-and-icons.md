@@ -1,15 +1,16 @@
 # Theming & icons
 
 Fieldbook has two **skins**, Humblewood and Classic D&D, each in **light** and **dark**, plus an
-optional hand-drawn wobble on every frame. The skin is not a free choice: it follows the open
-character's system. All of it is driven by four attributes on `<html>` and the CSS custom
+optional hand-drawn wobble on every frame. The skin is a look and nothing else: the player chooses
+it for the whole app, and no character sets it or is changed by it. All of it is driven by four
+attributes on `<html>` and the CSS custom
 properties in `00-tokens.css`. The same page covers the **emblems**, 79 glyphs from game-icons.net
 beside classes, ancestries and backgrounds and on the combat button. They come from a hand-authored
 map through a fetch script into a generated fragment, and they carry CC BY 3.0 obligations the app
 has to meet on its own. The **fonts** work the same way: three families, embedded in the stylesheet
 by a second fetch script so the page makes no font request, under the SIL Open Font License 1.1.
 
-**Code:** `applyTheme()`, `skinForSystem()`, `systemForSkin()` in `75-home-theme.js` · `raceTerm()`,
+**Code:** `applyTheme()` in `75-home-theme.js` · `raceTerm()`,
 `racesForCharacter()` in `52-race.js` · `iconSVG()`, `iconSlug()` in `50-classrace.js` ·
 `GAME_ICONS`, `ICON_MAP`, `ICON_ARTISTS` in `05-icons.js` (generated) · the credits in
 `88-settings.js` · `scripts/fetch-icons.js` · `css2Url()`, `parseLatinFaces()`, `licenceParts()`,
@@ -39,22 +40,33 @@ runs, is Humblewood, light, rough, word tabs.
 | `data-tabs` | `icons`, `labels` | `settings.tabIcons` (Icon tabs) | `labels` |
 
 `applyTheme()` also writes the wordmark (`#wmMain` / `#wmSub`: "Humblewood / The Fieldbook" or
-"D&D / Character Sheet"), `document.title` and the sun/moon glyph on the theme button, and repaints
-the sheet header (`renderSheetHead()`), whose "+ Race" / "+ Ancestry" follows the skin through
-`raceTerm()`. It runs at boot, on every character load, create and import, and on each Appearance
-control.
+"D&D / Character Sheet"), `document.title` ("Fieldbook — Humblewood" or "D&D Character Sheet") and
+the sun/moon glyph on the theme button, and repaints the sheet header (`renderSheetHead()`). The
+wordmark and title follow the **open character's system**, and the skin only when no character is
+open (`activeId` unset), since then there is no system to follow; the home screen covers the top bar
+with its own fixed wordmark, so that case shows only in the browser tab. The header's "+ Race" /
+"+ Ancestry" follows the system too, through `raceTerm()`. It runs at boot, on every character load,
+create and import, on a system change, when the open character is deleted (`deleteCharacter()`), and
+on each Appearance control.
 
-### Skins follow the system
+### The skin is look only; the system is the character's
 
-A character's `system` is `dnd` or `humblewood`. `skinForSystem()` maps `dnd` to `classic` and
-anything else to `humblewood`, and `systemForSkin()` is its inverse. `loadCharById()`,
-`newCharacter()` and the import path all set `settings.skin` from the character's system before
-drawing. The link runs the other way too: the **skin control in Settings** writes
-`character.system` for the open character, then redraws coins, updates the library entry and saves.
-Changing the skin there therefore changes the system, which sets the coin set (PP GP EP SP CP or
-GP SP CP), the ancestries `racesForCharacter()` offers, and the badge on the home screen's
-character card. The skin buttons in the home screen's setup panel change only `settings.skin`.
-`settings.skin` is global, so opening a character of the other system switches the whole app.
+A character's `system` is `dnd` or `humblewood`, set when it is made and changed only from Settings
+→ Sheet display → Game system, which says what will change and asks first (see
+[Settings & updates](../features/settings-and-updates.md)). The skin is `settings.skin`, written by
+exactly two controls, Skin on Settings → Appearance and Skin in the home screen's setup panel, and
+by Import settings. Opening, making or importing a character leaves it as it was, so a player with
+characters in both systems keeps the look they chose. What the skin sets is `data-skin`, so the
+palette, fonts and frames, and nothing else. What reads like the game follows the system:
+
+- "Race" (D&D) or "Ancestry" (anything else) from `raceTerm()`: the header's "+ Race" /
+  "+ Ancestry", the picker's title and its example name ("Elf" / "Strig"), the features list's
+  fallback group heading, the no-data window and the credits line;
+- the wordmark and the page title (above);
+- the coin set (`coinKeys()`), the ancestries `racesForCharacter()` offers, the default languages
+  and the XP table (`rulesetDecl()`), and the home card's badge.
+
+`settings.skin` that an older build left matching the last character opened is kept as stored.
 
 ### Light, dark and system
 
@@ -296,13 +308,14 @@ linked to openfontlicense.org; `docs.js` checks both name every family the fragm
 | Text on an accent fill | `--on-accent`, chosen per palette | A fixed dark brown: 2:1 on classic light's red. `--paper`: 3.6:1 on Humblewood light's ochre |
 | The mid-band HP colour | Its own `--warn` token in all four palettes | Reusing `--accent`: on the classic skin it is `--brick`, so two bands would be one colour |
 | The web fonts (#144) | Embedded: the three families as base64 woff2 in a generated fragment, `90-fonts.css`, Latin only (Mike, 2026-11-06) | The Google Fonts `<link>`: a third-party URL against constraint 1, and offline the lettering was lost. Latin Extended as well: a second file per family; a letter outside Latin falls back to Georgia for that letter instead (L9357) |
+| What Skin does (#133) | Look only: it never writes `character.system`, and nothing that opens a character writes `settings.skin` (Mike, 2026-11-07) | Keeping the link and warning before the switch: the skin would still flip on every character load, so a player with characters in both systems never gets the look they chose. Locking the system at creation: a player who picked the wrong one starts the character again (L9865) |
+| What follows the system instead of the skin (#133) | The Race/Ancestry wording (`raceTerm()`, the header's + Race / + Ancestry, the picker's example name) and the wordmark and page title (Mike, 2026-11-07) | The wordmark following the skin: it says "D&D Character Sheet" over a Humblewood character (L9865) |
+| The wordmark and title with no character open (#133) | They follow the skin, as before | A neutral "Fieldbook": it changes what a player sees in the tab for no gain (L9865) |
 
 ## Open
 
 - The comment in `fetch-icons.js` points at `src/icons/README.md`, which does not exist; the
   `_readme` key in `icons.json` carries that note.
-- `settings.skin` is global while `system` is per character, so the skin control in Settings is also
-  a system switch for the open character, with no warning that its coins and ancestry list change.
 - More: [Known issues](../roadmap/known-issues.md).
 
 ## History
@@ -327,3 +340,4 @@ linked to openfontlicense.org; `docs.js` checks both name every family the fragm
 - 2026-11-06 — `applyTheme()` repaints the header alone (`renderSheetHead()`), now that `renderClassRace()` also redraws what a grant touches; the stale `#craceWord` line is gone. → ledger L9101, #153
 - 2026-11-06 — The fonts are embedded, Latin only: `scripts/fetch-fonts.js` writes `90-fonts.css` with the OFL notices and text; the Google Fonts link is gone, and a guard checks the page loads nothing from a third-party address. → ledger L9357, #144
 - 2026-11-06 — After review: `.hcard-name` asks for 900, the weight it drew at online; `docs.js` checks every weight and each face's sha256; the fetcher retries Google's `/l/font?kit=` answer and refuses `</style`. → ledger L9416, #144
+- 2026-11-07 — The skin is look only: no character sets it and it sets no character; Race/Ancestry, the wordmark and the page title follow the open character's system; `skinForSystem()` and `systemForSkin()` are gone. → ledger L9865, #133

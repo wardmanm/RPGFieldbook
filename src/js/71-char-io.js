@@ -298,7 +298,7 @@ function finishImport(ch){
      that never landed is a home-screen card that opens nothing. */
   let why="";try{localStorage.setItem(charKey(ch.id),JSON.stringify(ch));}catch(e){why=storageWhy(e);}
   if(!why)why=libTouch();
-  settings.skin=skinForSystem(ch.system);saveSettings();applyTheme();renderAll();hideHome();
+  applyTheme();renderAll();hideHome();   /* the skin stays as chosen (#133) */
   showSaveResult(why);
   /* last, so it stacks after the Replace/Copy clash modal rather than under it */
   maybePromptUpdate();

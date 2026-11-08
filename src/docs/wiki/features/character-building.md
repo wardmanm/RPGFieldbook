@@ -19,7 +19,7 @@ so removing the source takes it back out; that mechanism is
 `featUnmet()`, `featOfferable()`, `featAbilityChoices()`, `featPendingIncreases()`,
 `asiFeatListHTML()`, `asiPanelHTML()`, `wireAsiFeats()`, `asiPickWarnings()`,
 `asiScreenPicks()`, `commitAsiPick()`, `commitExtraChoices()` in `58-choices.js`;
-`openAddRace()`, `applyRace()`, `racesForCharacter()` in `52-race.js`; `openAddBackground()`,
+`openAddRace()`, `applyRace()`, `racesForCharacter()`, `raceOfferedTo()` in `52-race.js`; `openAddBackground()`,
 `applyBackground()` in `54-background.js`; `subclassesFor()`, `addFeatureFromDef()`,
 `grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
 `setDismissGuard()`, `askConfirm()` in `80-modal-forms.js`; `classLineHTML()`, `classFlyHTML()`, `openShFly()` in
@@ -48,13 +48,15 @@ levels, per [rules-schema](../../../../docs/rules-schema.md) §5; a class's `mul
   when there is a subrace), which, from the sheet and for the
   character's own pick, ends in **Change** (the picker again) and **Remove** (confirm, then the
   window closes) — `raceInfoFoot()` / `bgInfoFoot()`. Reference mode (`{ref:true}`) shows neither.
-- **Nothing chosen** reads "+ Class", "+ Race" / "+ Ancestry" (by skin, `raceTerm()`) and
+- **Nothing chosen** reads "+ Class", "+ Race" / "+ Ancestry" (by the character's system, `raceTerm()`) and
   "+ Background", each opening its picker.
 
 **Ancestry.** `openAddRace()` lists `racesForCharacter()`: every loaded species except those whose
 system (read from `_source` by `systemOf()`) is the other one, or whose pack lists this system in
-`excludeSystems`. Unknown sources (homebrew) show for both. Only the picker filters — `findRaceDef()`
-does not, so an imported cross-system ancestry keeps resolving. A species with subraces must have one
+`excludeSystems`. Unknown sources (homebrew) show for both. The rule for one species is
+`raceOfferedTo()`, which a system change's warning shares: it says "*Name* stays on the sheet" exactly
+when the new system's list would leave the ancestry out. Only the picker filters — `findRaceDef()`
+does not, so an imported or switched cross-system ancestry keeps resolving. A species with subraces must have one
 picked. If it (or the subrace) carries `abilityChoice`, the modal offers +2/+1, +1/+1/+1 or **None**
 (the 2024 rule puts the increase on the background). `applyRace()` removes any current ancestry,
 then grants from the species and then the subrace: fixed `abilityScores` as a feature, skills and
@@ -627,3 +629,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-11-04 — Undo on a second class's level-up card restores the sheet from before Add class: `addClass()` takes the Undo copy, as `doLevelUp()` does. → ledger L8893, #181
 - 2026-11-06 — A level-up and Add class unlock Vitals (its pencil is the Max HP lock now) and the HP step puts it back as it was, through `setVitalsLocked()`; `LU_HP_CLOSE` says Vitals is unlocked. → ledger L9441, #115
 - 2026-11-07 — A background's tools are chips, and its tool choice a `tool` step in the choices window that names a placeholder; the dismiss guard leaves tool steps out; a species' speed, size and text are seeded through `seedField()` and taken back on a swap. → ledger L9760, #121, #131
+- 2026-11-07 — "+ Race" / "+ Ancestry", and the picker's example name, follow the character's system, not the skin; the picker's rule for one species is `raceOfferedTo()`, shared with a system change's warning. → ledger L9865, #133

@@ -361,8 +361,11 @@ detailed run, kept out of the repo, whose failures reach Mike only as probable b
      file, ever: no ticks, no `✓ Claude`, no `(not driven)`.
 3. **Pre-drive, separately.** Claude's own detailed run, in the project's Playwright MCP
    (`mcp__playwright__*`, never a plugin's: it refuses `file://`), at 1280 and 390 wide
-   (`browser_resize`), in both skins: a `newCharacter("QA", "dnd")` sheet is classic, a
-   `newCharacter("QA", "humblewood")` sheet is humblewood. Open `file://<repo>/dist/fieldbook.html`.
+   (`browser_resize`), in both skins, set on their own since no character sets the skin:
+   `settings.skin="classic";applyTheme()` and back to `"humblewood"` through `browser_evaluate`, or
+   Skin on Settings → Appearance, once each. For the lines about the system (coins, Race/Ancestry,
+   the wordmark), make one `newCharacter("QA", "dnd")` and one `newCharacter("QA", "humblewood")`
+   character. Open `file://<repo>/dist/fieldbook.html`.
    A line that needs rules data: install `dist/srd52_full.json` through Settings → Extensions →
    Manual install (`browser_file_upload`).
    - What it drives: a line for every check in the testing sections of this release's specs
