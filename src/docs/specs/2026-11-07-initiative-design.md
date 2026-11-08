@@ -1,6 +1,6 @@
 # Initiative: monster rows on a phone, and familiars in the fight — design
 
-**Status:** draft 2026-11-07, design calls settled; awaiting Mike's approval of the document · wave 2 of [1.9.1](../wiki/roadmap/1.9.1.md), the Initiative worktree
+**Status:** approved 2026-11-07 (Mike) · wave 2 of [1.9.1](../wiki/roadmap/1.9.1.md), the Initiative worktree
 **Issues:** #164 (P2: on a phone each Roll initiative monster row wraps its Init box) → #163 (P1:
 familiars and companions from the paw don't join initiative). One branch, built in that order:
 #163 adds rows to the same dialog #164 lays out.
