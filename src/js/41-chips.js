@@ -228,6 +228,18 @@ function openChipChooser(key){
   const ok=document.getElementById("chipOk");if(ok)ok.addEventListener("click",()=>{const i=document.getElementById("chipName");done(i?i.value:"");});
   const cn=document.getElementById("chipCancel");if(cn)cn.addEventListener("click",closeModal);
 }
+/* Name a placeholder tool (#121): the choices window's pick, or the namer's.
+   "" when it took the name — its source stays, its `ask` goes — else why not.
+   A name the sheet already has is refused, so a tool is never held twice. */
+function nameToolChip(c,id,name){
+  const n=String(name==null?"":name).trim();
+  const list=chipClean(c.tools,"tools",true),ph=list.find(x=>x.id===id&&x.ask);
+  if(!ph)return "No such tool chip.";
+  if(!n)return "Pick a tool or type one.";
+  const dup=list.find(x=>!x.ask&&x.name.toLowerCase()===n.toLowerCase());
+  if(dup)return "You already have "+dup.name+".";
+  ph.name=n;delete ph.ask;c.tools=list;return "";
+}
 function renderDefences(){
   const r=document.getElementById("defResists"),i=document.getElementById("defImmunes");
   if(r)r.innerHTML=chipsHTML(character,"resists");

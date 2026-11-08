@@ -83,7 +83,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'CHIP_SUGGEST', 'chipSrcLabel', 'chipsHTML', 'chipChooserHTML', 'openChipChooser', 'addChip', 'removeChip', 'renderDefences', 'renderBioChips',
   'mergeNoteInto', 'liftLanguages', 'migrateSheet103',
   'CHIP_SOURCED', 'TOOL_KINDS', 'TOOL_KIND_HEAD', 'toolParse', 'toolSuggestions', 'grantTools', 'dropChips', 'liftTools',
-  'removeBackground', 'removeRace', 'printSheet',
+  'removeBackground', 'removeRace', 'printSheet', 'nameToolChip',
   'pawHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
   'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
   'isTabHidden', 'cleanHiddenTabs', 'setTabHidden', 'applyHiddenTabs', 'HIDEABLE_TABS', 'TAB_LABELS', 'selectTab',
@@ -9075,6 +9075,45 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     C().tools = [{id: 't1', name: "Thieves' Tools", src: 'bg:Criminal'}, {id: 't2', name: 'Gaming Set', src: 'bg:Soldier', ask: 'Choose one kind of Gaming Set'}];
     err = flow(() => { ctx.printSheet(); });
     ck('#121 printSheet: a Tools line, the placeholder as its wording', !err && /Tools: <b>THIEVES&#39; TOOLS, Choose one kind of Gaming Set<\/b>/.test(screen('printArea')), why(err) || (screen('printArea').match(/Tools:[^<]*<b>[^<]*/) || [screen('printArea').slice(0, 300)])[0]);
+
+    // #121 the tool step: a pick in the choices window names the placeholder
+    fresh();
+    const tch = {type: 'tool', kinds: ['Gaming Set'], choose: 1, label: 'Choose one kind of Gaming Set', chipIds: ['p1'], _sid: 'bg:Soldier'};
+    let th = X.choiceFieldHTML(tch, 0);
+    ck('#121 the tool block: its type, the placeholder ids, the count and its source',
+       /<div class="choice" data-ci="0" data-ctype="tool" data-sid="bg:Soldier" data-choose="1" data-chipids="p1"/.test(th), th.slice(0, 200));
+    ck('#121 ...the pack\'s wording as its heading, with the counter', /<label class="f">Choose one kind of Gaming Set — <span data-chcount>0 of 1 chosen<\/span><\/label>/.test(th), th.slice(0, 300));
+    ck('#121 ...four gaming-set boxes under "Gaming Sets"', (th.match(/data-tool-opt=/g) || []).length === 4 && />Gaming Sets</.test(th) && !/Lute/.test(th), th);
+    C().tools = [{id: 'own', name: 'Dice Set', src: ''}];
+    th = X.choiceFieldHTML(tch, 0);
+    ck('#121 ...a tool already yours is ticked, fixed and says so', /<input type="checkbox" data-tool-opt="Dice Set" checked disabled data-fixed>Dice Set \(already yours\)/.test(th), th);
+    ck('#121 ...and the step still asks for one', /data-choose="1"/.test(th));
+    const two = X.choiceFieldHTML({type: 'tool', kinds: ["Artisan's Tools"], choose: 2, label: "two Artisan's Tools of your choice", chipIds: ['a', 'b'], _sid: 'bg:X'}, 1);
+    ck('#121 a two-pick step carries both placeholder ids', /data-choose="2" data-chipids="a,b"/.test(two) && (two.match(/data-tool-opt=/g) || []).length === 17, two.slice(0, 200));
+
+    X.resetRules(); X.mergeRules(JSON.parse(JSON.stringify(BC_PACK)), 'test-121');
+    fresh(); flow(() => { ctx.applyBackground('Soldier', {}); });
+    let pid = (tools().find(x => x.ask) || {}).id;
+    ctx.commitExtraChoices([{type: 'tool', sid: 'bg:Soldier', chipIds: [pid], names: ['Dice Set']}], []);
+    let nm = tools().find(x => x.id === pid) || {};
+    ck('#121 commitExtraChoices names the placeholder: its name, its source kept, its ask gone', nm.name === 'Dice Set' && nm.src === 'bg:Soldier' && !('ask' in nm), nm);
+    fresh(); flow(() => { ctx.applyBackground('Soldier', {}); });
+    pid = (tools().find(x => x.ask) || {}).id;
+    ctx.commitExtraChoices([{type: 'tool', sid: 'bg:Soldier', chipIds: [pid], names: []}], []);
+    ck('#121 ...with no pick it stays a placeholder', (tools().find(x => x.id === pid) || {}).ask === 'Choose one kind of Gaming Set', tools());
+    flow(() => { ctx.removeBackground(); });
+    ck('#121 ...and removing the background removes it, named or not', tools().length === 0, tools());
+
+    fresh(); flow(() => { ctx.applyBackground('Soldier', {}); });
+    C().tools = X.chipList(C(), 'tools').concat([{id: 'mine', name: 'Dice Set', src: ''}]);
+    pid = (tools().find(x => x.ask) || {}).id;
+    const before = JSON.stringify(tools());
+    ck('#121 nameToolChip refuses a name the sheet already has, saying so', X.nameToolChip(C(), pid, 'dice set') === 'You already have Dice Set.' && JSON.stringify(tools()) === before, X.nameToolChip(C(), pid, 'dice set'));
+    ck('#121 ...and an id that is no placeholder', X.nameToolChip(C(), 'mine', 'Lute') === 'No such tool chip.' && X.nameToolChip(C(), 'nope', 'Lute') === 'No such tool chip.');
+    ck('#121 ...and takes a new name, returning ""', X.nameToolChip(C(), pid, ' Playing Cards ') === '' && (tools().find(x => x.id === pid) || {}).name === 'Playing Cards');
+    // Review Focus 3: the player's own Dice Set outlives the background whose placeholder was named
+    flow(() => { ctx.removeBackground(); });
+    ck('#121 removing Soldier: the player\'s Dice Set stays, its Playing Cards go', JSON.stringify(tools().map(x => [x.name, x.src])) === '[["Dice Set",""]]', tools());
   } catch (e) {
     ck('#121 the Bio chips block ran without throwing', false, why(e));
   } finally {

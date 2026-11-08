@@ -147,17 +147,22 @@ function grantFeatDef(featName,origin,pending){
   if(pending&&sid)(fd.choices||[]).forEach(ch=>{if(ch&&ch.type==="skill")pending.push({ch:Object.assign({},ch,{_sid:sid}),sid,label:"Feat: "+fd.name});});
 }
 /* present a set of pending {ch,sid,label} choices — skill choices (from race
-   traits or feats), feat choices (a species' or background's, #118) and
-   equipment pickers — and grant each to its sid */
+   traits or feats), feat choices (a species' or background's, #118), a
+   background's tool choices (#121) and equipment pickers — and grant each to
+   its sid */
 function runExtraChoices(pending){
   const skills=(pending||[]).filter(x=>x&&x.kind!=="equip"&&x.ch&&x.ch.type==="skill"&&(x.ch.from||[]).length);
   const feats=(pending||[]).filter(x=>x&&x.kind!=="equip"&&x.ch&&x.ch.type==="feat");
+  const tools=(pending||[]).filter(x=>x&&x.kind!=="equip"&&x.ch&&x.ch.type==="tool"&&(x.ch.kinds||[]).length);
   const equips=(pending||[]).filter(x=>x&&x.kind==="equip"&&(x.options||[]).length);
-  if(!skills.length&&!feats.length&&!equips.length)return;
+  if(!skills.length&&!feats.length&&!tools.length&&!equips.length)return;
   let body="",ci=0;const list=[];
   skills.forEach(x=>{list[ci]=x.ch;body+=`<p class="hint" style="color:var(--accent-2);font-size:13px;margin:6px 0 0">✦ ${esc(x.label||"Choose")}</p>`+choiceFieldHTML(x.ch,ci++,null);});
   /* the sid rides on the block's data-sid (choiceFieldHTML reads ch._sid) */
   feats.forEach(x=>{const ch=Object.assign({},x.ch,{_sid:x.sid});list[ci]=ch;body+=choiceFieldHTML(ch,ci++,null);});
+  /* the pick names the placeholders the grant made: their ids ride on the
+     block's data-chipids */
+  tools.forEach(x=>{const ch=Object.assign({},x.ch,{_sid:x.sid});list[ci]=ch;body+=choiceFieldHTML(ch,ci++,null);});
   equips.forEach((x,ei)=>{
     body+=`<div class="choice" data-ctype="equip" data-eqi="${esc(ei)}" style="border-top:1px dotted var(--hair);padding-top:10px;margin-top:10px"><label class="f">${esc(x.label||"Starting equipment")}</label>`+
       x.options.map((o,oi)=>`<label class="opt" style="align-items:flex-start"><input type="radio" name="eq-${esc(ei)}" data-eq-opt="${esc(oi)}" ${oi===0?"checked":""}><span>${esc(equipOptLabel(o))}</span></label>`).join("")+`</div>`;

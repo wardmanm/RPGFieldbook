@@ -1261,6 +1261,64 @@ const FLOW={classes:[
   }finally{ctx.openModal=real.open;ctx.gatherChoices=real.gather;ctx.document.getElementById=real.byId;}
 }
 
+// ---------- #121: a background's tool choice is a step in the choices window
+// Queued with its window, one window at a time, counted in Picks left at Done,
+// and left out of the dismiss guard: nothing is lost by dismissing it, since
+// the placeholder stays on the card and a tap names it later. The #63 pattern:
+// openModal recorded (it still runs), Done captured and pressed. The DOM is
+// stubbed, so the blocks choiceBlocks() reads are doubles shaped like the
+// markup choiceFieldHTML() writes (its label, data-choose and data-ctype).
+{
+  const real={open:ctx.openModal,byId:ctx.document.getElementById,qsa:ctx.document.querySelectorAll,ask:ctx.askConfirm};
+  let shown=[],done={},blocks=[],asked=[];
+  ctx.openModal=(t,h,i)=>{shown.push({title:t,html:String(h)});return real.open(t,h,i);};
+  ctx.document.getElementById=id=>id==='xchDone'?{addEventListener:(ev,fn)=>{done[id]=fn;}}:real.byId(id);
+  ctx.document.querySelectorAll=sel=>sel==='.choice[data-choose]'?blocks:[];
+  ctx.askConfirm=o=>{asked.push(o);return Promise.resolve(false);};
+  const block=(ctype,label,target,ticked)=>({dataset:{choose:String(target),ctype},
+    querySelector:s=>s==='label.f'?{textContent:label+' — '+ticked+' of '+target+' chosen'}:null,
+    querySelectorAll:s=>/:checked/.test(s)&&/checkbox/.test(s)?new Array(ticked).fill({}):[]});
+  const toolB=n=>block('tool','Choose one kind of Gaming Set',1,n),skillB=n=>block('skill','Choose 1 skill(s)',1,n);
+  try{
+    c=setup(); X.resetRules();
+    X.mergeRules({backgrounds:[{name:'Soldier',tools:'Choose one kind of Gaming Set',skills:['Athletics']}]},'test-121');
+    shown=[];done={};
+    ctx.runExtraChoices(ctx.applyBackground('Soldier',{}));
+    ck('#121 adding Soldier opens one window, holding the tool step',
+       shown.length===1&&/data-ctype="tool"/.test(shown[0].html)&&/Choose one kind of Gaming Set/.test(shown[0].html)&&!!done.xchDone, shown.map(w=>w.title));
+    blocks=[toolB(0)];state.lastConfirm=null;
+    X.dismissModal();
+    ck('#121 ...dismissing a window that holds only the tool step asks nothing', state.lastConfirm===null, state.lastConfirm);
+    ck('#121 ...and the placeholder stays on the card', X.character.tools.some(t=>t.ask==='Choose one kind of Gaming Set'), X.character.tools);
+    shown=[];done={};
+    ctx.runExtraChoices(ctx.applyBackground('Soldier',{}));
+    blocks=[toolB(1)];state.lastConfirm=null;X.dismissModal();
+    ck('#121 ...nor with a tool ticked: nothing is lost that a tap can\'t name', state.lastConfirm===null, state.lastConfirm);
+
+    // a tool step beside a skill step: one window, and the guard speaks of the skill only
+    shown=[];done={};
+    const q=ctx.applyBackground('Soldier',{});
+    q.unshift({ch:{type:'skill',choose:1,from:['History','Insight'],_sid:'bg:Soldier'},sid:'bg:Soldier',label:'Soldier'});
+    ctx.runExtraChoices(q);
+    ck('#121 a skill step and a tool step share one window', shown.length===1&&/data-ctype="skill"/.test(shown[0].html)&&/data-ctype="tool"/.test(shown[0].html), shown.map(w=>w.title));
+    blocks=[skillB(0),toolB(1)];state.lastConfirm=null;
+    X.dismissModal();
+    ck('#121 ...the guard warns as it does today, of picks not yet made (the ticked tool is not counted)',
+       state.lastConfirm==="You have not made your picks yet.\n\nThere is no way to reopen this later — you would have to remove and re-add it.\n\nClose anyway?", state.lastConfirm);
+
+    // Done with the tool unpicked asks Picks left, naming the tool step
+    shown=[];done={};asked=[];
+    ctx.runExtraChoices(ctx.applyBackground('Soldier',{}));
+    blocks=[toolB(0)];
+    if(done.xchDone)done.xchDone();
+    ck('#121 Done with the tool unpicked asks Picks left, naming the step',
+       asked.length===1&&asked[0].title==='Picks left'&&/Choose one kind of Gaming Set: 0 of 1/.test(asked[0].message), asked);
+  }finally{
+    ctx.openModal=real.open;ctx.document.getElementById=real.byId;ctx.document.querySelectorAll=real.qsa;ctx.askConfirm=real.ask;
+    ctx.closeModal(); X.resetRules();
+  }
+}
+
 // ---------- #69: a choice window's title names the levels it holds, as written
 // runChoices() titled every window "<class> — Level <first choice's level>", so a
 // Fighter added at 3 opened as "Level 3" (or "Level 1") over picks that ran from
