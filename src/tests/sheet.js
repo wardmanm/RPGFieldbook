@@ -10533,6 +10533,101 @@ async function t181AddClassUndo() {
       X.irState().set = false; X.irState().faces = [];
     }
   }
+
+  /* Task 5 (#163): the familiar's combatant dialog, and its HP written through */
+  {
+    const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, rt: ctx.renderInitTable, ar: ctx.advanceRound, rf: ctx.renderFamiliars,
+      om: ctx.openModal, gid: ctx.document.getElementById, qs: ctx.document.querySelector};
+    let painted = 0;
+    ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {}; ctx.renderFamiliars = () => { painted++; };
+    ctx.advanceRound = d => { X.character.combatRound = X.num(X.character.combatRound) + d; };
+    /* Goblin 15, Mira 12, Wolf (after), then Sprocket 10 and Rat ratInit in sorted place */
+    const fight = (ratInit = 3) => {
+      const c = X.blankChar(); c.name = 'Mira'; c.combatActive = true; c.combatRound = 2; c.initMode = 'turns';
+      c.familiars = [{id: 's', name: 'Sprocket', kind: 'Owl', ac: '13', hp: {cur: '5', max: '7'}, active: true, turn: 'own'},
+                     {id: 'w', name: 'Wolf', kind: 'Wolf', ac: '', hp: {cur: '4', max: ''}, active: true, turn: 'after'}];
+      c.combatants = X.buildCombatants({name: 'Mira', init: 12}, [], [{name: 'Goblin', count: 1, ac: '', init: 15}, {name: 'Rat', count: 1, ac: '', init: ratInit}],
+        c.familiars.map(f => Object.assign({}, f, {init: f.id === 's' ? 10 : null})));
+      c.combatTurn = c.combatants[0].id;
+      X.character = c; painted = 0;
+      return c;
+    };
+    const rowOf = id => X.character.combatants.find(r => r.famId === id);
+    const famOf = id => X.character.familiars.find(f => f.id === id);
+    const order = () => X.character.combatants.map(r => r.kind === 'you' ? 'you' : r.name).join();
+    try {
+      fight();
+      const d = X.combatantDialogHTML(rowOf('s'), X.character);
+      ck('#163 the familiar\'s dialog: the HP stepper with its max, the switch with Own pressed, Initiative, no AC box, Remove and Done',
+         /data-chp="-1"/.test(d) && /id="cdHp"/.test(d) && /\/ 7</.test(d) && /data-cturn="own" class="on" aria-pressed="true"/.test(d) && /data-cturn="after" class="" aria-pressed="false"/.test(d) &&
+         /id="cdInit"/.test(d) && !/id="cdAC"/.test(d) && /id="cdRemove"/.test(d) && /id="cdDone"/.test(d) && !/data-ctrack/.test(d) && !/id="cdDead"/.test(d) && !/data-cband/.test(d), d);
+      ck('#163 ...AC read from the familiar, as a line', d.includes('AC 13, from the familiar. Edit the familiar from the paw to change it.'), d);
+      const dw = X.combatantDialogHTML(rowOf('w'), X.character);
+      ck('#163 ...an After familiar: Right after you pressed, no Initiative, no AC line with no AC, no "/ max" with none',
+         /data-cturn="after" class="on" aria-pressed="true"/.test(dw) && !/id="cdInit"/.test(dw) && !/from the familiar/.test(dw) && !/cd-k">\//.test(dw) && /id="cdHp"/.test(dw), dw);
+      ck('#163 test setup: Goblin, you, Wolf right behind you, Sprocket, Rat', order() === 'Goblin,you,Wolf,Sprocket,Rat', order());
+
+      const s = rowOf('s');
+      X.setCombatant(s.id, {hp: 4});
+      ck('#163 HP written through: the familiar\'s hp.cur, as the form stores it, and the row', famOf('s').hp.cur === '4' && famOf('s').hp.max === '7' && s.hp === 4 && painted > 0, [famOf('s').hp, s.hp]);
+      X.setCombatant(s.id, {hp: 99});
+      ck('#163 ...clamped to the max', famOf('s').hp.cur === '7' && s.hp === 7, famOf('s').hp);
+      X.setCombatant(s.id, {hp: -3});
+      ck('#163 ...a negative reads 0', famOf('s').hp.cur === '0' && s.hp === 0, famOf('s').hp);
+      X.setCombatant(rowOf('w').id, {hp: 12});
+      ck('#163 ...with no max, any whole number', famOf('w').hp.cur === '12' && rowOf('w').hp === 12, famOf('w').hp);
+      X.setCombatant(rowOf('w').id, {ac: 19});
+      ck('#163 ...and the dialog never sets a familiar\'s AC: it is the familiar\'s', rowOf('w').ac === '' && famOf('w').ac === '');
+      const lone = rowOf('w'); X.character.familiars = X.character.familiars.filter(f => f.id !== 'w');
+      X.setCombatant(lone.id, {hp: 3});
+      ck('#163 ...a familiar the row no longer finds is left alone', lone.hp === 3 && X.character.familiars.length === 1);
+
+      /* the acting familiar at 0 moves the marker (initSettleTurn) */
+      fight();
+      X.character.combatTurn = rowOf('s').id;
+      X.setCombatant(rowOf('s').id, {hp: 0});
+      ck('#163 the acting familiar at 0: the marker moves to its living successor, the round unchanged',
+         X.character.combatTurn === X.character.combatants.find(r => r.name === 'Rat').id && X.character.combatRound === 2 && X.combatantDead(rowOf('s')), [X.character.combatTurn, X.character.combatRound]);
+      fight(11);
+      ck('#163 test setup: Sprocket last', order() === 'Goblin,you,Wolf,Rat,Sprocket', order());
+      X.character.combatTurn = rowOf('s').id;
+      X.setCombatant(rowOf('s').id, {hp: 0});
+      ck('#163 ...acting and last: the first living row, and the round up by one (T5-M2)',
+         X.character.combatTurn === X.character.combatants[0].id && X.character.combatRound === 3, [X.character.combatTurn, X.character.combatRound]);
+
+      /* the switch from the dialog */
+      fight();
+      X.setCombatant(rowOf('s').id, {after: true});
+      ck('#163 the dialog\'s switch to Right after you: the familiar\'s turn, the row behind you, no initiative',
+         famOf('s').turn === 'after' && rowOf('s').after === true && rowOf('s').init === null && order() === 'Goblin,you,Wolf,Sprocket,Rat', [famOf('s').turn, order()]);
+      X.setCombatant(rowOf('s').id, {after: false});
+      ck('#163 ...back to Own initiative: blank, last among the unrolled',
+         famOf('s').turn === 'own' && rowOf('s').after === false && rowOf('s').init === null && order() === 'Goblin,you,Wolf,Rat,Sprocket', [famOf('s').turn, order()]);
+      X.setCombatant(rowOf('s').id, {init: '9'});
+      ck('#163 ...and then its initiative is typed as anyone\'s', rowOf('s').init === 9 && order() === 'Goblin,you,Wolf,Sprocket,Rat', order());
+      X.setCombatant(rowOf('w').id, {init: '20'});
+      ck('#163 ...an After row takes no initiative', rowOf('w').init === null && order() === 'Goblin,you,Wolf,Sprocket,Rat', order());
+
+      /* a tap on the switch reopens the dialog with focus on the pressed button */
+      {
+        fight();
+        const els = {};
+        let focused = '', opened = '';
+        const el = id => els[id] || (els[id] = {id, value: '', dataset: {}, ls: {}, addEventListener(ev, fn) { (this.ls[ev] = this.ls[ev] || []).push(fn); }, focus() {}});
+        ctx.document.getElementById = el;
+        ctx.document.querySelector = q => { const m = /^#mBody (.+)$/.exec(q); return m ? {focus() { focused = m[1]; }} : null; };
+        ctx.openModal = (t, h) => { opened = String(h); };
+        X.openCombatant(rowOf('s').id);
+        const t = {closest: q => q === '[data-cturn]' ? {dataset: {cturn: 'after'}} : null};
+        els.mBody.ls.click.forEach(f => f({target: t}));
+        ck('#163 a tap on Right after you writes the familiar, reopens the dialog and keeps focus on it',
+           famOf('s').turn === 'after' && /data-cturn="after" class="on"/.test(opened) && focused === '[data-cturn="after"]', [famOf('s').turn, focused]);
+      }
+    } finally {
+      X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.advanceRound = keep.ar; ctx.renderFamiliars = keep.rf;
+      ctx.openModal = keep.om; ctx.document.getElementById = keep.gid; ctx.document.querySelector = keep.qs;
+    }
+  }
 }
 
 t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(t168Ask).then(t181AddClassUndo).then(t136GlossSave).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

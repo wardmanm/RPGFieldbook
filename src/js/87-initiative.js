@@ -536,39 +536,65 @@ function combatantDialogHTML(r,ch){
   const list=ch.combatants||[],i=list.findIndex(x=>x.id===r.id);
   const bands=n=>`<div class="cd-lbl">How hurt?</div>`+[0,1,2,3,4].slice(0,n).map(b=>`<button type="button" class="cd-band${r.band===b?" on":""}" data-cband="${esc(String(b))}">`+
     `${hbBarHTML({band:b===4?null:b,share:null})}<span>${esc(HB_NAMES[b])}<small>${esc(HB_SAYS[b])}</small></span></button>`).join("");
-  const fields=`<div class="cd-two"><label class="cd-fld"><span class="cd-k">Initiative</span><input id="cdInit" inputmode="numeric" value="${esc(r.init===null?"":String(r.init))}"></label>`+
-    (r.kind==="you"?"":`<label class="cd-fld"><span class="cd-k">${r.kind==="foe"?"AC guess":"AC"} (optional)</span><input id="cdAC" inputmode="numeric" value="${esc(String(r.ac))}"></label>`)+`</div>`;
+  /* #163: a familiar's AC is the familiar's (no box), and an after-you row has no initiative */
+  const fam=r.kind==="familiar";
+  const fields=fam&&initAfter(r)?"":`<div class="cd-two"><label class="cd-fld"><span class="cd-k">Initiative</span><input id="cdInit" inputmode="numeric" value="${esc(r.init===null?"":String(r.init))}"></label>`+
+    (r.kind==="you"||fam?"":`<label class="cd-fld"><span class="cd-k">${r.kind==="foe"?"AC guess":"AC"} (optional)</span><input id="cdAC" inputmode="numeric" value="${esc(String(r.ac))}"></label>`)+`</div>`;
+  const step=`<div class="cd-lbl">Hit points</div><div class="cd-step"><button type="button" class="cd-pm" data-chp="-1" aria-label="One less">−</button>`+
+    `<input id="cdHp" inputmode="numeric" value="${esc(String(r.hp))}" aria-label="Current HP">${r.maxHp===""?"":`<span class="cd-k">/ ${esc(String(r.maxHp))}</span>`}`+
+    `<button type="button" class="cd-pm" data-chp="1" aria-label="One more">+</button></div>`;
   const ties=(initTie(list,i,-1)?`<button type="button" class="tbtn" data-cmove="-1">Act earlier</button>`:"")+(initTie(list,i,1)?`<button type="button" class="tbtn" data-cmove="1">Act later</button>`:"");
   let body="";
   if(r.kind==="foe")body=bands(5);
   else if(r.kind==="party"){
     const ex=r.track==="exact";
     body=`<div class="seg cd-track">${[["exact","Exact HP"],["estimate","Estimate"]].map(([v,l])=>`<button type="button" data-ctrack="${esc(v)}" class="${r.track===v?"on":""}" aria-pressed="${r.track===v?"true":"false"}">${esc(l)}</button>`).join("")}</div>`+
-      (ex?`<div class="cd-lbl">Hit points</div><div class="cd-step"><button type="button" class="cd-pm" data-chp="-1" aria-label="One less">−</button>`+
-        `<input id="cdHp" inputmode="numeric" value="${esc(String(r.hp))}" aria-label="Current HP">${r.maxHp===""?"":`<span class="cd-k">/ ${esc(String(r.maxHp))}</span>`}`+
-        `<button type="button" class="cd-pm" data-chp="1" aria-label="One more">+</button></div>`:bands(4))+
+      (ex?step:bands(4))+
       `<button type="button" class="cd-toggle" id="cdDead" role="switch" aria-checked="${r.dead?"true":"false"}"><span>Dead</span><span class="switch ${r.dead?"on":""}"></span></button>`;
+  }
+  else if(fam){
+    /* #163 decision 11: its own HP, written to the familiar; the form's switch */
+    const aft=initAfter(r);
+    body=step+`<div class="cd-lbl">In a fight</div><div class="seg cd-turn">${[["own","Own initiative"],["after","Right after you"]].map(([v,l])=>{const on=(v==="after")===aft;
+      return `<button type="button" data-cturn="${esc(v)}" class="${on?"on":""}" aria-pressed="${on?"true":"false"}">${esc(l)}</button>`;}).join("")}</div>`+
+      (r.ac!==""?`<p class="hint">AC ${esc(String(r.ac))}, from the familiar. Edit the familiar from the paw to change it.</p>`:"");
   }
   else body=`<p class="hint">HP ${esc(String(num(character.hp.cur)))} / ${esc(String(effMaxHP()))} and AC ${esc(String(youAC()))}, from your sheet. Your HP changes on the Vitals card.</p>`;
   return `<div class="cd">${body}${fields}${ties?`<div class="cd-ties">${ties}</div>`:""}`+
     `<div class="m-actions">${r.kind==="you"?"":`<button type="button" class="tbtn danger" id="cdRemove">Remove</button>`}<span class="grow"></span><button type="button" class="tbtn primary" id="cdDone">Done</button></div></div>`;
 }
+/* A familiar row's familiar, by famId (#163); undefined once it is gone */
+function famOfRow(r,c){
+  return r&&r.kind==="familiar"?(Array.isArray((c||character).familiars)?(c||character).familiars:[]).find(f=>f&&typeof f==="object"&&f.id===r.famId):undefined;
+}
 function setCombatant(id,patch){
   const list=character.combatants||[],r=list.find(x=>x.id===id);if(!r)return;
-  if("band" in patch)r.band=(Number.isInteger(patch.band)&&patch.band>=0&&patch.band<=4)?patch.band:null;
+  const fam=r.kind==="familiar",f=famOfRow(r);
+  if("band" in patch&&!fam)r.band=(Number.isInteger(patch.band)&&patch.band>=0&&patch.band<=4)?patch.band:null;
   if("track" in patch&&r.kind==="party")r.track=patch.track==="estimate"?"estimate":"exact";
-  if("hp" in patch&&r.kind==="party"){const n=initInt(patch.hp),h=n===null?"":Math.max(0,n);r.hp=h===""?"":(num(r.maxHp)>0?Math.min(h,num(r.maxHp)):h);}
+  if("hp" in patch&&(r.kind==="party"||fam)){const n=initInt(patch.hp),h=n===null?"":Math.max(0,n);r.hp=h===""?"":(num(r.maxHp)>0?Math.min(h,num(r.maxHp)):h);
+    /* #163 decision 3: one HP, the familiar's own, stored as its form does */
+    if(f)f.hp=Object.assign({cur:"",max:""},f.hp&&typeof f.hp==="object"?f.hp:{},{cur:r.hp===""?"":String(r.hp)});}
   if("dead" in patch&&r.kind==="party")r.dead=patch.dead===true;
-  if("ac" in patch&&r.kind!=="you")r.ac=initOpt(patch.ac);
-  if("init" in patch){r.init=initInt(patch.init);character.combatants=initSort(list);}
+  if("ac" in patch&&r.kind!=="you"&&!fam)r.ac=initOpt(patch.ac);
+  /* #163: the dialog's switch writes the familiar's own setting too */
+  if("after" in patch&&fam){r.after=patch.after===true;r.init=null;if(f)f.turn=r.after?"after":"own";character.combatants=initSort(list);}
+  if("init" in patch){r.init=initAfter(r)?null:initInt(patch.init);character.combatants=initSort(list);}
+  initSettleTurn();
+  renderCombatChrome();renderInitTable();scheduleSave();
+  if(fam)renderFamiliars();   /* the paw's card and the view's Familiars show the new HP */
+}
+/* The marker leaves a dead or missing actor for its living successor; a wrap
+   onto a living row advances the round once (T5-M2). Turns mode only.
+   setCombatant() and familiarsChanged() (#163) end in it. */
+function initSettleTurn(){
   let wrapped=false;
   if(character.initMode==="turns"&&!(character.combatants||[]).some(x=>x.id===character.combatTurn&&!combatantDead(x))){
-    const n=initNextTurn(character.combatants,character.combatTurn);
-    character.combatTurn=n.turnId||initFirstAlive(character.combatants);
+    const n=initNextTurn(character.combatants||[],character.combatTurn);
+    character.combatTurn=n.turnId||initFirstAlive(character.combatants||[]);
     wrapped=initTurnWrapped(n);
   }
   if(wrapped)advanceRound(1);
-  renderCombatChrome();renderInitTable();scheduleSave();
 }
 /* Moving the marker off a dead or removed actor past the end of the order
    is a wrap, exactly as Next's is (ruling T5-M2): the round advances once.
@@ -621,6 +647,7 @@ function openCombatant(id){
       if((m=t.closest("[data-cband]"))){setCombatant(cid,{band:num(m.dataset.cband)});closeModal();return;}
       if((m=t.closest("[data-ctrack]"))){const v=m.dataset.ctrack;setCombatant(cid,{track:v});openCombatant(cid);cdRefocus(`[data-ctrack="${v==="estimate"?"estimate":"exact"}"]`);return;}
       if((m=t.closest("[data-chp]"))){const d=num(m.dataset.chp),x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{hp:Math.max(0,num(x&&x.hp)+d)});openCombatant(cid);cdRefocus(`[data-chp="${d<0?-1:1}"]`);return;}
+      if((m=t.closest("[data-cturn]"))){const v=m.dataset.cturn==="after";setCombatant(cid,{after:v});openCombatant(cid);cdRefocus(`[data-cturn="${v?"after":"own"}"]`);return;}
       if(t.closest("#cdDead")){const x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{dead:!(x&&x.dead)});openCombatant(cid);cdRefocus("#cdDead");return;}
       if((m=t.closest("[data-cmove]"))){const d=num(m.dataset.cmove)<0?-1:1;moveCombatant(cid,d);openCombatant(cid);
         /* past the end of the tie the pressed button is gone: the other one, else Done */
