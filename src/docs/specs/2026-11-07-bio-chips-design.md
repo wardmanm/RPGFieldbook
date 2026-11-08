@@ -1,6 +1,6 @@
 # Bio chips: tools as chips, roomier chips, multi-select, clean swaps — design
 
-**Status:** draft 2026-11-07, design calls settled; awaiting Mike's approval of the document · wave 2 of [1.9.1](../wiki/roadmap/1.9.1.md), the Bio chips worktree
+**Status:** approved 2026-11-07 (Mike) · wave 2 of [1.9.1](../wiki/roadmap/1.9.1.md), the Bio chips worktree
 **Issues:** #121 (tool proficiencies as chips) → #120 (chips need more padding, rides along) →
 #119 (multi-select in the Add window) + #123 (the Add window's spacing, rides along) → #131
 (removing a source leaves seeded speed, size and text). One branch, `issue/121-bio-chips`, built
