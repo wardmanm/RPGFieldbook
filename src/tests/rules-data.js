@@ -3357,6 +3357,14 @@ function block(html, needle, tag) {
   site('the home screen\'s Mode', /getElementById\("homeMode"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
   site('the home screen\'s borders', /getElementById\("homeRough"\)\.addEventListener\("click",[^\n]*applyTheme\(\);saveSettingsSaid\(\);syncHomeSetupControls\(\);\}\);/);
   ck('#141 _pillSaved() is gone: the pills use the shared helper', !/_pillSaved/.test(js));
+  /* QA at 390 wide: the toast is fixed at left:50% and shifted back by half its
+     width, so a width left to shrink-to-fit is capped at the half-viewport to
+     the right of left:50% (195px on a phone), squeezing the settings sentence
+     into seven lines. It sizes to its content, up to its own 80vw. */
+  const sheetCss = fs.readFileSync(path.join(ROOT, 'src/css/30-sheet.css'), 'utf8');
+  const toastRule = (sheetCss.match(/\n\.toast\{[^}]*\}/) || [''])[0];
+  ck('#141 the toast sizes to its words up to 80vw, not to the half-screen right of left:50%',
+     /[{;]width:max-content[;}]/.test(toastRule) && /[{;]max-width:80vw[;}]/.test(toastRule) && /left:50%/.test(toastRule), toastRule);
   ck('#141 boot keeps a refused fold for the Extensions page, as the source check does',
      /function boot\(\)\{[\s\S]{0,400}?\n\s*if\(foldLegacySettings\(\)\)extSaveError=saveSettings\(\)\|\|"";/.test(frag('90-boot.js')));
   ck('#133 confirmSystemChange() asks with askConfirm(), and redraws what reads the system on Yes',

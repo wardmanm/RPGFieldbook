@@ -9823,6 +9823,10 @@ Builder's calls against the plan:
   `systemChangePlan()`, so an ancestry the new system's list leaves out by `excludeSystems` (Tasha's
   Custom Lineage going to Humblewood) gets the line too. A check runs every stubbed ancestry both
   ways against `racesForCharacter()`.
+- Found in the screenshot pass: on a 390px screen the error toast was 195px wide and the settings
+  sentence ran to seven lines. `.toast` is fixed at `left:50%` with `translateX(-50%)`, so a
+  shrink-to-fit width stopped at the half-screen to its right, short of its own `max-width:80vw`.
+  It now has `width:max-content`: 312px on a phone, one line at 1280. `rules-data.js` checks it.
 
 Not done here: the screenshots and the drive (plan Task 5) wait for the shared browser. The smoke
 list's line 78 is Mike's; the spec's §10 proposes its new wording. Left open: the Credits page's
