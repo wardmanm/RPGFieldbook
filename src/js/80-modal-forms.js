@@ -956,7 +956,9 @@ function openStatusForm(existing){
   });
 }
 function openFamiliarForm(existing){
-  const f=existing||{id:uid(),name:"",kind:"",ac:"",hp:{cur:"",max:""},speed:"",description:"",effects:[],active:false};
+  const f=existing||{id:uid(),name:"",kind:"",ac:"",hp:{cur:"",max:""},speed:"",description:"",effects:[],active:false,turn:"own"};
+  let turn=famTurn(f);   /* #163: how it acts in a fight */
+  const turnBtns=()=>[["own","Own initiative"],["after","Right after you"]].map(([v,l])=>`<button type="button" data-turn="${esc(v)}" class="${turn===v?"on":""}" aria-pressed="${turn===v?"true":"false"}">${l}</button>`).join("");
   openModal(existing?"Edit familiar":"New familiar",`
     <div class="g2"><div class="field"><label class="f">Name</label><input id="faName" value="${esc(f.name)}" placeholder="Sprocket"></div>
       <div class="field"><label class="f">Type</label><input id="faKind" value="${esc(f.kind||"")}" placeholder="Owl, Sprite…"></div></div>
@@ -964,18 +966,22 @@ function openFamiliarForm(existing){
       <div class="field"><label class="f">HP now</label><input id="faHpCur" type="number" value="${esc(f.hp&&f.hp.cur)}"></div>
       <div class="field"><label class="f">HP max</label><input id="faHpMax" type="number" value="${esc(f.hp&&f.hp.max)}"></div></div>
     <div class="field"><label class="f">Speed</label><input id="faSpeed" value="${esc(f.speed||"")}" placeholder="30 ft, fly 60 ft"></div>
+    <div class="field"><span class="f" id="faTurnL">In a fight</span><div class="seg" id="faTurn" role="group" aria-labelledby="faTurnL">${turnBtns()}</div>
+      <p class="hint">A familiar rolls its own. A beast companion or a summoned creature acts right after you.</p></div>
     <div class="field"><label class="f">Description / abilities</label><textarea id="faDesc">${esc(f.description||"")}</textarea></div>
     <div class="field"><label class="f">Effects on you while summoned (optional)</label><div id="faFx">${fxEditorRows(f.effects)}</div><button class="fx-add" id="faAddFx">+ Add effect</button></div>
     <label class="equip ${f.active?"on":""}" id="faActive" style="font-size:12px"><span class="box"></span>Summoned (active)</label>
     <div class="m-actions"><button class="tbtn" id="faCancel">Cancel</button><button class="tbtn primary" id="faSave">${existing?"Save":"Add"}</button></div>`);
   let active=!!f.active;
   const act=document.getElementById("faActive");act.addEventListener("click",()=>{active=!active;act.classList.toggle("on",active)});
+  const seg=document.getElementById("faTurn");seg.addEventListener("click",e=>{const b=e.target.closest("[data-turn]");if(!b)return;turn=famTurn({turn:b.dataset.turn});
+    seg.querySelectorAll("[data-turn]").forEach(x=>{const on=x.dataset.turn===turn;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on?"true":"false");});});
   const fxWrap=document.getElementById("faFx");
   document.getElementById("faAddFx").addEventListener("click",()=>fxWrap.insertAdjacentHTML("beforeend",fxRow(null)));
   fxWrap.addEventListener("click",e=>{const d=e.target.closest(".fx-del");if(d)d.closest(".fxrow").remove()});
   document.getElementById("faCancel").addEventListener("click",closeModal);
   document.getElementById("faSave").addEventListener("click",()=>{
-    const rec={id:f.id,name:document.getElementById("faName").value.trim()||"Familiar",kind:document.getElementById("faKind").value.trim(),ac:document.getElementById("faAc").value,hp:{cur:document.getElementById("faHpCur").value,max:document.getElementById("faHpMax").value},speed:document.getElementById("faSpeed").value.trim(),description:document.getElementById("faDesc").value,effects:collectFx(fxWrap),active};
+    const rec={id:f.id,name:document.getElementById("faName").value.trim()||"Familiar",kind:document.getElementById("faKind").value.trim(),ac:document.getElementById("faAc").value,hp:{cur:document.getElementById("faHpCur").value,max:document.getElementById("faHpMax").value},speed:document.getElementById("faSpeed").value.trim(),description:document.getElementById("faDesc").value,effects:collectFx(fxWrap),active,turn};
     const i=character.familiars.findIndex(x=>x.id===f.id);
     /* the first familiar turns the header's paw on, as migrate() decides it
        for a sheet that already has one (#103, spec decision 5) */

@@ -431,7 +431,8 @@ function stepStatusTap(id,deltaSec,viaKey){
    back on it after the modal repaints (M-14). */
 function familiarCardHTML(f){
   const on=!!f.active;
-  const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:""].filter(Boolean).join(" · ");
+  const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:"",
+    famTurn(f)==="after"?"Right after you":""].filter(Boolean).join(" · ");   /* #163: how it acts in a fight; Own says nothing */
   return `<div class="item${on?" on-fam":""}"><div class="top">
         <span class="nm">${esc(f.name||"Familiar")}</span>
         ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}

@@ -111,6 +111,27 @@ function buildCombatants(you,party,foes){
   return initSort(rows);
 }
 
+/* ---- familiars in the fight (#163) ----
+   A summoned familiar joins the fight, by its own roll or right after you
+   (its form's "In a fight"). Its row is a copy; the familiar is the truth.
+   Spec: src/docs/specs/2026-11-07-initiative-design.md. (A familiar's own
+   `kind` is its creature type, "Owl"; a row's `kind` is the row's kind.) */
+function famTurn(f){return f&&f.turn==="after"?"after":"own";}
+/* The summoned familiars, in familiar order. One with no id can't be matched
+   to a row, so it never joins. */
+function fightFamiliars(c){
+  return (Array.isArray(c&&c.familiars)?c.familiars:[]).filter(f=>f&&typeof f==="object"&&f.active&&typeof f.id==="string"&&f.id);
+}
+/* A blank current HP with a max reads 0 on the familiar's card and "?" in the
+   tracker, so on joining a fight (and on a form save while in one) it takes
+   the max, on the familiar. A copy of hp, as the form stores it: a string. */
+function famFillHP(f){
+  const hp=f&&f.hp;if(!hp||typeof hp!=="object")return false;
+  const mx=initOpt(hp.max);
+  if(String(hp.cur==null?"":hp.cur).trim()!==""||!(mx>0))return false;
+  f.hp=Object.assign({},hp,{cur:String(mx)});return true;
+}
+
 /* ---- the Party card (Bio) ---- */
 function partyRowsHTML(list){
   if(!list.length)return `<p class="empty">Add the friends who fight beside you. They join every fight you start.</p>`;

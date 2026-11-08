@@ -98,7 +98,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'renderInitStrip', 'irStart', 'renderCombatHeader',
   'initPrevTurn', 'initPrev', 'initCanPrev', 'initFitCount', 'initFitSide', 'iniMoreHTML', 'initTableBtnHTML',
   'openIniFly', 'closeIniFly',
-  'irFoeRowHTML',
+  'irFoeRowHTML', 'famTurn', 'fightFamiliars', 'famFillHP',
   'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
   'cleanInvLog', 'logInv', 'logGrant', 'logItemSave', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
@@ -10292,6 +10292,76 @@ async function t181AddClassUndo() {
          !/>×/.test(f) && !/>AC/.test(f) && /aria-label="How many"/.test(f) && /aria-label="AC guess \(optional\)"/.test(f) &&
          /aria-label="Initiative"/.test(f) && /placeholder="Init"/.test(f) && /value="1"/.test(f) && (f.match(/data-irf="/g) || []).length === 4, f);
     } finally { X.character = keep.ch; }
+  }
+
+  /* Task 2 (#163): a familiar's turn, on the form, the card and on load */
+  {
+    const ft = X.famTurn;
+    ck('#163 famTurn: "after" only for "after", Own for anything else',
+       ft(undefined) === 'own' && ft({}) === 'own' && ft({turn: 'AFTER'}) === 'own' && ft({turn: 7}) === 'own' && ft({turn: 'own'}) === 'own' && ft({turn: 'after'}) === 'after');
+    ck('#163 fightFamiliars: the summoned ones with an id, in familiar order',
+       X.fightFamiliars({familiars: [{id: 'a', active: true}, {id: 'b', active: false}, {active: true}, null, {id: '', active: true}, {id: 'c', active: 1}]}).map(f => f.id).join() === 'a,c' &&
+       X.fightFamiliars({}).length === 0 && X.fightFamiliars(null).length === 0);
+    /* Review Focus 3: a hand-edited familiar neither throws nor is written */
+    const fill = f => { let r; try { r = X.famFillHP(f); } catch (e) { r = 'threw ' + e.message; } return r; };
+    const a = {hp: {cur: '', max: '7'}}, b = {hp: {cur: '  ', max: 7}};
+    ck('#163 famFillHP: a blank current HP with a max takes the max, as a string', fill(a) === true && a.hp.cur === '7' && a.hp.max === '7' && fill(b) === true && b.hp.cur === '7', [a, b]);
+    const same = [{hp: {cur: '3', max: '7'}}, {hp: {cur: '', max: ''}}, {hp: {cur: 'abc', max: 'x'}}, {}, {hp: 'junk'}, {hp: {cur: '', max: '0'}}];
+    const before = JSON.stringify(same);
+    ck('#163 famFillHP: anything else is left alone and says so, and nothing throws',
+       same.every(f => fill(f) === false) && JSON.stringify(same) === before, same.map(fill));
+    const input = {abilities: {}, familiars: [{id: 'a', name: 'Owl'}, {id: 'b', turn: 'after', kind: 'Wolf', speed: '40 ft'}, {id: 'c', turn: 'sideways'}]};
+    const was = JSON.stringify(input.familiars);
+    const m = X.migrate(input);
+    ck('#163 migrate normalizes turn on a copy: own, after, own; every other key kept',
+       m.familiars.map(f => f.turn).join() === 'own,after,own' && m.familiars[1].kind === 'Wolf' && m.familiars[1].speed === '40 ft' && m.familiars[0].name === 'Owl', m.familiars);
+    ck('#163 ...and the loaded objects are not touched', JSON.stringify(input.familiars) === was && !('turn' in input.familiars[0]), input.familiars);
+    ck('#163 the card says Right after you', /Right after you/.test(X.familiarCardHTML({id: 'w', name: 'Wolf', turn: 'after', active: true})) &&
+       !/Right after you/.test(X.familiarCardHTML({id: 'w', name: 'Wolf', turn: 'own', active: true})) && !/Right after you/.test(X.familiarCardHTML({id: 'w', name: 'Wolf', active: true})));
+
+    /* the form: its record is a whitelist, so it must carry turn */
+    const keep = {ch: X.character, gid: ctx.document.getElementById, om: ctx.openModal, cm: ctx.closeModal, rf: ctx.renderFamiliars, rc: ctx.recompute, sv: ctx.scheduleSave};
+    const byId = {};
+    const el = () => ({
+      value: '', dataset: {}, hidden: false, textContent: '', innerHTML: '', style: {}, children: [],
+      classList: {toggle() {}, add() {}, remove() {}, contains: () => false},
+      _on: {}, addEventListener(type, fn) { (this._on[type] = this._on[type] || []).push(fn); },
+      querySelector: () => null, querySelectorAll: () => [], closest: () => null, insertAdjacentHTML() {},
+      setAttribute() {}, removeAttribute() {}, focus() {}, remove() {},
+    });
+    let html = '';
+    ctx.document.getElementById = id => byId[id] || (byId[id] = el());
+    ctx.openModal = (t, h) => { html = String(h); };
+    ctx.closeModal = () => {}; ctx.renderFamiliars = () => {}; ctx.recompute = () => {}; ctx.scheduleSave = () => {};
+    const open = f => { Object.keys(byId).forEach(k => delete byId[k]); ctx.openFamiliarForm(f); };
+    const tap = (id, ev) => (byId[id]._on.click || []).forEach(fn => fn(ev));
+    try {
+      X.character = X.blankChar();
+      open();
+      ck('#163 the form has "In a fight": Own initiative / Right after you, with its hint, Own pressed for a new one',
+         /In a fight/.test(html) && /id="faTurn"/.test(html) && /data-turn="own" class="on" aria-pressed="true">Own initiative</.test(html) &&
+         /data-turn="after" class="" aria-pressed="false">Right after you</.test(html) &&
+         html.includes('A familiar rolls its own. A beast companion or a summoned creature acts right after you.') &&
+         html.indexOf('id="faSpeed"') < html.indexOf('id="faTurn"'), html);
+      ctx.document.getElementById('faName').value = 'Sprocket';
+      tap('faSave');
+      ck('#163 Save on a new familiar keeps turn:"own"', X.character.familiars.length === 1 && X.character.familiars[0].turn === 'own' && X.character.familiars[0].name === 'Sprocket', X.character.familiars);
+      const wolf = {id: 'w', name: 'Wolf', kind: 'Wolf', ac: '13', hp: {cur: '11', max: '11'}, speed: '40 ft', description: '', effects: [], active: true, turn: 'after'};
+      X.character.familiars.push(wolf);
+      open(wolf);
+      ck('#163 ...an After familiar opens with Right after you pressed', /data-turn="after" class="on" aria-pressed="true"/.test(html), html);
+      ctx.document.getElementById('faName').value = 'Wolf';
+      tap('faSave');
+      const w = () => X.character.familiars.find(f => f.id === 'w');
+      ck('#163 ...and Save, untouched, keeps "after" (the whitelist trap)', w().turn === 'after', w());
+      open(w());
+      tap('faTurn', {target: {closest: q => q === '[data-turn]' ? {dataset: {turn: 'own'}} : null}});
+      tap('faSave');
+      ck('#163 ...a tap on Own initiative, then Save, gives "own"', w().turn === 'own', w());
+    } finally {
+      X.character = keep.ch; ctx.document.getElementById = keep.gid; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+      ctx.renderFamiliars = keep.rf; ctx.recompute = keep.rc; ctx.scheduleSave = keep.sv;
+    }
   }
 }
 
