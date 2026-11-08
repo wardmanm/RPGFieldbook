@@ -20,6 +20,7 @@ them. The first version was written from the wiki's feature pages (#127).
 - Add an ancestry, a background and a class from the Sheet header: each choice window opens, and what it grants lands on the sheet.
 - Remove that ancestry: everything it granted goes with it.
 - Level up: the hit points step and any choices open; Undo level-up puts the sheet back as it was.
+- Start a Fighter at level 8: each ASI asks for its choice, and no score passes 20.
 - Hit points: − and + change Current; a signed number typed into Current (−7, +4) applies; Temp HP takes damage first; locking Vitals with its pencil stops Max HP and your Flat AC from changing; on a touchscreen, tapping the bar opens Hit points, and Damage, Heal and Temp do what their preview says.
 - Short Rest restores Warlock pact slots and short-rest uses, offering to spend a Hit Die while any remain; Long Rest restores hit points to full, refills every spell slot, and returns half your Hit Dice.
 - Death saves: tick successes and failures; only a Long Rest clears them.
@@ -35,6 +36,7 @@ them. The first version was written from the wiki's feature pages (#127).
 - Fire a ranged weapon: its ammunition count drops, and Undo puts the shot back.
 - End combat asks first, then the End of combat window opens with its folded sections.
 - Leaving the combat tab during a fight does not end it.
+- A summoned familiar joins Roll initiative, and damage to it in the tracker shows on the paw.
 
 ## Spells
 - Add a spell from the browser: it appears under its level.
@@ -59,6 +61,7 @@ them. The first version was written from the wiki's feature pages (#127).
 - Type into each bio card and reload: the text is kept.
 - Add a language and a sense under Proficiencies, Senses & Languages.
 - Add someone to the Party card: they appear in the initiative tracker's party.
+- A background's tools are chips on Bio and leave with it; a tool choice is asked when it's added.
 
 ## Journal
 - Make a page with a title, a tag and text: it saves and groups under its tag.
@@ -75,7 +78,7 @@ them. The first version was written from the wiki's feature pages (#127).
 
 ## Settings
 - The cog opens Settings, and every page in its sidebar opens.
-- Switch light and dark, then the skin: the whole app follows.
+- Switch light and dark, then the skin: the whole app follows, and the open character's system and coins don't change. Settings → Sheet display → Game system asks first, then changes the coin set and the Race/Ancestry wording.
 - Hide a tab for this character: it leaves the tab bar, and comes back when shown again.
 - Back up: export the settings file, then import it; the status line says what the import did.
 - Credits name the icon artists and every loaded pack's credit.

@@ -10186,3 +10186,35 @@ moves each, with initiative changes) found the after-you rows always directly be
 Pages: [combat view](../wiki/features/combat-view.md), [sections & layout](../wiki/ui/sections-and-layout.md),
 [story & notes](../wiki/features/story-and-notes.md), [character model](../wiki/architecture/character-model.md),
 [decisions](../wiki/decisions.md), [1.9.1 roadmap](../wiki/roadmap/1.9.1.md).
+
+## 1.9.1 wave 2 merged: Bio chips, Skin & settings saves, ASI, Initiative (2026-11-08)
+
+All four wave-2 worktrees are merged into main, one `git merge` each, in the order Bio chips, Skin &
+settings saves, ASI, Initiative: 15 issues (#121, #120, #119, #123, #131; #133, #141; #172, #171;
+#164, #163) and two #146 items that rode along (S2-24, S2-26). Each branch had an approved spec and
+plan, a builder agent, a fresh reviewer whose findings were fixed before merge, and a browser pass
+with before and after shots. The full suite was green after each merge (9659 checks after the last).
+The design calls were Mike's (2026-11-07):
+- A background's tool choice is asked when it is added; old "Tools:" lines lift into chips; the rest
+  sits under Other proficiencies; multi-select for all but senses (#121, #119).
+- A removed or swapped source takes back only what it seeded; the player's values stay; a Base speed
+  box (#131).
+- Skin is look only; a Game system row asks first; PP and EP show on a Humblewood sheet while held (#133).
+- One window, each ASI blank and labelled by level, nothing past 20; S2-24 rides along (#171).
+- Summoned familiars join, "Own initiative" or "Right after you", one shared HP, struck and skipped
+  at 0 (#163).
+
+Conflicts were in `88-settings.js` (Skin's Game system handler beside Bio chips' size handler),
+`58-choices.js` (Bio chips' `data-chipids` and ASI's `data-level` on one choice block), `sheet.js`
+(each branch's block at one anchor, all kept) and wiki History lines. All four ledger entries were
+written at L9760; after the union merges they sit at L9760, L9865, L9972 and L10110, each later
+one with its blank line restored and its citations re-pointed. A new trap: a conflict resolver that
+splits on `=======` must match the whole line, because a comment banner ending in `=====` holds it.
+
+QA's older findings, for Mike to file: the Combatants table stays open into another character's
+fight; the live region keeps the old "X's turn" when the acting row is removed or dismissed; the
+home setup panel's "Classic D&D" clips on a 390 px Humblewood screen; the Coins card's
+"Auto-convert" wraps at 390 px; the private 2024 pack's Blessed Warrior and Druidic Warrior have no
+category line.
+
+Pages: [1.9.1](../wiki/roadmap/1.9.1.md).
