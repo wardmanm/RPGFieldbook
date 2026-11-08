@@ -28,7 +28,7 @@ function cleanCombatants(v,active){
       const fid=String(r.famId==null?"":r.famId);if(!fid||fams.has(fid))return;fams.add(fid);
       const after=r.after===true;
       out.push({id:initFreshId(r.id,seen),kind:"familiar",name:String(r.name==null?"":r.name).trim().slice(0,60)||"Familiar",init:after?null:initInt(r.init),
-        ac:initOpt(r.ac),track:"exact",band:null,hp:initOpt(r.hp),maxHp:initOpt(r.maxHp),dead:false,partyId:"",famId:fid,after});
+        ac:initOpt(r.ac),track:"exact",band:null,hp:famHP(r.hp),maxHp:initOpt(r.maxHp),dead:false,partyId:"",famId:fid,after});
       return;
     }
     const party=r.kind==="party",band=(Number.isInteger(r.band)&&r.band>=0&&r.band<=4)?r.band:null,maxHp=party?initOpt(r.maxHp):"";
@@ -158,9 +158,16 @@ function buildCombatants(you,party,foes,fams){
    `kind` is its creature type, "Owl"; a row's `kind` is the row's kind.) */
 function famTurn(f){return f&&f.turn==="after"?"after":"own";}
 /* The summoned familiars, in familiar order. One with no id can't be matched
-   to a row, so it never joins. */
+   to a row, so it never joins; nor can a later familiar repeating an id (a
+   hand-edited file): the first with an id is that id's familiar, as
+   famOfRow() and the paw's handlers find it, so one HP is never written to
+   another. */
 function fightFamiliars(c){
-  return (Array.isArray(c&&c.familiars)?c.familiars:[]).filter(f=>f&&typeof f==="object"&&f.active&&typeof f.id==="string"&&f.id);
+  const seen=new Set();
+  return (Array.isArray(c&&c.familiars)?c.familiars:[]).filter(f=>{
+    if(!f||typeof f!=="object"||typeof f.id!=="string"||!f.id||seen.has(f.id))return false;
+    seen.add(f.id);return !!f.active;
+  });
 }
 /* A blank current HP with a max reads 0 on the familiar's card and "?" in the
    tracker, so on joining a fight (and on a form save while in one) it takes
@@ -171,12 +178,16 @@ function famFillHP(f){
   if(String(hp.cur==null?"":hp.cur).trim()!==""||!(mx>0))return false;
   f.hp=Object.assign({},hp,{cur:String(mx)});return true;
 }
-/* One familiar's row, its name, AC and HP copied (cleaned as a party row's);
-   init is the typed roll for Own, null for After. */
+/* A familiar row's current HP: a whole number, a negative read as 0 (fallen,
+   as the tracker's own entry stores it), or "" when unknown. The familiar
+   keeps whatever its form was given. */
+function famHP(v){const n=initInt(v);return n===null?"":Math.max(0,n);}
+/* One familiar's row, its name, AC and HP copied; init is the typed roll for
+   Own, null for After. */
 function famRow(f,init){
   const hp=f&&f.hp&&typeof f.hp==="object"?f.hp:{},after=famTurn(f)==="after";
   return {id:uid(),kind:"familiar",name:String(f&&f.name!=null?f.name:"").trim().slice(0,60)||"Familiar",init:after?null:initInt(init),ac:initOpt(f&&f.ac),
-    track:"exact",band:null,hp:initOpt(hp.cur),maxHp:initOpt(hp.max),dead:false,partyId:"",famId:String(f&&f.id!=null?f.id:""),after};
+    track:"exact",band:null,hp:famHP(hp.cur),maxHp:initOpt(hp.max),dead:false,partyId:"",famId:String(f&&f.id!=null?f.id:""),after};
 }
 
 /* The familiar is the truth for its row (decision 10): copy each familiar
@@ -193,7 +204,7 @@ function syncFamiliarRows(c){
     const hp=f.hp&&typeof f.hp==="object"?f.hp:{},after=famTurn(f)==="after";
     r.name=String(f.name!=null?f.name:"").trim().slice(0,60)||"Familiar";r.ac=initOpt(f.ac);
     if(r.after!==after){r.after=after;r.init=null;moved=true;}
-    r.hp=initOpt(hp.cur);r.maxHp=initOpt(hp.max);
+    r.hp=famHP(hp.cur);r.maxHp=initOpt(hp.max);
   });
   if(moved)c.combatants=initSort(list);
   return gone;
@@ -615,12 +626,16 @@ function setCombatant(id,patch){
   if("band" in patch&&!fam)r.band=(Number.isInteger(patch.band)&&patch.band>=0&&patch.band<=4)?patch.band:null;
   if("track" in patch&&r.kind==="party")r.track=patch.track==="estimate"?"estimate":"exact";
   if("hp" in patch&&(r.kind==="party"||fam)){const n=initInt(patch.hp),h=n===null?"":Math.max(0,n);r.hp=h===""?"":(num(r.maxHp)>0?Math.min(h,num(r.maxHp)):h);
+    /* #163 decision 12: a familiar's cleared box with a max takes the max, or
+       its card would read 0 while the tracker read "?" */
+    if(fam&&r.hp===""&&num(r.maxHp)>0)r.hp=num(r.maxHp);
     /* #163 decision 3: one HP, the familiar's own, stored as its form does */
     if(f)f.hp=Object.assign({cur:"",max:""},f.hp&&typeof f.hp==="object"?f.hp:{},{cur:r.hp===""?"":String(r.hp)});}
   if("dead" in patch&&r.kind==="party")r.dead=patch.dead===true;
   if("ac" in patch&&r.kind!=="you"&&!fam)r.ac=initOpt(patch.ac);
-  /* #163: the dialog's switch writes the familiar's own setting too */
-  if("after" in patch&&fam){r.after=patch.after===true;r.init=null;if(f)f.turn=r.after?"after":"own";character.combatants=initSort(list);}
+  /* #163: the dialog's switch writes the familiar's own setting too. The
+     button already pressed changes nothing: it would wipe an Own roll. */
+  if("after" in patch&&fam&&(patch.after===true)!==r.after){r.after=patch.after===true;r.init=null;if(f)f.turn=r.after?"after":"own";character.combatants=initSort(list);}
   if("init" in patch){r.init=initAfter(r)?null:initInt(patch.init);character.combatants=initSort(list);}
   initSettleTurn();
   renderCombatChrome();renderInitTable();scheduleSave();

@@ -10303,6 +10303,15 @@ async function t181AddClassUndo() {
     ck('#163 fightFamiliars: the summoned ones with an id, in familiar order',
        X.fightFamiliars({familiars: [{id: 'a', active: true}, {id: 'b', active: false}, {active: true}, null, {id: '', active: true}, {id: 'c', active: 1}]}).map(f => f.id).join() === 'a,c' &&
        X.fightFamiliars({}).length === 0 && X.fightFamiliars(null).length === 0);
+    /* review: two familiars sharing an id (a hand-edited file) would get two rows, and one's damage
+       would write the other's HP. The first familiar with an id is that id's familiar, everywhere
+       (famOfRow() and the paw's handlers find the first too), so only it can join. */
+    {
+      const twin = {familiars: [{id: 'x', name: 'A', active: true}, {id: 'x', name: 'B', active: true}, {id: 'y', name: 'C', active: true}]};
+      ck('#163 fightFamiliars keeps the first familiar per id', X.fightFamiliars(twin).map(f => f.name).join() === 'A,C', X.fightFamiliars(twin).map(f => f.name));
+      const shadow = {familiars: [{id: 'x', name: 'A', active: false}, {id: 'x', name: 'B', active: true}]};
+      ck('#163 ...and a later twin of a dismissed familiar does not join in its place', X.fightFamiliars(shadow).length === 0, X.fightFamiliars(shadow));
+    }
     /* Review Focus 3: a hand-edited familiar neither throws nor is written */
     const fill = f => { let r; try { r = X.famFillHP(f); } catch (e) { r = 'threw ' + e.message; } return r; };
     const a = {hp: {cur: '', max: '7'}}, b = {hp: {cur: '  ', max: 7}};
@@ -10378,7 +10387,7 @@ async function t181AddClassUndo() {
     ck('#163 cleanCombatants keeps a familiar row: famId, a boolean after, init and HP as a party row\'s, Exact and nothing else',
        C.length === 4 && cr('r').kind === 'familiar' && cr('r').famId === 'f1' && cr('r').after === false && cr('r').init === 14 && cr('r').hp === 5 && cr('r').maxHp === 7 &&
        cr('r').track === 'exact' && cr('r').band === null && cr('r').dead === false && cr('r').partyId === '' && cr('r').name === 'Owl', C);
-    ck('#163 ...after:true has no initiative, and a blank name reads "Familiar"', cr('r2').after === true && cr('r2').init === null && cr('r2').name === 'Familiar' && cr('r2').hp === '' && cr('r2').maxHp === '', cr('r2'));
+    ck('#163 ...after:true has no initiative, a blank name reads "Familiar", and a negative HP reads 0 (review)', cr('r2').after === true && cr('r2').init === null && cr('r2').name === 'Familiar' && cr('r2').hp === 0 && cr('r2').maxHp === '', cr('r2'));
     ck('#163 ...a row with no famId is dropped, and so is a second row for the same familiar', !C.some(r => r.id === 'r3' || r.id === 'r4'), C.map(r => r.id));
     ck('#163 ...every other kind gets famId "" and after false', cr('y').famId === '' && cr('y').after === false && cr('g').famId === '' && cr('g').after === false, [cr('y'), cr('g')]);
     ck('#163 combatantDead: a familiar at 0 HP is dead; blank or 3 is not',
@@ -10456,6 +10465,14 @@ async function t181AddClassUndo() {
     const b1 = X.combatantBar(fr(5, 7)), b2 = X.combatantBar(fr('', 7)), b3 = X.combatantBar(fr(4, ''));
     ck('#163 ...its bar: a share with a max, the "?" with a blank HP or no max',
        Math.abs(b1.share - 5 / 7) < 1e-9 && b1.band === 1 && b2.band === null && b2.share === null && b3.band === null && b3.share === null, [b1, b2, b3]);
+    /* review: a negative HP typed on the familiar's form reads as 0, fallen, as the tracker's own
+       entry stores it; it used to read "HP ? / 7" and keep its turns */
+    {
+      const neg = X.famRow({id: 'm', name: 'Imp', hp: {cur: '-3', max: '7'}}, 4);
+      ck('#163 a familiar\'s negative HP reads 0 in its row: fallen, "HP 0 / 7"', neg.hp === 0 && X.combatantDead(neg) && ht(neg) === 'HP 0 / 7', neg);
+      const kept = X.cleanCombatants([{kind: 'familiar', id: 'k', famId: 'm', hp: -2, maxHp: 7}], true)[0];
+      ck('#163 ...and a stored row cleans it the same way', kept.hp === 0, kept);
+    }
 
     /* chips and rows */
     {
@@ -10575,8 +10592,14 @@ async function t181AddClassUndo() {
       ck('#163 ...clamped to the max', famOf('s').hp.cur === '7' && s.hp === 7, famOf('s').hp);
       X.setCombatant(s.id, {hp: -3});
       ck('#163 ...a negative reads 0', famOf('s').hp.cur === '0' && s.hp === 0, famOf('s').hp);
+      X.setCombatant(s.id, {hp: 5}); X.setCombatant(s.id, {hp: ''});
+      /* review: a cleared box wrote "" to the familiar, which its card reads as 0 while the tracker
+         read "?" and kept its turns; decision 12 applies here too */
+      ck('#163 ...a cleared box with a max takes the max, on the familiar and in the row (decision 12)', famOf('s').hp.cur === '7' && s.hp === 7, [famOf('s').hp, s.hp]);
       X.setCombatant(rowOf('w').id, {hp: 12});
       ck('#163 ...with no max, any whole number', famOf('w').hp.cur === '12' && rowOf('w').hp === 12, famOf('w').hp);
+      X.setCombatant(rowOf('w').id, {hp: ''});
+      ck('#163 ...and with no max a cleared box stays blank, both sides', famOf('w').hp.cur === '' && rowOf('w').hp === '', famOf('w').hp);
       X.setCombatant(rowOf('w').id, {ac: 19});
       ck('#163 ...and the dialog never sets a familiar\'s AC: it is the familiar\'s', rowOf('w').ac === '' && famOf('w').ac === '');
       const lone = rowOf('w'); X.character.familiars = X.character.familiars.filter(f => f.id !== 'w');
@@ -10609,6 +10632,31 @@ async function t181AddClassUndo() {
       X.setCombatant(rowOf('w').id, {init: '20'});
       ck('#163 ...an After row takes no initiative', rowOf('w').init === null && order() === 'Goblin,you,Wolf,Sprocket,Rat', order());
 
+      /* review: re-tapping the button already pressed wiped an Own familiar's roll and sorted it
+         last; acting, the next Next then wrapped the round and everyone after lost a turn */
+      {
+        const keepLive = ctx.setCombatLive; ctx.setCombatLive = () => {};
+        const all = () => JSON.stringify([X.character.combatants, X.character.combatTurn, X.character.combatRound, X.character.familiars]);
+        try {
+          fight();
+          X.character.combatTurn = rowOf('s').id;
+          let was = all();
+          X.setCombatant(rowOf('s').id, {after: false});
+          ck('#163 re-tapping Own initiative on the acting Own familiar changes nothing: its roll, its place, the marker, the round', all() === was && rowOf('s').init === 10, order());
+          X.initNext();
+          ck('#163 ...and Next goes on to the Rat, in the same round', X.character.combatTurn === X.character.combatants.find(r => r.name === 'Rat').id && X.character.combatRound === 2,
+             [X.character.combatTurn, X.character.combatRound]);
+          fight(); was = all();
+          X.setCombatant(rowOf('s').id, {after: false});
+          ck('#163 ...nor when it is not acting', all() === was);
+          X.setCombatant(rowOf('w').id, {after: true});
+          ck('#163 re-tapping Right after you on an After familiar changes nothing', all() === was);
+          X.character.combatTurn = rowOf('w').id; was = all();
+          X.setCombatant(rowOf('w').id, {after: true});
+          ck('#163 ...nor when it is acting', all() === was);
+        } finally { ctx.setCombatLive = keepLive; }
+      }
+
       /* a tap on the switch reopens the dialog with focus on the pressed button */
       {
         fight();
@@ -10623,6 +10671,11 @@ async function t181AddClassUndo() {
         els.mBody.ls.click.forEach(f => f({target: t}));
         ck('#163 a tap on Right after you writes the familiar, reopens the dialog and keeps focus on it',
            famOf('s').turn === 'after' && /data-cturn="after" class="on"/.test(opened) && focused === '[data-cturn="after"]', [famOf('s').turn, focused]);
+        X.setCombatant(rowOf('s').id, {after: false}); X.setCombatant(rowOf('s').id, {init: '10'});
+        const was = order(), tOwn = {closest: q => q === '[data-cturn]' ? {dataset: {cturn: 'own'}} : null};
+        focused = '';
+        els.mBody.ls.click.forEach(f => f({target: tOwn}));
+        ck('#163 a tap on the Own initiative already pressed keeps its roll and place, focus on it', rowOf('s').init === 10 && order() === was && focused === '[data-cturn="own"]', [rowOf('s').init, order(), focused]);
       }
     } finally {
       X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.advanceRound = keep.ar; ctx.renderFamiliars = keep.rf;
@@ -10718,9 +10771,17 @@ async function t181AddClassUndo() {
       fight(); X.character.combatants = []; X.character.combatTurn = '';
       X.setFamiliarSummoned('w', true); X.deleteFamiliar('s');
       ck('#163 ...nor in a fight with no list yet (Roll initiative will list them)', X.character.combatants.length === 0 && toasts.length === 0 && !famOf('s'));
-      fight(); X.character.combatants = X.character.combatants.filter(r => r.famId !== 's');
-      before = snap(); X.setFamiliarSummoned('w', false);
-      ck('#163 a familiar Removed from the fight stays out: an unrelated change brings nothing back', !rowOf('s') && snap() === before);
+      /* a familiar the player Removed stays out until it is dismissed and summoned again (the
+         form's save while it is still summoned is checked with the form, below) */
+      fight(); X.removeCombatant(rowOf('s').id);
+      X.setFamiliarSummoned('w', true);
+      ck('#163 a familiar Removed from the fight stays out: another familiar joining brings it nothing', !rowOf('s') && !!rowOf('w') && famOf('s').active === true, order());
+      X.setFamiliarSummoned('s', false);
+      ck('#163 ...dismissing it changes nothing more in the tracker', !rowOf('s') && famOf('s').active === false && order() === 'you,Wolf,Goblin,Thorn', order());
+      toasts = [];
+      X.setFamiliarSummoned('s', true);
+      ck('#163 ...and summoning it again brings it back: last, blank, with the toast', !!rowOf('s') && rowOf('s').init === null && order() === 'you,Wolf,Goblin,Thorn,Sprocket' &&
+         toasts.length === 1 && /^Sprocket joined the fight\./.test(toasts[0]), [order(), toasts]);
 
       /* the form's "Summoned (active)" tick is the same summon */
       {
@@ -10780,6 +10841,17 @@ async function t181AddClassUndo() {
         save(famOf('s'), {cur: '0'}, false);
         ck('#163 ...saving the acting familiar at 0 HP moves the marker to its living successor', famOf('s').hp.cur === '0' && rowOf('s').hp === 0 && X.character.combatTurn === named('Thorn').id &&
            X.character.combatRound === 2, [X.character.combatTurn, order()]);
+        /* review: a negative typed on the form read "HP ? / 7" in the row and kept its turns */
+        fight();
+        X.character.combatTurn = rowOf('s').id;
+        save(famOf('s'), {cur: '-3'}, false);
+        ck('#163 ...a negative typed on the form: the familiar keeps it, its row reads 0, fallen, and the marker moves on',
+           famOf('s').hp.cur === '-3' && rowOf('s').hp === 0 && X.combatantDead(rowOf('s')) && X.character.combatTurn === named('Thorn').id, [famOf('s').hp, rowOf('s'), order()]);
+        /* review item 6: the Removed familiar's form saved while it is still summoned brings it nothing */
+        fight(); X.removeCombatant(rowOf('s').id);
+        before = snap();
+        save(famOf('s'), {speed: 'fly 60 ft'}, false);
+        ck('#163 ...saving a Removed familiar\'s form while it is still summoned leaves it out, no toast', !rowOf('s') && snap() === before && toasts.length === 0 && famOf('s').speed === 'fly 60 ft', order());
         fight(); X.character.combatActive = false; X.character.combatants = [];
         save(famOf('o'), null, true);
         ck('#163 ...out of a fight a save fills nothing and joins nothing', famOf('o').active === true && famOf('o').hp.cur === '' && X.character.combatants.length === 0 && toasts.length === 0);
