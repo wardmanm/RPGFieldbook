@@ -60,7 +60,8 @@ carrying the pack's wording in `ask` (its title and accessible name). It is aske
 choices window that opens after Add background ([Character building](character-building.md)); one
 left unpicked, or one whose wording names no kind the app knows ("Tool of your choice"), stays on
 the card. Its name is a button (`data-chipask`) whose hit area fills the whole chip but its × (a
-positioned `::after`; the × comes later and stays on top), and opens `openToolNamer()`: the Add window with
+positioned `::after`; the × comes later and stays on top, and the dimmed "· background" lets taps
+through), and opens `openToolNamer()`: the Add window with
 the kinds its wording names, instant pills and Or type one, refusing a tool the sheet already has
 ("You already have Dice Set.") in `#chipMsg` and staying open. The pencil doesn't hide it: it hides
 removal, not naming. A player's own placeholder (one lifted from old text) also has its ×.
@@ -174,6 +175,10 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - **A preview that flattened everything** showed a note reading `**bold**` / `- bullet` as plain
   "bold bulleted", with no sign either marker worked; the note card itself had rendered correctly all
   along. → L3035
+- **A dimmed label took a tap meant for the chip.** A placeholder's "· background" (`.chip-src`) has
+  `opacity`, which makes it its own layer, painted above the name button's positioned `::after`, so
+  a tap on it did nothing. It has `pointer-events:none` there. The browser pass found it; a hit-test
+  (`elementFromPoint`) shows it, a screenshot doesn't. → L9760
 - **The Bio tab's "Notes" card formatted nothing** — no markup, not even line breaks — while the
   section notes rendered the whole grammar. One renderer for every field fixed it. → L3035
 
@@ -218,3 +223,4 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - 2026-10-25 — The Party card: a roster of companions that joins every fight the player starts; 19 sections. → ledger L7097, #91
 - 2026-11-06 — A granted language's pill appears and leaves at once with its species or background, on add, change and remove. → ledger L9101, #154
 - 2026-11-07 — Tools are a chip row with placeholders to name; the prose sits under Other proficiencies; the Add window takes several at once, tools grouped by kind; the chips and pills get room. → ledger L9760, #121, #120, #119, #123
+- 2026-11-08 — The browser pass: a tap on a placeholder's "· background" now names it too. → ledger L9760, #121

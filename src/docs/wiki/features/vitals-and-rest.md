@@ -65,7 +65,7 @@ breakdown it showed before. The box holds the player's own speed when there is o
 empty with the species' speed as its placeholder ("30"). Under it a hint: "From Elf: 30 ft. Type a
 number to set your own." when the base is a species' seed, "Your own. Clear it to use your
 species' speed." when it is the player's, "No species speed. Type yours." when there is none, and
-"Unlock Vitals to change it" while Vitals is locked, when the box is read-only. It commits on
+"Unlock Vitals to change it" while Vitals is locked, when the box is read-only and dimmed. It commits on
 `change` and on the window's dismissal, since Escape doesn't blur it (`setDismissGuard()`, the AC
 window's pattern): `parseBaseSpeed()` takes a whole number of feet 0–999, trimmed, gives `""` for
 blank and refuses anything else ("30 ft", "-5", "3.5", "3 0"), and the box then shows what the
@@ -456,3 +456,4 @@ came back.
 - 2026-11-06 — Tapping AC opens the Armor Class window (Calculated / Flat); the shield reads FLAT for a Flat AC. → ledger L9537, #130
 - 2026-11-06 — The Vitals pencil locks how AC is set too: the AC window's switch and Flat box; its label says so. → ledger L9597, #130
 - 2026-11-07 — Tapping Speed opens the Speed window, a Base speed box above the breakdown, the player's own speed through `setPlayerField()`; Size picks are the player's too, and Size is marked only when it is theirs; a swap or remove takes back the species' speed and size. → ledger L9760, #131
+- 2026-11-08 — A Base speed box the Vitals pencil locks is dimmed, so it looks locked. → ledger L9760, #131

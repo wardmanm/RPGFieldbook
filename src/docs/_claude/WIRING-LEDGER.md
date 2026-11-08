@@ -9834,10 +9834,30 @@ covers the tool step's window and guard and the spellcasting hand-on; `rules-dat
 card's order, the chip and chooser CSS, and the seed and Speed wiring. Scratchpad checks: every
 shipped `tools` wording through `toolParse()`; 55,986 sequences of apply, swap, pick a size, clear,
 remove and reload with no picked size lost and no seed outliving its species; `parseBaseSpeed()` over
-0–1000 and junk. Not yet done: the screenshots and the driven browser pass (Task 7), held for the
-shared browser.
+0–1000 and junk.
+
+**Browser pass** (2026-11-08, the project's Playwright MCP; 102 shots in
+`.claude/qa/in-progress/121-bio-chips/`). Before: main's artifact (equal to this branch's base), storage
+cleared; after: this branch's build, storage cleared again. Bio card, Defences, the Add windows, the
+tool step, the namer and the Speed window in both skins at 1280 and 390, light and dark for the
+cards and the Speed window, seeded through `evaluate` with the plan's inline pack. Driven with real
+clicks: pressing three resistance pills and Add 3; Add background → Soldier, the tool step, a pick,
+the named chip; Remove (its native confirm accepted) and Soldier again with the step dismissed by
+Escape (no question); the placeholder tapped on its "· background" text and its padding corner, the
+namer refusing a tool already held, then naming it; Change to Bandit Defector, its two-kind step, the
+swap taking Soldier's tool; Size: Save unchanged (stays the species'), Elf → Tiefling, pick Small
+(marked), swap to Gnome (kept, marked); Woodfolk (a species with Proficiencies text, added through
+`evaluate`) then Remove, its line leaving the card at once; a custom ancestry, a typed 25 on the
+badge, a swap to Elf keeping it, clearing it, 35, "30 ft" refused, Escape committing 40, and the
+Vitals pencil locking the box. The console stayed clean.
+Found and fixed (test first): a tap on a placeholder's "· background" did nothing, because
+`.chip-src`'s opacity makes it its own layer above the name's `::after` (now `pointer-events:none`);
+and a box the Vitals pencil locks looked editable (the Base speed box and, beside it, the AC window's
+Flat box now dim when disabled, as the AC switch does). The Task 3 chip values were kept: at 390 the
+rows fit and read well; at 1280 the Bio column is 320px wide, so **+ Add** wraps to its own row.
+Not driven: a real phone and touch, print, and Mike's own characters.
 
 Pages: [story & notes](../wiki/features/story-and-notes.md), [grants & provenance](../wiki/architecture/grants-and-provenance.md),
 [character model](../wiki/architecture/character-model.md), [character building](../wiki/features/character-building.md),
 [vitals & rest](../wiki/features/vitals-and-rest.md), [sections & layout](../wiki/ui/sections-and-layout.md),
-[known issues](../wiki/roadmap/known-issues.md), [1.9.1](../wiki/roadmap/1.9.1.md), [decisions](../wiki/decisions.md).
+[armor & AC](../wiki/features/armor-and-ac.md), [known issues](../wiki/roadmap/known-issues.md), [1.9.1](../wiki/roadmap/1.9.1.md), [decisions](../wiki/decisions.md).
