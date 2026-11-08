@@ -110,7 +110,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
   'isStyleChoice', 'classStyleSources', 'hasFightingStyle', 'featFeatureNamed', 'styleOptionTaken', 'findClassDef',
-  'asiStepLabel', 'asiReadStep', 'asiStepDone',
+  'asiStepLabel', 'asiReadStep', 'asiStepDone', 'asiScore', 'asiScores', 'asiStepIncreases', 'asiLedger',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -8941,7 +8941,11 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       {name: 'Great Weapon Master', description: 'General feat · Prerequisite: Level 4+ and Strength 13+\nHeavy Swing: You hit hard.', ability: [{str: 1}]},
       {name: 'Grappler', description: 'General feat · Prerequisite: Level 4+ and Strength 13+ or Level 4+ and Dexterity 13+\nPin: You hold on.', ability: [{choose: ['str', 'dex'], amount: 1}]},
       {name: 'Boon of Combat Prowess', description: 'Epic Boon · Prerequisite: Level 19+\nPeerless Aim: You rarely miss.', ability: [{choose: ['str', 'dex', 'con', 'int', 'wis', 'cha'], amount: 1, max: 30}]},
-      {name: 'Skilled', description: 'General feat\nRepeatable: You can take this feat more than once.\nTraining: Three skills.'}]};
+      {name: 'Skilled', description: 'General feat\nRepeatable: You can take this feat more than once.\nTraining: Three skills.'},
+      // two increase groups, a fixed one first (Review Focus 4)
+      {name: 'Sturdy Grip', description: 'General feat\nGrip: You hold fast.', ability: [{con: 1}, {choose: ['str', 'dex'], amount: 1}]},
+      // the Humblewood shape: the +1 carried as the feat's own effect, and named in its text
+      {name: 'Canopy Runner', description: 'You run the branches.\nIncrease your Dexterity score by 1, to a maximum of 20.', effects: [{target: 'ability.dex', value: 1}]}]};
   X.resetRules(); X.mergeRules(T172, 'test-172');
   const feat = n => X.rules.feats.find(f => f.name === n);
   const sheet = (classes, extra) => {
@@ -9091,6 +9095,112 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
   ck('#146 S2-24 "+1 to two" with the same ability twice grants nothing', !X.character.features.some(f => f.name === 'Ability Score Improvement'));
   X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '1', a: 'str', b: 'dex'}, fo, []);
   ck('#146 S2-24 ...two different abilities still do', X.character.features.some(f => f.name === 'Ability Score Improvement' && f.effects.length === 2));
+
+  // ---- #171 the cap: what counts toward it (asiScore), what a step adds (asiStepIncreases)
+  sheet([{name: 'Fighter', level: 6}]); X.character.abilities.str = 16;
+  X.character.features.push({id: 'c1', name: 'Ability Score Improvement', enabled: true, effects: [{target: 'ability.str', value: 2}]});
+  ck('#171 cap: asiScore is the score plus the enabled features\' effects', X.asiScore('str') === 18 && X.asiScores().str === 18 && X.asiScores().dex === 10, X.asiScores());
+  X.character.inventory = [{id: 'i1', name: 'Belt of Testing', equipped: true, effects: [{target: 'ability.str', value: 2}]}];
+  X.character.statuses = [{id: 's1', name: 'Mighty', active: true, effects: [{target: 'ability.str', value: 1}]}];
+  X.character.familiars = [{id: 'm1', name: 'Imp', active: true, effects: [{target: 'ability.str', value: 1}]}];
+  X.character.features.push({id: 'c2', name: 'Switched Off', enabled: false, effects: [{target: 'ability.str', value: 1}]});
+  ck('#171 cap: ...an equipped item, an active status, a familiar and a switched-off feature don\'t count (decision 3)',
+     X.asiScore('str') === 18 && X.abilFinal('str', X.contributions()) === 22, [X.asiScore('str'), X.abilFinal('str', X.contributions())]);
+  sheet([{name: 'Fighter', level: 6}]);
+  X.character.abilities.str = ''; const sBlank = X.asiScore('str');
+  X.character.abilities.str = 'abc'; const sJunk = X.asiScore('str');
+  ck('#171 cap: a blank or junk score reads 0, and every score is a number (Review Focus 2)', sBlank === 0 && sJunk === 0 && Object.values(X.asiScores()).every(Number.isFinite), [sBlank, sJunk]);
+  const GWM = feat('Great Weapon Master'), BOON = feat('Boon of Combat Prowess'), STG = feat('Sturdy Grip'), CAN = feat('Canopy Runner');
+  const S = (sel, f) => X.asiStepIncreases(sel, f || null);
+  const asi2 = k => S({pick: '__asi__', mode: '2', a: k});
+  const asi11 = (a, b) => S({pick: '__asi__', mode: '1', a, b});
+  const gwmS = S({pick: 'Great Weapon Master', plus: []}, GWM);
+  ck('#171 cap: "+2 to one" STR is one +2, capped at 20', JSON.stringify(asi2('str')) === JSON.stringify({route: 'asi', complete: true, incs: [{k: 'str', n: 2, cap: 20, fixed: false}]}), asi2('str'));
+  ck('#171 cap: "+1 to two" is two +1s; a blank one is no increase and not complete',
+     asi11('con', 'wis').incs.map(x => x.k + x.n).join() === 'con1,wis1' && asi11('con', 'wis').complete === true
+     && asi11('str', '').incs.length === 1 && asi11('str', '').complete === false && asi2('').incs.length === 0 && asi2('').complete === false);
+  ck('#171 cap: Great Weapon Master is one fixed +1 STR', gwmS.route === 'feat' && gwmS.complete === true && gwmS.incs.length === 1
+     && gwmS.incs[0].k === 'str' && gwmS.incs[0].n === 1 && gwmS.incs[0].cap === 20 && gwmS.incs[0].fixed === true, gwmS);
+  const grS = S({pick: 'Grappler', plus: ['dex']}, GRP);
+  ck('#171 cap: Grappler\'s answered "+1 to:" is a chosen +1 at its index', grS.incs.length === 1 && grS.incs[0].k === 'dex' && grS.incs[0].n === 1 && grS.incs[0].cap === 20 && grS.incs[0].i === 0 && grS.incs[0].fixed === false, grS);
+  ck('#171 cap: ...unanswered, no increase and not complete', S({pick: 'Grappler', plus: []}, GRP).incs.length === 0 && S({pick: 'Grappler', plus: []}, GRP).complete === false);
+  ck('#171 cap: an Epic Boon\'s increase carries its own cap, 30', S({pick: 'Boon of Combat Prowess', plus: ['str']}, BOON).incs[0].cap === 30);
+  const sgS = S({pick: 'Sturdy Grip', plus: [, 'dex']}, STG);
+  ck('#171 cap: a fixed group then a chosen one: the chosen keeps its index 1 (Review Focus 4)',
+     sgS.incs.length === 2 && sgS.incs[0].k === 'con' && sgS.incs[0].fixed && sgS.incs[1].k === 'dex' && sgS.incs[1].i === 1 && !sgS.incs[1].fixed && sgS.complete === true, sgS);
+  const nullS = S({pick: 'Nowhere Feat'}, null);
+  ck('#171 cap: a feat with no loaded rules adds nothing, set by its pick (Review Focus 5)', nullS.route === 'feat' && nullS.incs.length === 0 && nullS.complete === true);
+  ck('#171 cap: no pick is no route', S({pick: null}).route === 'none' && S({pick: null}).incs.length === 0);
+  const canS = S({pick: 'Canopy Runner', plus: []}, CAN);
+  ck('#171 cap: a +1 the feat carries as its own effect is counted, once, as landing (it is granted with the feat)',
+     canS.incs.length === 1 && canS.incs[0].k === 'dex' && canS.incs[0].own === true && canS.complete === true, canS);
+
+  // ---- #171 the ledger: level order, the spec's §7 cases
+  const B = str => ({str, dex: 14, con: 16, int: 10, wis: 12, cha: 8});
+  let Lg = X.asiLedger(B(19), [asi2('str')]);
+  ck('#171 ledger: STR 19, "+2 STR" does not fit', Lg[0].invalid.length === 1 && Lg[0].invalid[0].k === 'str' && !Lg[0].adds.str && Lg[0].before.str === 19, Lg);
+  Lg = X.asiLedger(B(19), [asi11('str', 'dex')]);
+  ck('#171 ledger: ...and "+1 STR, +1 DEX" fits', Lg[0].invalid.length === 0 && Lg[0].adds.str === 1 && Lg[0].adds.dex === 1, Lg);
+  Lg = X.asiLedger(B(18), [gwmS, asi2('str')]);
+  ck('#171 ledger: STR 18, level 4 GWM then level 6 "+2 STR": level 6 does not fit, from STR 19',
+     Lg[0].adds.str === 1 && Lg[1].before.str === 19 && Lg[1].invalid.length === 1 && !Lg[1].adds.str, Lg);
+  Lg = X.asiLedger(B(18), [gwmS, asi11('str', 'dex')]);
+  ck('#171 ledger: ...with "+1 STR, +1 DEX" at level 6 it fits', Lg[1].invalid.length === 0 && Lg[1].adds.str === 1 && Lg[1].adds.dex === 1, Lg);
+  Lg = X.asiLedger(B(18), [asi2('str'), gwmS]);
+  ck('#171 ledger: STR 18, level 4 "+2 STR" then level 6 GWM: its fixed +1 adds nothing and is not invalid',
+     Lg[1].before.str === 20 && !Lg[1].adds.str && Lg[1].invalid.length === 0 && X.asiStepDone({pick: 'Great Weapon Master', plus: []}, GWM), Lg);
+  Lg = X.asiLedger(B(20), [S({pick: 'Boon of Combat Prowess', plus: ['str']}, BOON)]);
+  ck('#171 ledger: an Epic Boon takes STR 20 to 21', Lg[0].adds.str === 1 && Lg[0].invalid.length === 0, Lg);
+  Lg = X.asiLedger(B(20), [asi11('str', '')]);
+  ck('#171 ledger: half a "+1 to two" adds nothing, but a half that no longer fits is invalid (so it is cleared)', Lg[0].invalid.length === 1 && Object.keys(Lg[0].adds).length === 0, Lg);
+  Lg = X.asiLedger(B(22), [asi2('str'), asi11('str', 'dex'), S({pick: 'Grappler', plus: ['str']}, GRP), gwmS, asi2('dex')]);
+  ck('#171 ledger: a sheet already at STR 22 (the bug\'s): every STR increase refused, nothing lowered, no NaN (Review Focus 1)',
+     Lg.slice(0, 4).every(x => x.before.str === 22) && Lg[0].invalid.length === 1 && Lg[1].invalid.length === 1 && Lg[1].invalid[0].k === 'str' && !Lg[1].adds.dex
+     && Lg[2].invalid.length === 1 && Lg[3].invalid.length === 0 && !Lg[3].adds.str && Lg[4].adds.dex === 2
+     && Lg.every(x => Object.values(x.before).every(Number.isFinite)), Lg);
+  Lg = X.asiLedger({str: 'abc', dex: ''}, [asi2('str')]);
+  ck('#171 ledger: junk base scores read 0', Lg[0].before.str === 0 && Lg[0].before.dex === 0 && Lg[0].adds.str === 2 && Object.values(Lg[0].before).every(Number.isFinite), Lg);
+  Lg = X.asiLedger(B(19), [S({pick: 'Sturdy Grip', plus: [, 'str']}, STG), asi2('con')]);
+  ck('#171 ledger: a feat adds each increase that fits, its chosen one invalid when not; the next step starts after it',
+     Lg[0].adds.con === 1 && Lg[0].adds.str === 1 && Lg[1].before.con === 17 && Lg[1].before.str === 20 && Lg[1].adds.con === 2, Lg);
+  Lg = X.asiLedger(B(18), [canS, asi2('dex')]);
+  ck('#171 ledger: a feat\'s own +1 counts before the next step', Lg[0].adds.dex === 1 && Lg[1].before.dex === 15, Lg);
+
+  // ---- #171 commit in level order: commitChoices() applies the same rule, step by step
+  const ftN = n => X.character.features.filter(f => f.name === n);
+  sheet([{name: 'Fighter', level: 6}]); X.character.abilities.str = 18;
+  X.commitChoices('Fighter', [{type: 'asi', pick: 'Great Weapon Master', plus: []}, {type: 'asi', pick: '__asi__', mode: '2', a: 'str'}], null);
+  ck('#171 commit: STR 18, GWM then "+2 STR": STR 19, the feat, and no ASI feature',
+     X.asiScore('str') === 19 && ftN('Feat: Great Weapon Master').length === 1 && ftN('Ability Score Improvement').length === 0, X.character.features.map(f => f.name));
+  sheet([{name: 'Fighter', level: 18}]); X.character.abilities.str = 16;
+  X.commitChoices('Fighter', [4, 6, 8, 12, 14, 16].map(() => ({type: 'asi', pick: '__asi__', mode: '2', a: 'str'})), null);
+  ck('#171 commit: six "+2 STR" on STR 16 leave STR 20 and two ASI features, not 28', X.asiScore('str') === 20 && ftN('Ability Score Improvement').length === 2, [X.asiScore('str'), ftN('Ability Score Improvement').length]);
+  sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 20;
+  X.commitAsiPick({type: 'asi', pick: 'Great Weapon Master', plus: []}, fo, []);
+  ck('#171 commit: GWM at STR 20 is granted, with no increase', ftN('Feat: Great Weapon Master').length === 1 && abFx(ftN('Feat: Great Weapon Master')[0]).length === 0 && X.asiScore('str') === 20);
+  X.commitAsiPick({type: 'asi', pick: 'Grappler', plus: ['str']}, fo, []);
+  ck('#171 commit: a chosen +1 STR at 20 is refused; the feat is still granted', ftN('Feat: Grappler').length === 1 && abFx(ftN('Feat: Grappler')[0]).length === 0 && X.asiScore('str') === 20);
+  X.commitAsiPick({type: 'asi', pick: 'Boon of Combat Prowess', plus: ['str']}, {kind: 'class', class: 'Fighter', level: 19}, []);
+  ck('#171 commit: an Epic Boon at STR 20 gives 21', X.asiScore('str') === 21);
+  X.commitAsiPick({type: 'asi', pick: 'Sturdy Grip', plus: [, 'dex']}, fo, []);
+  const sg = ftN('Feat: Sturdy Grip')[0];
+  ck('#171 commit: two groups, each to its own ability (Review Focus 4)', sg && abFx(sg).map(e => e.target + e.value).join() === 'ability.con1,ability.dex1', sg && sg.effects);
+  X.commitAsiPick({type: 'asi', pick: 'Canopy Runner', plus: []}, fo, []);
+  const cr = ftN('Feat: Canopy Runner')[0];
+  ck('#171 commit: a feat\'s own +1 is not added twice', cr && abFx(cr).length === 1 && X.asiScore('dex') === 12, cr && cr.effects);
+  X.commitAsiPick({type: 'asi', pick: 'Nowhere Feat', plus: []}, fo, []);
+  ck('#171 commit: a name with no loaded feat is granted by name, nothing more (Review Focus 5)', ftN('Feat: Nowhere Feat').length === 1 && abFx(ftN('Feat: Nowhere Feat')[0]).length === 0);
+  ck('#171 commit: the rules entries are untouched', !(GWM.effects || []).length && !(GRP.effects || []).length && CAN.effects.length === 1);
+  sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 22;
+  X.commitAsiPick({type: 'asi', pick: '__asi__', mode: '1', a: 'str', b: 'dex'}, fo, []);
+  ck('#171 commit: on STR 22, "+1 STR, +1 DEX" is refused whole and the score is not lowered', ftN('Ability Score Improvement').length === 0 && X.num(X.character.abilities.str) === 22);
+
+  // ---- #171 the panel: a fixed increase with no room says so
+  ck('#171 panel: a fixed +1 with no room reads "already 20: no increase"',
+     X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master', {str: 20, dex: 10, con: 10, int: 10, wis: 10, cha: 10}).includes('+1 Strength (already 20: no increase)'));
+  ck('#171 panel: ...and with room, just the increase', />\+1 Strength<\/p>/.test(X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master', {str: 19, dex: 10, con: 10, int: 10, wis: 10, cha: 10})));
+  sheet([{name: 'Fighter', level: 4}]); X.character.abilities.str = 20;
+  ck('#171 panel: ...read from the sheet when no scores are given', X.asiPanelHTML({type: 'asi'}, 0, 'Great Weapon Master').includes('(already 20: no increase)'));
 
   // ---- #171 end to end: a level-18 start opens one window, six blank ASI steps
   {

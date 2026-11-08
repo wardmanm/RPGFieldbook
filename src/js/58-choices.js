@@ -312,13 +312,16 @@ function asiFeatListHTML(ch,ci,opts){
 }
 /* A feat's "+1 to:" starts with no chip pressed (#171): the first-chip
    default was a choice the player never made, and could itself pass 20.
-   Each group carries its featAbilityChoices() index, `data-ft-group`. */
-function asiPanelHTML(ch,ci,pick){
+   Each group carries its featAbilityChoices() index, `data-ft-group`. A fixed
+   increase is text, drawn from `before` (the scores before this step; the
+   sheet's when not given), and redrawn from the window's ledger by asiRefresh. */
+function asiPanelHTML(ch,ci,pick,before){
   if(pick==="__asi__")return asiControlsHTML(ci,false);
   const f=asiFeatDef(pick);if(!f)return "";
+  const sc=before||asiScores();
   const body=featBodyLines(f).join("\n");
   const plus=featPendingIncreases(f).map(a=>a.fixed
-    ?`<p class="hint">${esc(Object.entries(a.fixed).map(([k,v])=>"+"+v+" "+featAbilName(k)).join(", "))}</p>`
+    ?`<p class="hint" data-ft-fixed="${esc(String(a.i))}">${esc(asiFixedText(a.fixed,sc))}</p>`
     :`<div class="ft-plus" role="group" aria-label="+${esc(String(a.amount))} to" data-ft-group="${esc(String(a.i))}">+${esc(String(a.amount))} to: ${a.choose.map(k=>`<button type="button" class="ft-chip" data-ft-plus="${esc(String(a.i))}" data-k="${esc(k)}" aria-pressed="false">${esc(featAbilName(k))}</button>`).join("")}</div>`).join("");
   return `<div class="ft-desc">${body.split(/\n\s*\n|\n/).filter(s=>s.trim()).map(p=>`<p>${esc(p)}</p>`).join("")}</div>${plus}`;
 }
@@ -351,6 +354,76 @@ function asiStepDone(sel,feat){
   if(!feat)return true;
   const plus=sel.plus||[],capped=sel.capped||[];
   return featPendingIncreases(feat).every(a=>!!a.fixed||a.choose.includes(plus[a.i])||capped.includes(a.i));
+}
+/* ---- the cap, in level order (#171) ----
+   An Ability Score Improvement "can't increase an ability score above 20", nor
+   can a General feat's +1; an Epic Boon's own increase can reach 30 (its `max`).
+   What counts toward it is the score as the rules see it: the typed score plus
+   the `ability.<k>` effects of enabled FEATURES — not abilFinal(), which adds
+   equipped items, active statuses and summoned familiars, so a Belt of Giant
+   Strength or a spell's buff would block a permanent pick. DOM-free. */
+function asiScoresFrom(c){const fx=c.filter(x=>x.kind==="feature"),o={};FEAT_ABIL_KEYS.forEach(k=>{o[k]=num(character.abilities&&character.abilities[k])+sumFx("ability."+k,fx);});return o;}
+function asiScore(k){return asiScoresFrom(contributions())[k]||0;}
+function asiScores(){return asiScoresFrom(contributions());}
+/* What one step would add, as increases {k, n, cap, fixed, i}:
+   - the ASI: "+2 to one" one +2, "+1 to two" a +1 for each ability chosen,
+     capped at 20; `complete` is asiStepDone();
+   - a feat: each fixed increase of featPendingIncreases() (cap 20), each
+     ANSWERED "+1 to:" group at its index `i`, capped at the group's `max` or 20.
+     A +1 the feat carries as its own effect (the Humblewood shape) is granted
+     with the feat whatever the cap — the cap was never applied there — so it is
+     listed `own`, always landing, which keeps the next step's room true to what
+     the commit will hold;
+   - no pick: nothing. */
+function asiStepIncreases(sel,feat){
+  const pick=sel&&sel.pick;
+  if(pick==null||pick==="")return {route:"none",complete:false,incs:[]};
+  if(pick==="__asi__"){
+    const two=sel.mode==="1",keys=two?[sel.a,sel.b]:[sel.a];
+    return {route:"asi",complete:asiStepDone(sel,null),incs:keys.filter(k=>FEAT_ABIL_KEYS.includes(k)).map(k=>({k,n:two?1:2,cap:20,fixed:false}))};
+  }
+  const incs=[];
+  if(feat){
+    (Array.isArray(feat.effects)?feat.effects:[]).forEach(e=>{const m=/^ability\.(\w+)$/.exec(String((e&&e.target)||""));if(m&&FEAT_ABIL_KEYS.includes(m[1])&&num(e.value)>0)incs.push({k:m[1],n:num(e.value),cap:Infinity,fixed:true,own:true});});
+    const plus=sel.plus||[];
+    featPendingIncreases(feat).forEach(a=>{
+      if(a.fixed)Object.entries(a.fixed).forEach(([k,v])=>{if(num(v))incs.push({k,n:num(v),cap:20,fixed:true,i:a.i});});
+      else{const k=plus[a.i];if(a.choose.includes(k))incs.push({k,n:a.amount,cap:a.max||20,fixed:false,i:a.i});}
+    });
+  }
+  return {route:"feat",complete:asiStepDone(sel,feat),incs};
+}
+/* The window's steps in WINDOW order — level order, and the order
+   commitChoices() grants them in — with running scores. Per step: `before`
+   (the base plus every earlier step's adds), `adds` ({k: n}), `took` (the
+   increases that landed) and `invalid` (the CHOSEN increases that no longer
+   fit, which the window clears and Done refuses). An increase fits when
+   before[k] + what this step already added to k + n <= its cap.
+   - an ASI not yet set adds nothing; `invalid` names any half that doesn't fit;
+   - a set ASI adds all of its increases if they all fit, else nothing;
+   - a feat adds each increase that fits; a fixed one that doesn't is skipped
+     ("to a maximum of 20"), never invalid, so the feat stays a valid pick.
+   No notion of the order the player filled them in: only level order. */
+function asiLedger(base,steps){
+  const cur={};FEAT_ABIL_KEYS.forEach(k=>{cur[k]=num(base&&base[k]);});
+  return (steps||[]).map(st=>{
+    const before=Object.assign({},cur),adds={},invalid=[],took=[];
+    const fits=(x,acc)=>before[x.k]+(acc[x.k]||0)+x.n<=x.cap;
+    const add=x=>{adds[x.k]=(adds[x.k]||0)+x.n;took.push(x);};
+    const incs=(st&&Array.isArray(st.incs))?st.incs:[];
+    if(st&&st.route==="asi"){
+      if(!st.complete)incs.forEach(x=>{if(!fits(x,{}))invalid.push(x);});
+      else{const acc={};incs.forEach(x=>{if(!fits(x,acc))invalid.push(x);acc[x.k]=(acc[x.k]||0)+x.n;});if(!invalid.length)incs.forEach(add);}
+    }else if(st&&st.route==="feat")incs.forEach(x=>{if(fits(x,adds))add(x);else if(!x.fixed)invalid.push(x);});
+    Object.keys(adds).forEach(k=>{cur[k]+=adds[k];});
+    return {before,adds,invalid,took};
+  });
+}
+/* A fixed increase as the panel shows it, from the scores before the step:
+   "+1 Strength", or "+1 Strength (already 20: no increase)" when it has no room */
+function asiFixedText(fixed,before,cap){
+  const c=cap||20;
+  return Object.entries(fixed||{}).map(([k,v])=>"+"+v+" "+featAbilName(k)+(num(before&&before[k])+num(v)>c?` (already ${c}: no increase)`:"")).join(", ");
 }
 /* Binds every ASI step on screen. Delegated to each step's own .choice div,
    which openModal() builds new on every open — so nothing stacks (#mBody
@@ -435,29 +508,34 @@ function choiceDoneHandler(btn,commit){
       .then(ok=>{if(ok&&btn.isConnected!==false)commit();});
   };
 }
-/* One pick at an ASI (#118): the ASI as today, or a feat with its +1 stored on
-   the feat, granted with `origin` so it reverts with whatever gave it — a class
-   level here, a species or background (Task 4) through the same path. */
+/* One pick at an ASI (#118): the ASI, or a feat with its +1 stored on the
+   feat, granted with `origin` so it reverts with whatever gave it — a class
+   level, a species or a background through the same path. The cap (#171) is
+   the window's rule, applied once more here: commitChoices() grants the steps
+   in level order, so asiScores() already holds the earlier ones, and this
+   step's ledger entry is exactly what the window showed.
+   - The ASI is written only when set, with every increase fitting; refused,
+     it writes no feature at all. "+1 to two" is two different scores (#146
+     S2-24), and never an `ability.undefined` effect.
+   - A feat is always granted; its feature gets the increases that fit. A
+     chosen one that doesn't fit is refused, a fixed one without room skipped,
+     an unanswered "+1 to:" adds nothing (no fallback to its first option). */
 function commitAsiPick(sel,origin,pending){
   if(sel.pick==null||sel.pick==="")return;   /* no row pressed (a category list): nothing to grant */
+  const fd=asiStepFeat(sel);
+  const st=asiStepIncreases(sel,fd);
+  const led=asiLedger(asiScores(),[st])[0];
   if(sel.pick==="__asi__"){
-    /* never an `ability.undefined` effect, and "+1 to two" is two different
-       scores (#146 S2-24): the same one twice is +2 by another route */
-    if(!FEAT_ABIL_KEYS.includes(sel.a)||(sel.mode==="1"&&(!FEAT_ABIL_KEYS.includes(sel.b)||sel.a===sel.b)))return;
-    const fx=sel.mode==="1"?[{target:"ability."+sel.a,value:1},{target:"ability."+sel.b,value:1}]:[{target:"ability."+sel.a,value:2}];
-    addFeatureFromDef({name:"Ability Score Improvement",description:"Gained from leveling "+((origin&&origin.class)||"")+".",effects:fx},origin);return;
+    if(!st.complete||led.invalid.length)return;
+    addFeatureFromDef({name:"Ability Score Improvement",description:"Gained from leveling "+((origin&&origin.class)||"")+".",
+      effects:led.took.map(x=>({target:"ability."+x.k,value:x.n}))},origin);return;
   }
   const f=asiFeatDef(sel.pick);
   grantFeatDef(f?asiFeatKey(f):sel.pick,origin,pending);
-  const fd=f||findFeatDef(sel.pick);
   const ft=(character.features||[]).slice().reverse().find(x=>x.name==="Feat: "+(fd?fd.name:sel.pick));
   if(!ft)return;
-  const fx=[];
-  featPendingIncreases(fd).forEach(a=>{
-    if(a.fixed)Object.entries(a.fixed).forEach(([k,v])=>fx.push({target:"ability."+k,value:v}));
-    /* an unanswered "+1 to:" adds nothing: no fallback to the first option (#171) */
-    else{const k=(sel.plus||[])[a.i];if(a.choose.includes(k))fx.push({target:"ability."+k,value:a.amount});}
-  });
+  /* the feat's own +1 (`own`) arrived with grantFeatDef(); the rest are added */
+  const fx=led.took.filter(x=>!x.own).map(x=>({target:"ability."+x.k,value:x.n}));
   /* a new array: the feature's effects may still be the rules entry's own */
   if(fx.length)ft.effects=(Array.isArray(ft.effects)?ft.effects:[]).concat(fx);
 }
