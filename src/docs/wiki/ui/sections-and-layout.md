@@ -145,7 +145,8 @@ Summoned switch, + Add). One switch per card, per character, shown by default.
 
 `EDIT_CARDS` in `87-notes.js` lists the thirteen keys: the eleven `NOTE_SECTIONS` ids `statuses`,
 `attacks`, `resources`, `features`, `spells`, `inventory`, `trackers`, `defences` and
-`proficiencies` (these two hide the chips' ×), plus `party` (#91; hides a roster row's edit and
+`proficiencies` (these two hide the chips' ×; a tool still to choose stays nameable, since naming is
+play, #121), plus `party` (#91; hides a roster row's edit and
 remove icons), plus `vitals` (#115; hides the portrait's add and remove buttons **and locks Max HP** and how AC is set (#130),
 the one pencil that also locks a number: `vitalsLocked()` reads it, `setVitalsLocked()` sets it from
 code, [Vitals & rest](../features/vitals-and-rest.md)), plus
@@ -486,3 +487,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-11-06 — Vitals joins `EDIT_CARDS` (thirteen): its pencil hides the portrait buttons and locks Max HP, reads "Lock Vitals" / "Unlock Vitals", and repaints Max. → ledger L9441, #115
 - 2026-11-06 — The #155 "CSS alone" check exempts exactly the HP bar's Temp observer, which measures no column. → ledger L9501, #113
 - 2026-11-06 — The Vitals pencil's label says it locks a flat AC too. → ledger L9597, #130
+- 2026-11-07 — The Bio card's pencil hides the chips' × but not a placeholder tool's name button. → ledger L9760, #121

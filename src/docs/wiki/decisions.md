@@ -58,6 +58,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **Pre-equip-era weapons** — Equip them once, recorded by `wpnEquipInit`
 - **The chip lists (#103)** — Their own fields, read through one guard, `chipList()`
 - **How often the Languages lift runs (#103)** — Once, flagged by `langLifted` (never in `blankChar()`)
+- **Old "Tools:" lines (#121)** — Lifted once into the player's own chips, flagged by `toolsLifted`; a choice part becomes the player's placeholder (Mike)
+- **Where a seed's provenance lives (#131)** — Its own list, `seeds`, read through `seedsOf()`; junk entries kept, never read
 - **Where hidden tabs are scoped (#52)** — Per character, saved on `character.hiddenTabs`; a new character shows every tab
 - **The End of combat window's settings (#105)** — `xpSplit` and `endCombatOpen` per character; the window's own state never saved
 
@@ -116,6 +118,14 @@ When a page gains a Decisions row, add its line here under that page.
 - **What the log records when a source is removed (#47)** — One "Removed with *source*" line listing what left, no Undo
 - **Where a grant's redraw happens (#153, #154)** — Once, at the end of every grant and revert path, in `renderClassRace()`
 - **Which granted items arrive equipped (#128)** — Weapons, through the finder's `equipNewWeapon()`
+- **A background's tool choice (#121)** — Asked when the background is added, a step in the choices window; the pick names a placeholder carrying the background's source (Mike)
+- **Wording the app can't list, and a pick left unmade (#121)** — A placeholder chip with the pack's wording, carrying the background's source; tapping it names it
+- **Is a tool lifted from old text tied to the background? (#121)** — No: it is the player's, as lifted languages are
+- **A swap or remove when the player changed a seeded value (#131)** — The player's value stays: a source's value is reverted only while it still matches what it put in (Mike)
+- **How the sheet knows what a source seeded (#131)** — A record, `character.seeds`, one `{sid, field, value}` per sid and field, `null` when the field was already full
+- **Sheets saved before the record (#131)** — A fallback only where there is no entry at all: reverted if it equals what the loaded definition seeds, else kept
+- **The spellcasting ability when its source goes (#131)** — Handed to the next caster, after every revert that can empty it
+- **How a value the player set is told apart from a seed (#131)** — A `player` entry in `seeds`, which seeding counts as full and reverting skips
 
 ### [Computed stats & effects](architecture/computed-stats-and-effects.md)
 
@@ -195,6 +205,8 @@ When a page gains a Decisions row, add its line here under that page.
 - **When Done commits with nothing to ask (#118)** — At once, in the same task
 - **Undo after a level-up (#118, decision 8)** — A copy from before the level-up, offered while the sheet is exactly as the level-up left it
 - **Level down (#118, decision 9)** — Each level-up records what it gave; level down removes the ticked HP and features and lists the rest
+- **A background's tool choice (#121)** — A `tool` step in `runExtraChoices()`, asked when the background is added (Mike)
+- **Dismissing a window with a tool step unpicked (#121)** — No warning for it; Done's Picks left still counts it
 
 ### [Abilities & skills](features/abilities-and-skills.md)
 
@@ -210,7 +222,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **How HP boxes commit** — On `change`, outside `data-path`
 - **Where the lock lives (#115)** — The Vitals pencil, `editHide.vitals`, read by `vitalsLocked()`
 - **Does Vitals start locked? (#115, Mike)** — Unlocked, like every card's pencil
-- **What the pencil covers (#115)** — The portrait's add and remove buttons, and Max HP; and how AC is set (#130)
+- **What the pencil covers (#115)** — The portrait's add and remove buttons, and Max HP; and how AC is set (#130); and the Base speed box (#131)
 - **Existing sheets (#115)** — All open unlocked; `hp.locked` is kept, unread
 - **Whether the lock confirms** — No confirm
 - **How HP is typed on a touchscreen (#112, Mike)** — Tapping the bar opens Hit points
@@ -237,6 +249,9 @@ When a page gains a Decisions row, add its line here under that page.
 - **How a hit die is spent (#103)** — Pick, then either auto-roll or type your own roll, live-validated
 - **Death saves filling outward** — CSS `row-reverse` off `data-kind="succ"` (successes left of the skull since #103)
 - **Size on tap** — A chooser
+- **Speed on tap (#131)** — A window with a Base speed box above the breakdown; a speed typed there is the player's and is never reverted or overwritten (Mike)
+- **The Base speed box while Vitals is locked (#131)** — Read-only, as the AC window's Flat box is
+- **Size marked "set by hand" (#131, #146)** — Only when it is the player's
 - **A first class that starts above level 1** — Seed level 1, then the level-up HP step for levels 2..N (average by default)
 
 ### [Conditions & concentration](features/conditions-and-concentration.md)
@@ -377,6 +392,10 @@ When a page gains a Decisions row, add its line here under that page.
 - **Notes on a retired card (#103)** — Merged once into the card that took its controls, under a heading
 - **A jump into a hidden tab (#52)** — Unhides the tab, saves, and toasts before carrying on
 - **The party (#91)** — A Party card on the Bio tab; every fight the player starts adds them, and the player
+- **The leftover Proficiencies text (#121)** — Under an Other proficiencies heading styled like the chip rows, shown even when empty (Mike)
+- **The card's row order (#121)** — Alignment, Languages, Senses, Tools, Other proficiencies
+- **Naming a placeholder tool while the pencil is locked (#121)** — Still works: the pencil hides removal, not naming
+- **Which Add windows take several at once (#119)** — Resistances, immunities, languages and tools; senses one at a time (Mike)
 
 ### [Journal](features/journal.md)
 

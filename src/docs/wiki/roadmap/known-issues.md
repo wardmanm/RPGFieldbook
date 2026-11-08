@@ -274,13 +274,6 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 - **Glossary pop-ups show raw table anchors.** (#151) `openGlossView()` renders the entry with `esc()` only, so
   the `[Table: Carrying Capacity]`-style anchors in the 2024, Xanathar's and Tasha's glossaries appear
   as literal text. → [Rich text](../architecture/rich-text.md)
-- **Removing a source does not revert everything it seeded** (#131): text appended to `proficiencies`, the
-  seeded `speed` and `size`, `spellAbility`, and the legacy `ancestry`/`background` strings. Because
-  `applyRace()` fills speed and size only when they are empty, *swapping* ancestry keeps the old ones.
-  This goes against the provenance invariant. → [Grants & provenance](../architecture/grants-and-provenance.md)
-- **The Size box shows as "set by hand" whenever the ancestry has a size** (#146), because `recompute()`
-  highlights it whenever `character.size` is set and `applyRace()` fills that field. This
-  contradicts L1711. → [Vitals & rest](../features/vitals-and-rest.md)
 - **Deleting a weapon's attack row by hand doesn't stick.** (#145) The next item save (`syncItemAttack()`) or
   rules update (`updResyncAttack()`) recreates it. → [Attacks & damage](../features/attacks-and-damage.md)
 - **"Insert from rules pack" in the item form** (#147) copies no `category`, `type` or `src` stamp, so the item
@@ -314,8 +307,7 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 - `usesMax()` reads `byLevel` by total character level; `resolveResMax()` uses the class's own level (#146).
   → [Computed stats & effects](../architecture/computed-stats-and-effects.md)
 - `settings.autoload` is seeded and never read (#151). `portraitImg` has no default in `blankChar()`.
-  `choicesSettled()` is defined and never called. Nothing binds `character.speed`, so base speed only
-  ever comes from the ancestry. → [Character model](../architecture/character-model.md)
+  `choicesSettled()` is defined and never called. → [Character model](../architecture/character-model.md)
 
 
 ### Tooling
@@ -494,3 +486,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — The estimated 220px threshold went: Temp's place is a measured fit now. → ledger L9501, #113
 - 2026-11-06 — #129 and #130 fixed (Include spells; Flat AC, best shield); #132 fixed for the feature form; what waits on phase 2 recorded (the Vitals lock, the item form); `usesMax()` is tested. → ledger L9537, #129, #130, #132
 - 2026-11-06 — Removed: the item form's scaling-uses freeze and the Flat AC's missing Vitals lock, both fixed in phase 2. → ledger L9597, #130, #132
+- 2026-11-07 — Removed, fixed by the Bio chips branch: a removed source's seeded speed, size, spellcasting ability, text and strings (#131), Size marked set by hand when the species set it (#146's item), and nothing binding `character.speed` (the Speed window's Base speed box). → ledger L9760, #131, #146

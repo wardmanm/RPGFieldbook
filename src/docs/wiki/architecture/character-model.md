@@ -14,8 +14,8 @@ comes from keeping that loop lossless: a sheet saved by any version must still o
 in `20-lists.js`, `encMode()` in `25-origins-items.js`,
 `noteMap()` in `87-notes.js`, `combatSectionsOf()` in `87-combat.js`,
 `cleanParty()`, `cleanCombatants()` (#91, in `migrate()`'s own cleaning block) in `87-initiative.js`, `cleanInvLog()`, `INV_LOG_SIZES` (#47) in `67-trade.js`, `chipList()`,
-`advancementOf()` in `41-chips.js`; the #103 pass `migrateSheet103()`, `mergeNoteInto()`,
-`liftLanguages()` in `71-char-io.js`, `ensureDefaultLanguages()` in `41-chips.js` · **Tests:** `char-update.js`
+`advancementOf()` in `41-chips.js`, `seedsOf()` in `50-classrace.js`; the #103 pass `migrateSheet103()`, `mergeNoteInto()`,
+`liftLanguages()`, `liftTools()` (#121) in `71-char-io.js`, `ensureDefaultLanguages()` in `41-chips.js` · **Tests:** `char-update.js`
 (the stamp is preserved and never advanced; unknown fields survive), `tables.js` (the round trip is
 idempotent), `sheet.js` (sub-key defaults arrive through `migrate()`; malformed glossary entries and
 junk list items, repaired, idempotent, and rendered) · **See also:**
@@ -31,8 +31,8 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 |---|---|
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp}` (a sheet from before #115 also carries `locked`, kept and unread), `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
-| lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers`, `party` `[{id, name, ac, maxHp}]` (#91, the Bio-tab roster), `combatants` `[{id, kind, name, init, ac, track, band, hp, maxHp, dead, partyId}]` (#91, always `[]` out of combat), `invLog` `[{id, at, kind, title, lines, undo, undone, meta}]` (#47, the inventory log, newest first), `levelLog` `[{at, class, level, hp, features:[{id, name, grants}], abilities, subclass, grants, slots}]` (#118, one record per level-up for level down, oldest first, at most 200; `migrate()` keeps a record only when it is an object with a string `class`, a `level` above 0 and a `features` array, then normalizes the inside without dropping other keys: features are objects with a non-empty string `id`, each with a `grants` array; grants are objects with string `sid`/`type`/`key`; `hp` is a number ≥ 0, `subclass` a string, `abilities` an object) |
-| chip lists (#103) | `resists` `[{id, name}]`, `immunes` `[{id, name}]`, `senses` `[{id, name, range}]` (`range` whole feet or `""`), `languages` `[{id, name, src}]` (`src` `""` the player's, `race:…` / `bg:…` a grant, `system` a ruleset default) — all `[]` in `blankChar()` |
+| lists | `classes`, `grants`, `seeds` `[{sid, field, value}]` (#131: what each source seeded into `speed`, `size`, `spellAbility` or `proficiencies`, `value` as the source gave it or `null`; the sid `player` marks a speed or size the player set; read only through `seedsOf()`, which ignores a malformed entry and leaves it in place, [Grants & provenance](grants-and-provenance.md)), `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers`, `party` `[{id, name, ac, maxHp}]` (#91, the Bio-tab roster), `combatants` `[{id, kind, name, init, ac, track, band, hp, maxHp, dead, partyId}]` (#91, always `[]` out of combat), `invLog` `[{id, at, kind, title, lines, undo, undone, meta}]` (#47, the inventory log, newest first), `levelLog` `[{at, class, level, hp, features:[{id, name, grants}], abilities, subclass, grants, slots}]` (#118, one record per level-up for level down, oldest first, at most 200; `migrate()` keeps a record only when it is an object with a string `class`, a `level` above 0 and a `features` array, then normalizes the inside without dropping other keys: features are objects with a non-empty string `id`, each with a `grants` array; grants are objects with string `sid`/`type`/`key`; `hp` is a number ≥ 0, `subclass` a string, `abilities` an object) |
+| chip lists (#103) | `resists` `[{id, name}]`, `immunes` `[{id, name}]`, `senses` `[{id, name, range}]` (`range` whole feet or `""`), `languages` `[{id, name, src}]` (`src` `""` the player's, `race:…` / `bg:…` a grant, `system` a ruleset default), `tools` `[{id, name, src}]` (#121; a placeholder, a choice not yet named, also carries `ask`, the pack's wording, a non-empty string) — all `[]` in `blankChar()` |
 | maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0), `ammoFight` (ammunition kind → `{fired, back}`: what a row's Recover gave back during the current fight, for End combat's log line; `{}` default, emptied at the start and end of a fight, #47), `endCombatOpen` (End of combat window row key → `true` for a row the player left open: `ammo`, `xp`, `loot`, `after`; `{}` default, #105) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
 | per-character settings | `acMode` (`"calc"` or `"flat"`, `"calc"` default; `migrate()` turns anything else, and a `"flat"` whose `ac` is not a whole number, into `"calc"`, #130) with `ac` its Flat number only (a whole number, or `""`; Calculated never reads it), `hpColor`, `showTrackers` (read as `!== false`), `size`, `encumbrance`, `coinWeight`, `combatSections`, `combatActive`, `combatRound`, `combatTurn` (the acting combatant's id, `""` default, #91), `initMode` (`"turns"` or `"rounds"`, `"turns"` default, #91), `initShowRolls` (boolean, `true` default, #91), `ammoRecovery` (`"half"` default, #104), `advancement` (`"xp"` or `"milestone"`, `"xp"` default, read through `advancementOf()`, #103), `showFamiliars` (the header's paw, `false` in `blankChar()`, #103), `hiddenTabs` (word tabs this character has switched off, `[]` default, cleaned by `migrate()`, #52), `invLogSize` (how many log lines to keep: 100, 250, 500, 1000 or 2500, `500` default, #47), `featsAllowed` (offer a feat at an ASI, `true` default; `migrate()` keeps a boolean and sets anything else to `true`, #118), `xpSplit` (the End of combat window's Split among N, `false` default; `migrate()` keeps it only when `true`, #105) |
@@ -100,10 +100,11 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    is logged. See [Inventory](../features/inventory.md).
 10. `migrateSheet103()` (#103) runs last. Each step is a no-op on a sheet that does not need it, so
    it is safe on every load:
-   - the four chip lists go through `chipClean()` (a non-array reads `[]`, an entry that is not an
-     object or has no string `name` is dropped, names trimmed, duplicates by name dropped case-blind,
-     an entry with no id given one; a sense's `range` becomes whole feet or `""`); `advancement`
-     through `advancementOf()`;
+   - the five chip lists go through `chipClean()` (a non-array reads `[]`, an entry that is not an
+     object or has no string `name` is dropped, names trimmed, duplicates by name dropped case-blind
+     among named chips, a tool placeholder never, an entry with no id given one; a sense's `range`
+     becomes whole feet or `""`; `src` is kept for languages and tools, and a tool's `ask` only when
+     it is a non-empty string); `advancement` through `advancementOf()`;
    - the retired cards' notes merge (`mergeNoteInto()`): `class` and `origin` into `portrait`,
      `rest` into `vitals`, each under a bold heading, keeping the earlier `at` and the later
      `editedAt` ([Story & notes](../features/story-and-notes.md));
@@ -111,6 +112,10 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    - "Languages: …" lines in `proficiencies` become the player's chips and leave the text
      (`liftLanguages()`), **once**: recorded by `langLifted`, which `newCharacter()` sets and
      `blankChar()` never does, so a line the player types later stays text;
+   - "Tools: …" lines become the player's tool chips the same way (`liftTools()`, #121): a named
+     tool a chip, a choice ("one Gaming Set of your choice") the player's placeholder, the rest of
+     the text tidied, **once**, recorded by `toolsLifted`, which `newCharacter()` sets and
+     `blankChar()` never does;
    - `ensureDefaultLanguages()` adds the ruleset's default languages the sheet lacks (case-blind), as
      `system` chips — Common unless a pack declares `defaultLanguages`.
 
@@ -134,7 +139,7 @@ in [Conditions & concentration](../features/conditions-and-concentration.md)).
 object, indented, as `humblewood-<name>.json`, whatever the system. Every load path runs `migrate()`:
 `loadCharById()`, `importChar()` (which accepts a file only if it parses and has `abilities`) and
 `migrateOldChar()`. `newCharacter()` builds straight from `blankChar()`, then adds the default
-languages and marks `ammoInit`, `langLifted` and `wpnEquipInit` done.
+languages and marks `ammoInit`, `langLifted`, `toolsLifted` and `wpnEquipInit` done.
 
 **The version stamp, `appVersion`,** means "the app version this sheet was last **reconciled**
 against", not "last saved with". `blankChar()` seeds `""`, `newCharacter()` stamps `APP_VERSION`,
@@ -213,6 +218,8 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 | The section-notes field | `secNotes` | Reusing `notes`: already the Story tab's bio field, so merging breaks that tab silently (L1497) |
 | The chip lists (#103) | Their own fields, read through one guard, `chipList()` | Prose in `proficiencies`: a grant can't be taken back cleanly, and the Defences card needs a list |
 | How often the Languages lift runs (#103) | Once, flagged by `langLifted` (never in `blankChar()`) | Every load: a "Languages:" line the player types later would be lifted too |
+| Old "Tools:" lines (#121) | Lifted once into the player's own chips, flagged by `toolsLifted` (never in `blankChar()`); a choice part becomes the player's placeholder (Mike) | Leaving them as text: the issue. Leaving the choice part in the text: half a line left behind reads as a bug |
+| Where a seed's provenance lives (#131) | Its own list, `seeds`, read through `seedsOf()`; junk entries kept, never read | On each field: speed and size are plain values every reader takes through `num()` and `charSize()` |
 | List items that are not objects | Dropped: `null`, strings, numbers | Kept: no screen can show one and each stopped the render. Dropping only `null`: a bare string in `spells` still threw on the first write in strict mode (L4206) |
 | A player's glossary entry with no term | Kept, given an id if it lacks one, listed as "(no term)" | Dropped: the player's own data, gone silently. Left without an id: Edit and Delete can't reach it (L4206) |
 | A player's glossary entry written `{name, description}` | Read as its term and text, originals kept | Leaving it termless: those are the names every other category uses, so the intent is plain (L4206) |
@@ -263,3 +270,4 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - 2026-11-06 — `newCharacter()` marks `wpnEquipInit` done: a new sheet's weapons arrive equipped, and the first reload no longer re-equips one the player unequipped. → ledger L9101, #128
 - 2026-11-06 — `hp.locked` is retired: gone from `blankChar()`, kept unread on an old sheet; the Max HP lock is `editHide.vitals`, so every sheet opens unlocked. → ledger L9441, #115
 - 2026-11-06 — `acMode` (`"calc"`) joins `blankChar()`; `ac` becomes the Flat number only; `migrate()` makes a Flat with no whole number Calculated. Effects may carry `spells: true` (#129), kept as they are. → ledger L9537, #130
+- 2026-11-07 — `tools` (`[]`) and `seeds` (`[]`) join `blankChar()`; `migrate()` keeps `seeds`' objects and cleans `tools` with the other chip lists; `migrateSheet103()` lifts "Tools:" lines once (`toolsLifted`), and `newCharacter()` marks it done. → ledger L9760, #121, #131

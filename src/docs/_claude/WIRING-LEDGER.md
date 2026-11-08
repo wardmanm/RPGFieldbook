@@ -9756,3 +9756,64 @@ side window's row formats (P2, P0, a feature's `—`, `(noted)`, `(priority not 
 `recordProblem()` and `parseRecord()`.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md).
+
+## Bio chips: tools as chips, roomier chips, multi-select, clean swaps (#121, #120, #119, #123, #131; 2026-11-07)
+
+Built from the approved spec (`src/docs/specs/2026-11-07-bio-chips-design.md`, Mike 2026-11-07) and
+its plan, on `issue/121-bio-chips`, in the spec's order. Decision numbers are the spec's.
+
+- **#121, tools as chips.** A fifth chip list, `tools` (`[{id, name, src}]`, plus `ask` on a
+  placeholder), read through `chipList()`/`chipClean()`. `CHIP_SOURCED` names the lists that keep a
+  `src` (languages, tools), and a placeholder is never deduplicated. `toolParse()` reads a pack's
+  wording into named tools and choices (kinds Artisan's Tools, Gaming Set, Musical Instrument; every
+  shipped wording checked), `toolSuggestions()` merges the packs' Tool items with a built-in
+  `TOOL_KINDS` list (the pack's spelling wins), and `applyBackground()`'s "Tools:" note became one
+  `grantTools()` call. A choice queues a `tool` step in `runExtraChoices()` (decision 1) carrying the
+  placeholders' ids; `commitExtraChoices()` names them through `nameToolChip()`. The dismiss guard
+  leaves tool blocks out (decision 15b): `choiceBlocks()` returns each block's `kind`. A placeholder
+  is a dashed chip, "GAMING SET · choose", whose name is a button that opens `openToolNamer()`, still
+  live under the pencil (decision 18). Old "Tools:" lines are lifted once into the player's own chips
+  (`liftTools()`, flag `toolsLifted`, decisions 3–5). The Bio card is Alignment, Languages, Senses,
+  Tools, then an **Other proficiencies** heading over the prose (decisions 7, 17). Print gains a
+  Tools line.
+- **#120.** Chip rows' chips are 28px tall, 8px apart within and between rows, 12px above the next
+  heading, with a 32px-tall × hit area that never reaches over the name. Scoped to `.chips`, so the
+  bare `.chip` rule in `30-sheet.css` is unchanged.
+- **#119, #123.** For resistances, immunities, languages and tools the Add window's pills toggle and
+  Add takes them all plus the typed name (`addChips()`, `chipAddLabel()`: "Add 3"); senses stay one
+  at a time (decision 8). Tools are grouped by kind. The pills are 32px tall and 8px apart, with
+  14px above "Or type one", scoped to `.chip-sug`: the browse picker's filter pills share `.fgrp`
+  and `.fpill`, so the plan's wording ("`.fgrp`", "`.fpill`") was read as the chooser's own.
+- **#131, clean swaps.** `character.seeds` records what each source seeded into speed, size,
+  `spellAbility` and Proficiencies (decision 10): `seedField()` writes into an empty field and
+  records the value as given, or `null` over a full one (10a); `unseedSource()` reverts a field only
+  while it still equals the record (decision 9), and with no entry at all falls back to the outgoing
+  source's loaded definition (decision 11, `raceWould()` for a species). One builder-level rule the
+  spec didn't state: a species and its subrace seed under one sid, so a later `null` never replaces
+  the same sid's recorded value, and their two Proficiencies lines are recorded as one text. A
+  `player` entry (decision 21), written by `setPlayerField()` from the Size window, Settings →
+  Carrying and the Speed window, makes both helpers skip the field. An emptied spellcasting ability
+  passes to the next caster (`handOnSpellAbility()`, decision 12) after `removeClass()` and a subclass
+  swap. `removeRace()` and `removeBackground()` clear the legacy `ancestry`/`background` strings.
+  Size is marked "set by hand" only when it is the player's (`sizeByHand()`, #146's item, decision
+  16). `applyRace()`'s dead `[data-path="character.speed"]` query went.
+- **#131, decision 20: the Speed window.** Tapping Speed opens "Speed": a Base speed box
+  (`parseBaseSpeed()`, a whole number 0–999, blank gives the species' speed back; inner spaces are
+  refused, as the HP grammar refuses them) above the breakdown, whose base line names its source
+  (`speedBase()`: "Base 35 ft, yours", "Base 30 ft, from Elf"). It commits on change and on Escape
+  (the AC window's pattern) and is read-only while Vitals is locked (decision 22). The other badges'
+  breakdowns moved into `statRowsHTML()` byte for byte.
+
+Tests: a new `sheet.js` block below the #130 block drives the flows against recorders (the card,
+the tool step, the namer, the multi-select window, seeds, swaps, the Speed window); `char-update.js`
+covers the tool step's window and guard and the spellcasting hand-on; `rules-data.js` pins the Bio
+card's order, the chip and chooser CSS, and the seed and Speed wiring. Scratchpad checks: every
+shipped `tools` wording through `toolParse()`; 55,986 sequences of apply, swap, pick a size, clear,
+remove and reload with no picked size lost and no seed outliving its species; `parseBaseSpeed()` over
+0–1000 and junk. Not yet done: the screenshots and the driven browser pass (Task 7), held for the
+shared browser.
+
+Pages: [story & notes](../wiki/features/story-and-notes.md), [grants & provenance](../wiki/architecture/grants-and-provenance.md),
+[character model](../wiki/architecture/character-model.md), [character building](../wiki/features/character-building.md),
+[vitals & rest](../wiki/features/vitals-and-rest.md), [sections & layout](../wiki/ui/sections-and-layout.md),
+[known issues](../wiki/roadmap/known-issues.md), [1.9.1](../wiki/roadmap/1.9.1.md), [decisions](../wiki/decisions.md).

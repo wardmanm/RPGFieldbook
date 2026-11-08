@@ -10,14 +10,15 @@ background or drop a class without hand-cleaning the sheet.
 `sidLabel()`, `effSkill()`, `effSaveProf()` in `00-constants.js`; `addFeatureFromDef()`,
 `removeFeaturesWhere()`, `grantItemByName()`, `addGrantGold()`, `applyEquipOption()`,
 `applyEquipGrants()`, `revertEquipmentGrants()`, `grantFeatDef()`, `runExtraChoices()`,
-`renderClassRace()` in `50-classrace.js`; `equipNewWeapon()` in `85-browse.js`; `applyRace()`, `removeRace()` in `52-race.js`; `applyBackground()`,
+`renderClassRace()`, and the seeds (#131) `seedsOf()`, `playerOwns()`, `seedField()`, `unseedSource()`,
+`handOnSpellAbility()`, `setPlayerField()` in `50-classrace.js`; `raceWould()` in `52-race.js`; `equipNewWeapon()` in `85-browse.js`; `applyRace()`, `removeRace()` in `52-race.js`; `applyBackground()`,
 `removeBackground()` in `54-background.js`; `addClass()`, `applyClassLevel()`, `removeClass()`,
 `grantClassSaves()`, `multiclassChoices()`, `selectSubclass()`, `doLevelDown()`, `seedLevel1HP()` in
 `56-class.js`; `runChoices()`,
 `commitChoices()`, `sidToOrigin()` in `58-choices.js`; `originFromSid()`, `itemOrigin()`,
 `costToGp()` in `25-origins-items.js`; `syncResources()` in `65-resources.js`;
-`forgetGrantAmmo()` in `62-ammo.js`; `logGrant()`, `grantSourceName()` in `67-trade.js`; `grantLanguages()`, `dropLanguages()`, `langParse()` in
-`41-chips.js` · **Tests:**
+`forgetGrantAmmo()` in `62-ammo.js`; `logGrant()`, `grantSourceName()` in `67-trade.js`; `grantLanguages()`, `dropLanguages()`, `langParse()`,
+`grantTools()`, `dropChips()`, `toolParse()`, `nameToolChip()` in `41-chips.js`; `commitExtraChoices()` in `58-choices.js` · **Tests:**
 `char-update.js` (grant and revert, `grantItemByName()` called for real, the pending equipment
 picker travelling with its window, the order the choice windows open in), `sheet.js` (`invSection()` filing; what the screen holds after each add, change and remove, and granted weapons equipped) · **See also:** [Character building](../features/character-building.md),
 [Inventory](../features/inventory.md), [Ammunition](../features/ammunition.md),
@@ -48,6 +49,8 @@ picked option.
 | Starting gold | added to `coins.gp` and recorded in `grantGold[sid]` | `sid` | `revertEquipmentGrants()`: subtracts exactly that amount, never below 0 |
 | Class resource pools | `resources[]` with `auto:true` and a `class:`/`subclass:` key | `key` | `syncResources()` on every `recompute()`: an auto pool whose class or subclass is gone is dropped |
 | Languages (#103) | `languages[]` chips `{id, name, src}` | `src`: `race:<Name>` or `bg:<Name>`, the grant's own sid | `dropLanguages()` on that src, in `removeRace()` / `removeBackground()` |
+| Tools (#121) | `tools[]` chips `{id, name, src}`, a placeholder also `ask` | `src`: `bg:<Name>` (no species or class grants tools yet) | `dropChips()` on that src, in `removeBackground()` (and `removeRace()` for `race:`), placeholders included, named or not |
+| Seeded fields (#131): `speed`, `size`, `spellAbility`, a species' `proficiencies` line | the field itself, and a record in `seeds[]` `{sid, field, value}` | the record's `sid`: `race:<Name>`, `class:<Name>`, `subclass:<Class>:<Sub>` | `unseedSource()`, in `removeRace()`, `removeBackground()`, `removeClass()` and a subclass swap: only while the field still equals the record |
 | Level-1 max HP | `hp.max` / `hp.cur` | nothing: recognised by value | `removeClass()` blanks it only if the box still holds exactly `level1HP()` |
 
 **Proficiencies are layered, never merged.** The player's own dots live in `character.skills` and
@@ -101,11 +104,52 @@ so they stay after a species or background change (a known issue, not a bug). A 
 not know (hand-edited) reads as the player's: `chipSrcLabel()` looks up own keys only, and
 `chipClean()` clears it, so the chip's × and `removeChip()` agree.
 
-**Choices.** Skill choices on a race, a race trait or a feat, and feat choices on a species or a
-background (#118), go into a `pending` list that `runExtraChoices()` presents after the add. Each
-pick is granted to the sid that queued it: `commitExtraChoices()` grants a feat with
-`sidToOrigin()`'s `{kind:"race"}` or `{kind:"background"}` origin, so changing or removing the
-species or background reverts it. A feat taken at an ASI carries its class-level origin, and its +1
+**Tools** (#121). A background's `tools` text grants chips the same way, through `grantTools()`:
+`toolParse()` splits it as `langParse()` does, a named tool becomes a chip stamped `bg:<Name>` (one
+the sheet already has keeps its own source), and a part naming a choice ("Choose one kind of Gaming
+Set") adds `count` **placeholders** stamped the same way, each `{id, name, src, ask}` with the pack's
+wording in `ask` and the kinds it names as its `name` ("Gaming Set", or "Tool of your choice" when
+it names none). When it names a kind, a `tool` step is queued for `runExtraChoices()` with the
+placeholders' ids. Naming a placeholder (`nameToolChip()`, from that step or the chip's namer)
+replaces its name and drops its `ask`; its `src` stays, so removing the background takes it back
+named or not. A name the sheet already holds is refused, so the player's own Dice Set never becomes
+the background's. Nothing is appended to `proficiencies` for tools any more; a sheet's old "Tools: …"
+lines become the player's own chips once, in `migrate()` ([Character model](character-model.md)).
+
+**Seeds** (#131). A species seeds `speed`, `size` and a line of `proficiencies` text; a class or
+subclass seeds `spellAbility`. Every one goes through `seedField(c, field, value, sid)`, which writes
+into an **empty** field only (today's rule, so a subrace never overrides its species and the
+player's value always wins; `0` is full) and records `{sid, field, value}` in `character.seeds`: the
+value as the source gave it (a Humblewood speed `30`, an SRD one `"30 ft"`), or `null` when the field
+was already full. There is one entry per sid and field, replaced when the source applies again; a
+species and its subrace share one sid, so a later `null` never replaces the same sid's value, and
+their two text lines are recorded as the one text they make together. The text is appended, never
+"full". `unseedSource(c, sid, would)` reverts each field:
+- a field with a `player` entry is skipped entirely;
+- an entry with a value: the field is emptied only while it still equals it (compared as text, so
+  `30` and `"30"` match), and the recorded text is taken out where it still stands as its own line, with the newline
+  that joined it; anything the player changed stays;
+- an entry with `null`: nothing is touched;
+- **no entry at all** for that sid and field means a source applied before the record: the outgoing
+  source's loaded definition (`would`, from `raceWould()` for a species, `spellcasting` for a class or
+  subclass) says what it would have seeded, and a field equal to exactly that is reverted. With no
+  definition loaded, or a different value, it is kept.
+
+Then the sid's entries go. **The `player` sid** marks a speed or size the player set in its window
+(the Speed window, the Size window, Settings → Carrying), through `setPlayerField()`: no seed writes
+over it (it records `null`) and no revert touches it. The sources' own entries stay beside it, so
+their reverts still know what they seeded. Clearing it ("From ancestry", a blank Base speed) removes
+the `player` entry and empties the field; Size then reads the species' live through `charSize()`,
+and Speed, which has no live fallback, is seeded again from the current species. Every read goes
+through `seedsOf()`, which ignores an entry without a string `sid`, a known field and a string,
+finite number or `null` value; such junk stays in the list, so it round-trips.
+
+**Choices.** Skill choices on a race, a race trait or a feat, feat choices on a species or a
+background (#118), and a background's tool choices (#121), go into a `pending` list that
+`runExtraChoices()` presents after the add. Each pick is granted to the sid that queued it:
+`commitExtraChoices()` grants a feat with `sidToOrigin()`'s `{kind:"race"}` or `{kind:"background"}`
+origin, so changing or removing the species or background reverts it, and names a tool step's
+placeholders in turn. A feat taken at an ASI carries its class-level origin, and its +1
 is an effect on that same feature.
 Class and subclass level choices go through `runChoices()` → `commitChoices()`: skills to the
 choice's sid, an ASI as a feature, a feat through `grantFeatDef()`, an option through
@@ -128,7 +172,7 @@ gets what is in [Character building](../features/character-building.md).
 `renderClassRace()`: an add, change or remove, a level up or down, a subclass, and the Done of each
 choice window (`commitChoices()`, `runExtraChoices()`). It repaints the header and everything a
 grant can touch beyond it: the inventory (items, and a removed source's leaving), the coin boxes
-(`renderCoins()`) and the chips (`renderChipsAll()`: languages and senses). The caller's
+(`renderCoins()`) and the chips (`renderChipsAll()`: the Defences, languages, senses and tools). The caller's
 `renderFeatures()` and `recompute()` repaint the features, the numbers, the attack rows and the
 resources. The grant functions themselves (`addGrantGold()`, `grantLanguages()`,
 `grantItemByName()` and the rest) only change the character: they run in loops and inside one
@@ -136,12 +180,19 @@ another. `renderAll()`, `applyTheme()` and `refreshRulesUI()` want the header al
 `renderSheetHead()`.
 
 **Removal and swapping.** `removeRace()`, `removeBackground()` and `removeClass()` each remove the
-features by origin, the proficiencies by sid, and the equipment and gold by sid. `removeClass()`
-also removes every `subclass:<Class>:` grant and un-seeds the level-1 HP. Removing the first class
-while another remains hands the saving throws on: the class now first gets its own through
-`grantClassSaves()`, under its own sid, so they revert with it in turn. `applyRace()` and
-`applyBackground()` remove the previous one first. Changing a subclass removes the old subclass's
-features and grants before applying the new one.
+features by origin, the proficiencies by sid, the chips by src, the equipment and gold by sid, and
+what the source seeded (`unseedSource()`). `removeRace()` and `removeBackground()` also clear the
+legacy `ancestry` / `background` string when it is the removed name, so print stops showing it.
+`removeClass()` also removes every `subclass:<Class>:` grant and seed and un-seeds the level-1 HP.
+Removing the first class while another remains hands the saving throws on: the class now first gets
+its own through `grantClassSaves()`, under its own sid, so they revert with it in turn. An emptied
+spellcasting ability is handed on the same way: after `removeClass()`, and after `selectSubclass()`
+replaces a subclass that seeded it, `handOnSpellAbility()` seeds it from the first remaining class,
+or that class's subclass, that casts, under that one's sid. `applyRace()` and `applyBackground()`
+remove the previous one first, so a swap empties the old species' unchanged speed and size and the
+new species seeds them; a speed or size the player set survives, its `player` entry skipped by the
+revert and counted full by the seed. Changing a subclass removes the old subclass's features,
+grants and seeds before applying the new one.
 
 ## Rules that must hold
 
@@ -151,7 +202,11 @@ features and grants before applying the new one.
   and no class-level-1 skill choice beyond the pack's `multiclass` block. Characters saved before
   this rule keep what their second class granted; `migrate()` does not strip it.
 - **Revert never touches what the player owns:** an item without that `grant`, a proficiency the
-  player set, a Max HP they typed, or gold beyond what that sid added.
+  player set, a Max HP they typed, gold beyond what that sid added, a seeded field they changed, a
+  speed or size they set (its `player` entry), or a tool they already had.
+- **Every seed goes through `seedField()` and is recorded, even over a full field** (as `null`).
+  Writing no entry would make the fallback take the source for one applied before the record and
+  revert the player's value: a Wizard added over an INT the player set, then removed.
 - **`feature.origin` is structural.** It drives the revert predicates and `featGroupLabel()`.
   Features added from the browser get `origin:null` and land in "Other". Do not borrow the field
   for a display label: browse origins carry `detail`, not `name`, and would never match a revert
@@ -196,8 +251,13 @@ features and grants before applying the new one.
   only the equipment picker's Done redrew the inventory, and it alone skipped `renderClassRace()`.
   Changing a species showed the old pill and not the new one. The tests read what recorder elements
   hold after each flow, not which functions ran.
-- **Free-text proficiencies do not revert.** That is why Student of War's tool lands as a feature
-  rather than in the Proficiencies box: as a feature, it leaves with the subclass.
+- **Free text reverts only while it is unchanged.** A species' Proficiencies line is recorded and
+  taken out verbatim; once edited, it stays. That is why Student of War's tool lands as a feature
+  rather than in the Proficiencies box: as a feature, it leaves with the subclass whatever the player
+  does to the text.
+- **A species and its subrace seed under one sid.** Recording the subrace's `null` over the species'
+  value (the field already full) would have left a removed species' speed behind; a later `null`
+  never replaces the same sid's value.
 
 ## Decisions
 
@@ -216,6 +276,14 @@ features and grants before applying the new one.
 | What the log records when a source is removed (#47) | One "Removed with *source*" line listing what left, no Undo | No line: the kit and its gold vanished without a trace. An Undo: granting again belongs to the source |
 | Where a grant's redraw happens (#153, #154) | Once, at the end of every grant and revert path, in `renderClassRace()` | A render in each grant function: they run in loops and inside one another. A call per flow: one missed caller brought the bug back (L9101) |
 | Which granted items arrive equipped (#128) | Weapons, through the finder's `equipNewWeapon()` | Armour and shields too: #130 changes shield stacking and must not go live first (Mike, L9101) |
+| A background's tool choice (#121) | Asked when the background is added, a step in the choices window; the pick names a placeholder carrying the background's source (Mike) | A placeholder to name later as the only path: the pick belongs with the add. Named tools only: leaves the choice as prose (L9760) |
+| Wording the app can't list, and a pick left unmade (#121) | A placeholder chip with the pack's wording, carrying the background's source; tapping it names it | Dropping a skipped pick: the background would grant nothing visible, and the choice would be lost |
+| Is a tool lifted from old text tied to the background? (#121) | No: it is the player's, as lifted languages are | Guessing from `bg.name`: a wrong guess deletes a player's tool when they change background |
+| A swap or remove when the player changed a seeded value (#131) | The player's value stays: a source's value is reverted only while it still matches what that source put in (Mike) | The source always wins: overwrites the player's choice. Asking each time: a dialog for something with one right answer |
+| How the sheet knows what a source seeded (#131) | A record, `character.seeds`, one `{sid, field, value}` per sid and field, with `null` for a source that found the field full | Reading speed and size live from the pack: a sheet without its pack reads Speed 0. Recognising by value alone, as level-1 HP is: a pack update that changes a species' speed strands the old value |
+| Sheets saved before the record (#131) | A fallback only where there is no entry at all for that sid and field: reverted if it equals what the loaded definition seeds, else kept | No fallback: every existing character keeps the bug. A one-time pass in `migrate()`: the rules may not be loaded when it runs |
+| The spellcasting ability when its source goes (#131) | Handed to the next caster, after every revert that can empty it | Leaving it blank: a Cleric/Wizard who drops Cleric would have no spell DC |
+| How a value the player set is told apart from a seed (#131) | A `player` entry in `seeds`, which `seedField()` counts as full and `unseedSource()` skips | Deleting the field's entries on a typed save: the fallback would then revert a typed speed equal to the old species' |
 
 ## Open
 
@@ -226,16 +294,17 @@ features and grants before applying the new one.
   level with no record (gained before #118) keeps everything. Removing the class reverts all of
   it, and race and background choices revert fully
   ([Character building](../features/character-building.md)).
-- **Some grants are not tagged, so they do not revert:** text appended to `proficiencies` (race
-  proficiencies, background tools), `speed` and `size` (seeded only when
-  empty), `spellAbility` (set by a class or subclass), and the legacy `ancestry` and `background`
-  strings.
+- **Tools lifted from old "Tools:" text are the player's** (#121, decision 5): the background behind
+  them can't be recovered, so they stay after a background change, as lifted languages do.
+- **A feat's tool choices** (Crafter, Musician, Skilled) stay feature text; a later issue can queue
+  them through the same `tool` step.
 - **Multiclass characters saved before #66 keep the extra grants.** Their second class carries its
   saving throws, full skill picks and starting equipment under its sid. They revert if that class is
   removed; nothing strips them on load, by design.
 - **Armor, weapon and tool training is not a grant** for any class — the first class's is only in
   its data, a multiclass's only in the window's note — so none of it reverts because none of it is
-  applied.
+  applied. If #137 tracks a class's tools, it adds a `class` source to `CHIP_SRC` and uses the tool
+  chip row.
 - A class's gold alternative is granted as the average of its dice, not a roll.
 
 See [Known issues](../roadmap/known-issues.md).
@@ -260,3 +329,4 @@ See [Known issues](../roadmap/known-issues.md).
 - 2026-10-25 — Removing a source writes one "Removed with *source*" line; an undone item whose source is gone comes back ordinary. → ledger L7339, #47
 - 2026-10-27 — Species and background feat choices are granted with their origin through `commitExtraChoices()`; a feat at an ASI carries the class-level origin with its +1 on the feature; level down reverts what a level's record names. → ledger L7569, #118
 - 2026-11-06 — Every grant and revert path ends in one redraw, `renderClassRace()`, which repaints the inventory, coins and chips; granted weapons arrive equipped through `equipNewWeapon()`. → ledger L9101, #153, #154, #128
+- 2026-11-07 — A background's tools are chips stamped `bg:`, a choice a placeholder asked for in the choices window; what a source seeds is recorded in `seeds` and reverted only while unchanged, with a fallback for older sheets, a `player` entry for a value the player set, and the spellcasting ability handed on; the legacy strings clear. → ledger L9760, #121, #131
