@@ -18,26 +18,62 @@ function cleanParty(v){
 }
 function cleanCombatants(v,active){
   if(!active)return [];
-  let you=false;const out=[],seen=new Set();
+  let you=false;const out=[],seen=new Set(),fams=new Set();
   (Array.isArray(v)?v:[]).forEach(r=>{
-    if(!r||typeof r!=="object"||["you","party","foe"].indexOf(r.kind)<0)return;
+    if(!r||typeof r!=="object"||["you","party","foe","familiar"].indexOf(r.kind)<0)return;
     if(r.kind==="you"){if(you)return;you=true;}
+    /* #163: a familiar's row needs its familiar's id, and one familiar has one
+       row: two would write one HP. An after-you row has no initiative. */
+    if(r.kind==="familiar"){
+      const fid=String(r.famId==null?"":r.famId);if(!fid||fams.has(fid))return;fams.add(fid);
+      const after=r.after===true;
+      out.push({id:initFreshId(r.id,seen),kind:"familiar",name:String(r.name==null?"":r.name).trim().slice(0,60)||"Familiar",init:after?null:initInt(r.init),
+        ac:initOpt(r.ac),track:"exact",band:null,hp:initOpt(r.hp),maxHp:initOpt(r.maxHp),dead:false,partyId:"",famId:fid,after});
+      return;
+    }
     const party=r.kind==="party",band=(Number.isInteger(r.band)&&r.band>=0&&r.band<=4)?r.band:null,maxHp=party?initOpt(r.maxHp):"";
     /* never a blank chip: your row reads your sheet's name, the rest a fallback */
     const nm=String(r.name==null?"":r.name).trim().slice(0,60)||(r.kind==="foe"?"Unnamed":r.kind==="party"?"Party member":"");
     out.push({id:initFreshId(r.id,seen),kind:r.kind,name:nm,init:initInt(r.init),
       ac:r.kind==="you"?"":initOpt(r.ac),
       track:party?((r.track==="exact"||r.track==="estimate")?r.track:(maxHp!==""?"exact":"estimate")):"",
-      band:r.kind==="you"?null:band,hp:party?initOpt(r.hp):"",maxHp,dead:party&&r.dead===true,partyId:party?String(r.partyId||""):""});
+      band:r.kind==="you"?null:band,hp:party?initOpt(r.hp):"",maxHp,dead:party&&r.dead===true,partyId:party?String(r.partyId||""):"",famId:"",after:false});
   });
   return out;
 }
-function combatantDead(r){return !!r&&(r.kind==="foe"?r.band===4:(r.kind==="party"?r.dead===true:false));}
+/* A familiar is fallen at 0 HP exactly: its HP is known, so 0 says it (#163) */
+function combatantDead(r){return !!r&&(r.kind==="foe"?r.band===4:r.kind==="party"?r.dead===true:r.kind==="familiar"?r.hp===0:false);}
+/* #163: a Right after you familiar's row. It has no initiative of its own and
+   always sits directly behind you, in familiar order (decision 6). */
+function initAfter(r){return !!r&&r.kind==="familiar"&&r.after===true;}
+/* Stable, highest first, unrolled last; then the after-you rows, in their
+   order, straight after you (last with no you row). Pure. */
 function initSort(list){
-  return list.map((r,i)=>({r,i})).sort((a,b)=>{
+  const out=list.filter(r=>!initAfter(r)).map((r,i)=>({r,i})).sort((a,b)=>{
     const x=a.r.init,y=b.r.init;
     if(x===y)return a.i-b.i;if(x===null)return 1;if(y===null)return -1;return y-x;
   }).map(o=>o.r);
+  const glued=list.filter(initAfter);if(!glued.length)return out;
+  const y=out.findIndex(r=>r.kind==="you");
+  out.splice(y<0?out.length:y+1,0,...glued);return out;
+}
+/* You and the after-you rows directly behind you: {start, end} (end===start
+   with none), null with no you row. */
+function initBlock(list){
+  const s=(list||[]).findIndex(r=>r&&r.kind==="you");if(s<0)return null;
+  let e=s;while(e+1<list.length&&initAfter(list[e+1]))e++;
+  return {start:s,end:e};
+}
+/* The order as units for the tie moves (decision 7): the block is one unit
+   whose initiative is yours; every other row is its own unit. Nothing ever
+   lands between you and an after-you row. */
+function initUnits(list){
+  const b=initBlock(list),out=[];
+  for(let i=0;i<list.length;i++){
+    if(b&&i===b.start){out.push({rows:list.slice(b.start,b.end+1),init:list[i].init,after:false});i=b.end;continue;}
+    out.push({rows:[list[i]],init:list[i].init,after:initAfter(list[i])});
+  }
+  return out;
 }
 function initFirstAlive(list){const r=(list||[]).find(x=>!combatantDead(x));return r?r.id:"";}
 /* The next living row after turnId. Passing the end is a wrap: the caller
@@ -77,6 +113,8 @@ function combatantBar(r){
   if(r.kind==="you"){const m=effMaxHP(),h=num(character.hp.cur);return {band:bandOfShare(h,m),share:m>0?Math.max(0,Math.min(1,h/m)):null};}
   if(r.kind==="party"&&r.track==="exact")return num(r.maxHp)>0?{band:bandOfShare(r.hp,r.maxHp),share:Math.max(0,Math.min(1,num(r.hp)/num(r.maxHp)))}
     :{band:null,share:null};   /* Exact with no max: no share to draw, and an Estimate band left over would be stale */
+  /* #163: a familiar as a party member on Exact; a blank current HP is not known */
+  if(r.kind==="familiar")return num(r.maxHp)>0&&r.hp!==""?{band:bandOfShare(r.hp,r.maxHp),share:Math.max(0,Math.min(1,num(r.hp)/num(r.maxHp)))}:{band:null,share:null};
   return {band:r.band===4?null:r.band,share:null};
 }
 /* Your typed d20: the face, 1..20, as the spend box takes 1..die. */
@@ -98,15 +136,17 @@ function initModOf(){
   return (character.init===""?dex:num(character.init))+sumFx("init",c)+sumFx("check",c);
 }
 function youAC(){return acTotal();}
-/* you: {name, init}; party: [{id,name,ac,maxHp,init}]; foes: [{name,count,ac,init}] */
-function buildCombatants(you,party,foes){
-  const rows=[{id:uid(),kind:"you",name:String(you.name||""),init:initInt(you.init),ac:"",track:"",band:null,hp:"",maxHp:"",dead:false,partyId:""}];
+/* you: {name, init}; party: [{id,name,ac,maxHp,init}]; foes: [{name,count,ac,init}];
+   fams (#163): summoned familiars, each with an added init (ignored for After) */
+function buildCombatants(you,party,foes,fams){
+  const rows=[{id:uid(),kind:"you",name:String(you.name||""),init:initInt(you.init),ac:"",track:"",band:null,hp:"",maxHp:"",dead:false,partyId:"",famId:"",after:false}];
   (party||[]).forEach(p=>{const mx=initOpt(p.maxHp);rows.push({id:uid(),kind:"party",name:String(p.name).slice(0,60),init:initInt(p.init),ac:initOpt(p.ac),
-    track:mx!==""?"exact":"estimate",band:null,hp:mx,maxHp:mx,dead:false,partyId:String(p.id||"")});});
+    track:mx!==""?"exact":"estimate",band:null,hp:mx,maxHp:mx,dead:false,partyId:String(p.id||""),famId:"",after:false});});
+  (fams||[]).forEach(f=>rows.push(famRow(f,f.init)));
   (foes||[]).forEach(f=>{
     const name=String(f.name||"").trim().slice(0,56);if(!name)return;
     const n=Math.max(1,Math.min(20,initInt(f.count)||1));
-    for(let k=1;k<=n;k++)rows.push({id:uid(),kind:"foe",name:n>1?`${name} ${k}`:name,init:initInt(f.init),ac:initOpt(f.ac),track:"",band:null,hp:"",maxHp:"",dead:false,partyId:""});
+    for(let k=1;k<=n;k++)rows.push({id:uid(),kind:"foe",name:n>1?`${name} ${k}`:name,init:initInt(f.init),ac:initOpt(f.ac),track:"",band:null,hp:"",maxHp:"",dead:false,partyId:"",famId:"",after:false});
   });
   return initSort(rows);
 }
@@ -130,6 +170,13 @@ function famFillHP(f){
   const mx=initOpt(hp.max);
   if(String(hp.cur==null?"":hp.cur).trim()!==""||!(mx>0))return false;
   f.hp=Object.assign({},hp,{cur:String(mx)});return true;
+}
+/* One familiar's row, its name, AC and HP copied (cleaned as a party row's);
+   init is the typed roll for Own, null for After. */
+function famRow(f,init){
+  const hp=f&&f.hp&&typeof f.hp==="object"?f.hp:{},after=famTurn(f)==="after";
+  return {id:uid(),kind:"familiar",name:String(f&&f.name!=null?f.name:"").trim().slice(0,60)||"Familiar",init:after?null:initInt(init),ac:initOpt(f&&f.ac),
+    track:"exact",band:null,hp:initOpt(hp.cur),maxHp:initOpt(hp.max),dead:false,partyId:"",famId:String(f&&f.id!=null?f.id:""),after};
 }
 
 /* ---- the Party card (Bio) ---- */
@@ -260,6 +307,11 @@ function hbBarHTML(bar){
 }
 function combatantHealthText(r){
   const bar=combatantBar(r);
+  /* #163: a familiar's HP is known exactly, so at 0 it says "HP 0 / 7"; a
+     blank current HP with a max (a hand-edited file) is "?" */
+  if(r.kind==="familiar"){const mx=num(r.maxHp)>0?num(r.maxHp):0;
+    if(r.hp==="")return mx?`HP ? / ${mx}`:"Health not set";
+    return mx?`HP ${num(r.hp)} / ${mx}`:`HP ${num(r.hp)}`;}
   if(combatantDead(r))return "Dead";
   if(r.kind==="you")return `HP ${num(character.hp.cur)} / ${effMaxHP()}`;
   if(r.kind==="party"&&r.track==="exact"&&num(r.maxHp)>0)return `HP ${num(r.hp)} / ${num(r.maxHp)}`;
@@ -289,17 +341,22 @@ function initTableBtnHTML(ch){
   if(!(ch.combatants||[]).length)return "";
   return `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">Combatants ${_iniTableOpen?"▴":"▾"}</button>`;
 }
+/* The number a chip or row shows: an after-you row shows yours (decision 6) */
+function initShownInit(r,ch){
+  if(!initAfter(r))return r.init;
+  const y=(ch.combatants||[]).find(x=>x.kind==="you");return y?y.init:null;
+}
 function initChipHTML(r,ch){
   const turns=ch.initMode==="turns",show=ch.initShowRolls!==false;
-  const now=turns&&r.id===ch.combatTurn,dead=combatantDead(r),name=r.kind==="you"?(ch.name||"You"):r.name;
-  const lbl=`${name}${r.init!==null?", initiative "+r.init:""}, ${combatantHealthText(r)}${now?", acting":""}`;
+  const now=turns&&r.id===ch.combatTurn,dead=combatantDead(r),name=r.kind==="you"?(ch.name||"You"):r.name,n=initShownInit(r,ch);
+  const lbl=`${name}${initAfter(r)?", acts right after you":n!==null?", initiative "+n:""}, ${combatantHealthText(r)}${now?", acting":""}`;
   return `<button type="button" class="ini-chip${now?" now":""}${dead?" dead":""}" data-inichip="${esc(r.id)}" aria-label="${esc(lbl)}">`+
-    `<span class="ini-top">${show?`<span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`:""}<span class="ini-nm">${esc(name)}</span></span>${hbBarHTML(dead?{band:null,share:null}:combatantBar(r))}</button>`;
+    `<span class="ini-top">${show?`<span class="ini-n">${esc(n===null?"—":String(n))}</span>`:""}<span class="ini-nm">${esc(name)}</span></span>${hbBarHTML(dead?{band:null,share:null}:combatantBar(r))}</button>`;
 }
 function initRowHTML(r,ch){
-  const name=r.kind==="you"?(ch.name||"You"):r.name,ac=r.kind==="you"?youAC():r.ac;
-  return `<button type="button" class="ini-row${combatantDead(r)?" dead":""}" data-inirow="${esc(r.id)}"><span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`+
-    `<span class="ini-nm">${esc(name)} <span class="ini-kind">${r.kind==="you"?"you":r.kind==="party"?"party":""}</span></span>`+
+  const name=r.kind==="you"?(ch.name||"You"):r.name,ac=r.kind==="you"?youAC():r.ac,n=initShownInit(r,ch);
+  return `<button type="button" class="ini-row${combatantDead(r)?" dead":""}" data-inirow="${esc(r.id)}"><span class="ini-n">${esc(n===null?"—":String(n))}</span>`+
+    `<span class="ini-nm">${esc(name)} <span class="ini-kind">${r.kind==="you"?"you":r.kind==="party"?"party":r.kind==="familiar"?"familiar":""}</span></span>`+
     `<span class="ini-hp">${esc(combatantHealthText(r))}</span>${ac!==""?`<span class="ini-ac">AC ${esc(String(ac))}</span>`:""}</button>`;
 }
 function initTableHTML(ch){
@@ -443,7 +500,24 @@ function toggleInitRolls(){character.initShowRolls=character.initShowRolls===fal
 /* ---- one combatant's dialog: big targets (Mike: bands are too small to tap
    on a phone). Foe: band buttons. Party: Exact HP / Estimate, Dead. You:
    initiative only. Ties break here with Act earlier / Act later. */
-function initTie(list,i,dir){const j=i+dir;return j>=0&&j<list.length&&list[j].init===list[i].init;}
+/* Two neighbouring units with the same initiative (initUnits(), #163
+   decision 7): you and your after-you rows tie and move as one, at your
+   initiative; an after-you row ties only with another after-you row. With no
+   after-you rows every unit is one row, as it was. */
+function initTie(list,i,dir){
+  const r=list[i];if(!r)return false;
+  if(initAfter(r))return initAfter(list[i+dir]);
+  const U=initUnits(list),u=U.findIndex(x=>x.rows.indexOf(r)>=0),v=U[u+dir];
+  return !!v&&!v.after&&!U[u].after&&v.init===U[u].init;
+}
+/* The order after the tie move initTie() allows: the two units swap whole. Pure. */
+function initMoved(list,i,dir){
+  const r=list[i];
+  if(initAfter(r)){const out=list.slice();[out[i],out[i+dir]]=[out[i+dir],out[i]];return out;}
+  const U=initUnits(list),u=U.findIndex(x=>x.rows.indexOf(r)>=0);
+  [U[u],U[u+dir]]=[U[u+dir],U[u]];
+  return [].concat(...U.map(x=>x.rows));
+}
 function combatantDialogHTML(r,ch){
   const list=ch.combatants||[],i=list.findIndex(x=>x.id===r.id);
   const bands=n=>`<div class="cd-lbl">How hurt?</div>`+[0,1,2,3,4].slice(0,n).map(b=>`<button type="button" class="cd-band${r.band===b?" on":""}" data-cband="${esc(String(b))}">`+
@@ -502,7 +576,7 @@ function removeCombatant(id){
 function moveCombatant(id,dir){
   const list=character.combatants||[],i=list.findIndex(x=>x.id===id);
   if(i<0||!initTie(list,i,dir))return false;
-  const j=i+dir;[list[i],list[j]]=[list[j],list[i]];
+  list.splice(0,list.length,...initMoved(list,i,dir));
   renderCombatChrome();renderInitTable();scheduleSave();return true;
 }
 function addCombatant(name,init,ac){
