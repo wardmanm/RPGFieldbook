@@ -325,6 +325,14 @@ into a fix, a Limitation above, or a Verified-NOT-gap below, and then removed fr
 - `settings.autoload` is seeded and never read (#151). `portraitImg` has no default in `blankChar()`.
   `choicesSettled()` is defined and never called. Nothing binds `character.speed`, so base speed only
   ever comes from the ancestry. → [Character model](../architecture/character-model.md)
+- The ASI step's window starts from the sheet as it opens (#146, 1.9.2). In a high-level start, a
+  later level's ability effect (a level-20 trait carried as an effect) would count before an earlier
+  step's increase, so the screen could refuse a pick the levels allow. Only Humblewood's Arboreal
+  Acrobat carries an ability effect, and it is a feat. → ledger L9760, and
+  [Character building](../features/character-building.md)
+- `featAbilityChoices()`'s text fallback doesn't read "to a maximum of 30" (#146, 1.9.2), so an Epic
+  Boon with no `ability` field would cap at 20. Every shipped boon carries `ability` with `max: 30`.
+  → ledger L9760, and [Character building](../features/character-building.md)
 
 
 ### Tooling
@@ -504,3 +512,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — #129 and #130 fixed (Include spells; Flat AC, best shield); #132 fixed for the feature form; what waits on phase 2 recorded (the Vitals lock, the item form); `usesMax()` is tested. → ledger L9537, #129, #130, #132
 - 2026-11-06 — Removed: the item form's scaling-uses freeze and the Flat AC's missing Vitals lock, both fixed in phase 2. → ledger L9597, #130, #132
 - 2026-11-07 — Removed: "+1 to two" accepting one ability twice (#146 S2-24, fixed with #171). Added: prerequisites in a choices window read from the sheet, and a blank single-radio option or subclass not counted (both 1.9.2, #146); a feat's own-effect +1 not capped. → ledger L9760, #171, #172
+- 2026-11-08 — Added, latent (#146, 1.9.2): the ASI window's base is the sheet at open, and a text-only Epic Boon would cap at 20. → ledger L9760, #171

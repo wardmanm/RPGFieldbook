@@ -23,7 +23,7 @@ so removing the source takes it back out; that mechanism is
 `styleOptionTaken()`, and for the ASI step's picks and cap (#171) `asiStepLabel()`,
 `asiReadStep()`, `asiStepDone()`, `choiceBlockPicked()`, `asiScore()`, `asiScores()`,
 `asiStepIncreases()`, `asiLedger()`, `asiFixedText()`, `asiRefresh()`, `asiLineText()`,
-`asiChooseAgainText()`, `asiTakenElsewhere()` in `58-choices.js`;
+`asiChooseAgainText()`, `asiTakenElsewhere()`, `asiSecondStale()` in `58-choices.js`;
 `openAddRace()`, `applyRace()`, `racesForCharacter()` in `52-race.js`; `openAddBackground()`,
 `applyBackground()` in `54-background.js`; `subclassesFor()`, `addFeatureFromDef()`,
 `grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
@@ -356,7 +356,9 @@ counts as a pick left until it is set.
   - **On screen** (`asiRefresh()`, on open and after every change): each ability with no room is
     disabled, its text ending " — max 20"; under "+1 to two" each select disables the other's
     ability; each "+1 to:" chip with no room is disabled, and a group with none left reads "no
-    increase: all at the maximum" and counts as answered.
+    increase: all at the maximum" and counts as answered. The second select holds an ability only
+    under "+1 to two", and never the first's (`asiSecondStale()`): "+2 to one" empties it, so
+    switching back never shows one ability twice.
   - **Clearing.** A change at an earlier level that takes a later pick's room clears that pick: its
     select back to "— choose —", or its chip unpressed, with "Choose again: level 4's pick took the
     room". It counts in Picks left again, and the note stays until that step changes. Switching "+1
@@ -651,6 +653,10 @@ they are built: [Converter](../data/converter.md).
   ledger counts it toward the next step's room, so the window stays true to the commit.
 - **Every ASI in a multi-level window is stamped with the class's final level** (18), not its
   step's (4…16). Nothing displays it, and a level-up's is right.
+- **Latent, no shipped data triggers them** (#146, 1.9.2): the window's base is the sheet at open,
+  so in a high-level start a later level's ability effect (a trait carried as an effect) would count
+  before an earlier step; and the text fallback (`featAbilityChoices()`) doesn't read "to a maximum
+  of 30", so an Epic Boon with no `ability` field would cap at 20.
 - **The choices inside a feat stay by hand:** its spells, tools, damage types, Resilient's saving
   throw and Weapon Master's mastery. Only its +1 is asked.
 - **Deferred from #118's review.** None blocks a level-up:
@@ -729,3 +735,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-11-04 — Undo on a second class's level-up card restores the sheet from before Add class: `addClass()` takes the Undo copy, as `doLevelUp()` does. → ledger L8893, #181
 - 2026-11-06 — A level-up and Add class unlock Vitals (its pencil is the Max HP lock now) and the HP step puts it back as it was, through `setVitalsLocked()`; `LU_HP_CLOSE` says Vitals is unlocked. → ledger L9441, #115
 - 2026-11-07 — The class's Fighting Style counts for Fighting Style feats, and the style it gave counts as that feat taken (and the reverse). Every ASI step starts blank, names its level and counts in Picks left and the dismiss guard; no increase passes 20 (30 for an Epic Boon's), in level order on screen and at Done; a pick that loses its room clears with "Choose again"; a feat is offered once per window; "+1 to two" needs two abilities. → ledger L9760, #172, #171, #146
+- 2026-11-08 — "+1 to two" never shows one ability twice: "+2 to one" empties the hidden second select (`asiSecondStale()`). Two latent gaps recorded (a later level's ability effect in a high-level start; a text-only Epic Boon's 30). → ledger L9760, #171, #146

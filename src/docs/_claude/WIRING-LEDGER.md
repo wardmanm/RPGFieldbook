@@ -9835,13 +9835,60 @@ Focus edges (a sheet at 22, junk scores, two groups, a name with no feat), commi
 slots. `rules-data.js` guards the binding as text. Two throwaway scratchpad checks: 765 ledger-vs-
 commit sequences with no mismatch, and a 41-check drive of `asiRefresh()` over a small fake DOM.
 
-**Not yet driven in the browser:** the plan's before and after screenshots and its Task 5 drive wait
-for the shared browser (`.claude/qa/in-progress/172-asi/`).
+**The browser pass (2026-11-08).** Before shots from main's artifact; after shots and the drive from
+this branch's `./build.sh --no-zip`, with localStorage and the `hw-fb-cache` IndexedDB cleared
+between them, the SRD pack loaded through the home screen's import. The shots are in
+`.claude/qa/in-progress/172-asi/`.
+- **Main, before:** a level-18 Fighter's six steps unlabelled and each on STR; Done gave STR 16 → 28
+  with six ASI features; Picks left named only the skills; a Fighter 4 was told Archery "needs the
+  Fighting Style feature"; Escape on a level-up window holding only an ASI closed without asking.
+- **Driven here, with real selects and clicks:**
+  - two "+2 STR" giving "STR 20 (max)" and level 8's "STR — max 20";
+  - turning level 4 down bringing it back;
+  - Picks left naming the blank steps by level, then Continue anyway granting only the set ones;
+  - level 6's "+2 STR" first, then Grappler +1 Strength at level 4, which cleared level 6 with
+    "Choose again: level 4's pick took the room" and greyed Grappler "picked at level 4";
+  - "+1 to two" allowing that STR, and the mode switch back clearing with "that would pass 20";
+  - the Defense option at level 1 greying the Defense feat, and Archery pressed at level 8 greying
+    the Archery radio;
+  - Escape asking on a window with picks made;
+  - a Fighter who chose Defense offered Archery and not Defense at the level-up, Show all still
+    listing it;
+  - Escape on that blank ASI-only window asking first;
+  - Feats allowed off through Settings, its selects and line following each change;
+  - an Epic Boon taking DEX 20 to 21;
+  - a capped-out Grappler counting as set;
+  - both skins, 1280 and 390.
+- **Set up through evaluate:** each new character, its scores and `addClass()` / `doLevelUp()`. A
+  select is shown as a list (`size`) for some shots, because headless Chrome doesn't draw an open
+  dropdown. `window.confirm` was stubbed for one Escape, because a native dialog blocks the
+  driver.
+- **Not driven:** touch, a real phone, print, Mike's own characters, and the private packs.
+
+**Review fix (after a fresh read of the branch).** "+1 to two" could show one ability twice: "+1 to
+two" STR/DEX, "+2 to one" with DEX, then "+1 to two" again kept the hidden second select's DEX. Both
+selects read DEX, both DEX options greyed, and there was no note; Done refused it, but the screen
+showed a pick that never lands (against decision 4). Reproduced in the browser.
+- `asiSecondStale()` says when the second select is stale: it holds an ability under "+2 to one", or
+  the first's ability under "+1 to two". `asiRefresh()` empties it before it reads the steps.
+- Tests: `sheet.js` (the rule), `rules-data.js` (the clearing comes before the read), and the
+  scratchpad drive (the reviewer's sequence, with Feats on and off). Re-driven in the browser: DEX
+  once, the second select blank with its DEX greyed, and Done granting DEX +1, CON +1.
+
+**Recorded, not fixed (latent, no shipped data triggers them; known-issues, #146, 1.9.2):**
+- The window's base is the sheet at open. In a high-level start, a later level's ability effect (a
+  level-20 trait carried as an effect) would count before an earlier step. No shipped pack has one;
+  only Humblewood's Arboreal Acrobat carries an ability effect, and it is a feat.
+- `featAbilityChoices()`'s text fallback doesn't read "to a maximum of 30", so an Epic Boon with no
+  `ability` field would cap at 20. Every shipped boon carries `ability` with `max: 30`.
+
+**For Mike (not this branch):** the private 2024 pack lists Blessed Warrior and Druidic Warrior as
+feats with no category line, so every ASI offers them to every class.
 
 **For merge time (not done from the branch):** tick #146 S2-24 and S2-26; add to #146's checklist the
 two known-issues items (prerequisites in a choices window read from the sheet; a blank single-radio
 option or subclass not in Picks left or the dismiss guard); move `.claude/qa/in-progress/172-asi/`
-to `complete/` once the shots exist.
+to `complete/`.
 
 Pages: [character building](../wiki/features/character-building.md),
 [abilities & skills](../wiki/features/abilities-and-skills.md),
