@@ -179,6 +179,47 @@ function famRow(f,init){
     track:"exact",band:null,hp:initOpt(hp.cur),maxHp:initOpt(hp.max),dead:false,partyId:"",famId:String(f&&f.id!=null?f.id:""),after};
 }
 
+/* The familiar is the truth for its row (decision 10): copy each familiar
+   row's name, AC, switch and HP from its familiar, re-sorting when a switch
+   changed. Pure over c: it reads the familiars and never writes one, and it
+   never adds or removes a row. Returns the ids of the rows whose familiar is
+   gone or dismissed, for the caller to drop (migrate() on load,
+   familiarsChanged() live). */
+function syncFamiliarRows(c){
+  const list=Array.isArray(c&&c.combatants)?c.combatants:[],live=fightFamiliars(c),gone=[];let moved=false;
+  list.forEach(r=>{
+    if(!r||r.kind!=="familiar")return;
+    const f=live.find(x=>x.id===r.famId);if(!f){gone.push(r.id);return;}
+    const hp=f.hp&&typeof f.hp==="object"?f.hp:{},after=famTurn(f)==="after";
+    r.name=String(f.name!=null?f.name:"").trim().slice(0,60)||"Familiar";r.ac=initOpt(f.ac);
+    if(r.after!==after){r.after=after;r.init=null;moved=true;}
+    r.hp=initOpt(hp.cur);r.maxHp=initOpt(hp.max);
+  });
+  if(moved)c.combatants=initSort(list);
+  return gone;
+}
+/* After every change to a familiar (the paw's Summon / Dismiss, Delete, the
+   form's Save), in a fight with a list: join it if it was just summoned,
+   fill a blank current HP from its max (decision 12), copy, drop the rows
+   whose familiar left, settle the marker, and draw once. wasActive is the
+   familiar's `active` before the change (false for a new one). With no fight,
+   or no list yet, nothing: Roll initiative will list a summoned familiar. */
+function familiarsChanged(id,wasActive){
+  if(!inCombat(character)||!(character.combatants||[]).length)return;
+  const f=fightFamiliars(character).find(x=>x.id===id);
+  const has=!!f&&character.combatants.some(r=>r.kind==="familiar"&&r.famId===f.id);
+  if(f&&!wasActive&&!has){
+    famFillHP(f);
+    const row=famRow(f,null);
+    character.combatants=initSort(character.combatants.concat([row]));
+    if(!row.after)toast(`${row.name} joined the fight. Tap its chip to set its initiative.`);
+  }
+  else if(has)famFillHP(f);
+  syncFamiliarRows(character).forEach(initDropRow);
+  initSettleTurn();
+  renderCombatChrome();renderInitTable();renderFamiliars();scheduleSave();
+}
+
 /* ---- the Party card (Bio) ---- */
 function partyRowsHTML(list){
   if(!list.length)return `<p class="empty">Add the friends who fight beside you. They join every fight you start.</p>`;
@@ -604,13 +645,20 @@ function initTurnWrapped(n){
   const r=(character.combatants||[]).find(x=>x.id===n.turnId);
   return !!r&&!combatantDead(r);
 }
-function removeCombatant(id){
+/* One row out of the fight, never yours: the marker moves to its living
+   successor first, and that wrapping onto a living row advances the round
+   once (T5-M2). No repaint, so several rows can leave and draw once (#163). */
+function initDropRow(id){
   const list=character.combatants||[],r=list.find(x=>x.id===id);if(!r||r.kind==="you")return;
   let n=null;
   if(character.combatTurn===id){n=initNextTurn(list,id);character.combatTurn=n.turnId;}
   character.combatants=list.filter(x=>x.id!==id);
   if(character.combatTurn===id)character.combatTurn=initFirstAlive(character.combatants);
   if(initTurnWrapped(n))advanceRound(1);   /* T5-M2 */
+}
+function removeCombatant(id){
+  const r=(character.combatants||[]).find(x=>x.id===id);if(!r||r.kind==="you")return;
+  initDropRow(id);
   renderCombatChrome();renderInitTable();scheduleSave();
 }
 function moveCombatant(id,dir){

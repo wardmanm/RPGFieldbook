@@ -461,6 +461,22 @@ function renderFamiliars(){
   if(!has)return;
   el.innerHTML=character.familiars.map(f=>familiarCardHTML(f)).join("");
 }
+/* Summon / Dismiss and Delete (#163: out of 90-boot.js, so the tests reach
+   them). In a fight a summoned familiar joins and a dismissed or deleted one
+   leaves (familiarsChanged()). Boot keeps the confirm, the modal and focus.
+   False when no familiar has that id. */
+function setFamiliarSummoned(id,on){
+  const f=(Array.isArray(character.familiars)?character.familiars:[]).find(x=>x&&x.id===id);if(!f)return false;
+  const was=!!f.active;f.active=!!on;
+  familiarsChanged(id,was);
+  renderFamiliars();recompute();scheduleSave();return true;
+}
+function deleteFamiliar(id){
+  const list=Array.isArray(character.familiars)?character.familiars:[],f=list.find(x=>x&&x.id===id);if(!f)return false;
+  character.familiars=list.filter(x=>x!==f);
+  familiarsChanged(id,!!f.active);
+  renderFamiliars();recompute();scheduleSave();return true;
+}
 
 /* ================= the sheet header (#103, spec §6.1, §6.6) =================
    The name, both rests and the star are static markup in 00-sheet.html (their

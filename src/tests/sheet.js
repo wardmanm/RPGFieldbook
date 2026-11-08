@@ -99,6 +99,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'initPrevTurn', 'initPrev', 'initCanPrev', 'initFitCount', 'initFitSide', 'iniMoreHTML', 'initTableBtnHTML',
   'openIniFly', 'closeIniFly',
   'irFoeRowHTML', 'famTurn', 'fightFamiliars', 'famFillHP', 'famRow', 'initBlock', 'initChipHTML', 'initRowHTML',
+  'syncFamiliarRows', 'familiarsChanged', 'initDropRow', 'initSettleTurn', 'setFamiliarSummoned', 'deleteFamiliar',
   'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
   'cleanInvLog', 'logInv', 'logGrant', 'logItemSave', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
@@ -10626,6 +10627,189 @@ async function t181AddClassUndo() {
     } finally {
       X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.advanceRound = keep.ar; ctx.renderFamiliars = keep.rf;
       ctx.openModal = keep.om; ctx.document.getElementById = keep.gid; ctx.document.querySelector = keep.qs;
+    }
+  }
+
+  /* Task 6 (#163): keeping the tracker in step with the familiars */
+  {
+    const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, rt: ctx.renderInitTable, ar: ctx.advanceRound, rf: ctx.renderFamiliars,
+      re: ctx.recompute, toast: ctx.toast, om: ctx.openModal, cm: ctx.closeModal, gid: ctx.document.getElementById};
+    let toasts = [], painted = 0;
+    ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {}; ctx.recompute = () => {};
+    ctx.renderFamiliars = () => { painted++; }; ctx.toast = m => { toasts.push(String(m)); return null; };
+    ctx.advanceRound = d => { X.character.combatRound = X.num(X.character.combatRound) + d; };
+    /* you 15, Goblin 12, Sprocket (Own, summoned) by sInit, Thorn 8; Wolf (After) and Owl (Own) dismissed */
+    const fight = (sInit = 10) => {
+      const c = X.blankChar(); c.name = 'Mira'; c.combatActive = true; c.combatRound = 2; c.initMode = 'turns';
+      c.familiars = [
+        {id: 'w', name: 'Wolf', kind: 'Wolf', ac: '12', hp: {cur: '11', max: '11'}, speed: '40 ft', description: '', effects: [], active: false, turn: 'after'},
+        {id: 'o', name: 'Owl', kind: 'Owl', ac: '11', hp: {cur: '', max: '6'}, speed: '', description: '', effects: [], active: false, turn: 'own'},
+        {id: 's', name: 'Sprocket', kind: 'Owl', ac: '13', hp: {cur: '5', max: '7'}, speed: '', description: '', effects: [], active: true, turn: 'own'}];
+      c.combatants = X.buildCombatants({name: 'Mira', init: 15}, [{id: 'p1', name: 'Thorn', ac: '', maxHp: '', init: 8}], [{name: 'Goblin', count: 1, ac: '', init: 12}],
+        [Object.assign({}, c.familiars[2], {init: sInit})]);
+      c.combatTurn = c.combatants.find(r => r.name === 'Goblin').id;
+      X.character = c; toasts = []; painted = 0;
+      return c;
+    };
+    const rowOf = id => X.character.combatants.find(r => r.famId === id);
+    const famOf = id => X.character.familiars.find(f => f.id === id);
+    const named = n => X.character.combatants.find(r => r.name === n);
+    const order = () => X.character.combatants.map(r => r.kind === 'you' ? 'you' : r.name).join();
+    const snap = () => JSON.stringify([X.character.combatants, X.character.combatTurn, X.character.combatRound]);
+    try {
+      fight();
+      ck('#163 test setup: you, Goblin, Sprocket, Thorn; the Goblin acting', order() === 'you,Goblin,Sprocket,Thorn', order());
+
+      /* syncFamiliarRows: the familiar is the truth; it copies, never writes one, never adds or removes a row */
+      {
+        const c = fight(), s = famOf('s');
+        s.name = 'Sprocket II'; s.ac = '14'; s.hp = {cur: '3', max: '9'};
+        const was = JSON.stringify(c.familiars);
+        const gone = X.syncFamiliarRows(c);
+        ck('#163 syncFamiliarRows: a renamed, re-ACed and re-HPed familiar shows in its row', gone.length === 0 && rowOf('s').name === 'Sprocket II' && rowOf('s').ac === 14 &&
+           rowOf('s').hp === 3 && rowOf('s').maxHp === 9 && JSON.stringify(c.familiars) === was, rowOf('s'));
+        s.turn = 'after';
+        X.syncFamiliarRows(c);
+        ck('#163 ...a switch to After re-sorts it behind you, with no initiative', order() === 'you,Sprocket II,Goblin,Thorn' && rowOf('s').after === true && rowOf('s').init === null, order());
+        s.turn = 'own'; X.syncFamiliarRows(c);
+        ck('#163 ...and back to Own leaves it blank, last', order() === 'you,Goblin,Thorn,Sprocket II' && rowOf('s').after === false && rowOf('s').init === null, order());
+        s.active = false;
+        const id = rowOf('s').id, n = c.combatants.length, was2 = JSON.stringify(c.familiars);
+        ck('#163 ...a dismissed familiar\'s row id is returned and the row left in place', JSON.stringify(X.syncFamiliarRows(c)) === JSON.stringify([id]) && c.combatants.length === n && JSON.stringify(c.familiars) === was2);
+        c.familiars = c.familiars.filter(f => f.id !== 's');
+        ck('#163 ...and so is a deleted one\'s', JSON.stringify(X.syncFamiliarRows(c)) === JSON.stringify([id]) && c.combatants.length === n);
+      }
+
+      /* Review Focus 1: a summon mid-fight joins; the marker and the round stay */
+      fight();
+      ck('#163 summoning an After familiar mid-fight: its row directly behind you, no toast',
+         X.setFamiliarSummoned('w', true) === true && order() === 'you,Wolf,Goblin,Sprocket,Thorn' && rowOf('w').after === true && toasts.length === 0 &&
+         X.character.combatTurn === named('Goblin').id && X.character.combatRound === 2 && famOf('w').active === true, [order(), toasts]);
+      X.setFamiliarSummoned('o', true);
+      ck('#163 ...an Own one: last, blank, its blank HP filled from the max, one toast; the marker and round unchanged',
+         order() === 'you,Wolf,Goblin,Sprocket,Thorn,Owl' && rowOf('o').init === null && famOf('o').hp.cur === '6' && rowOf('o').hp === 6 && rowOf('o').maxHp === 6 &&
+         toasts.length === 1 && toasts[0] === 'Owl joined the fight. Tap its chip to set its initiative.' &&
+         X.character.combatTurn === named('Goblin').id && X.character.combatRound === 2 && painted > 0, [order(), toasts, famOf('o').hp]);
+      ck('#163 ...an unknown familiar changes nothing', X.setFamiliarSummoned('nobody', true) === false && X.deleteFamiliar('nobody') === false);
+
+      /* Review Focus 2: a dismiss or a delete leaves, moving the marker as Remove does */
+      fight();
+      X.character.combatTurn = rowOf('s').id;
+      X.setFamiliarSummoned('s', false);
+      ck('#163 dismissing the acting familiar mid-order: its row leaves, the marker goes to its successor, the round stays',
+         !rowOf('s') && X.character.combatTurn === named('Thorn').id && X.character.combatRound === 2 && famOf('s').active === false, [order(), X.character.combatTurn]);
+      fight(1);
+      ck('#163 test setup: Sprocket last', order() === 'you,Goblin,Thorn,Sprocket', order());
+      X.character.combatTurn = rowOf('s').id;
+      X.setFamiliarSummoned('s', false);
+      ck('#163 ...acting and last: the first living row, and the round up by one (T5-M2)',
+         !rowOf('s') && X.character.combatTurn === X.character.combatants[0].id && X.character.combatRound === 3, [X.character.combatTurn, X.character.combatRound]);
+      fight();
+      X.character.combatTurn = rowOf('s').id;
+      ck('#163 deleting the acting familiar likewise: gone from the paw and the fight, the marker on its successor',
+         X.deleteFamiliar('s') === true && !famOf('s') && !rowOf('s') && X.character.combatTurn === named('Thorn').id && X.character.combatRound === 2, order());
+      fight(); X.character.combatActive = false;
+      let before = JSON.stringify(X.character.combatants);
+      X.setFamiliarSummoned('w', true); X.setFamiliarSummoned('s', false);
+      ck('#163 out of a fight, a summon and a dismiss change nothing in the tracker', JSON.stringify(X.character.combatants) === before && famOf('w').active === true && famOf('s').active === false);
+      fight(); X.character.combatants = []; X.character.combatTurn = '';
+      X.setFamiliarSummoned('w', true); X.deleteFamiliar('s');
+      ck('#163 ...nor in a fight with no list yet (Roll initiative will list them)', X.character.combatants.length === 0 && toasts.length === 0 && !famOf('s'));
+      fight(); X.character.combatants = X.character.combatants.filter(r => r.famId !== 's');
+      before = snap(); X.setFamiliarSummoned('w', false);
+      ck('#163 a familiar Removed from the fight stays out: an unrelated change brings nothing back', !rowOf('s') && snap() === before);
+
+      /* the form's "Summoned (active)" tick is the same summon */
+      {
+        const byId = {};
+        const el = () => ({
+          value: '', dataset: {}, hidden: false, textContent: '', innerHTML: '', style: {}, children: [],
+          classList: {toggle() {}, add() {}, remove() {}, contains: () => false},
+          _on: {}, addEventListener(type, fn) { (this._on[type] = this._on[type] || []).push(fn); },
+          querySelector: () => null, querySelectorAll: () => [], closest: () => null, insertAdjacentHTML() {},
+          setAttribute() {}, removeAttribute() {}, focus() {}, remove() {},
+        });
+        ctx.document.getElementById = id => byId[id] || (byId[id] = el());
+        ctx.openModal = () => {}; ctx.closeModal = () => {};
+        const put = (id, v) => { ctx.document.getElementById(id).value = v == null ? '' : String(v); };
+        /* open the form on f (or a new one), the fields as given, tick "Summoned" if asked, Save */
+        const save = (f, fields, tick) => {
+          Object.keys(byId).forEach(k => delete byId[k]);
+          ctx.openFamiliarForm(f);
+          const v = Object.assign({}, f ? {name: f.name, kind: f.kind, ac: f.ac, cur: f.hp.cur, max: f.hp.max, speed: f.speed, desc: f.description} : {}, fields || {});
+          put('faName', v.name); put('faKind', v.kind); put('faAc', v.ac); put('faHpCur', v.cur); put('faHpMax', v.max); put('faSpeed', v.speed); put('faDesc', v.desc);
+          if (tick) (byId.faActive._on.click || []).forEach(fn => fn());
+          (byId.faSave._on.click || []).forEach(fn => fn());
+        };
+        fight();
+        X.setFamiliarSummoned('o', true);
+        const viaPaw = {row: Object.assign({}, rowOf('o'), {id: ''}), order: order(), hp: famOf('o').hp.cur, toasts: toasts.slice()};
+        fight();
+        save(famOf('o'), null, true);
+        ck('#163 the form, saving an existing dismissed familiar with "Summoned" ticked: it joins exactly as the paw\'s summon does',
+           famOf('o').active === true && JSON.stringify(Object.assign({}, rowOf('o'), {id: ''})) === JSON.stringify(viaPaw.row) && order() === viaPaw.order &&
+           famOf('o').hp.cur === viaPaw.hp && JSON.stringify(toasts) === JSON.stringify(viaPaw.toasts), [rowOf('o'), viaPaw, toasts]);
+        fight();
+        save(null, {name: 'Hawk', cur: '', max: '4'}, true);
+        const hawk = X.character.familiars.find(f => f.name === 'Hawk');
+        ck('#163 ...saving a new familiar with it ticked joins it, filled, with the toast',
+           !!hawk && hawk.turn === 'own' && rowOf(hawk.id) && rowOf(hawk.id).hp === 4 && hawk.hp.cur === '4' && toasts[0] === 'Hawk joined the fight. Tap its chip to set its initiative.' &&
+           order() === 'you,Goblin,Sprocket,Thorn,Hawk', [order(), toasts]);
+        fight();
+        X.character.combatTurn = rowOf('s').id;
+        save(famOf('s'), null, true);
+        ck('#163 ...saving a summoned one with it unticked takes it out, the marker moving on', famOf('s').active === false && !rowOf('s') && X.character.combatTurn === named('Thorn').id, order());
+        /* Review Focus 5 */
+        fight();
+        before = snap();
+        save(famOf('s'), {name: 'Sprocket', speed: 'fly 60 ft'}, false);
+        save(famOf('w'), null, false);
+        ck('#163 ...saving with nothing about summoning changed adds and removes nothing, no toast, the marker and round alone',
+           snap() === before && toasts.length === 0 && famOf('s').speed === 'fly 60 ft', [snap(), before, toasts]);
+        save(famOf('s'), {name: 'Sprocket the Bold', ac: '15'}, false);
+        ck('#163 ...but its new name and AC show in the tracker at once', rowOf('s').name === 'Sprocket the Bold' && rowOf('s').ac === 15, rowOf('s'));
+
+        /* a form save fills and settles */
+        fight();
+        save(famOf('s'), {cur: '', max: '7'}, false);
+        ck('#163 a form save mid-fight with a blank current HP and a max fills it, on the familiar and in the row', famOf('s').hp.cur === '7' && rowOf('s').hp === 7, [famOf('s').hp, rowOf('s')]);
+        X.character.combatTurn = rowOf('s').id;
+        save(famOf('s'), {cur: '0'}, false);
+        ck('#163 ...saving the acting familiar at 0 HP moves the marker to its living successor', famOf('s').hp.cur === '0' && rowOf('s').hp === 0 && X.character.combatTurn === named('Thorn').id &&
+           X.character.combatRound === 2, [X.character.combatTurn, order()]);
+        fight(); X.character.combatActive = false; X.character.combatants = [];
+        save(famOf('o'), null, true);
+        ck('#163 ...out of a fight a save fills nothing and joins nothing', famOf('o').active === true && famOf('o').hp.cur === '' && X.character.combatants.length === 0 && toasts.length === 0);
+      }
+
+      /* on load */
+      {
+        const g = X.blankChar(); g.name = 'Mira'; g.combatActive = true; g.combatRound = 4; g.initMode = 'turns';
+        g.familiars = [{id: 's', name: 'Sprocket', ac: '13', hp: {cur: '2', max: '7'}, active: true, turn: 'own'},
+                       {id: 'w', name: 'Wolf', ac: '', hp: {cur: '11', max: '11'}, active: false, turn: 'after'},
+                       {id: 'h', name: 'Hawk', ac: '', hp: {cur: '', max: '7'}, active: true, turn: 'own'}];
+        const yr = {id: 'y', kind: 'you', name: '', init: 15, ac: '', track: '', band: null, hp: '', maxHp: '', dead: false, partyId: '', famId: '', after: false};
+        const fr = (id, famId, init, after, hp) => ({id, kind: 'familiar', name: 'stale', init, ac: '', track: 'exact', band: null, hp, maxHp: 7, dead: false, partyId: '', famId, after});
+        g.combatants = [yr, fr('rw', 'w', null, true, 11), fr('rs', 's', 10, false, 5), fr('rh', 'h', 9, false, 7),
+          {id: 'g', kind: 'foe', name: 'Goblin', init: 3, ac: '', track: '', band: null, hp: '', maxHp: '', dead: false, partyId: '', famId: '', after: false}];
+        g.combatTurn = 'rw';
+        const saved = JSON.parse(JSON.stringify(g)), famsWas = JSON.stringify(saved.familiars.map(f => f.hp));
+        const m = X.migrate(saved);
+        ck('#163 on load: a row whose familiar is dismissed is dropped; the marker on the first living row, the round unchanged',
+           !m.combatants.some(r => r.famId === 'w') && m.combatTurn === 'y' && m.combatRound === 4 && m.combatants.map(r => r.id).join() === 'y,rs,rh,g', [m.combatants.map(r => r.id), m.combatTurn]);
+        ck('#163 ...a kept row\'s copy refreshed from its familiar', m.combatants[1].hp === 2 && m.combatants[1].name === 'Sprocket' && m.combatants[1].ac === 13, m.combatants[1]);
+        ck('#163 ...no familiar written: a blank current HP with a max stays blank, and its row reads "HP ? / 7"',
+           JSON.stringify(m.familiars.map(f => f.hp)) === famsWas && m.familiars[2].hp.cur === '' && m.combatants[2].hp === '' && X.combatantHealthText(m.combatants[2]) === 'HP ? / 7' &&
+           !X.combatantDead(m.combatants[2]), [m.familiars, m.combatants[2]]);
+        const m2 = X.migrate(JSON.parse(JSON.stringify(m)));
+        ck('#163 ...and a save → load round trip mid-fight keeps the familiar rows in their places', JSON.stringify(m2.combatants) === JSON.stringify(m.combatants) && m2.combatTurn === m.combatTurn, m2.combatants);
+        const g2 = JSON.parse(JSON.stringify(g)); g2.familiars = g2.familiars.filter(f => f.id !== 's'); g2.combatTurn = 'rh';
+        const m3 = X.migrate(g2);
+        ck('#163 ...a deleted familiar\'s row goes too, and a living actor keeps the marker', !m3.combatants.some(r => r.famId === 's') && m3.combatTurn === 'rh', m3.combatants.map(r => r.id));
+      }
+    } finally {
+      X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.advanceRound = keep.ar; ctx.renderFamiliars = keep.rf;
+      ctx.recompute = keep.re; ctx.toast = keep.toast; ctx.openModal = keep.om; ctx.closeModal = keep.cm; ctx.document.getElementById = keep.gid;
     }
   }
 }

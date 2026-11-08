@@ -193,6 +193,7 @@ function migrate(s){
   base.party=cleanParty(s.party);
   base.combatants=cleanCombatants(s.combatants,base.combatActive===true);
   base.familiars=base.familiars.map(f=>Object.assign({},f,{turn:famTurn(f)}));   /* #163: Own unless "after"; a copy, every key kept */
+  {const gone=syncFamiliarRows(base);base.combatants=base.combatants.filter(r=>gone.indexOf(r.id)<0);}   /* #163: rows follow their familiar; never writes one */
   base.initMode=s.initMode==="rounds"?"rounds":"turns";
   /* a marker only in Turns mode, and never on a dead row (final review m1) */
   base.combatTurn=base.initMode!=="turns"?"":base.combatants.some(r=>r.id===s.combatTurn&&!combatantDead(r))?String(s.combatTurn):initFirstAlive(base.combatants);

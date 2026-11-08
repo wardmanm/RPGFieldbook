@@ -127,9 +127,9 @@ function wire(){
     if((m=t.closest("[data-edit-familiar]")))return openFamiliarForm(character.familiars.find(x=>x.id===m.dataset.editFamiliar));
     /* the same two buttons sit in the header's familiar modal (openFamiliar):
        Delete there closes it, Summon / Dismiss re-opens it so it repaints */
-    if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){if(m.closest("#mBody"))closeModal();character.familiars=character.familiars.filter(x=>x.id!==f.id);renderFamiliars();recompute();scheduleSave();}return;}
+    if((m=t.closest("[data-del-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.delFamiliar);if(f&&confirm(`Delete “${f.name}”?`)){if(m.closest("#mBody"))closeModal();deleteFamiliar(f.id);}return;}
     /* ...and the keyboard goes back to the toggle the repaint replaced (M-14) */
-    if((m=t.closest("[data-toggle-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.toggleFamiliar);if(f){f.active=!f.active;renderFamiliars();recompute();scheduleSave();if(m.closest("#mBody")){openFamiliar(f.id);const b=document.querySelector("#mBody "+attrSel("data-toggle-familiar",f.id));if(b)b.focus();}}return;}
+    if((m=t.closest("[data-toggle-familiar]"))){const f=character.familiars.find(x=>x.id===m.dataset.toggleFamiliar);if(f){setFamiliarSummoned(f.id,!f.active);if(m.closest("#mBody")){openFamiliar(f.id);const b=document.querySelector("#mBody "+attrSel("data-toggle-familiar",f.id));if(b)b.focus();}}return;}
     // the Party card (#91)
     if(t.closest("#partyAdd"))return openPartyForm("");
     if((m=t.closest("[data-partyedit]")))return openPartyForm(m.dataset.partyedit);

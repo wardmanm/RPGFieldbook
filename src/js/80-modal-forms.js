@@ -987,6 +987,7 @@ function openFamiliarForm(existing){
        for a sheet that already has one (#103, spec decision 5) */
     if(i<0&&!character.familiars.length)character.showFamiliars=true;
     if(i>=0)character.familiars[i]=rec;else character.familiars.push(rec);
+    familiarsChanged(rec.id,!!f.active);   /* #163: the tick is the paw's summon; a save mid-fight shows at once */
     closeModal();renderFamiliars();recompute();scheduleSave();
   });
 }
