@@ -9756,3 +9756,94 @@ side window's row formats (P2, P0, a feature's `—`, `(noted)`, `(priority not 
 `recordProblem()` and `parseRecord()`.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md).
+
+## #172, #171: every ASI asked, none past 20; the class's Fighting Style counts (2026-11-07)
+
+Built the 1.9.1 ASI worktree (`issue/172-asi`) from its approved spec,
+`src/docs/specs/2026-11-07-asi-design.md` (Mike, 2026-11-07), and its plan,
+`src/docs/plans/2026-11-07-asi.md`. All of it is in `58-choices.js` and `50-modal.css`;
+`56-class.js` and `57-levelup.js` are untouched.
+
+**#172, Fighting Style feats marked unqualified.** `featHasFeature(/Fighting Style/i)` looked for a
+sheet feature named "Fighting Style", and no pack puts one there: the Fighter (1), Paladin and Ranger
+(2) carry an `option` choice labelled "Choose a Fighting Style", committed as a feature named after
+the option ("Defense"). Only Champion's "Additional Fighting Style" trait matched, and the #118 test
+pushed a hand-made "Fighting Style" feature, so it never saw the pack shape.
+- `classStyleSources()` walks each class on the sheet, and its chosen subclass, from level 1 to the
+  class's level (`findClassDef()`, `subclassesFor()`), for a trait named or a choice labelled
+  "Fighting Style" (`isStyleChoice()`: College of Swords' "Fighting Style: choose 1" too), with each
+  choice's option names. `hasFightingStyle()` is that or a feature so named; `featPartUnmet()`'s
+  `style` part and `featOfferable()`'s `style` category ask it.
+- The style the class gave counts as that feat taken: `featTaken()` is `featFeatureNamed()` (a
+  `Feat: <name>` feature, its old body) or `styleOptionTaken()` (a class-origin feature named as an
+  option of a Fighting Style choice that class has, switched on or off). The other way, a Fighting
+  Style option is "already yours" when its `Feat: <name>` is on the sheet; invocations and maneuvers
+  keep their name-only match.
+
+**#171, a high-level start leaves every ASI on its default, past 20.** A level-18 Fighter's window had
+six ASI steps, each with "+2 to one" and Strength selected; Done gave STR 10 → 22.
+- Every ASI step starts blank: both ability selects on "— choose —" (the second shown only under "+1
+  to two"), a feat's "+1 to:" with no chip pressed. The ASI row stays pressed (the step's route).
+  The label names the level before the em dash ("Level 4 · Ability Score Improvement — or a feat
+  instead", `asiStepLabel()`), Feats allowed off too.
+- A class ASI step carries `data-choose="1"` and `data-level`. `choiceBlockPicked()` counts an
+  `asi` step through `asiReadStep()` (now `gatherChoices()`'s per-step read) and `asiStepDone()`, so
+  Picks left lists "Level 8 · Ability Score Improvement: 0 of 1" and the dismiss guard asks for a
+  blank one. A species feat list counts the same way: its pick and its "+1 to:".
+- The cap: `asiScore()` is the typed score plus enabled features' `ability.<k>` effects (not items,
+  statuses or familiars). `asiStepIncreases()` says what a step adds; `asiLedger()` walks the steps in
+  window order (level order, `commitChoices()`'s order) and names each chosen increase that doesn't
+  fit (20, or the increase's own `max`: an Epic Boon's 30). A fixed one without room is skipped, never invalid.
+  `commitAsiPick()` runs the same ledger per step: a refused ASI writes no feature, a feat is granted
+  without what doesn't fit, an unanswered "+1 to:" adds nothing (the first-option fallback is gone).
+- The live window: `asiRefresh()` runs on open and after every change, over
+  `document.querySelectorAll('#mBody …')` only. It clears a pick that lost its room ("Choose again:
+  level 4's pick took the room", or "that would pass 20" after the step's own mode switch), disables
+  each ability with no room (" — max 20"), the other select's ability under "+1 to two", each chip
+  with no room (a group with none left says "no increase: all at the maximum" and counts as
+  answered), redraws a fixed increase ("+1 Strength (already 20: no increase)") and writes "After
+  level 6: STR 20 (max) · …". A non-repeatable feat pressed at one step, or a Fighting Style option
+  picked in the window, is disabled at the others, "picked at level N", and the reverse.
+  `wireAsiFeats()` binds every ASI step for `change` before its early return (so Feats allowed off is
+  bound), and each Fighting Style option step.
+
+**Ride-alongs from #146:** S2-24 ("+1 to two" the same ability twice: each select disables the
+other's, and `commitAsiPick()` refuses `a===b`) and S2-26 (the dismiss guard didn't count a feat
+pick: the step had no `data-choose`).
+
+**Builder's calls inside the spec (§10 and small fixes):**
+- A +1 a feat carries as its own effect (the Humblewood shape, which `featPendingIncreases()`
+  already leaves out) is listed by `asiStepIncreases()` as `own` and always lands, as it always has,
+  so the next step's room matches what the commit holds. It is not capped (known-issues).
+- `asiRefresh(src)` takes the step that changed, so its own mode switch says "that would pass 20"
+  rather than naming an earlier level. A step with no level (a species list) tags "picked in this
+  window".
+- `data-tag` sits after `aria-pressed`, so #118's markup checks read on unchanged. A "+1 to:" group
+  holds a hidden `data-ft-capnote`; a Fighting Style option holds a `data-opt-taken` slot.
+- The old `sheet.js` check "an ASI block is unchanged" (no `data-choose`) is rewritten in place to
+  the new rule.
+- `featAbilityChoices()` dropped `max` from a fixed entry (rules-schema §6.6's `{"cha": 1, "max":
+  30}`), so a fixed Epic Boon +1 would have been capped at 20. It keeps it now, through
+  `featPendingIncreases()`, the cap, the panel's text and the scores line (decision 5). The
+  player-facing `docs/rules-schema.md` no longer says `max` is "shown but not enforced".
+
+**Tests.** `sheet.js` gains one block (`#172 …`, `#171 …`, `#146 S2-24 …`) before the async chain:
+the walk on an invented pack and on the real SRD Fighter, taken both ways, the blank labelled markup,
+`asiStepDone()` and `choiceBlockPicked()` over a stand-in step, the ledger's §7 cases and the Review
+Focus edges (a sheet at 22, junk scores, two groups, a name with no feat), commit in level order,
+`addClass('Fighter',18)` opening one window with six blank steps, and the live window's words and
+slots. `rules-data.js` guards the binding as text. Two throwaway scratchpad checks: 765 ledger-vs-
+commit sequences with no mismatch, and a 41-check drive of `asiRefresh()` over a small fake DOM.
+
+**Not yet driven in the browser:** the plan's before and after screenshots and its Task 5 drive wait
+for the shared browser (`.claude/qa/in-progress/172-asi/`).
+
+**For merge time (not done from the branch):** tick #146 S2-24 and S2-26; add to #146's checklist the
+two known-issues items (prerequisites in a choices window read from the sheet; a blank single-radio
+option or subclass not in Picks left or the dismiss guard); move `.claude/qa/in-progress/172-asi/`
+to `complete/` once the shots exist.
+
+Pages: [character building](../wiki/features/character-building.md),
+[abilities & skills](../wiki/features/abilities-and-skills.md),
+[known issues](../wiki/roadmap/known-issues.md), [decisions](../wiki/decisions.md),
+[1.9.1](../wiki/roadmap/1.9.1.md).

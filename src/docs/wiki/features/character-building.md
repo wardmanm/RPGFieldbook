@@ -16,9 +16,14 @@ so removing the source takes it back out; that mechanism is
 `effectiveChoose()`, `choiceShortfall()`, `choiceDoneHandler()`, `choiceWarningsConfirmed()`,
 `armChoiceDismissGuard()`, `choiceWindowTitle()`,
 `choiceLevelSpan()`, `choiceNoteText()`, and for feats (#118) `featCategory()`, `featPrereq()`,
-`featUnmet()`, `featOfferable()`, `featAbilityChoices()`, `featPendingIncreases()`,
+`featUnmet()`, `featOfferable()`, `featTaken()`, `featAbilityChoices()`, `featPendingIncreases()`,
 `asiFeatListHTML()`, `asiPanelHTML()`, `wireAsiFeats()`, `asiPickWarnings()`,
-`asiScreenPicks()`, `commitAsiPick()`, `commitExtraChoices()` in `58-choices.js`;
+`asiScreenPicks()`, `commitAsiPick()`, `commitExtraChoices()`, for the Fighting Style feature
+(#172) `isStyleChoice()`, `classStyleSources()`, `hasFightingStyle()`, `featFeatureNamed()`,
+`styleOptionTaken()`, and for the ASI step's picks and cap (#171) `asiStepLabel()`,
+`asiReadStep()`, `asiStepDone()`, `choiceBlockPicked()`, `asiScore()`, `asiScores()`,
+`asiStepIncreases()`, `asiLedger()`, `asiFixedText()`, `asiRefresh()`, `asiLineText()`,
+`asiChooseAgainText()`, `asiTakenElsewhere()` in `58-choices.js`;
 `openAddRace()`, `applyRace()`, `racesForCharacter()` in `52-race.js`; `openAddBackground()`,
 `applyBackground()` in `54-background.js`; `subclassesFor()`, `addFeatureFromDef()`,
 `grantFeatDef()`, `runExtraChoices()` in `50-classrace.js`; `dismissModal()`,
@@ -237,7 +242,7 @@ pack is keyed "Name (PACK)" and offered alongside, and `subSourceTag()` tags the
 |---|---|---|
 | `skill` | checkboxes; ones you already have are ticked, disabled and `data-fixed`, naming the source | a grant per pick under the choice's sid |
 | `option` | radios for `choose:1`, capped checkboxes above that; options already on the sheet are marked "already yours" unless `repeatable` | each pick becomes a feature (with `effects`, `skills`, `saves`, `cost`) whose origin comes from `sidToOrigin()` |
-| `asi` | the ASI step (#118, below): a list with Ability Score Improvement pinned first, and a panel. With Feats allowed off, +2 to one or +1 to two, as before | `commitAsiPick()`: an "Ability Score Improvement" feature carrying the effects, or the feat with its +1 |
+| `asi` | the ASI step (#118, #171, below): a list with Ability Score Improvement pinned first, and a panel; named by its level, nothing chosen to start, one pick in `data-choose`. With Feats allowed off, the +2 to one or +1 to two controls alone | `commitAsiPick()`: an "Ability Score Improvement" feature carrying the effects, or the feat with its +1, each only as far as the cap allows |
 | `feat` | on a species or background, or with a `category` and no `from`: the ASI step's list with no ASI row. On a class level: a select over `from`, or every loaded feat | `commitAsiPick()` with the species or background origin; a class level's select through `grantFeatDef()` |
 | `subclass` | radios with pack and description | `selectSubclass()` after the rest commits |
 | `hp` | a dice box, Roll for me, and the working ("Average 6 + 2 CON = 8 HP") — creation only now: a level-up or a second class gets the level-up card's own HP step instead (#101) | `commitHPChoice()` |
@@ -249,7 +254,8 @@ unticked boxes once the block is full and re-enables them off `data-fixed`, neve
 Done is `choiceDoneHandler(btn, commit)`, in both choice windows (`runChoices()`,
 `runExtraChoices()`). It asks its warnings in the app's warning window (`askConfirm()`,
 [Shell](../ui/shell.md)), over the choice window, which stays open while it asks:
-- **Picks left** (Go back / Continue anyway), with `choiceShortfall(choiceBlocks())`'s text;
+- **Picks left** (Go back / Continue anyway), with `choiceShortfall(choiceBlocks())`'s text. An ASI
+  step counts until it is set (#171, below): "• Level 8 · Ability Score Improvement: 0 of 1";
 - then, one feat at a time, the prerequisite warning below.
 
 `choiceWarningsConfirmed()` asks them in turn and stops at the first "no", which leaves the window
@@ -260,28 +266,35 @@ open with every pick. Only then does `commit` read the picks: `gatherChoices()` 
   can't commit twice. If the window went while the question was open (its Done is out of the page),
   nothing commits.
 
-**The ASI step (#118).** At an `asi` choice the player takes the Ability Score Improvement or a feat,
-in one list (`asiFeatListHTML()`).
+**The ASI step (#118, #171).** At an `asi` choice the player takes the Ability Score Improvement or
+a feat, in one list (`asiFeatListHTML()`). Nothing is chosen for them: every step starts blank and
+counts as a pick left until it is set.
 
+- **The label names the level** (`asiStepLabel()`): "Level 4 · Ability Score Improvement — or a feat
+  instead", "Level 19 · Epic Boon — a feat, or an Ability Score Improvement", or "Level 8 · " before a
+  pack's own `label`. The level sits before the em dash, because `choiceBlocks()` keeps the text
+  before it as the Picks left line. A species or background list has no `_level` and keeps its label.
+  A level-18 start holds six such steps in one window (4, 6, 8, 12, 14, 16).
 - **The list.**
   - It has a search box (it matches the name only, and never hides the pressed row) and a
     **Show all** switch.
   - **Ability Score Improvement** is pinned first and pressed to start, with the subline "+2 to one
-    score, or +1 to two" and the tag General.
+    score, or +1 to two" and the tag General. Pressed is the step's route, not an increase.
   - Then come the offered feats, by name. Each shows a short line and a tag.
     - The short line (`asiFeatShort()`) is its increase and its first benefit's name. The increase
       reads "+1 Str or Dex", or "+1 any" when all six abilities are allowed, as most Epic Boons'
       are. The first benefit is the first "Name: …" line that isn't a `Repeatable:` or
       `Prerequisite:` line, so Skilled has none.
     - The tag is its category, or, under Show all, the first unmet prerequisite in amber ("needs
-      the Fighting Style feature").
+      the Fighting Style feature"). Each row keeps its own tag in `data-tag`.
   - A row's key is the feat's `_id` when the merge gave it one, else its name, because two packs
     can share a name.
 - **What is offered** (`featOfferable()`, Show all off):
   - **The category** is read from the feat's first line (`featCategory()`). General feats are
     offered when their prerequisites are met. Origin feats are not (backgrounds and species grant
-    them). Fighting Style feats need a feature named "Fighting Style". Epic Boons need a level-19
-    choice. A feat with no category line is offered when its prerequisites are met.
+    them). Fighting Style feats need the Fighting Style feature (`hasFightingStyle()`, below). Epic
+    Boons need a level-19 choice. A feat with no category line is offered when its prerequisites
+    are met.
   - **Prerequisites** come from "Prerequisite:" on that line (`featPrereq()`). The parts it reads
     are `Level N+`, `<Ability> N+` (after effects, through `abilFinal()`), "Spellcasting feature"
     (a caster class by `classCasterKind()`, Pact Magic excluded, or a feature named Spellcasting),
@@ -291,31 +304,93 @@ in one list (`asiFeatListHTML()`).
     is listed on its own. What is left of the alternatives is one entry naming them all: "Strength
     13 or Dexterity 13 (yours: Strength 10, Dexterity 10)". With a single alternative each unmet
     part is its own entry, "Strength 13 or higher (yours is 12)". The amber tag shows the first
-    entry, and the warning joins them with "and".
-  - **A feat already taken** is hidden unless its text has a `Repeatable:` line. The rules entry
-    named "Ability Score Improvement" is never listed.
+    entry, and the warning joins them with "and". They are read from the sheet, not from the
+    window's earlier steps.
+  - **The Fighting Style feature (#172)** is a feature named "Fighting Style" (a custom class, a
+    hand-added feature), or a class on the sheet whose rules give one at or below its level.
+    `classStyleSources()` walks each class's rules entry, and its chosen subclass's, from level 1 to
+    the class's level, for a trait named "Fighting Style" (Champion's "Additional Fighting Style" at
+    7) or a choice labelled so (`isStyleChoice()`: the Fighter's "Choose a Fighting Style" at 1, the
+    Paladin's and Ranger's at 2, College of Swords' "Fighting Style: choose 1" at 3). A level-1
+    Paladin doesn't qualify. Which style was picked doesn't matter.
+  - **A feat already taken** (`featTaken()`) is hidden unless its text has a `Repeatable:` line:
+    a `Feat: <name>` feature (`featFeatureNamed()`), or **the style the class already gave**
+    (`styleOptionTaken()`): a class-origin feature named as an option of a Fighting Style choice
+    that class has, switched on or off. In 2024 the class's Defense option is the Defense feat, so a
+    Fighter who chose it isn't offered the feat again. The other way, a Fighting Style option is
+    "already yours" when its `Feat: <name>` is on the sheet; invocations and maneuvers keep their
+    name-only match. The rules entry named "Ability Score Improvement" is never listed.
 - **Show all** lists every loaded feat. It lifts every filter, a species list's category included
   (Ruling 6, Mike's "turn off that filter and see all feats"). A fixed `from` menu is the one thing
-  it never widens.
+  it never widens, and it lifts neither the cap nor one feat per window (below).
 - **The panel** (`asiPanelHTML()`):
-  - **For the ASI**, today's +2 / +1+1 controls.
+  - **For the ASI**, "+2 to one" ticked and the ability select on "— choose —"; the second select
+    shows only under "+1 to two", also on "— choose —".
   - **For a feat**, its text below the category line (escaped, in paragraphs), then one "+1 to:"
-    chip group per choose increase, the first option pressed. A fixed increase is shown as text.
+    chip group per choose increase, none pressed, each carrying its index (`data-ft-group`). A fixed
+    increase is shown as text, from the scores before the step: "+1 Strength", or "+1 Strength
+    (already 20: no increase)" (`asiFixedText()`).
   - **The increases** come from the feat's `ability` field, else from "Increase your A, B, or C
     score by N" in its text (`featAbilityChoices()`). `featPendingIncreases()` drops anything the
     feat's own `effects` already raise, so a pack that carries both never gives +2.
+  - **Under the controls**, a note slot ("Choose again: …") and the scores after this step: "After
+    level 6: STR 20 (max) · DEX 14 · CON 16 · INT 10 · WIS 12 · CHA 8" (`asiLineText()`), a score at
+    its cap marked; "After this pick: " with no level.
+- **Set, or a pick left** (`asiStepDone()`, over `asiReadStep()`): the ASI with an ability ("+2 to
+  one"), or two different ones ("+1 to two"); a feat with every "+1 to:" group answered, or capped
+  out; a `from` name with no loaded feat, by being pressed. A class ASI step carries
+  `data-choose="1"`, so `choiceBlockPicked()` counts it 0 or 1 for Picks left and the dismiss guard.
+  A species or background list counts the same way.
+- **The cap, in level order.** An Ability Score Improvement can't take a score above 20, nor can a
+  General feat's +1; an Epic Boon's own increase can reach 30: the cap is the increase's own `max` in the feat's
+  `ability` field (`featAbilityChoices()` keeps it on a fixed entry too), else 20.
+  - **What counts** (`asiScore()`): the typed score plus the `ability.<k>` effects of enabled
+    features, plus the steps at earlier levels in the open window. Not `abilFinal()`: an equipped
+    item, an active status or a summoned familiar must not block a permanent pick.
+  - **The ledger** (`asiLedger()`) walks the window's steps in window order, which is level order
+    and the order `commitChoices()` grants them in, over what each step adds
+    (`asiStepIncreases()`). Per step it gives the scores before it, what it adds, and which of its
+    chosen increases no longer fit. An ASI adds all of its increases or, if any doesn't fit,
+    nothing; a feat adds each that fits; a fixed increase without room is skipped, never invalid,
+    so the feat stays a valid pick. A blank step adds nothing.
+  - **On screen** (`asiRefresh()`, on open and after every change): each ability with no room is
+    disabled, its text ending " — max 20"; under "+1 to two" each select disables the other's
+    ability; each "+1 to:" chip with no room is disabled, and a group with none left reads "no
+    increase: all at the maximum" and counts as answered.
+  - **Clearing.** A change at an earlier level that takes a later pick's room clears that pick: its
+    select back to "— choose —", or its chip unpressed, with "Choose again: level 4's pick took the
+    room". It counts in Picks left again, and the note stays until that step changes. Switching "+1
+    to two" back to "+2 to one" can make the step's own pick too big: it clears with "Choose again:
+    that would pass 20".
+  - **At Done** `commitAsiPick()` applies the same ledger per step, after the earlier steps are
+    granted: a refused ASI writes no feature at all; a feat is granted without the increase that
+    doesn't fit. What the window shows is what lands.
+  - **A sheet already past 20** is never lowered or re-read: that ability is simply disabled at the
+    next step. Show all doesn't lift the cap.
+- **One feat per window** (`asiTakenElsewhere()`). A non-repeatable feat pressed at one step is
+  disabled at the others, tagged "picked at level N", until it is unpressed; so is a Fighting Style
+  feat whose option is picked in the window's Fighting Style step, and the other way, that option's
+  radio reads "(picked at level N)". A Repeatable feat stays open. A step with no level (a species
+  list) tags "picked in this window".
 - **Done.**
   - **The warning.** For each pressed feat (`asiScreenPicks()`) with unmet readable prerequisites,
     `asiPickWarnings()` writes the sentence: "Grappler needs level 4 or higher (yours is 1) and
     Strength 13 or Dexterity 13 (yours: Strength 10, Dexterity 10). Take it anyway?" Done asks it in the warning window, titled
     "Prerequisite not met", with **Choose another** and **Take it anyway**, one feat at a time. It
     never blocks. Choose another keeps the step open with the pick.
-  - **The grant.** `commitAsiPick()` stores the ASI as before. A feat goes through `grantFeatDef()`
-    with the class-level origin `{kind:"class", class, level}`, and its +1 is added as an
-    `ability.<k>` effect on that same feature, so removing the class removes both.
-  - **No pick.** A list with no row pressed commits nothing.
-- **Feats allowed off** (`character.featsAllowed === false`, Settings → Sheet display) draws exactly
-  the old controls, with no list. The feats a character already has stay.
+  - **The grant.** `commitAsiPick()` stores the ASI as an "Ability Score Improvement" feature
+    carrying its effects. A feat goes through `grantFeatDef()` with the class-level origin
+    `{kind:"class", class, level}`, and its +1 is added as an `ability.<k>` effect on that same
+    feature, so removing the class removes both. An unanswered "+1 to:" adds nothing.
+  - **No pick.** A list with no row pressed commits nothing; Continue anyway past a blank step
+    grants nothing for it.
+- **Feats allowed off** (`character.featsAllowed === false`, Settings → Sheet display) draws the
+  controls alone, with no list, headed "Level 4 · Ability Score Improvement", blank, capped and
+  counted like the rest. The feats a character already has stay.
+- **The binding** (`wireAsiFeats()`): every ASI step is bound for `change` (the selects and the mode
+  radios), the Feats-off one included; a step with a list also for its rows, chips, search and Show
+  all. Each ends in `asiRefresh()`, as does a change in a Fighting Style option step, and one
+  `asiRefresh()` runs once all is bound.
 - **Level 19.** `applyClassLevel()` adds `{type:"asi", boon:true}` at level 19 when the level has a
   trait named exactly "Epic Boon" and no `asi` choice of its own. The trait is still added. The
   card's row reads "Epic Boon — a feat, or an Ability Score Improvement" (`LU_CHOICE.boon`), and the
@@ -358,7 +433,9 @@ picks) passes the queue straight on.
 **Dismissing.** Closing wipes `#mBody` and a chooser cannot be reopened. `armChoiceDismissGuard()`
 registers a guard (via `setDismissGuard()`) that ✕, Escape and a backdrop click (only when
 Settings → Appearance allows it, #106) all consult through `dismissModal()`: it warns that picks will be discarded, or asks a milder question when only hit
-points are at stake (`hpPending()`), since Vitals, and so Max, is unlocked. The guard also carries the window's
+points are at stake (`hpPending()`), since Vitals, and so Max, is unlocked. An ASI step counts like
+any other block (#171): blank, it is a pick left, so a level-up window holding only an ASI asks before
+it closes; set, ASI or feat, it is a pick that would be discarded. The guard also carries the window's
 `pending` as `then`, so a dismissed window still opens the ones queued behind it: dismissing costs
 that window's own picks, never the starting equipment of a class already on the sheet.
 `openModal()` and `closeModal()` clear the guard and `then`, so an ordinary form's Escape stays
@@ -422,8 +499,22 @@ they are built: [Converter](../data/converter.md).
 - **A feat's +1 lives on the feat's own feature,** so it reverts with whatever granted the feat.
   It is never a separate ASI feature.
 - **The feat helpers stay DOM-free:** `featOfferable()`, `featUnmet()`, `asiPickWarnings()`,
-  `asiRowHidden()` and the HTML builders. Only `wireAsiFeats()` and `asiScreenPicks()` read the
-  document.
+  `asiRowHidden()`, `classStyleSources()`, `asiStepDone()`, `asiStepIncreases()`, `asiLedger()`,
+  `asiTakenElsewhere()` and the HTML builders. Only `wireAsiFeats()`, `asiRefresh()`,
+  `asiScreenPicks()`, and `asiReadStep()` over the step it is handed, read the document.
+- **The screen and the commit use one ledger** (#171). `asiRefresh()` and `commitAsiPick()` both
+  run `asiLedger()` over `asiStepIncreases()`, in window order, which is the order `commitChoices()`
+  grants the steps in. A cap checked anywhere else, or in any other order, would show room the
+  commit then refuses.
+- **The cap counts features, not `abilFinal()`** (#171): an item, a status or a familiar never
+  blocks a permanent increase, and nothing ever lowers a score already past 20.
+- **`asiRefresh()` reads only `#mBody`'s steps,** through `document.querySelectorAll`, so nothing
+  reaches a window behind the open one, and the harness (which stubs that call to `[]`) can load it.
+  Never call `querySelectorAll` on an element the harness hands back.
+- **Every ASI step is bound for `change` before `wireAsiFeats()`'s early return** on a step with no
+  list, or a Feats-off step would never cap (guarded as text in `rules-data.js`).
+- **A Fighting Style option and its feat are one thing** (#172): `featTaken()` asks the class's own
+  option, and the option list asks `featFeatureNamed()`, only for a choice `isStyleChoice()` names.
 - **Done reads the picks after the warnings,** in its `commit`, with the window still open, and
   commits at once when there is nothing to ask. The synchronous flow tests in `char-update.js`
   depend on that.
@@ -479,6 +570,17 @@ they are built: [Converter](../data/converter.md).
   answers (`data-ft-plus`).
 - **Search matched the tag (#118).** Matching a row's whole text matched "st" against "needs the
   Fighting Style feature". It matches the name only.
+- **The Fighting Style feature was looked for by name (#172).** `featHasFeature(/Fighting Style/i)`
+  wanted a sheet feature called "Fighting Style", and no pack puts one there: the packs give an
+  `option` choice whose pick is a feature named after the option ("Defense"). Every Fighter, Paladin
+  and Ranger was told they lacked it, and with Show all off the category was hidden. The #118 test
+  pushed a hand-made "Fighting Style" feature, so it never saw the pack shape; `sheet.js` now checks
+  an invented pack in that shape and the real SRD Fighter.
+- **Every ASI took its default (#171).** A first class added at level 18 opened one window with six
+  ASI steps, each with "+2 to one" ticked and Strength selected, and a feat's "+1 to:" had its first
+  chip pressed. Done gave STR 10 → 22, and the steps had no `data-choose`, so neither Picks left nor
+  the dismiss guard saw them. A silent default is a choice the player never made, and here an
+  illegal one.
 - **A Warlock met "Spellcasting feature" (#118).** `classCasterKind()` returns `"pact"` for a
   Warlock, which counts only for "Spellcasting or Pact Magic". Reading the class's own
   `spellcasting` field instead missed Eldritch Knights and Arcane Tricksters, whose casting lives
@@ -515,7 +617,14 @@ they are built: [Converter](../data/converter.md).
 | Hit points for a first class that starts above level 1 | Seed level 1, then an HP step for levels 2..N in the same window | None at all, as before: a level-3 character was created with no hit points |
 | What a choice window's title names (#69) | The span of levels its choices and notes carry, an HP step's own span included; no level when nothing carries one | The first choice's level: whichever block led decided it. A level the caller passes: a second source that can disagree with what the window shows |
 | Which feats the ASI step offers (#118, decision 1) | The feats the character qualifies for, with Show all; an unmet prerequisite asks "Take it anyway?" at Done and never blocks | Every feat, unchecked: dozens the character can't legally take. Strict, no override: house rules need a manual edit |
-| A feat's own +1 (#118, decision 2) | Asked in the same step and stored on the feat, so removing the feat removes it | By hand: the step players forget. A cap of 20: a wider change, since nothing caps scores |
+| A feat's own +1 (#118, decision 2) | Asked in the same step and stored on the feat, so removing the feat removes it; since #171 capped at 20, or the increase's own `max` (an Epic Boon's 30) | By hand: the step players forget. No cap (#118 as built, "a wider change"): a General feat's +1 could take a score to 21 |
+| How a high-level start asks for its ASIs (#171, decision 1; Mike 2026-11-07) | One window, each step labelled by its level and starting blank; Picks left counts the blank ones | One window per ASI level: clearer per step, but a level-18 start opens six or more windows in a row, and the one-modal queue (#63) gets longer |
+| Where the cap is enforced (#171, decision 2; Mike 2026-11-07) | In the step: an ability with no room is disabled ("can't be chosen"); `commitAsiPick()` applies the same rule at Done | A warning at Done only: the player can still press past it |
+| What counts toward the cap (#171, decision 3) | The typed score plus enabled features' `ability.<k>` effects, plus the steps at earlier levels in the open window, chosen and fixed alike, in the window's (level) order | `abilFinal()`: a Belt of Giant Strength or a spell's buff would block a permanent pick. Every other step, in any order: the commit runs in level order, so a later step could be shown room the commit then refuses |
+| An earlier change that takes a later pick's room (#171, decision 4) | The later pick is cleared, "Choose again: level 4's pick took the room", and counts in Picks left again | Keeping it and refusing at Done: a pick on screen that never lands. Blocking the earlier change: the rules apply the earlier level first |
+| What has the Fighting Style feature (#172, decision 13) | A feature named "Fighting Style", or a class on the sheet whose rules give one at or below its level: a trait named, or a choice labelled, "Fighting Style", on the class or its chosen subclass | Renaming the option's feature "Fighting Style: Defense": every existing sheet still fails, and it changes names the rules-update tool matches on. A converter change: data moves for what the app can see |
+| A style the class already gave (#172, decision 14) | Counts as that Fighting Style feat taken, and a `Feat: <name>` counts as the option owned | Leaving them separate: a Fighter could take Defense twice for +2 AC |
+| The same feat at two steps of one window (#171, decision 15) | A non-repeatable feat pressed at one step is disabled at the others, "picked at level N"; a Fighting Style option picked in the window counts the same; Show all doesn't lift it | Catching it at Done: two grants of one feat, or a warning after the fact |
 | Level 19's Epic Boon (#118, decision 3) | An ASI level too, detected in the app from the level-19 "Epic Boon" trait; Epic Boons are offered only there | In the converter: every pack's class data would move for what the app can see. Left manual: nothing prompts |
 | The step's layout (#118, decision 5) | One list, Ability Score Improvement pinned first (mockup B); 2024 frames the ASI as a General feat | Two tabs, ASI and Feat: one more control, and the book doesn't separate them |
 | Species feats (#118, decision 7) | Granted as a background's are: a fixed `feat`, or a feat choice through the same list, reverting with the species | Versatile as prose: the player adds the feat by hand |
@@ -530,8 +639,18 @@ they are built: [Converter](../data/converter.md).
 
 ## Open
 
-- **A feat's fixed `skills` are not granted** by `grantFeatDef()`, and the ASI's "+1 to two" accepts
-  the same ability twice. Both predate #118 ([Known issues](../roadmap/known-issues.md)).
+- **A feat's fixed `skills` are not granted** by `grantFeatDef()`. It predates #118
+  ([Known issues](../roadmap/known-issues.md)).
+- **Prerequisites in a choices window are read from the sheet** (#146, 1.9.2), not from the window's
+  earlier steps: a feat whose Strength 13 only the level-4 ASI would reach still says "needs …" at
+  level 8, and Done's "Take it anyway" warns.
+- **A blank single-radio option or subclass isn't counted** (#146, 1.9.2): a "choose 1" option and a
+  subclass carry no `data-choose`, so neither Picks left nor the dismiss guard sees them blank.
+- **A +1 a feat carries as its own effect isn't capped** (the Humblewood shape, which
+  `featPendingIncreases()` leaves to the effect). It lands with the feat, as it always has, and the
+  ledger counts it toward the next step's room, so the window stays true to the commit.
+- **Every ASI in a multi-level window is stamped with the class's final level** (18), not its
+  step's (4…16). Nothing displays it, and a level-up's is right.
 - **The choices inside a feat stay by hand:** its spells, tools, damage types, Resilient's saving
   throw and Weapon Master's mastery. Only its +1 is asked.
 - **Deferred from #118's review.** None blocks a level-up:
@@ -540,7 +659,6 @@ they are built: [Converter](../data/converter.md).
     disappearing.
   - Subclass traits below the reached level, picked late, aren't in the record.
   - With max HP blank, the dialog reads "max HP 0 → 1".
-  - The dismiss guard doesn't count a feat pick (as before #118, for the ASI).
   - `sidLabel()` cuts a colon-named species in its "from …" label.
 - A class's gold alternative uses the average of its dice, not a roll.
 - The Humblewood Gadgeteer has no `multiclass` data (no Humblewood source defines it), so a
@@ -610,3 +728,4 @@ they are built: [Converter](../data/converter.md).
 - 2026-11-04 — A background with no ability scores or feat (seven Humblewood ones) previews and adds without empty pickers, and Add no longer refuses it; its info card drops the empty lines. → ledger L8474, #159
 - 2026-11-04 — Undo on a second class's level-up card restores the sheet from before Add class: `addClass()` takes the Undo copy, as `doLevelUp()` does. → ledger L8893, #181
 - 2026-11-06 — A level-up and Add class unlock Vitals (its pencil is the Max HP lock now) and the HP step puts it back as it was, through `setVitalsLocked()`; `LU_HP_CLOSE` says Vitals is unlocked. → ledger L9441, #115
+- 2026-11-07 — The class's Fighting Style counts for Fighting Style feats, and the style it gave counts as that feat taken (and the reverse). Every ASI step starts blank, names its level and counts in Picks left and the dismiss guard; no increase passes 20 (30 for an Epic Boon's), in level order on screen and at Done; a pick that loses its room clears with "Choose again"; a feat is offered once per window; "+1 to two" needs two abilities. → ledger L9760, #172, #171, #146

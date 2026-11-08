@@ -34,8 +34,17 @@ Known behaviour that is accepted for now.
   shipped data: no shipped species uses a fixed `feat`, and Origin feats carry no `ability`.
   `docs/rules-schema.md` says so. → ledger L7657, and
   [Character building](../features/character-building.md)
-- **The ASI's "+1 to two" accepts the same ability twice,** (#146) for +2 to one score. The 2024 rule
-  says two different scores. It predates #118. → ledger L7569, and
+- **Prerequisites in a choices window are read from the sheet,** (#146, 1.9.2) not from the window's
+  earlier steps. A feat whose Strength 13 only the level-4 ASI in the same window would reach still
+  says "needs …" at level 8, and Done's "Take it anyway" warns. → ledger L9760, and
+  [Character building](../features/character-building.md)
+- **A blank single-radio option or subclass isn't counted** (#146, 1.9.2) by Picks left or the
+  dismiss guard: a "choose 1" option and a subclass choice carry no `data-choose`, as an ASI step now
+  does (#171). → ledger L9760, and [Character building](../features/character-building.md)
+- **A +1 a feat carries as its own effect isn't capped at 20.** The Humblewood shape (Arboreal
+  Acrobat's `ability.dex` effect) is granted with the feat by `grantFeatDef()`, outside the ASI
+  step's cap; the window counts it toward the next step's room, so what it shows still lands. A
+  pack's `ability` field and its text's "Increase your …" are capped (#171). → ledger L9760, and
   [Abilities & skills](../features/abilities-and-skills.md)
 - **The choices inside a feat stay by hand.** (#146) The ASI step asks only for a feat's +1. Its spells
   (Magic Initiate, Fey-Touched, Ritual Caster…), tools and instruments (Crafter, Musician), damage
@@ -494,3 +503,4 @@ These look like missing features. Each was checked and is right as it stands.
 - 2026-11-06 — The estimated 220px threshold went: Temp's place is a measured fit now. → ledger L9501, #113
 - 2026-11-06 — #129 and #130 fixed (Include spells; Flat AC, best shield); #132 fixed for the feature form; what waits on phase 2 recorded (the Vitals lock, the item form); `usesMax()` is tested. → ledger L9537, #129, #130, #132
 - 2026-11-06 — Removed: the item form's scaling-uses freeze and the Flat AC's missing Vitals lock, both fixed in phase 2. → ledger L9597, #130, #132
+- 2026-11-07 — Removed: "+1 to two" accepting one ability twice (#146 S2-24, fixed with #171). Added: prerequisites in a choices window read from the sheet, and a blank single-radio option or subclass not counted (both 1.9.2, #146); a feat's own-effect +1 not capped. → ledger L9760, #171, #172
