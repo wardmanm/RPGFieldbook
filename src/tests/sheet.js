@@ -85,7 +85,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'CHIP_SOURCED', 'TOOL_KINDS', 'TOOL_KIND_HEAD', 'toolParse', 'toolSuggestions', 'grantTools', 'dropChips', 'liftTools',
   'removeBackground', 'removeRace', 'printSheet', 'nameToolChip',
   'CHIP_MULTI', 'CHIP_TITLE', 'addChips', 'chipAddLabel', 'openToolNamer', 'renderChipsAll',
-  'SEED_FIELDS', 'seedsOf', 'playerOwns', 'seedField', 'unseedSource', 'handOnSpellAbility', 'setPlayerField', 'raceWould', 'sizeByHand',
+  'toolKnownNames', 'sizePickValue', 'SEED_FIELDS', 'seedsOf', 'playerOwns', 'seedField', 'unseedSource', 'handOnSpellAbility', 'setPlayerField', 'raceWould', 'sizeByHand',
   'statRowsHTML', 'parseBaseSpeed', 'speedBase', 'speedWindowHTML', 'commitBaseSpeed', 'openSpeedWindow', 'dismissModal',
   'pawHTML', 'classLineHTML', 'classFlyHTML', 'levelBadgeHTML', 'familiarCardHTML', 'famFlyHTML',
   'combatAddable', 'renderCombatToggles', 'jumpToNote', 'openAddClass', 'NO_RULES_HINT', 'NOTE_SECTIONS',
@@ -9205,6 +9205,7 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       ck('#131 Size is not marked "set by hand" when the species set it', X.sizeByHand(C()) === false && !el('sizeDisp').classList.contains('fx-on'));
       err = flow(() => { ctx.removeRace(); });
       ck('#131 removing Elf empties its speed and size, takes its text and the ancestry string', !err && C().speed === '' && C().size === '' && C().proficiencies === '' && C().ancestry === '' && seeds().length === 0, why(err) || [C().speed, C().size, C().proficiencies, C().ancestry, seeds()]);
+      ck('#131 ...and the Bio card\'s Other proficiencies shows it gone at once', /Nothing yet — tap Edit\./.test(screen('rt-proficiencies')) && !/Longbows/.test(screen('rt-proficiencies')), screen('rt-proficiencies'));
       fresh(); C().proficiencies = 'Light armor';
       flow(() => { ctx.applyRace('Elf', null, {}); });
       C().proficiencies = C().proficiencies.replace('Longbows', 'Longbows and shortbows');
@@ -9213,6 +9214,7 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
       fresh(); C().proficiencies = 'Light armor';
       flow(() => { ctx.applyRace('Elf', null, {}); ctx.removeRace(); });
       ck('#131 ...an unedited species line leaves with the newline that joined it', C().proficiencies === 'Light armor', JSON.stringify(C().proficiencies));
+      ck('#131 ...on screen too', /Light armor/.test(screen('rt-proficiencies')) && !/Longbows/.test(screen('rt-proficiencies')), screen('rt-proficiencies'));
       fresh(); C().speed = 35;
       flow(() => { ctx.applyRace('Elf', null, {}); });
       ck('#131 a species over a speed already set records null, and leaves it', C().speed === 35 && entry('race:Elf', 'speed') && entry('race:Elf', 'speed').value === null, seeds());
@@ -9392,6 +9394,76 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
         ck('#131 driven: Escape with junk in the box closes and keeps the last number', C().speed === 40, C().speed);
       } finally { ctx.openModal = keepOM2; }
     }
+
+      // ---- review fixes ----
+      // 1. a hyphenated word is never a count, and a known tool name is never a choice
+      ck('#121 review: "Three-Dragon Ante Set" is one named tool, not a choice of three', JSON.stringify(X.toolParse('Three-Dragon Ante Set')) === JSON.stringify({fixed: ['Three-Dragon Ante Set'], choices: []}), X.toolParse('Three-Dragon Ante Set'));
+      ck('#121 review: ...beside a choice, each read as it is', (r => JSON.stringify(r.fixed) === '["Three-Dragon Ante Set"]' && r.choices.length === 1 && r.choices[0].count === 1 && JSON.stringify(r.choices[0].kinds) === '["Musical Instrument"]')(X.toolParse('Three-Dragon Ante Set, and one Musical Instrument of your choice')), X.toolParse('Three-Dragon Ante Set, and one Musical Instrument of your choice'));
+      ck('#121 review: "two" and "three" still count when they stand alone', X.toolParse("three Artisan's Tools of your choice").choices[0].count === 3 && X.toolParse('two-handed saw').choices.length === 0);
+      X.rules.items = (X.rules.items || []).concat([{category: 'Tool', type: 'Tool', name: 'Any Key'}]);
+      ck('#121 review: a pack Tool item\'s name is read as that tool, even with a choice word in it', JSON.stringify(X.toolParse('Any Key').fixed) === '["Any Key"]' && X.toolParse('Any Key').choices.length === 0, X.toolParse('Any Key'));
+      loadSeedPack();
+      X.mergeRules({system: 'T121b', backgrounds: [{name: 'Gambler', tools: 'Three-Dragon Ante Set'}, {name: 'Busker', tools: ["Thieves' Tools", 'Choose one kind of Musical Instrument']}]}, 'test-121b');
+      fresh(); q = null;
+      err = flow(() => { q = ctx.applyBackground('Gambler', {}); });
+      ck('#121 review: a background granting the Three-Dragon Ante Set gives that one chip, no step', !err && JSON.stringify(tools().map(x => [x.name, !!x.ask])) === '[["Three-Dragon Ante Set",false]]' && !(q || []).some(x => x.ch && x.ch.type === 'tool'), why(err) || [tools(), q]);
+      const tda = X.migrate({abilities: {}, proficiencies: 'Light armor\nTools: Three-Dragon Ante Set'});
+      ck('#121 review: an old "Tools: Three-Dragon Ante Set" line lifts into that one named chip', JSON.stringify(X.chipList(tda, 'tools').map(x => [x.name, x.src, !!x.ask])) === '[["Three-Dragon Ante Set","",false]]' && tda.proficiencies === 'Light armor', [X.chipList(tda, 'tools'), tda.proficiencies]);
+
+      // 7. a pack's tools as an array of strings
+      ck('#121 review: toolParse takes an array of strings, as one list', (r => JSON.stringify(r.fixed) === '["Thieves\' Tools"]' && r.choices.length === 1 && JSON.stringify(r.choices[0].kinds) === '["Musical Instrument"]')(X.toolParse(["Thieves' Tools", 'Choose one kind of Musical Instrument', 5, null])), X.toolParse(["Thieves' Tools", 'Choose one kind of Musical Instrument']));
+      fresh(); q = null;
+      err = flow(() => { q = ctx.applyBackground('Busker', {}); });
+      ck('#121 review: ...so a background whose tools are an array grants them', !err && tools().some(x => x.name === "Thieves' Tools" && x.src === 'bg:Busker') && tools().some(x => x.ask === 'Choose one kind of Musical Instrument') &&
+         (q || []).filter(x => x.ch && x.ch.type === 'tool').length === 1, why(err) || [tools(), q]);
+
+      // 2. the Size window: Save unchanged doesn't make the species' size the player's
+      loadSeedPack(); fresh(); flow(() => { ctx.applyRace('Elf', null, {}); });
+      let szm = null; const keepOM3 = ctx.openModal; ctx.openModal = (t, h) => { szm = {t, h}; return keepOM3(t, h); };
+      const selectedOf = h => { const m = /<select id="szSel">[\s\S]*?<option value="([^"]*)"[^>]*\bselected\b/.exec(h || ''); return m ? m[1] : null; };
+      try {
+        err = flow(() => { ctx.openSizePicker(); el('szSel').value = selectedOf(szm && szm.h); (el('szSave')._on.click || []).forEach(fn => fn({})); });
+        ck('#131 review: the Size window pre-selects From ancestry when the species set the size', !err && selectedOf(szm && szm.h) === '', why(err) || selectedOf(szm && szm.h));
+        ck('#131 review: ...and Save unchanged leaves it the species\', not the player\'s', !X.playerOwns(C(), 'size') && X.sizeByHand(C()) === false && C().size === 'Medium', [C().size, seeds()]);
+        flow(() => { ctx.applyRace('Gnome', null, {}); });
+        ck('#131 review: ...so a swap to Gnome gives Small', C().size === 'Small' && X.charSize() === 'Small', C().size);
+        X.setPlayerField(C(), 'size', 'Large');
+        err = flow(() => { ctx.openSizePicker(); el('szSel').value = selectedOf(szm && szm.h); (el('szSave')._on.click || []).forEach(fn => fn({})); });
+        ck('#131 review: a size the player picked is pre-selected, and Save unchanged keeps it theirs', !err && selectedOf(szm && szm.h) === 'Large' && C().size === 'Large' && X.playerOwns(C(), 'size'), why(err) || [selectedOf(szm && szm.h), seeds()]);
+        err = flow(() => { ctx.openSizePicker(); el('szSel').value = ''; (el('szSave')._on.click || []).forEach(fn => fn({})); });
+        ck('#131 review: ...and From ancestry gives it back', !err && !X.playerOwns(C(), 'size') && X.charSize() === 'Small', why(err) || seeds());
+      } finally { ctx.openModal = keepOM3; }
+      ck('#131 review: Settings → Carrying\'s size list pre-selects the same way', /setSize[^>]*>\$\{sizeOptionsHTML\(sizePickValue\(character\)\)\}/.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '88-settings.js'), 'utf8')));
+
+      // 5. a deliberate "—" spellcasting ability is never overwritten by a hand-on that didn't empty it
+      loadSeedPack(); fresh();
+      flow(() => { ctx.addClass('Fighter', 3); ctx.luAbandon(); ctx.addClass('Wizard', 1); ctx.luAbandon(); });
+      ck('#131 review: Fighter/Wizard casts with INT, the Wizard\'s', C().spellAbility === 'int', C().spellAbility);
+      C().spellAbility = '';   /* the Spells tab's "—" */
+      flow(() => { ctx.selectSubclass('Fighter', 'Champion'); });
+      ck('#131 review: picking a subclass that seeded nothing leaves the player\'s "—"', C().spellAbility === '', C().spellAbility);
+      fresh();
+      flow(() => { ctx.addClass('Barbarian', 1); ctx.luAbandon(); ctx.addClass('Wizard', 1); ctx.luAbandon(); ctx.addClass('Cleric', 1); ctx.luAbandon(); });
+      C().spellAbility = '';
+      flow(() => { ctx.removeClass(2); });
+      ck('#131 review: removing a class whose seed the player had already cleared leaves "—" too', C().spellAbility === '', C().spellAbility);
+      flow(() => { ctx.removeClass(0); });
+      ck('#131 review: ...as does removing one that seeded nothing', C().spellAbility === '', C().spellAbility);
+
+      // 6. a species and its subrace's proficiencies lines revert line by line
+      X.mergeRules({system: 'T131b', races: [{name: 'Woodfolk', speed: '30 ft', proficiencies: 'Longbows', subraces: [{name: 'High', proficiencies: 'Shortswords'}]}]}, 'test-131b');
+      fresh(); flow(() => { ctx.applyRace('Woodfolk', 'High', {}); });
+      ck('#131 review: species and subrace lines both seeded', C().proficiencies === 'Longbows\nShortswords', JSON.stringify(C().proficiencies));
+      C().proficiencies = 'Longbows\nShortswords and rapiers';
+      flow(() => { ctx.removeRace(); });
+      ck('#131 review: the subrace line edited: it stays, the species line goes', C().proficiencies === 'Shortswords and rapiers', JSON.stringify(C().proficiencies));
+      fresh(); flow(() => { ctx.applyRace('Woodfolk', 'High', {}); });
+      C().proficiencies = 'Longbows and shortbows\nShortswords';
+      flow(() => { ctx.removeRace(); });
+      ck('#131 review: the species line edited: it stays, the subrace line goes', C().proficiencies === 'Longbows and shortbows', JSON.stringify(C().proficiencies));
+      fresh(); Object.assign(C(), {race: {name: 'Woodfolk', subrace: 'High'}, ancestry: 'Woodfolk', speed: '30 ft', proficiencies: 'Light armor\nLongbows\nShortswords and daggers', seeds: []});
+      flow(() => { ctx.removeRace(); });
+      ck('#131 review: an old sheet\'s fallback takes each unedited line on its own', C().proficiencies === 'Light armor\nShortswords and daggers' && C().speed === '', [C().proficiencies, C().speed]);
     } finally { ctx.window.matchMedia = keepMM; ctx.luAbandon(); }
   } catch (e) {
     ck('#121 the Bio chips block ran without throwing', false, why(e));

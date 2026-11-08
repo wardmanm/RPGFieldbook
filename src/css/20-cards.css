@@ -273,8 +273,13 @@ html[data-rough="on"] .portrait::before{filter:url(#rough)}
 .chip-add{background:none;color:var(--ink-soft);border:1.5px dashed var(--line);cursor:pointer}
 /* a tool still to choose (#121): dashed like + Add, since it is unfinished,
    and its name is the button that names it */
-.chips .chip-ask{border:1.5px dashed var(--accent-2)}
+/* The name button's ::after fills the chip (its nearest positioned box), so a
+   tap anywhere on it names the tool; the × comes later and is positioned, so
+   it stays on top and keeps its own hit area. The name itself is not
+   positioned, or the ::after would shrink to it. */
+.chips .chip-ask{border:1.5px dashed var(--accent-2);position:relative}
 .chip-name{background:none;border:0;padding:0;margin:0;font:inherit;letter-spacing:inherit;color:inherit;text-transform:none;cursor:pointer;min-height:0;width:auto}
+.chip-name::after{content:"";position:absolute;top:0;right:0;bottom:0;left:0;border-radius:inherit}
 .chip-name:hover{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 .chip-none{color:var(--ink-soft);font-size:13px}
 .def-h{font-family:var(--head);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin:14px 0 4px;padding-bottom:3px;border-bottom:1.5px solid var(--line)}

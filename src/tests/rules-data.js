@@ -1302,6 +1302,11 @@ function block(html, needle, tag) {
   ck('#120 each heading starts a clearly separate group: more space above it than below', m.length >= 3 && m[0] > m[2], dh);
   ck('#120 a row keeps about 12px from the next heading', ((px(row, 'margin') || [])[2] || 0) >= 12 || ((px(row, 'margin-bottom') || [])[0] || 0) >= 12, row);
   ck('#121 a placeholder chip is dashed', !!ask && /border[^;]*dashed/.test(ask), ask);
+  /* review: the whole placeholder chip, but its ×, names it — not only the 14px name inside */
+  const askName = rule(cards, '.chip-name::after');
+  ck('#121 a placeholder is positioned, so its name\'s hit area can fill it', !!ask && /position\s*:\s*relative/.test(ask), ask);
+  ck('#121 ...the name button has a ::after covering the chip', !!askName && /position\s*:\s*absolute/.test(askName) && (/inset\s*:\s*0/.test(askName) || ['top', 'right', 'bottom', 'left'].every(k => new RegExp('(^|;)\\s*' + k + '\\s*:\\s*0').test(askName))), askName);
+  ck('#121 ...and the name itself is not positioned, so that ::after spans the chip, not the name', !/position\s*:/.test(rule(cards, '.chip-name') || ''), rule(cards, '.chip-name'));
   ck('#121 ...and its name is a plain button that keeps its own casing', /text-transform\s*:\s*none/.test(rule(cards, '.chip-name') || '') && /background\s*:\s*none/.test(rule(cards, '.chip-name') || ''), rule(cards, '.chip-name'));
   /* #123: the Add window's pills, scoped to .chip-sug — the browse picker's
      filter pills share .fgrp and .fpill and stay as they are */

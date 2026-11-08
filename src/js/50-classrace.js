@@ -253,7 +253,7 @@ function seedField(c,field,value,sid){
   if(seedBlank(c[field])&&!playerOwns(c,field)){c[field]=value;seedSet(c,sid,field,value);}
   else if(!(prev&&prev.value!==null))seedSet(c,sid,field,null);
 }
-/* Take `t` out of the text where it still stands as its own line(s), with the
+/* Take `t` out of the text where it still stands as its own line, with the
    newline that joined it, and tidy as the lifts do. Edited text stays. */
 function unseedText(p,t){
   p=typeof p==="string"?p:"";t=String(t==null?"":t);if(!t)return p;
@@ -266,26 +266,33 @@ function unseedText(p,t){
 }
 /* `would`: what the outgoing source's loaded definition seeds,
    {speed, size, spellAbility, proficiencies:[texts]}, or null when it isn't
-   loaded — read only for a field with no entry at all (decision 11). */
+   loaded — read only for a field with no entry at all (decision 11).
+   Returns the scalar fields it emptied, so a caller hands on only what its
+   own revert took (decision 12), never a blank the player chose.
+   The text is taken back line by line: a species and its subrace record their
+   lines as one text, and the player may edit one and not the other. */
 function unseedSource(c,sid,would){
-  if(!c||!sid)return;
+  const emptied=[];
+  if(!c||!sid)return emptied;
   const w=would&&typeof would==="object"?would:null;
   SEED_FIELDS.forEach(field=>{
     if(playerOwns(c,field))return;
     const e=seedEntry(c,sid,field);
     if(field==="proficiencies"){
       const texts=e?(e.value===null?[]:[String(e.value)]):(w&&Array.isArray(w.proficiencies)?w.proficiencies.filter(x=>typeof x==="string"&&x):[]);
-      texts.forEach(t=>{c.proficiencies=unseedText(c.proficiencies,t);});
+      texts.forEach(t=>String(t).split("\n").reverse().forEach(line=>{if(line.trim())c.proficiencies=unseedText(c.proficiencies,line);}));
       return;
     }
     const was=e?e.value:(w?w[field]:null);
-    if(!seedBlank(was)&&!seedBlank(c[field])&&String(c[field])===String(was))c[field]="";
+    if(!seedBlank(was)&&!seedBlank(c[field])&&String(c[field])===String(was)){c[field]="";emptied.push(field);}
   });
   seedDrop(c,e=>e.sid===sid);
+  return emptied;
 }
 /* Decision 12: an empty spellcasting ability goes to the first class still on
    the sheet that casts, or that class's subclass, under that one's sid — as
-   saving throws pass to the new first class (#66). */
+   saving throws pass to the new first class (#66). Called only after a revert
+   that emptied it (unseedSource()'s answer): a "—" the player chose stays. */
 function handOnSpellAbility(c){
   if(!c||!seedBlank(c.spellAbility))return;
   for(const cl of (Array.isArray(c.classes)?c.classes:[])){

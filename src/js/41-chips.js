@@ -108,8 +108,9 @@ function dropLanguages(c,src){dropChips(c,"languages",src);}
 
 /* ---- tools (#121) ----
    The kinds a background's choice can name, and what fills each when the
-   loaded packs don't: the SRD has only artisan's tools and instruments, and
-   Humblewood no tools at all, so a gaming set would have no pick without these. */
+   loaded packs don't: Humblewood has no tools at all, and a homebrew pack may
+   have some kinds and not others, so a gaming set would have no pick without
+   these. Their names are also how toolParse() knows a tool from a choice. */
 const TOOL_KINDS=[
   ["Artisan's Tools",["Alchemist's Supplies","Brewer's Supplies","Calligrapher's Supplies","Carpenter's Tools","Cartographer's Tools","Cobbler's Tools","Cook's Utensils","Glassblower's Tools","Jeweler's Tools","Leatherworker's Tools","Mason's Tools","Painter's Supplies","Potter's Tools","Smith's Tools","Tinker's Tools","Weaver's Tools","Woodcarver's Tools"]],
   ["Gaming Set",["Dice Set","Dragonchess Set","Playing Cards","Three-Dragon Ante Set"]],
@@ -117,22 +118,40 @@ const TOOL_KINDS=[
   ["Other",["Disguise Kit","Forgery Kit","Herbalism Kit","Navigator's Tools","Poisoner's Kit","Thieves' Tools"]]
 ];
 const TOOL_KIND_HEAD={"Artisan's Tools":"Artisan's Tools","Gaming Set":"Gaming Sets","Musical Instrument":"Musical Instruments","Other":"Other"};
+/* The tool names the app knows, lower-cased: the built-in list and the loaded
+   packs' Tool items. A fragment that IS one of them is that tool, whatever
+   words it holds ("Three-Dragon Ante Set", a pack's "Any Key"). */
+function toolKnownNames(){
+  const out=new Set();
+  TOOL_KINDS.forEach(([,names])=>names.forEach(n=>out.add(n.toLowerCase())));
+  (Array.isArray(rules.items)?rules.items:[]).forEach(i=>{if(i&&i.category==="Tool"&&typeof i.name==="string"&&i.name.trim())out.add(i.name.trim().toLowerCase());});
+  return out;
+}
+const TOOL_CHOICE_WORDS=["choose","choice","any","one","two","three","kind","type"];
 /* A pack's `tools` text → {fixed:[names], choices:[{kinds, count, ask, name}]}.
-   Split as langParse() splits. A fragment naming a choice ("Choose one kind of
-   Gaming Set", "one type of wind Musical Instrument") is a choice: the kinds it
-   names, how many, its own wording (`ask`), and the placeholder's name — the
-   kinds, or "Tool of your choice" when it names none (chipClean() drops a chip
-   with no name). Anything else is a tool by name. */
+   An array of strings reads as one list. Split as langParse() splits. A
+   fragment that is a known tool's name is that tool. Otherwise one naming a
+   choice ("Choose one kind of Gaming Set", "one type of wind Musical
+   Instrument") is a choice: the kinds it names, how many, its own wording
+   (`ask`), and the placeholder's name — the kinds, or "Tool of your choice"
+   when it names none (chipClean() drops a chip with no name). Anything else is
+   a tool by name. The words are whole words split on spaces, so a hyphenated
+   one ("Three-Dragon", "two-handed") is never a count or a choice word: \b
+   reads a hyphen as a word's edge, and "Three-Dragon Ante Set" once read as a
+   choice of three. */
 function toolParse(str){
   const out={fixed:[],choices:[]};
+  if(Array.isArray(str))str=str.filter(x=>typeof x==="string"&&x.trim()).join(", ");
   if(typeof str!=="string")return out;
+  const known=toolKnownNames();
   str.split(/,|\band\b|;/i).map(s=>s.trim()).filter(Boolean).forEach(s=>{
-    if(!/\b(choose|choice|any|one|two|three|kind|type)\b/i.test(s)){out.fixed.push(s);return;}
+    const words=s.toLowerCase().split(/\s+/).map(w=>w.replace(/^[^a-z0-9'’-]+|[^a-z0-9'’-]+$/g,""));
+    if(known.has(s.toLowerCase())||!words.some(w=>TOOL_CHOICE_WORDS.indexOf(w)>=0)){out.fixed.push(s);return;}
     const kinds=[];
     if(/artisan['’]s tools/i.test(s))kinds.push("Artisan's Tools");
     if(/gaming set/i.test(s))kinds.push("Gaming Set");
     if(/instrument/i.test(s))kinds.push("Musical Instrument");
-    const count=/\btwo\b/i.test(s)?2:(/\bthree\b/i.test(s)?3:1);
+    const count=words.indexOf("two")>=0?2:(words.indexOf("three")>=0?3:1);
     out.choices.push({kinds,count,ask:s,name:kinds.length?kinds.join(" or "):"Tool of your choice"});
   });
   return out;

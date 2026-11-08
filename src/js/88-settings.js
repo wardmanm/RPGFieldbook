@@ -146,7 +146,7 @@ function openSettings(){
     tabsGroupHTML(character):"";
   const secCarrying=hasChar?setGroupHTML("Size and weight",
       setRowHTML("Size","From your ancestry unless you choose one. It sets your carrying capacity.",
-        `<select id="setSize" aria-label="Size">${sizeOptionsHTML(character.size)}</select>`)+
+        `<select id="setSize" aria-label="Size">${sizeOptionsHTML(sizePickValue(character))}</select>`)+
       setRowHTML("Encumbrance","Off shows weight only. Standard limits you at capacity; Variant slows you in tiers before that.",
         `<div class="seg" id="segEnc">${[["none","Off"],["standard","Standard"],["variant","Variant"]].map(([v,l])=>`<button type="button" data-enc="${esc(v)}" class="${encMode()===v?"on":""}" aria-pressed="${encMode()===v?"true":"false"}">${l}</button>`).join("")}</div>`)+
       setRowHTML("Coins count as weight","50 coins to the pound, the way the rules have it.",

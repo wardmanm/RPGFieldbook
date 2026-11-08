@@ -103,6 +103,9 @@ function charSize(){return character.size||raceDefSize()||"Medium";}
    (a "player" entry), or — a sheet from before the record — when it matches
    neither what a source recorded nor the species' own. Not when the species
    set it, which #146 found marked. */
+/* What a size list shows selected: the player's own size, else From ancestry
+   (""), so a size the species seeded is never offered as if picked. */
+function sizePickValue(c){return sizeByHand(c)?c.size:"";}
 function sizeByHand(c){
   if(!c||!c.size)return false;
   if(playerOwns(c,"size"))return true;

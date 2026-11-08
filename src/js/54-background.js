@@ -94,7 +94,8 @@ function removeBackground(doRender){
      the legacy string goes with it */
   if(name){unseedSource(character,"bg:"+name,null);if(character.background===name)character.background="";}
   character.bg=null;
-  if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
+  /* renderAllRT(), as removeRace(): whatever text a background seeds leaves at once */
+  if(doRender!==false){renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();}
 }
 /* By id or name; `{ref:true}` leaves out your choices (#99). */
 /* From the sheet (#103), the character's own background gets Change (the Add

@@ -238,17 +238,20 @@ function openSizePicker(){
       (mult===1?"":` (${mult>1?"double":"half"} a Medium character's)`)+
       (sz?"":" · taken from your ancestry");
   };
+  const was=sizePickValue(character);   /* #131: a seeded size shows as From ancestry */
   openModal("Size",`
-    <div class="field"><label class="f">Creature size</label><select id="szSel">${sizeOptionsHTML(character.size)}</select></div>
-    <p class="hint" id="szHint">${esc(line(character.size))}</p>
+    <div class="field"><label class="f">Creature size</label><select id="szSel">${sizeOptionsHTML(was)}</select></div>
+    <p class="hint" id="szHint">${esc(line(was))}</p>
     <p class="hint">Size sets how much you can carry. It only changes anything on the sheet while Encumbrance is switched on, in Settings.</p>
     <div class="m-actions"><button class="tbtn" id="szCancel">Cancel</button><button class="tbtn primary" id="szSave">Save</button></div>`);
   const sel=document.getElementById("szSel"), hint=document.getElementById("szHint");
   sel.addEventListener("change",()=>{hint.textContent=line(sel.value);});
   document.getElementById("szCancel").addEventListener("click",closeModal);
   document.getElementById("szSave").addEventListener("click",()=>{
-    /* the player's own, which no swap or remove touches; "" gives it back (#131) */
-    setPlayerField(character,"size",sel.value);
+    /* the player's own, which no swap or remove touches; "" gives it back
+       (#131). Save with nothing changed writes nothing: it must not make the
+       species' size the player's. */
+    if(sel.value!==was)setPlayerField(character,"size",sel.value);
     closeModal();renderInventory();recompute();scheduleSave();
   });
 }

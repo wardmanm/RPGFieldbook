@@ -162,7 +162,8 @@ function removeRace(doRender){
      and the legacy string printSheet() falls back to */
   if(name){unseedSource(character,"race:"+name,would);if(character.ancestry===name)character.ancestry="";}
   character.race=null;
-  if(doRender!==false){renderClassRace();renderFeatures();recompute();scheduleSave();}
+  /* renderAllRT(): the Proficiencies text it seeded leaves the Bio card at once (#131) */
+  if(doRender!==false){renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();}
 }
 /* By id or name; `{ref:true}` leaves the chosen lineage unmarked (#99). */
 /* From the sheet (#103), the character's own species gets Change (the Add

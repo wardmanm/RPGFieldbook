@@ -264,12 +264,13 @@ function removeClass(idx){
   if(Array.isArray(character.levelLog))character.levelLog=character.levelLog.filter(r=>!(r&&r.class===c.name));
   /* #131: the spellcasting ability it or its subclass seeded, while still theirs */
   const cdef=findClassDef(c.name),subSid="subclass:"+c.name+":";
-  unseedSource(character,"class:"+c.name,cdef?{spellAbility:cdef.spellcasting}:null);
-  if(c.subclass){const sc=cdef&&subclassesFor(cdef)[c.subclass];unseedSource(character,subSid+c.subclass,sc?{spellAbility:sc.spellcasting}:null);}
-  seedsOf(character).filter(e=>e.sid.indexOf(subSid)===0).forEach(e=>unseedSource(character,e.sid,null));
+  const emptied=unseedSource(character,"class:"+c.name,cdef?{spellAbility:cdef.spellcasting}:null);
+  if(c.subclass){const sc=cdef&&subclassesFor(cdef)[c.subclass];emptied.push(...unseedSource(character,subSid+c.subclass,sc?{spellAbility:sc.spellcasting}:null));}
+  seedsOf(character).filter(e=>e.sid.indexOf(subSid)===0).forEach(e=>emptied.push(...unseedSource(character,e.sid,null)));
   character.classes.splice(idx,1);
-  /* ...and the next caster takes it (decision 12) */
-  handOnSpellAbility(character);
+  /* ...and the next caster takes it (decision 12), only when this revert
+     emptied it: a "—" the player chose is theirs */
+  if(emptied.indexOf("spellAbility")>=0)handOnSpellAbility(character);
   const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;
   /* Saving throws came from the class just removed if it was the first. The
      one now first takes its own, tagged to it so they leave with it — without
@@ -434,12 +435,12 @@ function applyLevelDown(idx,remove,expect){
 function selectSubclass(className,subName,pending){
   const entry=character.classes.find(c=>c.name===className);if(!entry)return;
   const d=findClassDef(className);
-  const oldSub=entry.subclass;
+  const oldSub=entry.subclass;let emptied=[];
   removeFeaturesWhere(f=>f.origin&&f.origin.kind==="class"&&f.origin.class===className&&f.origin.subclass);
   if(oldSub){
     removeGrants(g=>g.sid==="subclass:"+className+":"+oldSub);
     /* #131: the old subclass's spellcasting ability goes with it */
-    const osc=subclassesFor(d)[oldSub];unseedSource(character,"subclass:"+className+":"+oldSub,osc?{spellAbility:osc.spellcasting}:null);
+    const osc=subclassesFor(d)[oldSub];emptied=unseedSource(character,"subclass:"+className+":"+oldSub,osc?{spellAbility:osc.spellcasting}:null);
   }
   entry.subclass=subName;
   const sc=subclassesFor(d)[subName];
@@ -453,9 +454,10 @@ function selectSubclass(className,subName,pending){
       if(lv.spells){const n=lv.spells.note||(lv.spells.known!=null?`You can know up to ${lv.spells.known} ${subName} spell(s).`:null);if(n)notes.push({text:n,_level:L});}
     });
   }
-  /* an emptied ability passes to the next caster (decision 12): a Fighter/
-     Wizard whose Eldritch Knight is swapped keeps a spell DC, the Wizard's */
-  handOnSpellAbility(character);
+  /* an ability the old subclass's revert emptied passes to the next caster
+     (decision 12): a Fighter/Wizard whose Eldritch Knight is swapped keeps a
+     spell DC, the Wizard's; a "—" the player chose stays */
+  if(emptied.indexOf("spellAbility")>=0)handOnSpellAbility(character);
   {const spi=document.querySelector('[data-path="character.spellAbility"]');if(spi)spi.value=character.spellAbility;}
   renderClassRace();renderFeatures();renderAllRT();recompute();scheduleSave();
   runChoices(className,choices,notes,pending);
