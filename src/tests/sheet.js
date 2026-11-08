@@ -109,7 +109,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'featPendingIncreases', 'asiRowHidden',
   'applyRace', 'applyBackground', 'applyClassLevel', 'sidToOrigin', 'levelGains', 'choiceBlockPicked', 'commitExtraChoices',
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
-  'raceTerm', 'applyTheme', 'finishSettingsImport',
+  'raceTerm', 'applyTheme', 'finishSettingsImport', 'swapDefaultLanguages', 'tradeCoinsHTML',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -837,10 +837,11 @@ sheet({coins: {cp: '', sp: '', ep: '', gp: '', pp: ''}});
 ck('an empty purse weighs nothing', X.coinsWeight() === 0);
 sheet({coins: {gp: 500}, coinWeight: false});
 ck('the coin-weight switch turns it off', X.coinsWeight() === 0);
-// electrum is D&D-only, so coinKeys() hides it on a Humblewood sheet — but an
-// imported character can still be carrying some, and it is still in the purse.
+// a Humblewood sheet has no electrum of its own, but an imported or switched
+// character can be carrying some: it is in the purse, so it weighs, and since
+// #133 coinKeys() shows its row while it is held.
 sheet({system: 'humblewood', coins: {cp: '', sp: '', ep: 50, gp: '', pp: ''}});
-ck('electrum counts even when the skin does not show it', X.coinsWeight() === 1);
+ck('electrum counts on a Humblewood sheet, which shows it while held', X.coinsWeight() === 1);
 
 // ---------- the total
 sheet({coins: {gp: 100}, inventory: [item({weight: 3}), item({weight: 0.05, qty: 20})]});
@@ -8988,6 +8989,74 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#133 ...but not the character\'s system, raceTerm() or the wordmark',
        X.character.system === 'humblewood' && X.raceTerm() === 'Ancestry' && d.els.wmMain.textContent === 'Humblewood',
        [X.character.system, X.raceTerm(), d.els.wmMain.textContent]);
+    X.settings.skin = 'humblewood';
+
+    /* ---- #133 the default-language swap. No shipped pack declares
+       defaultLanguages, so it is stubbed: one list per ruleset. */
+    const chip = (name, src, id) => ({id: id || 'l-' + name, name, src});
+    const langKey = c => (c.languages || []).map(x => x.name + '|' + x.src).sort().join(', ');
+    const STUB = {'Humblewood': ['Common', 'Humblefolk'], 'XPHB': ['Common', 'Dwarvish']};
+    const keepDL = X.rules.defaultLanguages;
+    try {
+      X.rules.defaultLanguages = JSON.parse(JSON.stringify(STUB));
+      let c = {system: 'humblewood', languages: [chip('Common', 'system'), chip('Humblefolk', 'system'), chip('Elvish', ''), chip('Sylvan', 'race:Elf')]};
+      let got = X.swapDefaultLanguages(c, 'dnd');
+      ck('#133 swapDefaultLanguages to dnd: drops the default the new ruleset lacks, adds its own, says which stayed',
+         JSON.stringify(got) === JSON.stringify({drop: ['Humblefolk'], add: ['Dwarvish'], keep: ['Common']}), got);
+      ck('#133 ...the player\'s Elvish and the species\' Sylvan are untouched',
+         c.languages.some(x => x.id === 'l-Elvish' && x.name === 'Elvish' && x.src === '') &&
+         c.languages.some(x => x.id === 'l-Sylvan' && x.name === 'Sylvan' && x.src === 'race:Elf'), c.languages);
+      const dw = c.languages.find(x => x.name === 'Dwarvish');
+      ck('#133 ...Dwarvish arrives stamped system, with an id', !!dw && dw.src === 'system' && typeof dw.id === 'string' && dw.id !== '', dw);
+      ck('#133 ...and Common keeps its own chip', c.languages.filter(x => x.name === 'Common').length === 1 && c.languages.find(x => x.name === 'Common').id === 'l-Common');
+      ck('#133 ...c.system is not the swap\'s to change', c.system === 'humblewood');
+      /* the player's chips and the grants' are never dropped, whatever their names */
+      c = {system: 'humblewood', languages: [chip('Common', 'system'), chip('humblefolk', ''), chip('Dwarvish', 'bg:Sage')]};
+      got = X.swapDefaultLanguages(c, 'dnd');
+      ck('#133 ...a player chip named like an old default stays, and a grant naming a new one is not doubled',
+         JSON.stringify(got) === JSON.stringify({drop: [], add: [], keep: ['Common']}) && langKey(c) === 'Common|system, Dwarvish|bg:Sage, humblefolk|', [got, langKey(c)]);
+      /* the other way, case-blind */
+      c = {system: 'dnd', languages: [chip('common', 'system'), chip('Dwarvish', 'system')]};
+      got = X.swapDefaultLanguages(c, 'humblewood');
+      ck('#133 ...to humblewood, matched case-blind',
+         JSON.stringify(got) === JSON.stringify({drop: ['Dwarvish'], add: ['Humblefolk'], keep: ['common']}), got);
+      /* no declared defaults: every ruleset's default is Common, so nothing moves */
+      X.rules.defaultLanguages = {};
+      c = {system: 'humblewood', languages: [chip('Common', 'system'), chip('Elvish', ''), chip('Sylvan', 'race:Elf')]};
+      const before = JSON.stringify(c.languages);
+      got = X.swapDefaultLanguages(c, 'dnd');
+      ck('#133 swapDefaultLanguages with no declared defaults: languages unchanged, nothing dropped or added',
+         JSON.stringify(c.languages) === before && got.drop.length === 0 && got.add.length === 0, [got, c.languages]);
+    } finally { X.rules.defaultLanguages = keepDL; }
+
+    /* ---- coins: a Humblewood sheet shows PP or EP while it holds some (decision 10) */
+    const purse = (coins, system) => { X.character = X.blankChar(); X.character.system = system || 'humblewood'; X.character.coins = Object.assign({cp: '', sp: '', ep: '', gp: '', pp: ''}, coins); return X.character; };
+    const keys = () => JSON.stringify(X.coinKeys());
+    purse({ep: 50});
+    ck('#133 coinKeys on a Humblewood sheet holding EP: EP between GP and SP', keys() === '["gp","ep","sp","cp"]', X.coinKeys());
+    purse({pp: 3, ep: 4});
+    ck('#133 ...holding PP and EP: PP first', keys() === '["pp","gp","ep","sp","cp"]', X.coinKeys());
+    const junk = ['abc', '-2', 0, ''].map(v => { purse({ep: v, pp: v}); return keys(); });
+    ck('#133 ...junk, negative, 0 or empty PP and EP show no row', junk.every(k => k === '["gp","sp","cp"]'), junk);
+    purse({ep: '3'});
+    ck('#133 ...while "3" does', keys() === '["gp","ep","sp","cp"]', X.coinKeys());
+    purse({});
+    ck('#133 ...an empty Humblewood purse is GP SP CP, as before', keys() === '["gp","sp","cp"]', X.coinKeys());
+    const dndKeys = [{}, {pp: 0, ep: ''}, {ep: 9}].map(cs => { purse(cs, 'dnd'); return keys(); });
+    ck('#133 a D&D sheet gives all five, whatever it holds', dndKeys.every(k => k === '["pp","gp","ep","sp","cp"]'), dndKeys);
+    /* Convert keeps its own rule: the value, in the highest coins this system uses */
+    let p = purse({ep: 50});
+    X.convertCoins();
+    ck('#133 Convert on a Humblewood sheet holding ep:50 folds it into gold (2,500 cp is 25 gp), and EP leaves coinKeys()',
+       p.coins.gp === 25 && p.coins.ep === '' && p.coins.sp === '' && keys() === '["gp","sp","cp"]', [p.coins, X.coinKeys()]);
+    p = purse({ep: 3, pp: 1});
+    X.convertCoins();
+    ck('#133 ...and an odd count into gold and silver: 1 PP and 3 EP make 11 GP 5 SP',
+       p.coins.gp === 11 && p.coins.sp === 5 && p.coins.pp === '' && p.coins.ep === '' && keys() === '["gp","sp","cp"]', p.coins);
+    purse({ep: 50});
+    const give = X.tradeCoinsHTML('give', {}, {ep: 50, gp: 0, sp: 0, cp: 0});
+    ck('#133 the trade window\'s give side offers the held EP, capped at what is held',
+       /data-trcoin="give:ep"[^>]*max="50"/.test(give) && !/give:pp/.test(give), give);
   } catch (err) {
     ck('#133 block A ran without throwing', false, String(err && err.stack || err));
   } finally {

@@ -78,6 +78,27 @@ function ensureDefaultLanguages(c){
   defaultLanguagesFor(c).forEach(n=>{if(!names.has(n.toLowerCase())){have.push({id:uid(),name:n,src:"system"});names.add(n.toLowerCase());}});
   c.languages=have;
 }
+/* A character changing game system (#133): its "system" chips become the new
+   ruleset's defaults. Each one the new ruleset doesn't list (case-blind) goes,
+   then each default the character lacks is added, stamped "system". The
+   player's own chips ("") and the grants' ("race:…", "bg:…") are never
+   touched, whatever their names. Changes c.languages only, never c.system.
+   Returns {drop, add, keep}: the names dropped, added, and the system chips
+   that stayed. systemChangePlan() runs it on a scratch copy, so the warning
+   and the change can't disagree. */
+function swapDefaultLanguages(c,sys){
+  const out={drop:[],add:[],keep:[]};
+  if(!c)return out;
+  const want=defaultLanguagesFor({system:sys}),wanted=new Set(want.map(n=>n.toLowerCase()));
+  const have=chipClean(c.languages,"languages",true).filter(x=>{
+    if(x.src!=="system")return true;
+    if(wanted.has(x.name.toLowerCase())){out.keep.push(x.name);return true;}
+    out.drop.push(x.name);return false;});
+  const names=new Set(have.map(x=>x.name.toLowerCase()));
+  want.forEach(n=>{if(!names.has(n.toLowerCase())){have.push({id:uid(),name:n,src:"system"});names.add(n.toLowerCase());out.add.push(n);}});
+  c.languages=have;
+  return out;
+}
 /* A pack's `languages` text → names. "Common, Elvish and one other language of
    your choice": the choice is the player's to add, so it is skipped. */
 function langParse(str){
