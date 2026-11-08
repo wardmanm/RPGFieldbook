@@ -31,7 +31,7 @@ junk list items, repaired, idempotent, and rendered) · **See also:**
 |---|---|
 | identity | `id` (from `uid()`), `appVersion` `""`, `system` `"humblewood"`, `name` |
 | structured objects | `hp` `{cur, max, temp}` (a sheet from before #115 also carries `locked`, kept and unread), `death`, `coins` `{cp…pp}`, `abilities` (10 each), `saves`, `skills` (0/1/2), `slots` `{1…9: {total, used}}` |
-| lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars`, `glossary`, `resources`, `journal`, `trackers`, `party` `[{id, name, ac, maxHp}]` (#91, the Bio-tab roster), `combatants` `[{id, kind, name, init, ac, track, band, hp, maxHp, dead, partyId}]` (#91, always `[]` out of combat), `invLog` `[{id, at, kind, title, lines, undo, undone, meta}]` (#47, the inventory log, newest first), `levelLog` `[{at, class, level, hp, features:[{id, name, grants}], abilities, subclass, grants, slots}]` (#118, one record per level-up for level down, oldest first, at most 200; `migrate()` keeps a record only when it is an object with a string `class`, a `level` above 0 and a `features` array, then normalizes the inside without dropping other keys: features are objects with a non-empty string `id`, each with a `grants` array; grants are objects with string `sid`/`type`/`key`; `hp` is a number ≥ 0, `subclass` a string, `abilities` an object) |
+| lists | `classes`, `grants`, `features`, `inventory`, `attacks`, `spells`, `activeSpells`, `statuses`, `familiars` (each familiar's optional `turn`, `"own"` or `"after"`, how it acts in a fight, #163), `glossary`, `resources`, `journal`, `trackers`, `party` `[{id, name, ac, maxHp}]` (#91, the Bio-tab roster), `combatants` `[{id, kind, name, init, ac, track, band, hp, maxHp, dead, partyId, famId, after}]` (#91, always `[]` out of combat; `kind` `you`/`party`/`foe`/`familiar`, the last with the id of the familiar it stands for in `famId` and `after` true for Right after you, #163; every other row has `famId:""`, `after:false`), `invLog` `[{id, at, kind, title, lines, undo, undone, meta}]` (#47, the inventory log, newest first), `levelLog` `[{at, class, level, hp, features:[{id, name, grants}], abilities, subclass, grants, slots}]` (#118, one record per level-up for level down, oldest first, at most 200; `migrate()` keeps a record only when it is an object with a string `class`, a `level` above 0 and a `features` array, then normalizes the inside without dropping other keys: features are objects with a non-empty string `id`, each with a `grants` array; grants are objects with string `sid`/`type`/`key`; `hp` is a number ≥ 0, `subclass` a string, `abilities` an object) |
 | chip lists (#103) | `resists` `[{id, name}]`, `immunes` `[{id, name}]`, `senses` `[{id, name, range}]` (`range` whole feet or `""`), `languages` `[{id, name, src}]` (`src` `""` the player's, `race:…` / `bg:…` a grant, `system` a ruleset default) — all `[]` in `blankChar()` |
 | maps | `featCollapse`, `invCollapse`, `atkCollapse`, `hdUsed`, `grantGold`, `secNotes`, `noteCollapse`, `editHide` (card key → `true` for a hidden card's edit/delete/remove buttons, #97), `journalCollapse`, `trackerCollapse`, `trackerTotals` (tag key → `true` for a shown total, #93), `ammoSpent` (stack or thrown-weapon id → `{n, hits, misses, kind, snap}`, #104; an entry from before #104 has neither `hits` nor `misses`, read as 0), `ammoFight` (ammunition kind → `{fired, back}`: what a row's Recover gave back during the current fight, for End combat's log line; `{}` default, emptied at the start and end of a fight, #47), `endCombatOpen` (End of combat window row key → `true` for a row the player left open: `ammo`, `xp`, `loot`, `after`; `{}` default, #105) |
 | origins | `race` (`null` or `{name, subrace}`), `bg` (`null` or `{name, feat, abils}`) |
@@ -89,9 +89,17 @@ value distinct from 0. In `hp`, for instance, it means "not set yet", and `clamp
    `87-initiative.js`): `party` drops any entry with no name and forces `ac`/`maxHp` to a whole
    number or `""`; `combatants` reads `[]` outright when `combatActive!==true`, otherwise drops an
    unknown `kind` and any second `kind:"you"` row and forces every other field's type, names a
-   blank foe "Unnamed" and a blank party row "Party member". Both give a missing or repeated id a
-   fresh one (`initFreshId()`). `combatTurn` is `""` in Rounds mode; in Turns mode it keeps its id
-   only if that row exists and is alive, else the first living row.
+   blank foe "Unnamed" and a blank party row "Party member". A `familiar` row (#163) without a
+   `famId`, or a second one for the same familiar, is dropped; `after` is a boolean, and `init`
+   `null` when it is set. Both give a missing or repeated id a
+   fresh one (`initFreshId()`). Then each familiar's `turn` is normalized **on a copy**
+   (`Object.assign({}, f, {turn: famTurn(f)})`: `"after"` kept, anything else `"own"`, every other
+   key kept), and `syncFamiliarRows()` copies each familiar row's name, AC, switch and HP from its
+   familiar; the rows whose familiar is gone or dismissed are dropped. `migrate()` never writes a
+   familiar: a blank current HP with a max stays blank, and its row reads "HP ? / 7". An older app
+   drops a `familiar` row (unknown kind) and ignores `turn`. `combatTurn` is `""` in Rounds mode; in Turns mode it keeps its id
+   only if that row exists and is alive, else the first living row (so a marker on a dropped
+   familiar row moves to the top, the round unchanged).
    Then the inventory log (#47): `invLogSize` keeps one of `INV_LOG_SIZES` or becomes `500`, and
    `invLog` goes through `cleanInvLog()`, which drops a line that is not an object, has an unknown
    `kind` or no `at`, forces each field's type (`lines` to `{dir, text}` with `dir` `+`, `-` or
@@ -263,3 +271,4 @@ never saved: a reload with the window open loses typed XP, as any unsaved form d
 - 2026-11-06 — `newCharacter()` marks `wpnEquipInit` done: a new sheet's weapons arrive equipped, and the first reload no longer re-equips one the player unequipped. → ledger L9101, #128
 - 2026-11-06 — `hp.locked` is retired: gone from `blankChar()`, kept unread on an old sheet; the Max HP lock is `editHide.vitals`, so every sheet opens unlocked. → ledger L9441, #115
 - 2026-11-06 — `acMode` (`"calc"`) joins `blankChar()`; `ac` becomes the Flat number only; `migrate()` makes a Flat with no whole number Calculated. Effects may carry `spells: true` (#129), kept as they are. → ledger L9537, #130
+- 2026-11-07 — A familiar's optional `turn` (Own unless `"after"`, normalized on a copy); the `familiar` combatant kind with `famId` and `after` on every row; `migrate()` brings familiar rows in step with their familiars and never writes one. → ledger L9760, #163

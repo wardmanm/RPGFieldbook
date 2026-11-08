@@ -9756,3 +9756,53 @@ side window's row formats (P2, P0, a feature's `—`, `(noted)`, `(priority not 
 `recordProblem()` and `parseRecord()`.
 
 Pages: [building & CI](../wiki/process/building-and-ci.md), [decisions](../wiki/decisions.md).
+
+## #164, #163: Roll initiative's grid; familiars in the fight (2026-11-07)
+
+Built from the approved spec, `src/docs/specs/2026-11-07-initiative-design.md` (Mike, 2026-11-07),
+by its plan, `src/docs/plans/2026-11-07-initiative.md`. One branch: #164 lays out the dialog #163
+adds rows to.
+
+**#164.** A monster row in Roll initiative was a wrapping flex line that needed 353px (a 120px name,
+"× [60]", "AC [60]", a 60px Init, three gaps); a phone's dialog body gives 326, so Init dropped to a
+second line. Now one heading row, `Name · × · AC · Init` (`irHeadHTML()`, `aria-hidden`), sits under
+your own row, and the heading, every party, familiar and monster row share one grid
+(`minmax(0,1fr) 48px 52px 60px`, 6px gaps): the name keeps about 148px at 390 and 78px at 320.
+The words × and AC left the rows; each box keeps its `aria-label`. A party row's box sits in the Init
+column.
+
+**#163.** A summoned familiar joins the fight as a new combatant kind, `familiar`, carrying `famId`
+and `after`; every other row gets `famId:""` and `after:false`. Each familiar's form has "In a
+fight": Own initiative (an Init box in Roll initiative) or Right after you (no roll; it always sits
+directly behind you). Saved as the familiar's `turn` (`famTurn()` reads anything but `"after"` as
+Own; `migrate()` normalizes it on a copy, and the form's whitelisted record carries it). The
+familiar is the truth: its row mirrors its name, AC, switch and HP (`syncFamiliarRows()`, pure, used
+by `migrate()` on load and by `familiarsChanged()` live), and the tracker's HP stepper writes the
+familiar's own `hp.cur`. `initSort()` glues the after-you rows behind you; the tie moves treat you
+plus them as one block whose initiative is yours (`initBlock()`, `initUnits()`, `initMoved()`), so
+nothing lands between you and a companion. A familiar at 0 HP is struck and skipped, still summoned.
+Summon, Dismiss, Delete and the form's Save all end in `familiarsChanged()`: join (a blank current
+HP filled from the max, `famFillHP()`; an Own one last with a toast), fill, copy, drop through
+`initDropRow()` (Remove's marker step, T5-M2 kept), settle (`initSettleTurn()`, lifted out of
+`setCombatant()` unchanged), and draw once. Summon and Delete left boot's click handler for
+`setFamiliarSummoned()` and `deleteFamiliar()` in `40-sheet.js`; boot keeps the confirm, the modal
+and the focus line #103 M-14 checks.
+
+Builder's calls within the plan: `initUnits()`, `initMoved()`, `initAfter()`, `initShownInit()`,
+`famOfRow()`, `irHeadHTML()` and `irFamRowHTML()` are new helpers; `setCombatant()` no longer sets
+a band or AC on a familiar row (its AC is the familiar's); `irStart()` repaints the familiars when a
+fill happened; `irStart()` finds a familiar's box with `attrSel()` (the harness has no `CSS.escape`).
+`45-combat.css` and `87-combat-end.js`, named by the roadmap row, needed no change.
+
+Not done in this run: the screenshots and the driven checks (plan Tasks 1 Step 1 and 7), pending
+one shared browser.
+
+Tests: `sheet.js` gains the `#164 #163 Initiative` block above the async chain (107 checks:
+cleaning, the block tie rule, Next, building, health, chips, Roll initiative, Start, the dialog, HP
+written through, summon/dismiss/delete/form mid-fight, load); `rules-data.js` pins the grid and no
+`flex-wrap:wrap` or `min-width:120px` on a row rule. A throwaway fuzz (20,000 random fights, 20 tie
+moves each, with initiative changes) found the after-you rows always directly behind you.
+
+Pages: [combat view](../wiki/features/combat-view.md), [sections & layout](../wiki/ui/sections-and-layout.md),
+[story & notes](../wiki/features/story-and-notes.md), [character model](../wiki/architecture/character-model.md),
+[decisions](../wiki/decisions.md), [1.9.1 roadmap](../wiki/roadmap/1.9.1.md).

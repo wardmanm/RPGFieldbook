@@ -13,7 +13,8 @@ strip, and familiars, which open from the header.
 `renderCombatToggles()`, `combatCard()`, `combatAddable()` in `87-combat.js` ·
 `featGroups()`, `renderFeatures()`, `featCol()`, `invCol()`, `atkCol()`, `FEAT_FAV`, `ATK_FAV` in
 `20-lists.js` · `renderInventory()`, `invGroups()`, `renderFamiliars()`, `renderSheetHead()`,
-`famFlyHTML()`, `openShFly()`, `openFamiliar()` in `40-sheet.js` ·
+`famFlyHTML()`, `openShFly()`, `openFamiliar()`, `familiarCardHTML()`, `setFamiliarSummoned()`, `deleteFamiliar()` in `40-sheet.js` ·
+`openFamiliarForm()` in `80-modal-forms.js` · `famTurn()`, `familiarsChanged()` in `87-initiative.js` ·
 `groupFieldHTML()`, `groupChoices()`, `groupNameProblem()`, `syncGroupFieldMsg()`, `groupFieldBlocked()` in
 `80-modal-forms.js` · `GROUP_RESERVED` in `00-constants.js` · `tagLabel()`, `tagTidy()` in `87-journal.js` · `renderAttacks()` in
 `60-attacks.js` · `rulesCatOf()` in `86-rules-browser.js` · `setPageOf()` in `88-settings.js` · `buildStats()`, `buildBio()`, `blankChar()` in `00-constants.js`
@@ -288,9 +289,13 @@ header's popover (`openShFly()` with `famFlyHTML()`): each familiar's name with 
 carry: **Combat view** on/off (`role="menuitemcheckbox"`, `data-combatbtn="familiars"`) and
 **Add a note** / **Edit note** (`data-notebtn="familiars"`). Both are the existing delegated hooks,
 which run after the popover closes. A name opens a modal (`openFamiliar()`) with that
-familiar's card (`familiarCardHTML()`: kind, AC, HP, speed, notes) and its Summon / Dismiss (a
-button with `aria-pressed`; after the modal repaints, focus goes back to it), Edit
-and Delete. Settings → Sheet display → "Familiars & companions icon" is the switch; `migrate()`
+familiar's card (`familiarCardHTML()`: kind, AC, HP, speed, "Right after you" when it acts so in a
+fight, notes) and its Summon / Dismiss (a button with `aria-pressed`; after the modal repaints,
+focus goes back to it), Edit and Delete. Summon / Dismiss and Delete are `setFamiliarSummoned()` and
+`deleteFamiliar()` (#163, out of boot's click handler so the tests reach them): each changes the
+familiar, calls `familiarsChanged()` — in a fight a summoned familiar joins the tracker and a
+dismissed or deleted one leaves it ([Combat view](../features/combat-view.md)) — then repaints,
+recomputes and saves; boot keeps the confirm, the modal close or reopen and the focus. Settings → Sheet display → "Familiars & companions icon" is the switch; `migrate()`
 sets it once from whether the sheet has a familiar, and adding the first familiar turns it on.
 
 `#familiarCard` stays in the Sheet's markup, always `display:none` there, with the old
@@ -299,7 +304,14 @@ and its note keeps its key. `renderFamiliars()` fills its list, clearing it befo
 because the combat view shows the card even when empty. `jumpToNote('familiars')` scrolls to the
 header and opens the paw's popover, hung from `#sheetHead .sh-bar` when the paw is hidden.
 `openFamiliarForm()` edits a record of name, type (`kind`), `ac`,
-`hp.cur`/`hp.max`, `speed`, `description`, `effects` and `active`. Its effects count only while it is
+`hp.cur`/`hp.max`, `speed`, **In a fight** (`turn`, #163: a `.seg` of Own initiative / Right after
+you after Speed, with the hint "A familiar rolls its own. A beast companion or a summoned creature
+acts right after you."; a new familiar starts `"own"`, and `famTurn()` reads anything but `"after"`
+as Own, so an old familiar is Own), `description`, `effects` and `active`. The record is built from
+the fields the form shows, so it names `turn` or a save would reset it. Its Save ends in
+`familiarsChanged(id, wasActive)`: in a fight, "Summoned (active)" newly ticked joins it exactly as
+the paw's Summon does, newly unticked takes it out, and any other edit shows in the tracker at once.
+Its effects count only while it is
 summoned: `contributions()` adds them when `active` is true, labelled with the familiar's name and
 "(summoned)". Row wrapping is scoped to `#familiarList` (and the modal's copy).
 
@@ -486,3 +498,4 @@ optional and not in `blankChar()`; `migrate()` keeps it because it keeps every f
 - 2026-11-06 — Vitals joins `EDIT_CARDS` (thirteen): its pencil hides the portrait buttons and locks Max HP, reads "Lock Vitals" / "Unlock Vitals", and repaints Max. → ledger L9441, #115
 - 2026-11-06 — The #155 "CSS alone" check exempts exactly the HP bar's Temp observer, which measures no column. → ledger L9501, #113
 - 2026-11-06 — The Vitals pencil's label says it locks a flat AC too. → ledger L9597, #130
+- 2026-11-07 — A familiar's form says how it acts in a fight (`turn`: Own initiative or Right after you), shown on its card; Summon / Dismiss and Delete become `setFamiliarSummoned()` and `deleteFamiliar()`, and they and the form's Save join or take a familiar out of a running fight. → ledger L9760, #163

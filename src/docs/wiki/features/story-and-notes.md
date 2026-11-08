@@ -60,7 +60,10 @@ name required, AC/max HP optional whole numbers), stored as `character.party`. I
 it is the roster the next fight copies from, not a fight's own combatants — those live on the
 combat view's tracker ([Combat view](combat-view.md)). Starting a fight copies each member's
 current name/AC/maxHp into that fight's `combatants`; editing or removing a party member afterwards
-never touches a fight already running.
+never touches a fight already running. Familiars and companions on the header's paw join a fight on
+their own when summoned (#163, [Combat view](combat-view.md)), with their HP shared, so a companion
+needn't be typed into Party: one typed there before #163 would fight twice, and the release note says
+it can go.
 
 **Section notes.** `NOTE_SECTIONS` is the registry: 19 entries of `{k, tab, title}` — nine on the
 Sheet (the header, titled "Character", and the rail, strip, Skills, Defences, Statuses, Resources,
@@ -179,3 +182,4 @@ checkbox button beside its formatting key ([Journal](journal.md), [Rich text](..
 - 2026-10-25 — `jumpToNote()` unhides the note's tab first when it is hidden, toasts the tab's own label, then jumps as before. → ledger L6989, #52
 - 2026-10-25 — The Party card: a roster of companions that joins every fight the player starts; 19 sections. → ledger L7097, #91
 - 2026-11-06 — A granted language's pill appears and leaves at once with its species or background, on add, change and remove. → ledger L9101, #154
+- 2026-11-07 — Summoned familiars join fights on their own (#163), so a companion needn't be typed into the Party card. → ledger L9760, #163

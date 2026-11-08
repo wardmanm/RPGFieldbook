@@ -456,6 +456,21 @@ When a page gains a Decisions row, add its line here under that page.
 - **Closing the End of combat window with XP typed (#105)** — Refuse the dismissal and ask in the warning window; Add XP is Done, Don't add closes without it
 - **Show rolls (#91)** — A switch (`initShowRolls`, default on)
 - **Ties (#91)** — Act earlier / Act later in the combatant dialog, never a drag on the table
+- **Which familiars join a fight (#163)** — The summoned ones (Mike, 2026-11-07)
+- **When a familiar acts (#163)** — A switch per familiar, on its form: Own initiative or Right after you (Mike, 2026-11-07)
+- **A familiar's hit points in a fight (#163)** — One HP, shared: the tracker reads and writes the familiar's own (Mike, 2026-11-07)
+- **The switch's default (#163)** — Own initiative, for new and existing familiars
+- **What a familiar's row is (#163)** — A new combatant kind, `familiar`, carrying `famId`
+- **Where Right after you sits (#163)** — Directly after your row, always, in order; its chip shows your number
+- **Ties around you (#163)** — You and your after-you rows are one block for every tie move, at your initiative
+- **A familiar at 0 HP (#163)** — Struck and skipped by Next, still summoned (Mike, 2026-11-07)
+- **Summoned, dismissed or deleted mid-fight (#163)** — Summon joins at once; Dismiss or Delete leaves, the marker moving on as Remove's does; the form's tick is the same summon
+- **A familiar edited mid-fight (#163)** — The familiar is the truth while it exists: its name, AC, switch and HP show at once
+- **A familiar's combatant dialog (#163)** — The HP stepper, the switch, Initiative on Own, AC as a line from the familiar, Remove for this fight only
+- **A familiar's blank current HP with a max (#163)** — Filled with the max on the familiar when it joins a fight and when its form is saved in one; never on load
+- **XP split and Loot with familiars (#163)** — Unchanged: no XP share, and Loot names fallen foes only
+- **Roll initiative's monster row (#164)** — Column headings and one grid: Name · × · AC · Init once, three fixed columns
+- **A companion already typed into the Party card (#163)** — A release-note line saying it can be removed; no code
 
 ### [Rules-update tool](features/rules-update-tool.md)
 
