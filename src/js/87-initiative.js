@@ -18,26 +18,62 @@ function cleanParty(v){
 }
 function cleanCombatants(v,active){
   if(!active)return [];
-  let you=false;const out=[],seen=new Set();
+  let you=false;const out=[],seen=new Set(),fams=new Set();
   (Array.isArray(v)?v:[]).forEach(r=>{
-    if(!r||typeof r!=="object"||["you","party","foe"].indexOf(r.kind)<0)return;
+    if(!r||typeof r!=="object"||["you","party","foe","familiar"].indexOf(r.kind)<0)return;
     if(r.kind==="you"){if(you)return;you=true;}
+    /* #163: a familiar's row needs its familiar's id, and one familiar has one
+       row: two would write one HP. An after-you row has no initiative. */
+    if(r.kind==="familiar"){
+      const fid=String(r.famId==null?"":r.famId);if(!fid||fams.has(fid))return;fams.add(fid);
+      const after=r.after===true;
+      out.push({id:initFreshId(r.id,seen),kind:"familiar",name:String(r.name==null?"":r.name).trim().slice(0,60)||"Familiar",init:after?null:initInt(r.init),
+        ac:initOpt(r.ac),track:"exact",band:null,hp:famHP(r.hp),maxHp:initOpt(r.maxHp),dead:false,partyId:"",famId:fid,after});
+      return;
+    }
     const party=r.kind==="party",band=(Number.isInteger(r.band)&&r.band>=0&&r.band<=4)?r.band:null,maxHp=party?initOpt(r.maxHp):"";
     /* never a blank chip: your row reads your sheet's name, the rest a fallback */
     const nm=String(r.name==null?"":r.name).trim().slice(0,60)||(r.kind==="foe"?"Unnamed":r.kind==="party"?"Party member":"");
     out.push({id:initFreshId(r.id,seen),kind:r.kind,name:nm,init:initInt(r.init),
       ac:r.kind==="you"?"":initOpt(r.ac),
       track:party?((r.track==="exact"||r.track==="estimate")?r.track:(maxHp!==""?"exact":"estimate")):"",
-      band:r.kind==="you"?null:band,hp:party?initOpt(r.hp):"",maxHp,dead:party&&r.dead===true,partyId:party?String(r.partyId||""):""});
+      band:r.kind==="you"?null:band,hp:party?initOpt(r.hp):"",maxHp,dead:party&&r.dead===true,partyId:party?String(r.partyId||""):"",famId:"",after:false});
   });
   return out;
 }
-function combatantDead(r){return !!r&&(r.kind==="foe"?r.band===4:(r.kind==="party"?r.dead===true:false));}
+/* A familiar is fallen at 0 HP exactly: its HP is known, so 0 says it (#163) */
+function combatantDead(r){return !!r&&(r.kind==="foe"?r.band===4:r.kind==="party"?r.dead===true:r.kind==="familiar"?r.hp===0:false);}
+/* #163: a Right after you familiar's row. It has no initiative of its own and
+   always sits directly behind you, in familiar order (decision 6). */
+function initAfter(r){return !!r&&r.kind==="familiar"&&r.after===true;}
+/* Stable, highest first, unrolled last; then the after-you rows, in their
+   order, straight after you (last with no you row). Pure. */
 function initSort(list){
-  return list.map((r,i)=>({r,i})).sort((a,b)=>{
+  const out=list.filter(r=>!initAfter(r)).map((r,i)=>({r,i})).sort((a,b)=>{
     const x=a.r.init,y=b.r.init;
     if(x===y)return a.i-b.i;if(x===null)return 1;if(y===null)return -1;return y-x;
   }).map(o=>o.r);
+  const glued=list.filter(initAfter);if(!glued.length)return out;
+  const y=out.findIndex(r=>r.kind==="you");
+  out.splice(y<0?out.length:y+1,0,...glued);return out;
+}
+/* You and the after-you rows directly behind you: {start, end} (end===start
+   with none), null with no you row. */
+function initBlock(list){
+  const s=(list||[]).findIndex(r=>r&&r.kind==="you");if(s<0)return null;
+  let e=s;while(e+1<list.length&&initAfter(list[e+1]))e++;
+  return {start:s,end:e};
+}
+/* The order as units for the tie moves (decision 7): the block is one unit
+   whose initiative is yours; every other row is its own unit. Nothing ever
+   lands between you and an after-you row. */
+function initUnits(list){
+  const b=initBlock(list),out=[];
+  for(let i=0;i<list.length;i++){
+    if(b&&i===b.start){out.push({rows:list.slice(b.start,b.end+1),init:list[i].init,after:false});i=b.end;continue;}
+    out.push({rows:[list[i]],init:list[i].init,after:initAfter(list[i])});
+  }
+  return out;
 }
 function initFirstAlive(list){const r=(list||[]).find(x=>!combatantDead(x));return r?r.id:"";}
 /* The next living row after turnId. Passing the end is a wrap: the caller
@@ -77,6 +113,8 @@ function combatantBar(r){
   if(r.kind==="you"){const m=effMaxHP(),h=num(character.hp.cur);return {band:bandOfShare(h,m),share:m>0?Math.max(0,Math.min(1,h/m)):null};}
   if(r.kind==="party"&&r.track==="exact")return num(r.maxHp)>0?{band:bandOfShare(r.hp,r.maxHp),share:Math.max(0,Math.min(1,num(r.hp)/num(r.maxHp)))}
     :{band:null,share:null};   /* Exact with no max: no share to draw, and an Estimate band left over would be stale */
+  /* #163: a familiar as a party member on Exact; a blank current HP is not known */
+  if(r.kind==="familiar")return num(r.maxHp)>0&&r.hp!==""?{band:bandOfShare(r.hp,r.maxHp),share:Math.max(0,Math.min(1,num(r.hp)/num(r.maxHp)))}:{band:null,share:null};
   return {band:r.band===4?null:r.band,share:null};
 }
 /* Your typed d20: the face, 1..20, as the spend box takes 1..die. */
@@ -98,17 +136,100 @@ function initModOf(){
   return (character.init===""?dex:num(character.init))+sumFx("init",c)+sumFx("check",c);
 }
 function youAC(){return acTotal();}
-/* you: {name, init}; party: [{id,name,ac,maxHp,init}]; foes: [{name,count,ac,init}] */
-function buildCombatants(you,party,foes){
-  const rows=[{id:uid(),kind:"you",name:String(you.name||""),init:initInt(you.init),ac:"",track:"",band:null,hp:"",maxHp:"",dead:false,partyId:""}];
+/* you: {name, init}; party: [{id,name,ac,maxHp,init}]; foes: [{name,count,ac,init}];
+   fams (#163): summoned familiars, each with an added init (ignored for After) */
+function buildCombatants(you,party,foes,fams){
+  const rows=[{id:uid(),kind:"you",name:String(you.name||""),init:initInt(you.init),ac:"",track:"",band:null,hp:"",maxHp:"",dead:false,partyId:"",famId:"",after:false}];
   (party||[]).forEach(p=>{const mx=initOpt(p.maxHp);rows.push({id:uid(),kind:"party",name:String(p.name).slice(0,60),init:initInt(p.init),ac:initOpt(p.ac),
-    track:mx!==""?"exact":"estimate",band:null,hp:mx,maxHp:mx,dead:false,partyId:String(p.id||"")});});
+    track:mx!==""?"exact":"estimate",band:null,hp:mx,maxHp:mx,dead:false,partyId:String(p.id||""),famId:"",after:false});});
+  (fams||[]).forEach(f=>rows.push(famRow(f,f.init)));
   (foes||[]).forEach(f=>{
     const name=String(f.name||"").trim().slice(0,56);if(!name)return;
     const n=Math.max(1,Math.min(20,initInt(f.count)||1));
-    for(let k=1;k<=n;k++)rows.push({id:uid(),kind:"foe",name:n>1?`${name} ${k}`:name,init:initInt(f.init),ac:initOpt(f.ac),track:"",band:null,hp:"",maxHp:"",dead:false,partyId:""});
+    for(let k=1;k<=n;k++)rows.push({id:uid(),kind:"foe",name:n>1?`${name} ${k}`:name,init:initInt(f.init),ac:initOpt(f.ac),track:"",band:null,hp:"",maxHp:"",dead:false,partyId:"",famId:"",after:false});
   });
   return initSort(rows);
+}
+
+/* ---- familiars in the fight (#163) ----
+   A summoned familiar joins the fight, by its own roll or right after you
+   (its form's "In a fight"). Its row is a copy; the familiar is the truth.
+   Spec: src/docs/specs/2026-11-07-initiative-design.md. (A familiar's own
+   `kind` is its creature type, "Owl"; a row's `kind` is the row's kind.) */
+function famTurn(f){return f&&f.turn==="after"?"after":"own";}
+/* The summoned familiars, in familiar order. One with no id can't be matched
+   to a row, so it never joins; nor can a later familiar repeating an id (a
+   hand-edited file): the first with an id is that id's familiar, as
+   famOfRow() and the paw's handlers find it, so one HP is never written to
+   another. */
+function fightFamiliars(c){
+  const seen=new Set();
+  return (Array.isArray(c&&c.familiars)?c.familiars:[]).filter(f=>{
+    if(!f||typeof f!=="object"||typeof f.id!=="string"||!f.id||seen.has(f.id))return false;
+    seen.add(f.id);return !!f.active;
+  });
+}
+/* A blank current HP with a max reads 0 on the familiar's card and "?" in the
+   tracker, so on joining a fight (and on a form save while in one) it takes
+   the max, on the familiar. A copy of hp, as the form stores it: a string. */
+function famFillHP(f){
+  const hp=f&&f.hp;if(!hp||typeof hp!=="object")return false;
+  const mx=initOpt(hp.max);
+  if(String(hp.cur==null?"":hp.cur).trim()!==""||!(mx>0))return false;
+  f.hp=Object.assign({},hp,{cur:String(mx)});return true;
+}
+/* A familiar row's current HP: a whole number, a negative read as 0 (fallen,
+   as the tracker's own entry stores it), or "" when unknown. The familiar
+   keeps whatever its form was given. */
+function famHP(v){const n=initInt(v);return n===null?"":Math.max(0,n);}
+/* One familiar's row, its name, AC and HP copied; init is the typed roll for
+   Own, null for After. */
+function famRow(f,init){
+  const hp=f&&f.hp&&typeof f.hp==="object"?f.hp:{},after=famTurn(f)==="after";
+  return {id:uid(),kind:"familiar",name:String(f&&f.name!=null?f.name:"").trim().slice(0,60)||"Familiar",init:after?null:initInt(init),ac:initOpt(f&&f.ac),
+    track:"exact",band:null,hp:famHP(hp.cur),maxHp:initOpt(hp.max),dead:false,partyId:"",famId:String(f&&f.id!=null?f.id:""),after};
+}
+
+/* The familiar is the truth for its row (decision 10): copy each familiar
+   row's name, AC, switch and HP from its familiar, re-sorting when a switch
+   changed. Pure over c: it reads the familiars and never writes one, and it
+   never adds or removes a row. Returns the ids of the rows whose familiar is
+   gone or dismissed, for the caller to drop (migrate() on load,
+   familiarsChanged() live). */
+function syncFamiliarRows(c){
+  const list=Array.isArray(c&&c.combatants)?c.combatants:[],live=fightFamiliars(c),gone=[];let moved=false;
+  list.forEach(r=>{
+    if(!r||r.kind!=="familiar")return;
+    const f=live.find(x=>x.id===r.famId);if(!f){gone.push(r.id);return;}
+    const hp=f.hp&&typeof f.hp==="object"?f.hp:{},after=famTurn(f)==="after";
+    r.name=String(f.name!=null?f.name:"").trim().slice(0,60)||"Familiar";r.ac=initOpt(f.ac);
+    if(r.after!==after){r.after=after;r.init=null;moved=true;}
+    r.hp=famHP(hp.cur);r.maxHp=initOpt(hp.max);
+  });
+  if(moved)c.combatants=initSort(list);
+  return gone;
+}
+/* After every change to a familiar (the paw's Summon / Dismiss, Delete, the
+   form's Save), in a fight with a list: join it if it was just summoned,
+   fill a blank current HP from its max (decision 12), copy, drop the rows
+   whose familiar left, settle the marker, and draw once. wasActive is the
+   familiar's `active` before the change (false for a new one). With no fight,
+   or no list yet, nothing: Roll initiative will list a summoned familiar. */
+function familiarsChanged(id,wasActive){
+  if(!inCombat(character)||!(character.combatants||[]).length)return;
+  const f=fightFamiliars(character).find(x=>x.id===id);
+  const has=!!f&&character.combatants.some(r=>r.kind==="familiar"&&r.famId===f.id);
+  if(f&&!wasActive&&!has){
+    famFillHP(f);
+    const row=famRow(f,null);
+    character.combatants=initSort(character.combatants.concat([row]));
+    /* an instruction, read beside the familiar's reopened window: the long toast */
+    if(!row.after)toast(`${row.name} joined the fight. Tap its chip to set its initiative.`,null,{long:true});
+  }
+  else if(has)famFillHP(f);
+  syncFamiliarRows(character).forEach(initDropRow);
+  initSettleTurn();
+  renderCombatChrome();renderInitTable();renderFamiliars();scheduleSave();
 }
 
 /* ---- the Party card (Bio) ---- */
@@ -148,22 +269,36 @@ function openPartyForm(id){
    "Roll initiative" when an old save has a fight but no list (midFight). */
 let _ir={faces:[],set:false,adv:false};
 function irState(){return _ir;}
+/* #164: a monster row is four bare boxes in the grid the heading row names
+   (Name · × · AC · Init, .ir-head); each box keeps its own aria-label, since
+   the heading is aria-hidden. With "×" and "AC" in every row it needed 353px
+   and a phone's dialog gives 326, so Init wrapped. */
 function irFoeRowHTML(){
   return `<div class="ir-foe" data-irfoe><input data-irf="name" placeholder="Monster" aria-label="Monster name" autocomplete="off">`+
-    `<label class="ir-k">× <input data-irf="count" inputmode="numeric" size="2" value="1" aria-label="How many"></label>`+
-    `<label class="ir-k">AC <input data-irf="ac" inputmode="numeric" size="2" aria-label="AC guess (optional)"></label>`+
+    `<input data-irf="count" inputmode="numeric" size="2" value="1" aria-label="How many">`+
+    `<input data-irf="ac" inputmode="numeric" size="2" aria-label="AC guess (optional)">`+
     `<input data-irf="init" inputmode="numeric" size="3" placeholder="Init" aria-label="Initiative"></div>`;
 }
-function initRollHTML(party,midFight){
+function irHeadHTML(){return `<div class="ir-head" aria-hidden="true"><span>Name</span><span>×</span><span>AC</span><span>Init</span></div>`;}
+/* #163: a summoned familiar's row, after the party. Own: an Init box in the
+   Init column, blank allowed (last). After: no box, "right after you" across
+   the three columns (60px is too narrow for the words). */
+function irFamRowHTML(f){
+  const nm=String(f.name||"Familiar"),tag=`<span>${esc(nm)} <span class="ir-k">familiar</span></span>`;
+  if(famTurn(f)==="after")return `<div class="ir-row ir-after">${tag}<span class="ir-aft">right after you</span></div>`;
+  return `<label class="ir-row">${tag}<input data-irfam="${esc(f.id)}" inputmode="numeric" size="3" placeholder="Init" aria-label="${esc(nm+"'s initiative")}"></label>`;
+}
+function initRollHTML(party,midFight,fams=fightFamiliars(character)){
   const mod=initModOf();
-  return `<p class="hint">${midFight?"Roll for the fight already running.":"Your party and you are in. Add the monsters, then everyone's roll."}</p>`+
+  return `<p class="hint">${midFight?"Roll for the fight already running.":fams.length?"You, your party and your summoned familiars are in. Add the monsters, then everyone's roll.":"Your party and you are in. Add the monsters, then everyone's roll."}</p>`+
     `<div class="ir-you"><b>${esc(character.name||"You")}</b> <span class="ir-k">you · initiative ${esc((mod<0?"−":"+")+Math.abs(mod))}</span>`+
     `<div class="hd-how"><button type="button" class="tbtn primary" id="irRoll">🎲 Roll for me</button> <span>or</span> `+
     `<label>I rolled <input id="irTyped" inputmode="numeric" size="3"></label> <button type="button" class="tbtn" id="irApply">Apply</button> `+
     `<button type="button" class="switch" id="irAdv" role="switch" aria-checked="false" aria-label="Advantage"></button><span class="ir-k">Advantage</span></div>`+
-    `<div class="hd-res" id="irRes" aria-live="polite"></div></div>`+
+    `<div class="hd-res" id="irRes" aria-live="polite"></div></div>`+irHeadHTML()+
     (party.length?`<div class="ir-party">`+party.map(p=>`<label class="ir-row"><span>${esc(p.name)} <span class="ir-k">party</span></span>`+
       `<input data-irparty="${esc(p.id)}" inputmode="numeric" size="3" placeholder="Init" aria-label="${esc(p.name+"'s initiative")}"></label>`).join("")+`</div>`:"")+
+    (fams.length?`<div class="ir-fams">${fams.map(irFamRowHTML).join("")}</div>`:"")+
     `<div id="irFoes">${irFoeRowHTML()}</div><button type="button" class="add" id="irAddFoe">+ Add a monster</button>`+
     `<p class="hint">A blank initiative goes last; you can fill it in later.</p>`+
     `<div class="m-actions"><button class="tbtn" id="irCancel">Cancel</button><button class="tbtn primary" id="irStart">Start ▸</button></div>`;
@@ -183,9 +318,9 @@ function irRoll(){
   const box=document.getElementById("irTyped");if(box)box.value=String(Math.max.apply(null,_ir.faces));
   irPaint("");
 }
-function startInitFight(you,party,foes){
+function startInitFight(you,party,foes,fams){
   if(!inCombat(character))combatStart(character);
-  character.combatants=buildCombatants(you,party,foes);
+  character.combatants=buildCombatants(you,party,foes,fams);
   character.combatTurn=character.initMode==="turns"?initFirstAlive(character.combatants):"";
   renderActiveSpells();renderCombatChrome();scheduleSave();
 }
@@ -203,13 +338,14 @@ function openInitRoll(){
   on("irAdv","click",e=>{_ir.adv=!_ir.adv;e.currentTarget.classList.toggle("on",_ir.adv);e.currentTarget.setAttribute("aria-checked",_ir.adv?"true":"false");});
   on("irAddFoe","click",()=>{const f=document.getElementById("irFoes");if(f)f.insertAdjacentHTML("beforeend",irFoeRowHTML());});
   on("irCancel","click",closeModal);
-  on("irStart","click",()=>irStart(party));
+  on("irStart","click",()=>irStart(party,fightFamiliars(character)));
 }
 /* Start ▸ is the commit (final review I3): a roll typed into "I rolled" but
    never Applied is applied here, and a bad one stops Start with irSetTyped()'s
    message in #irRes. A blank box still means unrolled, last. Returns that
-   message, or "" once the fight has started. */
-function irStart(party){
+   message, or "" once the fight has started. The summoned familiars (#163)
+   join with a blank current HP filled from the max, on the familiar. */
+function irStart(party,fams=fightFamiliars(character)){
   if(!_ir.set){
     const b=document.getElementById("irTyped"),typed=b?String(b.value==null?"":b.value).trim():"";
     if(typed){const why=irSetTyped(typed);if(why)return why;}
@@ -218,7 +354,11 @@ function irStart(party){
   const party2=party.map(p=>{const i=document.querySelector(`[data-irparty="${CSS.escape(p.id)}"]`);return Object.assign({},p,{init:i?i.value:""});});
   const foes=Array.from(document.querySelectorAll("[data-irfoe]")).map(row=>{const v=k=>{const i=row.querySelector(`[data-irf="${k}"]`);return i?i.value:"";};
     return {name:v("name"),count:v("count"),ac:v("ac"),init:v("init")};});
-  closeModal();startInitFight(you,party2,foes);return "";
+  const filled=fams.map(famFillHP).some(Boolean);
+  const fams2=fams.map(f=>{const i=famTurn(f)==="after"?null:document.querySelector(attrSel("data-irfam",f.id));return Object.assign({},f,{init:i?i.value:""});});
+  closeModal();startInitFight(you,party2,foes,fams2);
+  if(filled)renderFamiliars();   /* the paw's card and the view's Familiars show the filled HP */
+  return "";
 }
 
 /* ---- the strip (in #cvHead, so it sticks with it) and the table ----
@@ -234,6 +374,11 @@ function hbBarHTML(bar){
 }
 function combatantHealthText(r){
   const bar=combatantBar(r);
+  /* #163: a familiar's HP is known exactly, so at 0 it says "HP 0 / 7"; a
+     blank current HP with a max (a hand-edited file) is "?" */
+  if(r.kind==="familiar"){const mx=num(r.maxHp)>0?num(r.maxHp):0;
+    if(r.hp==="")return mx?`HP ? / ${mx}`:"Health not set";
+    return mx?`HP ${num(r.hp)} / ${mx}`:`HP ${num(r.hp)}`;}
   if(combatantDead(r))return "Dead";
   if(r.kind==="you")return `HP ${num(character.hp.cur)} / ${effMaxHP()}`;
   if(r.kind==="party"&&r.track==="exact"&&num(r.maxHp)>0)return `HP ${num(r.hp)} / ${num(r.maxHp)}`;
@@ -263,17 +408,22 @@ function initTableBtnHTML(ch){
   if(!(ch.combatants||[]).length)return "";
   return `<button type="button" class="tbtn" id="cvInitMore" aria-expanded="${_iniTableOpen?"true":"false"}" aria-controls="cvInitTable" aria-label="Show the initiative table">Combatants ${_iniTableOpen?"▴":"▾"}</button>`;
 }
+/* The number a chip or row shows: an after-you row shows yours (decision 6) */
+function initShownInit(r,ch){
+  if(!initAfter(r))return r.init;
+  const y=(ch.combatants||[]).find(x=>x.kind==="you");return y?y.init:null;
+}
 function initChipHTML(r,ch){
   const turns=ch.initMode==="turns",show=ch.initShowRolls!==false;
-  const now=turns&&r.id===ch.combatTurn,dead=combatantDead(r),name=r.kind==="you"?(ch.name||"You"):r.name;
-  const lbl=`${name}${r.init!==null?", initiative "+r.init:""}, ${combatantHealthText(r)}${now?", acting":""}`;
+  const now=turns&&r.id===ch.combatTurn,dead=combatantDead(r),name=r.kind==="you"?(ch.name||"You"):r.name,n=initShownInit(r,ch);
+  const lbl=`${name}${initAfter(r)?", acts right after you":n!==null?", initiative "+n:""}, ${combatantHealthText(r)}${now?", acting":""}`;
   return `<button type="button" class="ini-chip${now?" now":""}${dead?" dead":""}" data-inichip="${esc(r.id)}" aria-label="${esc(lbl)}">`+
-    `<span class="ini-top">${show?`<span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`:""}<span class="ini-nm">${esc(name)}</span></span>${hbBarHTML(dead?{band:null,share:null}:combatantBar(r))}</button>`;
+    `<span class="ini-top">${show?`<span class="ini-n">${esc(n===null?"—":String(n))}</span>`:""}<span class="ini-nm">${esc(name)}</span></span>${hbBarHTML(dead?{band:null,share:null}:combatantBar(r))}</button>`;
 }
 function initRowHTML(r,ch){
-  const name=r.kind==="you"?(ch.name||"You"):r.name,ac=r.kind==="you"?youAC():r.ac;
-  return `<button type="button" class="ini-row${combatantDead(r)?" dead":""}" data-inirow="${esc(r.id)}"><span class="ini-n">${esc(r.init===null?"—":String(r.init))}</span>`+
-    `<span class="ini-nm">${esc(name)} <span class="ini-kind">${r.kind==="you"?"you":r.kind==="party"?"party":""}</span></span>`+
+  const name=r.kind==="you"?(ch.name||"You"):r.name,ac=r.kind==="you"?youAC():r.ac,n=initShownInit(r,ch);
+  return `<button type="button" class="ini-row${combatantDead(r)?" dead":""}" data-inirow="${esc(r.id)}"><span class="ini-n">${esc(n===null?"—":String(n))}</span>`+
+    `<span class="ini-nm">${esc(name)} <span class="ini-kind">${r.kind==="you"?"you":r.kind==="party"?"party":r.kind==="familiar"?"familiar":""}</span></span>`+
     `<span class="ini-hp">${esc(combatantHealthText(r))}</span>${ac!==""?`<span class="ini-ac">AC ${esc(String(ac))}</span>`:""}</button>`;
 }
 function initTableHTML(ch){
@@ -417,44 +567,91 @@ function toggleInitRolls(){character.initShowRolls=character.initShowRolls===fal
 /* ---- one combatant's dialog: big targets (Mike: bands are too small to tap
    on a phone). Foe: band buttons. Party: Exact HP / Estimate, Dead. You:
    initiative only. Ties break here with Act earlier / Act later. */
-function initTie(list,i,dir){const j=i+dir;return j>=0&&j<list.length&&list[j].init===list[i].init;}
+/* Two neighbouring units with the same initiative (initUnits(), #163
+   decision 7): you and your after-you rows tie and move as one, at your
+   initiative; an after-you row ties only with another after-you row. With no
+   after-you rows every unit is one row, as it was. */
+function initTie(list,i,dir){
+  const r=list[i];if(!r)return false;
+  if(initAfter(r))return initAfter(list[i+dir]);
+  const U=initUnits(list),u=U.findIndex(x=>x.rows.indexOf(r)>=0),v=U[u+dir];
+  return !!v&&!v.after&&!U[u].after&&v.init===U[u].init;
+}
+/* The order after the tie move initTie() allows: the two units swap whole. Pure. */
+function initMoved(list,i,dir){
+  const r=list[i];
+  if(initAfter(r)){const out=list.slice();[out[i],out[i+dir]]=[out[i+dir],out[i]];return out;}
+  const U=initUnits(list),u=U.findIndex(x=>x.rows.indexOf(r)>=0);
+  [U[u],U[u+dir]]=[U[u+dir],U[u]];
+  return [].concat(...U.map(x=>x.rows));
+}
 function combatantDialogHTML(r,ch){
   const list=ch.combatants||[],i=list.findIndex(x=>x.id===r.id);
   const bands=n=>`<div class="cd-lbl">How hurt?</div>`+[0,1,2,3,4].slice(0,n).map(b=>`<button type="button" class="cd-band${r.band===b?" on":""}" data-cband="${esc(String(b))}">`+
     `${hbBarHTML({band:b===4?null:b,share:null})}<span>${esc(HB_NAMES[b])}<small>${esc(HB_SAYS[b])}</small></span></button>`).join("");
-  const fields=`<div class="cd-two"><label class="cd-fld"><span class="cd-k">Initiative</span><input id="cdInit" inputmode="numeric" value="${esc(r.init===null?"":String(r.init))}"></label>`+
-    (r.kind==="you"?"":`<label class="cd-fld"><span class="cd-k">${r.kind==="foe"?"AC guess":"AC"} (optional)</span><input id="cdAC" inputmode="numeric" value="${esc(String(r.ac))}"></label>`)+`</div>`;
+  /* #163: a familiar's AC is the familiar's (no box), and an after-you row has no initiative */
+  const fam=r.kind==="familiar";
+  const fields=fam&&initAfter(r)?"":`<div class="cd-two"><label class="cd-fld"><span class="cd-k">Initiative</span><input id="cdInit" inputmode="numeric" value="${esc(r.init===null?"":String(r.init))}"></label>`+
+    (r.kind==="you"||fam?"":`<label class="cd-fld"><span class="cd-k">${r.kind==="foe"?"AC guess":"AC"} (optional)</span><input id="cdAC" inputmode="numeric" value="${esc(String(r.ac))}"></label>`)+`</div>`;
+  const step=`<div class="cd-lbl">Hit points</div><div class="cd-step"><button type="button" class="cd-pm" data-chp="-1" aria-label="One less">−</button>`+
+    `<input id="cdHp" inputmode="numeric" value="${esc(String(r.hp))}" aria-label="Current HP">${r.maxHp===""?"":`<span class="cd-k">/ ${esc(String(r.maxHp))}</span>`}`+
+    `<button type="button" class="cd-pm" data-chp="1" aria-label="One more">+</button></div>`;
   const ties=(initTie(list,i,-1)?`<button type="button" class="tbtn" data-cmove="-1">Act earlier</button>`:"")+(initTie(list,i,1)?`<button type="button" class="tbtn" data-cmove="1">Act later</button>`:"");
   let body="";
   if(r.kind==="foe")body=bands(5);
   else if(r.kind==="party"){
     const ex=r.track==="exact";
     body=`<div class="seg cd-track">${[["exact","Exact HP"],["estimate","Estimate"]].map(([v,l])=>`<button type="button" data-ctrack="${esc(v)}" class="${r.track===v?"on":""}" aria-pressed="${r.track===v?"true":"false"}">${esc(l)}</button>`).join("")}</div>`+
-      (ex?`<div class="cd-lbl">Hit points</div><div class="cd-step"><button type="button" class="cd-pm" data-chp="-1" aria-label="One less">−</button>`+
-        `<input id="cdHp" inputmode="numeric" value="${esc(String(r.hp))}" aria-label="Current HP">${r.maxHp===""?"":`<span class="cd-k">/ ${esc(String(r.maxHp))}</span>`}`+
-        `<button type="button" class="cd-pm" data-chp="1" aria-label="One more">+</button></div>`:bands(4))+
+      (ex?step:bands(4))+
       `<button type="button" class="cd-toggle" id="cdDead" role="switch" aria-checked="${r.dead?"true":"false"}"><span>Dead</span><span class="switch ${r.dead?"on":""}"></span></button>`;
+  }
+  else if(fam){
+    /* #163 decision 11: its own HP, written to the familiar; the form's switch */
+    const aft=initAfter(r);
+    body=step+`<div class="cd-lbl">In a fight</div><div class="seg cd-turn">${[["own","Own initiative"],["after","Right after you"]].map(([v,l])=>{const on=(v==="after")===aft;
+      return `<button type="button" data-cturn="${esc(v)}" class="${on?"on":""}" aria-pressed="${on?"true":"false"}">${esc(l)}</button>`;}).join("")}</div>`+
+      (r.ac!==""?`<p class="hint">AC ${esc(String(r.ac))}, from the familiar. Edit the familiar from the paw to change it.</p>`:"");
   }
   else body=`<p class="hint">HP ${esc(String(num(character.hp.cur)))} / ${esc(String(effMaxHP()))} and AC ${esc(String(youAC()))}, from your sheet. Your HP changes on the Vitals card.</p>`;
   return `<div class="cd">${body}${fields}${ties?`<div class="cd-ties">${ties}</div>`:""}`+
     `<div class="m-actions">${r.kind==="you"?"":`<button type="button" class="tbtn danger" id="cdRemove">Remove</button>`}<span class="grow"></span><button type="button" class="tbtn primary" id="cdDone">Done</button></div></div>`;
 }
+/* A familiar row's familiar, by famId (#163); undefined once it is gone */
+function famOfRow(r,c){
+  return r&&r.kind==="familiar"?(Array.isArray((c||character).familiars)?(c||character).familiars:[]).find(f=>f&&typeof f==="object"&&f.id===r.famId):undefined;
+}
 function setCombatant(id,patch){
   const list=character.combatants||[],r=list.find(x=>x.id===id);if(!r)return;
-  if("band" in patch)r.band=(Number.isInteger(patch.band)&&patch.band>=0&&patch.band<=4)?patch.band:null;
+  const fam=r.kind==="familiar",f=famOfRow(r);
+  if("band" in patch&&!fam)r.band=(Number.isInteger(patch.band)&&patch.band>=0&&patch.band<=4)?patch.band:null;
   if("track" in patch&&r.kind==="party")r.track=patch.track==="estimate"?"estimate":"exact";
-  if("hp" in patch&&r.kind==="party"){const n=initInt(patch.hp),h=n===null?"":Math.max(0,n);r.hp=h===""?"":(num(r.maxHp)>0?Math.min(h,num(r.maxHp)):h);}
+  if("hp" in patch&&(r.kind==="party"||fam)){const n=initInt(patch.hp),h=n===null?"":Math.max(0,n);r.hp=h===""?"":(num(r.maxHp)>0?Math.min(h,num(r.maxHp)):h);
+    /* #163 decision 12: a familiar's cleared box with a max takes the max, or
+       its card would read 0 while the tracker read "?" */
+    if(fam&&r.hp===""&&num(r.maxHp)>0)r.hp=num(r.maxHp);
+    /* #163 decision 3: one HP, the familiar's own, stored as its form does */
+    if(f)f.hp=Object.assign({cur:"",max:""},f.hp&&typeof f.hp==="object"?f.hp:{},{cur:r.hp===""?"":String(r.hp)});}
   if("dead" in patch&&r.kind==="party")r.dead=patch.dead===true;
-  if("ac" in patch&&r.kind!=="you")r.ac=initOpt(patch.ac);
-  if("init" in patch){r.init=initInt(patch.init);character.combatants=initSort(list);}
+  if("ac" in patch&&r.kind!=="you"&&!fam)r.ac=initOpt(patch.ac);
+  /* #163: the dialog's switch writes the familiar's own setting too. The
+     button already pressed changes nothing: it would wipe an Own roll. */
+  if("after" in patch&&fam&&(patch.after===true)!==r.after){r.after=patch.after===true;r.init=null;if(f)f.turn=r.after?"after":"own";character.combatants=initSort(list);}
+  if("init" in patch){r.init=initAfter(r)?null:initInt(patch.init);character.combatants=initSort(list);}
+  initSettleTurn();
+  renderCombatChrome();renderInitTable();scheduleSave();
+  if(fam)renderFamiliars();   /* the paw's card and the view's Familiars show the new HP */
+}
+/* The marker leaves a dead or missing actor for its living successor; a wrap
+   onto a living row advances the round once (T5-M2). Turns mode only.
+   setCombatant() and familiarsChanged() (#163) end in it. */
+function initSettleTurn(){
   let wrapped=false;
   if(character.initMode==="turns"&&!(character.combatants||[]).some(x=>x.id===character.combatTurn&&!combatantDead(x))){
-    const n=initNextTurn(character.combatants,character.combatTurn);
-    character.combatTurn=n.turnId||initFirstAlive(character.combatants);
+    const n=initNextTurn(character.combatants||[],character.combatTurn);
+    character.combatTurn=n.turnId||initFirstAlive(character.combatants||[]);
     wrapped=initTurnWrapped(n);
   }
   if(wrapped)advanceRound(1);
-  renderCombatChrome();renderInitTable();scheduleSave();
 }
 /* Moving the marker off a dead or removed actor past the end of the order
    is a wrap, exactly as Next's is (ruling T5-M2): the round advances once.
@@ -464,19 +661,26 @@ function initTurnWrapped(n){
   const r=(character.combatants||[]).find(x=>x.id===n.turnId);
   return !!r&&!combatantDead(r);
 }
-function removeCombatant(id){
+/* One row out of the fight, never yours: the marker moves to its living
+   successor first, and that wrapping onto a living row advances the round
+   once (T5-M2). No repaint, so several rows can leave and draw once (#163). */
+function initDropRow(id){
   const list=character.combatants||[],r=list.find(x=>x.id===id);if(!r||r.kind==="you")return;
   let n=null;
   if(character.combatTurn===id){n=initNextTurn(list,id);character.combatTurn=n.turnId;}
   character.combatants=list.filter(x=>x.id!==id);
   if(character.combatTurn===id)character.combatTurn=initFirstAlive(character.combatants);
   if(initTurnWrapped(n))advanceRound(1);   /* T5-M2 */
+}
+function removeCombatant(id){
+  const r=(character.combatants||[]).find(x=>x.id===id);if(!r||r.kind==="you")return;
+  initDropRow(id);
   renderCombatChrome();renderInitTable();scheduleSave();
 }
 function moveCombatant(id,dir){
   const list=character.combatants||[],i=list.findIndex(x=>x.id===id);
   if(i<0||!initTie(list,i,dir))return false;
-  const j=i+dir;[list[i],list[j]]=[list[j],list[i]];
+  list.splice(0,list.length,...initMoved(list,i,dir));
   renderCombatChrome();renderInitTable();scheduleSave();return true;
 }
 function addCombatant(name,init,ac){
@@ -507,6 +711,7 @@ function openCombatant(id){
       if((m=t.closest("[data-cband]"))){setCombatant(cid,{band:num(m.dataset.cband)});closeModal();return;}
       if((m=t.closest("[data-ctrack]"))){const v=m.dataset.ctrack;setCombatant(cid,{track:v});openCombatant(cid);cdRefocus(`[data-ctrack="${v==="estimate"?"estimate":"exact"}"]`);return;}
       if((m=t.closest("[data-chp]"))){const d=num(m.dataset.chp),x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{hp:Math.max(0,num(x&&x.hp)+d)});openCombatant(cid);cdRefocus(`[data-chp="${d<0?-1:1}"]`);return;}
+      if((m=t.closest("[data-cturn]"))){const v=m.dataset.cturn==="after";setCombatant(cid,{after:v});openCombatant(cid);cdRefocus(`[data-cturn="${v?"after":"own"}"]`);return;}
       if(t.closest("#cdDead")){const x=(character.combatants||[]).find(z=>z.id===cid);setCombatant(cid,{dead:!(x&&x.dead)});openCombatant(cid);cdRefocus("#cdDead");return;}
       if((m=t.closest("[data-cmove]"))){const d=num(m.dataset.cmove)<0?-1:1;moveCombatant(cid,d);openCombatant(cid);
         /* past the end of the tie the pressed button is gone: the other one, else Done */

@@ -431,7 +431,8 @@ function stepStatusTap(id,deltaSec,viaKey){
    back on it after the modal repaints (M-14). */
 function familiarCardHTML(f){
   const on=!!f.active;
-  const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:""].filter(Boolean).join(" · ");
+  const stats=[f.ac!==""&&f.ac!=null?`AC ${esc(f.ac)}`:"",(f.hp&&(f.hp.max!==""&&f.hp.max!=null))?`HP ${esc(f.hp.cur||0)}/${esc(f.hp.max)}`:"",f.speed?`Speed ${esc(f.speed)}`:"",
+    famTurn(f)==="after"?"Right after you":""].filter(Boolean).join(" · ");   /* #163: how it acts in a fight; Own says nothing */
   return `<div class="item${on?" on-fam":""}"><div class="top">
         <span class="nm">${esc(f.name||"Familiar")}</span>
         ${f.kind?`<span class="qty">${esc(f.kind)}</span>`:""}
@@ -459,6 +460,22 @@ function renderFamiliars(){
   renderSheetHead();
   if(!has)return;
   el.innerHTML=character.familiars.map(f=>familiarCardHTML(f)).join("");
+}
+/* Summon / Dismiss and Delete (#163: out of 90-boot.js, so the tests reach
+   them). In a fight a summoned familiar joins and a dismissed or deleted one
+   leaves (familiarsChanged()). Boot keeps the confirm, the modal and focus.
+   False when no familiar has that id. */
+function setFamiliarSummoned(id,on){
+  const f=(Array.isArray(character.familiars)?character.familiars:[]).find(x=>x&&x.id===id);if(!f)return false;
+  const was=!!f.active;f.active=!!on;
+  familiarsChanged(id,was);
+  renderFamiliars();recompute();scheduleSave();return true;
+}
+function deleteFamiliar(id){
+  const list=Array.isArray(character.familiars)?character.familiars:[],f=list.find(x=>x&&x.id===id);if(!f)return false;
+  character.familiars=list.filter(x=>x!==f);
+  familiarsChanged(id,!!f.active);
+  renderFamiliars();recompute();scheduleSave();return true;
 }
 
 /* ================= the sheet header (#103, spec §6.1, §6.6) =================

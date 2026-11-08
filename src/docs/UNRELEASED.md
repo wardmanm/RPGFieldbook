@@ -98,3 +98,9 @@ Bullets below this line — leave the heading in place.
   needs two different abilities.
 - Fighters, Paladins and Rangers with the Fighting Style feature now qualify for Fighting Style feats,
   and the style you already have counts as that feat taken.
+- Summoned familiars and companions from the paw now join the initiative tracker. On each one's
+  form, choose whether it rolls its own initiative or acts right after you. Damage it takes in the
+  fight changes its hit points on the paw too.
+- If you typed a companion into the Party card so it could join fights, you can remove it there
+  now: summoned familiars and companions from the paw join on their own.
+- On a phone, each monster row in Roll initiative now fits on one line, under column headings.

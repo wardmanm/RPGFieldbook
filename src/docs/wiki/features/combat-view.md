@@ -33,14 +33,17 @@ its own tab. Leaving the tab never ends combat.
 **the initiative tracker** (#91), in `87-initiative.js`: `cleanParty()`, `cleanCombatants()`,
 `combatantDead()`, `initSort()`, `initFirstAlive()`, `initNextTurn()`, `bandOfShare()`,
 `combatantBar()`, `initRollCheck()`, `initRollLine()`, `initModOf()`, `youAC()`,
-`buildCombatants()`, `initFreshId()`; `irState()`, `irFoeRowHTML()`, `initRollHTML()`, `irPaint()`, `irSetTyped()`,
+`buildCombatants()`, `initFreshId()`; `irState()`, `irFoeRowHTML()`, `irHeadHTML()`, `irFamRowHTML()`, `initRollHTML()`, `irPaint()`, `irSetTyped()`,
 `irRoll()`, `startInitFight()`, `openInitRoll()`, `irStart()`; `hbBarHTML()`, `combatantHealthText()`,
-`initChipHTML()`, `initRowHTML()`, `initStripHTML()`, `initTableHTML()`, `initFitCount()`,
+`initShownInit()`, `initChipHTML()`, `initRowHTML()`, `initStripHTML()`, `initTableHTML()`, `initFitCount()`,
 `initFitSide()`, `initFitStrip()`, `iniMoreHTML()`, `openIniFly()`, `closeIniFly()`, `renderInitStrip()`,
 `renderInitTable()`, `toggleInitTable()`, `initNext()`, `initPrevTurn()`, `initCanPrev()`, `initPrev()`,
-`setInitMode()`, `toggleInitRolls()`; `initTie()`, `combatantDialogHTML()`, `setCombatant()`,
-`initTurnWrapped()`, `removeCombatant()`, `moveCombatant()`, `addCombatant()`, `openCombatant()`,
-`cdRefocus()`, `openAddCombatant()` · `renderHP()` in `66-coins-hp.js` (it ends in
+`setInitMode()`, `toggleInitRolls()`; `initTie()`, `initMoved()`, `combatantDialogHTML()`, `setCombatant()`,
+`initSettleTurn()`, `initTurnWrapped()`, `initDropRow()`, `removeCombatant()`, `moveCombatant()`, `addCombatant()`, `openCombatant()`,
+`cdRefocus()`, `openAddCombatant()`; **familiars in the fight** (#163) `famTurn()`, `fightFamiliars()`,
+`famFillHP()`, `famHP()`, `famRow()`, `initAfter()`, `initBlock()`, `initUnits()`, `famOfRow()`, `syncFamiliarRows()`,
+`familiarsChanged()` · `setFamiliarSummoned()`, `deleteFamiliar()`, `renderFamiliars()` in `40-sheet.js` ·
+`openFamiliarForm()` in `80-modal-forms.js` · `renderHP()` in `66-coins-hp.js` (it ends in
 `renderInitStrip()`) ·
 `toggleInspiration()` in `10-compute.js` · `COMBAT_DEFAULTS` in `00-constants.js` ·
 `selectTab()`, `scrollToCard()` in `40-sheet.js` · `advanceRound()`, `toast()` in
@@ -50,6 +53,7 @@ its own tab. Leaving the tab never ends combat.
 [the spec](../../specs/1.7.0/2026-09-24-combat-view-design.md), [the plan](../../plans/1.7.0/2026-09-24-combat-view.md),
 [the initiative tracker spec](../../specs/1.9.0/2026-10-25-initiative-tracker-design.md),
 [the End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-design.md),
+[the Initiative spec](../../specs/2026-11-07-initiative-design.md) (#164, #163),
 [Spells](spells.md), [Ammunition](ammunition.md), [Sections & layout](../ui/sections-and-layout.md),
 [Story & notes](story-and-notes.md), [Shell](../ui/shell.md)
 
@@ -156,31 +160,55 @@ as-built summary.
 
 **Data.** `character.party` ([{id,name,ac,maxHp}]`, the Bio-tab roster, see
 [Story & notes](story-and-notes.md)) and `character.combatants` ([{id,kind,name,init,ac,track,band,
-hp,maxHp,dead,partyId}]`, `kind` one of `you`/`party`/`foe`) are saved **with the character while a
+hp,maxHp,dead,partyId,famId,after}]`, `kind` one of `you`/`party`/`foe`/`familiar`) are saved **with the character while a
 fight is on** (`combatActive`, same as `combatRound`); `combatEnd()` clears `combatants` and
 `combatTurn` the same moment it zeroes the round, so a mid-fight reload restores everything
 including the marker, and End leaves nothing behind. Cleaning (`migrate()`) gives a missing or
 repeated id a fresh one (`initFreshId()`: two rows sharing an id would open one dialog for both),
 names a blank foe "Unnamed" and a blank party row "Party member", and sets `combatTurn` only in
-Turns mode, never to a dead row. The combatants array order **is** the turn
-order; `initSort()` (stable, unrolled rows last) re-sorts it whenever a row's initiative changes.
+Turns mode, never to a dead row. A `familiar` row (#163) stands for one of the character's own
+familiars: `famId` is that familiar's id (a row without one is dropped, and so is a second row for
+the same familiar, since two would write one HP), `after` is `true` for Right after you (its `init`
+is then `null` and never read for order), `hp`/`maxHp` mirror the familiar's `hp.cur`/`hp.max`
+(whole numbers or `""`; a negative current HP reads 0, fallen, through `famHP()`), `name` and `ac` copy the familiar's (`name` falls back to "Familiar"),
+and `track` is `"exact"`, `band` `null`, `dead` `false`, `partyId` `""`, unused. Every other row has
+`famId:""` and `after:false`. After cleaning, `migrate()` runs `syncFamiliarRows()` (below) and drops
+the rows whose familiar is gone or dismissed, before the `combatTurn` line, which then puts a marker
+that sat on a dropped row on the first living row without moving the round. A familiar's own `kind`
+is its creature type ("Owl"); the row's `kind` is the row's. The combatants array order **is** the
+turn order; `initSort()` (stable, unrolled rows last, then every after-you row, in its existing
+order, straight after you; last with no you row) re-sorts it whenever a row's initiative changes.
 
 **Roll initiative** (`initRollHTML()`) is the ordinary dialog, not the wide one (#161): it grows
 with its rows and its body scrolls, so Start ▸ is always reachable. It lists you first (🎲 Roll for me — a d20 plus your initiative
 modifier, or a typed roll + Apply, with an Advantage switch that rolls two and keeps the higher,
-and a working line like "14 + 3 = 17"), then every `party` row (a typed total, blank allowed), then
-foe rows (name, a `× N` count that becomes "Name 1" … "Name N" sharing one roll, an optional AC, a
-typed total) with **+ Add a monster** to add more; party and foe initiative boxes both carry an
-"Init" placeholder. **Start ▸** is `irStart()`, and it is the commit: a roll typed into "I rolled"
+and a working line like "14 + 3 = 17"). Under it one heading row, **Name · × · AC · Init**
+(`irHeadHTML()`, small heading type, `aria-hidden`), above every other row (#164): the heading and
+each row are one grid, `minmax(0,1fr) 48px 52px 60px` with 6px gaps, so the name takes what is left
+(about 148px at 390, 78px at 320) and nothing wraps. Then every `party` row (the name in the first
+column, × and AC blank, a typed total in the Init column, blank allowed), then every **summoned
+familiar** (`fightFamiliars()`, `irFamRowHTML()`, tagged `familiar`): an Own one has an Init box
+(`data-irfam`, "<name>'s initiative") in the Init column, a Right after you one no box and "right
+after you" across the three columns. Then foe rows (name, a count that becomes "Name 1" … "Name N"
+sharing one roll, an optional AC, a typed total, four bare boxes each with its own `aria-label`) with
+**+ Add a monster** to add more under the same heading; every initiative box carries an "Init"
+placeholder. The hint reads "You, your party and your summoned familiars are in. Add the monsters,
+then everyone's roll." when a familiar is summoned, else "Your party and you are in. …"; mid-fight
+(an old save with a fight and no list) it is "Roll for the fight already running." and lists the
+familiars the same way. **Start ▸** is `irStart()`, and it is the commit: a roll typed into "I rolled"
 but never Applied is applied there, and a bad one stops Start with its message (a blank box still
-means unrolled, last). Then `startInitFight()`: calls
-`combatStart()` if not already in combat, builds `combatants` via `buildCombatants()` (sorted,
-unrolled last), and in Turns mode sets `combatTurn` to the first living row.
+means unrolled, last). It fills each joining familiar's blank current HP from its max, on the
+familiar (`famFillHP()`, spec decision 12), reads each Own familiar's box, and repaints the
+familiars when one was filled. Then `startInitFight()`: calls
+`combatStart()` if not already in combat, builds `combatants` via `buildCombatants()` (you, the
+party, the familiars through `famRow()`, the foes; sorted, unrolled last, after-you rows behind
+you), and in Turns mode sets `combatTurn` to the first living row.
 
 **Turns vs Rounds** (`character.initMode`, default `"turns"`). *Turns* shows a "now acting" chip
 (accent background) and a **Next ▸** button; `initNext()` → `initNextTurn()` moves the marker to
-the next living row, skipping dead foes (`band===4`) and dead party members (`dead===true`) but
-never you — passing the end calls `advanceRound(1)` exactly once (so active spells and timed
+the next living row, skipping dead foes (`band===4`), dead party members (`dead===true`) and
+fallen familiars (`hp===0`, a number; a blank HP is not fallen) but never you, so it goes from you
+to your after-you rows in turn, then on — passing the end calls `advanceRound(1)` exactly once (so active spells and timed
 conditions tick as they do for the header's own ▶) and wraps the marker to the first living row.
 Next announces "<name>'s turn"; a wrap announces "Round N — <name>'s turn" as one message, since a
 screen reader speaks only the last write of a task. The marker also moves off an actor who is
@@ -193,7 +221,13 @@ Rounds→Turns keeps a stored actor only while alive, else lands on the first li
 sticks with `#cvHead` and repaints on every header redraw) is a row of chips, each showing the
 initiative (if `initShowRolls`), the name (a chip is at most 170px, a long name ellipsized), and a bar: a four-segment band bar, a smooth share bar
 for you and for a party member on Exact with a max HP, or a grey "?" when nothing is known (a party
-member on Exact with no max reads "HP n" with a "?" bar). **It never scrolls sideways (#165).** In
+member on Exact with no max reads "HP n" with a "?" bar). A familiar's health reads as a party
+member's on Exact (#163): "HP 5 / 7" with a share bar, "HP 5" without a max, "Health not set" with
+neither; at 0, "HP 0 / 7", struck through and faded (`.dead`) rather than "Dead"; a blank current
+HP with a max (a hand-edited file only) "HP ? / 7" with the "?" bar. An after-you row's number is
+your initiative (`initShownInit()`, decision 6), shown or hidden by Show rolls like every number,
+and its accessible label says "acts right after you" in place of "initiative N"; in the table its
+kind tag is `familiar`. **It never scrolls sideways (#165).** In
 Turns mode the acting chip sits in the middle of `.ini-line`, between two `.ini-side`s that share the
 width equally (`flex:1 1 0`), so it stays centred whatever the names: the left side holds who has
 acted this round, the right who is still to come, and nothing wraps into the next round, so at the
@@ -229,15 +263,57 @@ Estimate switch (Exact: a stepper clamped `0..max`, a typed value accepted — a
 the box is rewritten from the stored row, so it shows the clamp; Estimate: four band
 buttons, no Dead band since party death is its own switch) and a **Dead** switch; **you** gets
 initiative only, with HP and AC read live off the sheet (`effMaxHP()`, `character.hp.cur`,
-`youAC()`) and a note that HP changes on the Vitals card. Every kind but you gets **Remove**
-(`removeCombatant()`, confirmed; if the removed row was acting, the marker moves to its living
-successor first) and **Done**. A tied neighbour (`initTie()`) offers **Act earlier** / **Act
-later** (`moveCombatant()`), swapping places within the tie — the only way to resolve one; see the
-Ruling below. `openCombatant()` binds one delegated `click` listener on `#mBody`, guarded by a
+`youAC()`) and a note that HP changes on the Vitals card. A **familiar** (#163, decision 11) gets
+the party stepper (`data-chp`, `#cdHp`, "/ max" when it has one), written to the familiar's own
+`hp.cur` (`setCombatant()`: the party clamp, a cleared box with a max taking the max, decision 12,
+then the familiar found by `famOfRow()`, stored as a string as its form does; a familiar the row no
+longer finds is left alone), then **In a fight**, the form's Own initiative / Right after you
+switch (`data-cturn`), which writes the familiar's `turn` and the row's `after`, sets `init` to
+`null` and re-sorts (a tap on the button already pressed changes nothing); Initiative only on Own; and AC as a line,
+"AC 13, from the familiar. Edit the familiar from the paw to change it." (none with no AC), never a
+box: `setCombatant()` sets no band or AC on a familiar row. Its HP change repaints the familiars too
+(`renderFamiliars()`), so the paw's card and the view's Familiars show it. Every kind but you gets
+**Remove** (`removeCombatant()` → `initDropRow()`, confirmed; if the removed row was acting, the
+marker moves to its living successor first); Remove takes a familiar out of this fight only and
+leaves it summoned. **Done** closes. The marker leaves an actor that just fell through
+`initSettleTurn()`, `setCombatant()`'s last step (a wrap onto a living row advances the round once,
+T5-M2). A tied neighbour (`initTie()`) offers **Act earlier** / **Act later** (`moveCombatant()`
+→ `initMoved()`), swapping places within the tie — the only way to resolve one; see the Ruling
+below. **You and your after-you rows are one block for every tie** (decision 7, `initBlock()`,
+`initUnits()`): the block's initiative is yours; your move takes the whole block past a tied
+neighbour; a tied neighbour's move takes it past the whole block, from either side, so a foe tied
+with you just before you gets Act later and lands after your companion, and one just after your
+companion gets Act earlier and lands before you; an after-you row ties only with another after-you
+row and moves only among them. Nothing ever lands between you and an after-you row. `openCombatant()` binds one delegated `click` listener on `#mBody`, guarded by a
 dataset flag so it survives every `innerHTML` swap rather than stacking a new listener on each
 reopen (the dialog reopens itself after most changes so the player sees the result). After a reopen
 `cdRefocus()` puts the keyboard back on the control that was pressed (−, +, Dead, the track, Act
 earlier/later — at the end of a tie the other one, then Done), so three presses of + stay on +.
+
+**Familiars in the fight** (#163). A familiar or companion on the header's paw joins when it is
+summoned (`fightFamiliars()`: `active`, with a string id, and only the first familiar with that id,
+as `famOfRow()` finds it), acting by its own roll or right after
+you, as its form says (`famTurn()`; see [Sections & layout](../ui/sections-and-layout.md)).
+**The familiar is the truth for its row** (decision 10): `syncFamiliarRows(c)` copies each familiar
+row's name, AC, switch and HP from its familiar (re-sorting when a switch changed, with `init` set to
+`null` when it becomes After), never writes a familiar, never adds or removes a row, and returns the
+ids of the rows whose familiar is gone or dismissed. Live, one function runs after every change to a
+familiar, `familiarsChanged(id, wasActive)`: the paw's Summon / Dismiss (`setFamiliarSummoned()`),
+Delete (`deleteFamiliar()`), and the familiar form's Save, whose "Summoned (active)" tick is the
+same summon. In a fight with a list, in order: **join** (the familiar was just summoned and has no
+row: its blank current HP is filled from its max, on the familiar, and `famRow()` adds it; After
+goes straight behind you, Own last with a blank initiative and the long toast (6 s) "<name> joined
+the fight. Tap its chip to set its initiative."; the marker and the round stay); **fill** (a familiar already
+in the fight saved with a blank current HP and a max takes the max); **copy and leave**
+(`syncFamiliarRows()`, then `initDropRow()` for each id, Remove's marker step without its repaint:
+the successor, and a wrap onto a living row advancing the round once); **settle**
+(`initSettleTurn()`, so a form save that drops the acting familiar to 0 moves the marker on); then
+one repaint of the chrome, the table and the familiars, and a save. With no fight, or a fight with
+no list yet, it changes nothing: Roll initiative will list them. A familiar the player Removed stays
+out until the next fight, or until it is dismissed and summoned again. End combat clears the rows as
+ever; the familiar keeps its HP, which was always its own. The End of combat window lists a familiar
+like a party member (struck, ", fell", at 0); Split among N and Loot are unchanged (decision 13).
+Nothing here has an Undo, as nothing in the tracker does.
 
 **Adding mid-fight** (`+ Add combatant`, `openAddCombatant()` → `addCombatant()`): a name (up to 60
 characters), an
@@ -377,6 +453,13 @@ XP; the fight itself had already ended and saved.
 - **`combatEnd()` clears `combatants` and `combatTurn` in the same step as `combatActive`/
   `combatRound` (#91)**, so nothing can read a stale fight off the character after End; the fight
   it cleared comes back in its return value, which is where #105 reads it.
+- **The familiar is the truth for its row (#163).** A `familiar` row's name, AC, switch and HP are
+  copies, refreshed by `syncFamiliarRows()`; the tracker's HP writes the familiar's own `hp.cur`.
+  `migrate()` never writes a familiar: it only copies from one into its row.
+- **After-you rows sit directly after you (#163).** `initSort()` glues them behind you whatever
+  anyone rolled, and every tie move treats you plus them as one block; nothing lands between.
+- **Every familiar change ends in `familiarsChanged()` (#163)**: the paw's Summon / Dismiss, Delete
+  and the form's Save, so the three ways to summon behave one way.
 - **Your HP repaints your chip and row in place, never the strip (#91).** `renderInitStrip()`
   patches two nodes; a swap of the strip there loses the next tap (see Traps).
 - **The End of combat window's state is never saved, and belongs to the character object (#105).**
@@ -434,6 +517,19 @@ XP; the fight itself had already ended and saved.
   height and a body that never scrolls, with 4px of right padding. On a phone, three monster rows
   pushed Cancel and Start out of reach, and the Init box sat on the border. It is the ordinary dialog
   now; only dialogs that scroll their own panes open wide (see [shell](../ui/shell.md)). → L8514
+- **Roll initiative's Init box wrapped on a phone (#164).** A monster row was a wrapping flex line
+  needing 353px (a 120px name, "× [60]", "AC [60]", a 60px Init, three gaps) and a phone's dialog
+  body gives 326, so each monster read as two lines. One grid under a Name · × · AC · Init heading
+  now; `rules-data.js` refuses a row rule with `flex-wrap:wrap` or `min-width:120px`. → L10110
+- **The join toast was gone before it could be read (#163, browser QA).** Summoning from the paw
+  reopens the familiar's window, and at the default 1.9 s the toast's instruction to tap the chip
+  faded while the player was still looking at it. It is the long toast (6 s). → L10110
+- **Re-tapping the pressed switch wiped a roll (#163, review).** `setCombatant(id, {after:false})`
+  on an Own familiar still cleared its `init` and sorted it last; with it acting, the next Next
+  wrapped the round and everyone after it lost a turn. The switch acts only on a change. → L10110
+- **The familiar form's record is a whitelist (#163).** Its Save builds the record from the fields
+  it shows, so a key it doesn't name is dropped: forgetting `turn` would reset the switch to Own on
+  every save. It carries `turn`; `sheet.js` checks an untouched save keeps "after". → L10110
 - **The "I rolled" box dropped under its words (#162)**, here, in Spend a Hit Die and in the level-up
   HP step: `input{width:100%}` filled the label. `.hd-how label` is an inline flex row with a 60px
   box. → L8514
@@ -487,6 +583,27 @@ Settled in the [initiative tracker spec](../../specs/1.9.0/2026-10-25-initiative
 | Who is skipped | Dead foes and Dead party members (a switch, since 0 HP means dying, not dead); you never are | Skipping anyone at 0 HP: wrong for dying characters |
 | Show rolls | A switch (`initShowRolls`, default on) hides initiative numbers from the strip | n/a |
 | Ties (plan-level, not in the spec table) | **Act earlier** / **Act later** buttons inside the combatant dialog | Dragging a table row: the table's targets are 44px inside a sideways-scrolling strip, where drag and scroll gestures collide |
+
+Settled in the [Initiative spec](../../specs/2026-11-07-initiative-design.md) §2 (#164, #163;
+Mike, 2026-11-07, for the first three and the eighth; the rest the spec's calls, for him to check):
+
+| Question | Decision | Rejected, and why |
+|---|---|---|
+| Which familiars join | **The summoned ones** (Mike); a dismissed familiar is not in the fight | Every familiar, with a tick to leave one out: a dismissed familiar isn't there to act |
+| When a familiar acts | **A switch per familiar, on its form: Own initiative or Right after you** (Mike). A 2024 familiar rolls its own; a beast companion or a summoned creature acts right after you | All roll their own; all act after you: each is wrong for half the creatures the paw holds |
+| Its hit points in the fight | **One HP, shared** (Mike): the tracker reads and writes the familiar's own `hp.cur` | Written back at End combat: two numbers disagree all fight. Never written back: two HPs kept in step by hand |
+| The switch's default | **Own initiative**, new and existing familiars | Right after you: a wrong After places it silently, a wrong Own shows a blank box and last, where the player sees it |
+| What a familiar's row is | **A new combatant kind, `familiar`, with `famId`** | Reusing `party`: its own copy of HP, Estimate and Dead, and someone on another sheet |
+| Where Right after you sits | **Directly after your row, always**, in order; its chip shows your number | Copying your number and breaking the tie: stale when your roll changes, and a tied foe could land between |
+| Ties around you | **You and your after-you rows are one block for every tie move**, at your initiative; an after-you row ties only with another | Ordinary ties: a foe's Act later could land between you and your companion |
+| A familiar at 0 HP | **Struck and skipped by Next**, still summoned; healing it puts it back (Mike) | Dismissing it automatically: its effects would switch off unasked. A Dead switch: 0 says it |
+| Summoned, dismissed or deleted mid-fight | **Summon joins at once; Dismiss or Delete leaves**, the marker moving on as Remove's does; the form's tick is the same summon | A dismissed familiar kept, greyed: a second kind of "not here". The tick ignored in a fight: three ways to summon, behaving two ways |
+| Edited mid-fight | **The familiar is the truth while it exists**: name, AC, switch and HP show at once | Copying once at Start, as party rows do: only the shared HP would be in step |
+| What its combatant dialog holds | **The HP stepper, the switch, Initiative on Own, AC as a line from the familiar, Remove (this fight only)** | An editable AC: a second place to change it. Remove dismissing it: a fight-only action shouldn't switch its effects off |
+| A blank current HP with a max | **Filled with the max on the familiar** when it joins a fight, when its form is saved in one, and when the tracker's HP box is cleared (review); never on load | Left blank: the card reads it as 0 and the tracker as unknown |
+| XP split and Loot | **Unchanged**: familiars take no XP share; Loot names fallen foes only | Counting familiars in the split |
+| The monster row's layout (#164) | **Column headings and one grid**: Name · × · AC · Init once, three fixed columns | Narrower boxes with labels: wraps again at 360. A two-line row: twice as tall |
+| A companion already typed into the Party card | **A release-note line** saying it can be removed there now; no code | Saying nothing: two rows for it next fight. Flagging a matching name: code for a one-time tidy-up |
 
 Settled in the [End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-design.md) §2, with Mike,
 2026-10-29 (#105):
@@ -546,3 +663,5 @@ Settled in the [End of combat spec](../../specs/1.9.0/2026-10-29-end-of-combat-d
 - 2026-11-04 — Loot opens the trade window as Loot, You get alone (no You give, no switches), with Take loot; the row reads "Open loot…", then "Looted from …". → ledger L8645, #166
 - 2026-11-06 — The window's Undo recovery takes back what came back and leaves the fired ammunition spent, so the next fight starts from nothing fired. → ledger L9155, #170
 - 2026-11-06 — The rail's AC shield reads FLAT, with its own rim, for a Flat AC; the view's copy is the same element. → ledger L9537, #130
+- 2026-11-07 — Roll initiative's rows are one grid under a Name · × · AC · Init heading, so a monster row fits a phone (#164); summoned familiars join the fight as `familiar` rows, by their own roll or right after you, one HP shared with the paw, the block tie rule, and every familiar change through `familiarsChanged()` (#163). → ledger L10110, #164, #163
+- 2026-11-07 — Review fixes: re-tapping the pressed switch changes nothing; a cleared HP box with a max takes the max; a negative familiar HP reads 0 in its row; only the first familiar per id joins. The join toast is the long one (browser QA). → ledger L10110, #163

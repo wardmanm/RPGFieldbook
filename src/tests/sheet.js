@@ -103,6 +103,8 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'renderInitStrip', 'irStart', 'renderCombatHeader',
   'initPrevTurn', 'initPrev', 'initCanPrev', 'initFitCount', 'initFitSide', 'iniMoreHTML', 'initTableBtnHTML',
   'openIniFly', 'closeIniFly',
+  'irFoeRowHTML', 'famTurn', 'fightFamiliars', 'famFillHP', 'famRow', 'initBlock', 'initChipHTML', 'initRowHTML',
+  'syncFamiliarRows', 'familiarsChanged', 'initDropRow', 'initSettleTurn', 'setFamiliarSummoned', 'deleteFamiliar',
   'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
   'cleanInvLog', 'logInv', 'logGrant', 'logItemSave', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
@@ -11575,6 +11577,623 @@ async function t181AddClassUndo() {
     ck('#170 ...once', got.undo() === false && h() === '1,1,0');
   } finally {
     ctx.toast = keep.toast; X.character = keep.ch; X._endFight = null;
+  }
+}
+
+/* ---------- #164 #163 Initiative: Roll initiative's rows are one grid under
+   Name · × · AC · Init (#164); summoned familiars join the fight, each by its
+   own roll or right after you, with one HP shared with the paw (#163). Spec:
+   src/docs/specs/2026-11-07-initiative-design.md. Synchronous, and kept above
+   the chain below, as the #170 block is: each sub-block puts back what it
+   swaps. */
+{
+  /* Task 1 (#164): the heading row and the grid */
+  {
+    const keep = {ch: X.character};
+    try {
+      X.character = X.blankChar(); X.character.name = 'Mira';
+      const h = X.initRollHTML([{id: 'p1', name: 'Thorn', ac: '', maxHp: ''}], false);
+      ck('#164 one heading row, aria-hidden, after your row and before the party and the monsters',
+         /id="irRes"[\s\S]*class="ir-head" aria-hidden="true">[\s\S]*>Name<[\s\S]*>×<[\s\S]*>AC<[\s\S]*>Init<[\s\S]*data-irparty="p1"[\s\S]*data-irfoe/.test(h), h);
+      ck('#164 ...exactly one', (h.match(/class="ir-head"/g) || []).length === 1, h);
+      const f = X.irFoeRowHTML();
+      ck('#164 a monster row shows no × or AC words; its boxes keep their names',
+         !/>×/.test(f) && !/>AC/.test(f) && /aria-label="How many"/.test(f) && /aria-label="AC guess \(optional\)"/.test(f) &&
+         /aria-label="Initiative"/.test(f) && /placeholder="Init"/.test(f) && /value="1"/.test(f) && (f.match(/data-irf="/g) || []).length === 4, f);
+    } finally { X.character = keep.ch; }
+  }
+
+  /* Task 2 (#163): a familiar's turn, on the form, the card and on load */
+  {
+    const ft = X.famTurn;
+    ck('#163 famTurn: "after" only for "after", Own for anything else',
+       ft(undefined) === 'own' && ft({}) === 'own' && ft({turn: 'AFTER'}) === 'own' && ft({turn: 7}) === 'own' && ft({turn: 'own'}) === 'own' && ft({turn: 'after'}) === 'after');
+    ck('#163 fightFamiliars: the summoned ones with an id, in familiar order',
+       X.fightFamiliars({familiars: [{id: 'a', active: true}, {id: 'b', active: false}, {active: true}, null, {id: '', active: true}, {id: 'c', active: 1}]}).map(f => f.id).join() === 'a,c' &&
+       X.fightFamiliars({}).length === 0 && X.fightFamiliars(null).length === 0);
+    /* review: two familiars sharing an id (a hand-edited file) would get two rows, and one's damage
+       would write the other's HP. The first familiar with an id is that id's familiar, everywhere
+       (famOfRow() and the paw's handlers find the first too), so only it can join. */
+    {
+      const twin = {familiars: [{id: 'x', name: 'A', active: true}, {id: 'x', name: 'B', active: true}, {id: 'y', name: 'C', active: true}]};
+      ck('#163 fightFamiliars keeps the first familiar per id', X.fightFamiliars(twin).map(f => f.name).join() === 'A,C', X.fightFamiliars(twin).map(f => f.name));
+      const shadow = {familiars: [{id: 'x', name: 'A', active: false}, {id: 'x', name: 'B', active: true}]};
+      ck('#163 ...and a later twin of a dismissed familiar does not join in its place', X.fightFamiliars(shadow).length === 0, X.fightFamiliars(shadow));
+    }
+    /* Review Focus 3: a hand-edited familiar neither throws nor is written */
+    const fill = f => { let r; try { r = X.famFillHP(f); } catch (e) { r = 'threw ' + e.message; } return r; };
+    const a = {hp: {cur: '', max: '7'}}, b = {hp: {cur: '  ', max: 7}};
+    ck('#163 famFillHP: a blank current HP with a max takes the max, as a string', fill(a) === true && a.hp.cur === '7' && a.hp.max === '7' && fill(b) === true && b.hp.cur === '7', [a, b]);
+    const same = [{hp: {cur: '3', max: '7'}}, {hp: {cur: '', max: ''}}, {hp: {cur: 'abc', max: 'x'}}, {}, {hp: 'junk'}, {hp: {cur: '', max: '0'}}];
+    const before = JSON.stringify(same);
+    ck('#163 famFillHP: anything else is left alone and says so, and nothing throws',
+       same.every(f => fill(f) === false) && JSON.stringify(same) === before, same.map(fill));
+    const input = {abilities: {}, familiars: [{id: 'a', name: 'Owl'}, {id: 'b', turn: 'after', kind: 'Wolf', speed: '40 ft'}, {id: 'c', turn: 'sideways'}]};
+    const was = JSON.stringify(input.familiars);
+    const m = X.migrate(input);
+    ck('#163 migrate normalizes turn on a copy: own, after, own; every other key kept',
+       m.familiars.map(f => f.turn).join() === 'own,after,own' && m.familiars[1].kind === 'Wolf' && m.familiars[1].speed === '40 ft' && m.familiars[0].name === 'Owl', m.familiars);
+    ck('#163 ...and the loaded objects are not touched', JSON.stringify(input.familiars) === was && !('turn' in input.familiars[0]), input.familiars);
+    ck('#163 the card says Right after you', /Right after you/.test(X.familiarCardHTML({id: 'w', name: 'Wolf', turn: 'after', active: true})) &&
+       !/Right after you/.test(X.familiarCardHTML({id: 'w', name: 'Wolf', turn: 'own', active: true})) && !/Right after you/.test(X.familiarCardHTML({id: 'w', name: 'Wolf', active: true})));
+
+    /* the form: its record is a whitelist, so it must carry turn */
+    const keep = {ch: X.character, gid: ctx.document.getElementById, om: ctx.openModal, cm: ctx.closeModal, rf: ctx.renderFamiliars, rc: ctx.recompute, sv: ctx.scheduleSave};
+    const byId = {};
+    const el = () => ({
+      value: '', dataset: {}, hidden: false, textContent: '', innerHTML: '', style: {}, children: [],
+      classList: {toggle() {}, add() {}, remove() {}, contains: () => false},
+      _on: {}, addEventListener(type, fn) { (this._on[type] = this._on[type] || []).push(fn); },
+      querySelector: () => null, querySelectorAll: () => [], closest: () => null, insertAdjacentHTML() {},
+      setAttribute() {}, removeAttribute() {}, focus() {}, remove() {},
+    });
+    let html = '';
+    ctx.document.getElementById = id => byId[id] || (byId[id] = el());
+    ctx.openModal = (t, h) => { html = String(h); };
+    ctx.closeModal = () => {}; ctx.renderFamiliars = () => {}; ctx.recompute = () => {}; ctx.scheduleSave = () => {};
+    const open = f => { Object.keys(byId).forEach(k => delete byId[k]); ctx.openFamiliarForm(f); };
+    const tap = (id, ev) => (byId[id]._on.click || []).forEach(fn => fn(ev));
+    try {
+      X.character = X.blankChar();
+      open();
+      ck('#163 the form has "In a fight": Own initiative / Right after you, with its hint, Own pressed for a new one',
+         /In a fight/.test(html) && /id="faTurn"/.test(html) && /data-turn="own" class="on" aria-pressed="true">Own initiative</.test(html) &&
+         /data-turn="after" class="" aria-pressed="false">Right after you</.test(html) &&
+         html.includes('A familiar rolls its own. A beast companion or a summoned creature acts right after you.') &&
+         html.indexOf('id="faSpeed"') < html.indexOf('id="faTurn"'), html);
+      ctx.document.getElementById('faName').value = 'Sprocket';
+      tap('faSave');
+      ck('#163 Save on a new familiar keeps turn:"own"', X.character.familiars.length === 1 && X.character.familiars[0].turn === 'own' && X.character.familiars[0].name === 'Sprocket', X.character.familiars);
+      const wolf = {id: 'w', name: 'Wolf', kind: 'Wolf', ac: '13', hp: {cur: '11', max: '11'}, speed: '40 ft', description: '', effects: [], active: true, turn: 'after'};
+      X.character.familiars.push(wolf);
+      open(wolf);
+      ck('#163 ...an After familiar opens with Right after you pressed', /data-turn="after" class="on" aria-pressed="true"/.test(html), html);
+      ctx.document.getElementById('faName').value = 'Wolf';
+      tap('faSave');
+      const w = () => X.character.familiars.find(f => f.id === 'w');
+      ck('#163 ...and Save, untouched, keeps "after" (the whitelist trap)', w().turn === 'after', w());
+      open(w());
+      tap('faTurn', {target: {closest: q => q === '[data-turn]' ? {dataset: {turn: 'own'}} : null}});
+      tap('faSave');
+      ck('#163 ...a tap on Own initiative, then Save, gives "own"', w().turn === 'own', w());
+    } finally {
+      X.character = keep.ch; ctx.document.getElementById = keep.gid; ctx.openModal = keep.om; ctx.closeModal = keep.cm;
+      ctx.renderFamiliars = keep.rf; ctx.recompute = keep.rc; ctx.scheduleSave = keep.sv;
+    }
+  }
+
+  /* Task 3 (#163): the familiar row in the tracker's core */
+  {
+    const C = X.cleanCombatants([
+      {kind: 'you', id: 'y', init: 12},
+      {kind: 'familiar', id: 'r', famId: 'f1', after: 'yes', init: '14', hp: '5', maxHp: '7', name: 'Owl', track: 'estimate', band: 2, dead: true, partyId: 'p'},
+      {kind: 'familiar', id: 'r2', famId: 'f2', after: true, init: 9, hp: '-3', maxHp: 'x'},
+      {kind: 'familiar', id: 'r3', name: 'No famId'},
+      {kind: 'familiar', id: 'r4', famId: 'f1', name: 'Second row for f1'},
+      {kind: 'foe', id: 'g', name: 'Wolf', init: 3}], true);
+    const cr = id => C.find(r => r.id === id) || {};
+    ck('#163 cleanCombatants keeps a familiar row: famId, a boolean after, init and HP as a party row\'s, Exact and nothing else',
+       C.length === 4 && cr('r').kind === 'familiar' && cr('r').famId === 'f1' && cr('r').after === false && cr('r').init === 14 && cr('r').hp === 5 && cr('r').maxHp === 7 &&
+       cr('r').track === 'exact' && cr('r').band === null && cr('r').dead === false && cr('r').partyId === '' && cr('r').name === 'Owl', C);
+    ck('#163 ...after:true has no initiative, a blank name reads "Familiar", and a negative HP reads 0 (review)', cr('r2').after === true && cr('r2').init === null && cr('r2').name === 'Familiar' && cr('r2').hp === 0 && cr('r2').maxHp === '', cr('r2'));
+    ck('#163 ...a row with no famId is dropped, and so is a second row for the same familiar', !C.some(r => r.id === 'r3' || r.id === 'r4'), C.map(r => r.id));
+    ck('#163 ...every other kind gets famId "" and after false', cr('y').famId === '' && cr('y').after === false && cr('g').famId === '' && cr('g').after === false, [cr('y'), cr('g')]);
+    ck('#163 combatantDead: a familiar at 0 HP is dead; blank or 3 is not',
+       X.combatantDead({kind: 'familiar', hp: 0}) === true && X.combatantDead({kind: 'familiar', hp: ''}) === false && X.combatantDead({kind: 'familiar', hp: 3}) === false);
+
+    const row = (id, kind, init) => ({id, kind, name: id, init, famId: '', after: false});
+    const fam = (id, after, init) => ({id, kind: 'familiar', name: id, famId: 'F' + id, after, init: after ? null : (init == null ? null : init), hp: '', maxHp: '', track: 'exact', band: null, dead: false, partyId: ''});
+    const ids = L => L.map(r => r.id).join();
+    ck('#163 initSort glues after-you rows behind you; a foe tied with you never lands between',
+       ids(X.initSort([row('f20', 'foe', 20), row('y', 'you', 12), row('f12', 'foe', 12), fam('A', true), row('p', 'party', 8), fam('B', true)])) === 'f20,y,A,B,f12,p');
+    ck('#163 ...with you unrolled, you and they go last', ids(X.initSort([row('f20', 'foe', 20), row('y', 'you', null), fam('A', true), row('f12', 'foe', 12), fam('B', true)])) === 'f20,f12,y,A,B');
+    ck('#163 ...with no you row they go last, and stay in their order', ids(X.initSort([fam('B', true), row('f20', 'foe', 20), fam('A', true), row('f12', 'foe', 12)])) === 'f20,f12,B,A');
+    ck('#163 ...stable among themselves wherever they were', ids(X.initSort([fam('B', true), row('y', 'you', 5), row('f', 'foe', 9), fam('A', true)])) === 'f,y,B,A');
+    ck('#163 initBlock: you and the after-you rows behind you', JSON.stringify(X.initBlock([row('f', 'foe', 9), row('y', 'you', 5), fam('A', true), fam('B', true), row('g', 'foe', 1)])) === '{"start":1,"end":3}' &&
+       JSON.stringify(X.initBlock([row('y', 'you', 5), row('g', 'foe', 1)])) === '{"start":0,"end":0}' && X.initBlock([row('g', 'foe', 1)]) === null);
+
+    /* decision 7, Review Focus 4: you and your after-you rows are one block for every tie move */
+    const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, rt: ctx.renderInitTable, ar: ctx.advanceRound};
+    ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {}; ctx.advanceRound = () => {};
+    try {
+      const start = (yInit = 12) => {
+        X.character = X.blankChar(); X.character.combatActive = true; X.character.combatRound = 1; X.character.initMode = 'turns';
+        X.character.combatants = [row('X', 'foe', 12), row('y', 'you', 12), fam('A', true), fam('B', true), row('Y', 'foe', yInit)];
+        X.character.combatTurn = 'X';
+      };
+      const L = () => X.character.combatants, at = id => L().findIndex(r => r.id === id), tie = (id, d) => X.initTie(L(), at(id), d);
+      start();
+      ck('#163 a foe tied with you, just before you, is offered Act later', tie('X', 1) === true && tie('X', -1) === false);
+      ck('#163 ...and it lands after your companions, never between you', X.moveCombatant('X', 1) === true && ids(L()) === 'y,A,B,X,Y', ids(L()));
+      start();
+      ck('#163 a foe tied with you, just after your companion, is offered Act earlier (the block\'s initiative is yours)', tie('Y', -1) === true);
+      ck('#163 ...and it lands before you', X.moveCombatant('Y', -1) === true && ids(L()) === 'X,Y,y,A,B', ids(L()));
+      start();
+      ck('#163 your Act later moves you and your companions together past the tied foe', X.moveCombatant('y', 1) === true && ids(L()) === 'X,Y,y,A,B', ids(L()));
+      start();
+      ck('#163 ...and your Act earlier likewise', X.moveCombatant('y', -1) === true && ids(L()) === 'y,A,B,X,Y', ids(L()));
+      start();
+      ck('#163 an after-you row ties only with another after-you row', tie('A', 1) === true && tie('A', -1) === false && tie('B', 1) === false && tie('B', -1) === true);
+      ck('#163 ...and moves only among them', X.moveCombatant('A', 1) === true && ids(L()) === 'X,y,B,A,Y' && X.moveCombatant('A', 1) === false && ids(L()) === 'X,y,B,A,Y', ids(L()));
+      start(11);
+      ck('#163 a foe with a different initiative next to the block gets neither', tie('Y', -1) === false && tie('Y', 1) === false && tie('y', 1) === false && X.moveCombatant('Y', -1) === false && ids(L()) === 'X,y,A,B,Y', ids(L()));
+      ck('#163 ...and the dialog offers the block\'s tie moves', /data-cmove="1"/.test(X.combatantDialogHTML(L()[0], X.character)) && !/data-cmove="-1"/.test(X.combatantDialogHTML(L()[2], X.character)) &&
+         /data-cmove="1"/.test(X.combatantDialogHTML(L()[2], X.character)));
+      start();
+      X.setCombatant('y', {init: 5});
+      ck('#163 your initiative changes: both companions follow you, in familiar order', ids(L()) === 'X,Y,y,A,B', ids(L()));
+      start();
+      ck('#163 Next goes you → companion → companion → on', X.initNextTurn(L(), 'y').turnId === 'A' && X.initNextTurn(L(), 'A').turnId === 'B' && X.initNextTurn(L(), 'B').turnId === 'Y');
+      L()[2].hp = 0;
+      ck('#163 ...skipping a companion at 0', X.initNextTurn(L(), 'y').turnId === 'B');
+    } finally { X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.advanceRound = keep.ar; }
+
+    const B = X.buildCombatants({name: 'Mira', init: 12}, [], [{name: 'Goblin', count: 1, ac: '', init: 10}],
+      [{id: 's', name: 'Sprocket', ac: '13', hp: {cur: '5', max: '7'}, turn: 'own', init: '14'},
+       {id: 'o', name: '', hp: {cur: '', max: ''}, turn: 'own', init: ''},
+       {id: 'w', name: 'Wolf', ac: 12, hp: {cur: '11', max: '11'}, turn: 'after', init: '20'}]);
+    const bs = id => B.find(r => r.famId === id) || {};
+    ck('#163 buildCombatants with familiars: Own by its roll, Own blank last, After behind you',
+       B.map(r => r.name).join() === 'Sprocket,Mira,Wolf,Goblin,Familiar' && bs('s').kind === 'familiar' && bs('s').init === 14 && bs('s').after === false &&
+       bs('w').after === true && bs('w').init === null && bs('o').init === null, B.map(r => [r.name, r.init]));
+    ck('#163 ...HP and AC copied from the familiar', bs('s').hp === 5 && bs('s').maxHp === 7 && bs('s').ac === 13 && bs('w').hp === 11 && bs('o').hp === '' && bs('o').maxHp === '' && bs('w').ac === 12, B);
+    ck('#163 ...every row has every key', B.every(r => typeof r.famId === 'string' && typeof r.after === 'boolean') && B.filter(r => r.kind !== 'familiar').every(r => r.famId === '' && r.after === false));
+    ck('#163 ...and three arguments build as before', X.buildCombatants({name: 'M', init: 3}, [], [{name: 'Rat', count: 2, ac: '', init: 4}]).map(r => r.name).join() === 'Rat 1,Rat 2,M');
+
+    /* Review Focus 3: health, from a mirror that may be blank */
+    const fr = (hp, maxHp) => ({kind: 'familiar', name: 'Owl', famId: 'f', after: false, init: null, hp, maxHp, track: 'exact', band: null, dead: false, partyId: ''});
+    const ht = X.combatantHealthText;
+    ck('#163 a familiar\'s health: "HP 5 / 7", "HP 5", "HP 0 / 7" (not "Dead"), "HP ? / 7", "Health not set"',
+       ht(fr(5, 7)) === 'HP 5 / 7' && ht(fr(5, '')) === 'HP 5' && ht(fr(0, 7)) === 'HP 0 / 7' && ht(fr('', 7)) === 'HP ? / 7' && ht(fr('', '')) === 'Health not set',
+       [ht(fr(5, 7)), ht(fr(5, '')), ht(fr(0, 7)), ht(fr('', 7)), ht(fr('', ''))]);
+    const h1 = X.famRow({id: 'h', hp: {cur: 'abc', max: 'x'}}, null), h2 = X.famRow({id: 'n'}, null);
+    ck('#163 ...a hand-edited familiar\'s row has a blank HP and max, no NaN, and reads "Health not set"',
+       h1.hp === '' && h1.maxHp === '' && h2.hp === '' && h2.maxHp === '' && !/NaN/.test(JSON.stringify([h1, h2])) && ht(h1) === 'Health not set' && ht(h2) === 'Health not set' &&
+       h1.famId === 'h' && h1.kind === 'familiar' && h2.name === 'Familiar', [h1, h2]);
+    const b1 = X.combatantBar(fr(5, 7)), b2 = X.combatantBar(fr('', 7)), b3 = X.combatantBar(fr(4, ''));
+    ck('#163 ...its bar: a share with a max, the "?" with a blank HP or no max',
+       Math.abs(b1.share - 5 / 7) < 1e-9 && b1.band === 1 && b2.band === null && b2.share === null && b3.band === null && b3.share === null, [b1, b2, b3]);
+    /* review: a negative HP typed on the familiar's form reads as 0, fallen, as the tracker's own
+       entry stores it; it used to read "HP ? / 7" and keep its turns */
+    {
+      const neg = X.famRow({id: 'm', name: 'Imp', hp: {cur: '-3', max: '7'}}, 4);
+      ck('#163 a familiar\'s negative HP reads 0 in its row: fallen, "HP 0 / 7"', neg.hp === 0 && X.combatantDead(neg) && ht(neg) === 'HP 0 / 7', neg);
+      const kept = X.cleanCombatants([{kind: 'familiar', id: 'k', famId: 'm', hp: -2, maxHp: 7}], true)[0];
+      ck('#163 ...and a stored row cleans it the same way', kept.hp === 0, kept);
+    }
+
+    /* chips and rows */
+    {
+      const keep2 = {ch: X.character};
+      try {
+        X.character = X.blankChar(); X.character.name = 'Mira'; X.character.combatActive = true; X.character.initMode = 'turns';
+        X.character.combatants = [Object.assign(row('y', 'you', 15), {name: ''}), Object.assign(fam('w', true), {name: 'Wolf <b>', hp: 9, maxHp: 11}),
+          Object.assign(fam('o', false, 9), {name: 'Owl', hp: 0, maxHp: 7})];
+        X.character.combatTurn = 'y';
+        const [, wolf, owl] = X.character.combatants;
+        const wc = X.initChipHTML(wolf, X.character), oc = X.initChipHTML(owl, X.character);
+        ck('#163 an after-you chip shows your number and says it acts right after you',
+           /class="ini-n">15</.test(wc) && /aria-label="Wolf &lt;b&gt;, acts right after you, HP 9 \/ 11"/.test(wc) && !/initiative/.test(wc) && !wc.includes('<b>'), wc);
+        ck('#163 ...a familiar at 0 is struck, with its HP', /class="ini-chip dead"/.test(oc) && /Owl, initiative 9, HP 0 \/ 7/.test(oc), oc);
+        const wr = X.initRowHTML(wolf, X.character);
+        ck('#163 ...its table row is tagged familiar, with your number', /class="ini-kind">familiar</.test(wr) && /class="ini-n">15</.test(wr) && /Wolf &lt;b&gt;/.test(wr) && /HP 9 \/ 11/.test(wr), wr);
+        X.character.initShowRolls = false;
+        ck('#163 ...Show rolls off hides its number like every number', !/class="ini-n"/.test(X.initChipHTML(wolf, X.character)));
+      } finally { X.character = keep2.ch; }
+    }
+    const sum = ctx.endFightSummaryHTML({combatants: [row('y', 'you', 3), X.famRow({id: 'a', name: 'Owl', hp: {cur: '0', max: '7'}}, 5), X.famRow({id: 'b', name: 'Cat', hp: {cur: '4', max: '7'}}, 2)]});
+    ck('#163 End of combat lists a familiar like a party member: a fallen one struck, "fell"',
+       /<li class="ec-chip fell"><s>Owl<\/s><span class="sh-vh">, fell<\/span><\/li>/.test(sum) && /<li class="ec-chip">Cat<\/li>/.test(sum), sum);
+  }
+
+  /* Task 4 (#163): Roll initiative lists the summoned familiars; Start brings them in */
+  {
+    const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, ra: ctx.renderActiveSpells, cm: ctx.closeModal, rf: ctx.renderFamiliars,
+      qs: ctx.document.querySelector, qsa: ctx.document.querySelectorAll, gid: ctx.document.getElementById};
+    let painted = 0;
+    ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderActiveSpells = () => {}; ctx.closeModal = () => {}; ctx.renderFamiliars = () => { painted++; };
+    const sheet = () => {
+      X.character = X.blankChar(); X.character.name = 'Mira';
+      X.character.familiars = [
+        {id: 's', name: 'Sprocket', kind: 'Owl', ac: '13', hp: {cur: '', max: '7'}, active: true, turn: 'own'},
+        {id: 'w', name: 'Wolf', kind: 'Wolf', ac: '12', hp: {cur: '11', max: '11'}, active: true, turn: 'after'},
+        {id: 'c', name: 'Cat', kind: 'Cat', ac: '', hp: {cur: '', max: '3'}, active: false, turn: 'own'}];
+      return X.character;
+    };
+    try {
+      sheet();
+      const h = X.initRollHTML([{id: 'p1', name: 'Thorn', ac: '', maxHp: ''}], false);
+      ck('#163 Roll initiative lists an Own familiar with its own Init box',
+         /<input data-irfam="s"[^>]*placeholder="Init"[^>]*aria-label="Sprocket&#39;s initiative"/.test(h) || /<input data-irfam="s"[^>]*placeholder="Init"[^>]*aria-label="Sprocket's initiative"/.test(h), h);
+      const wolfRow = (h.match(/<div class="ir-row ir-after">[\s\S]*?<\/div>/) || [''])[0];
+      ck('#163 ...an After one with no box, "right after you" in its place', /Wolf/.test(wolfRow) && /right after you/.test(wolfRow) && !/data-irfam="w"/.test(h), wolfRow);
+      ck('#163 ...both tagged familiar, after the party row and before the monsters; no dismissed Cat',
+         (h.match(/<span class="ir-k">familiar<\/span>/g) || []).length === 2 && h.indexOf('data-irparty="p1"') < h.indexOf('data-irfam="s"') &&
+         h.indexOf('data-irfam="s"') < h.indexOf('Wolf') && h.indexOf('Wolf') < h.indexOf('data-irfoe') && !/Cat/.test(h) && h.indexOf('class="ir-head"') < h.indexOf('data-irparty="p1"'), h);
+      ck('#163 ...the hint names them', h.includes("You, your party and your summoned familiars are in. Add the monsters, then everyone's roll."), h);
+      X.character.familiars.forEach(f => { f.active = false; });
+      ck('#163 ...with none summoned the hint is today\'s, and no familiar row', /Your party and you are in\. Add the monsters, then everyone's roll\./.test(X.initRollHTML([], false)) && !/data-irfam|ir-after/.test(X.initRollHTML([], false)));
+      sheet(); X.character.familiars[0].name = '<b>Sprocket</b>';
+      const hx = X.initRollHTML([], true);
+      ck('#163 ...a name comes out escaped; mid-fight lists them the same way', hx.includes('&lt;b&gt;Sprocket&lt;/b&gt;') && !hx.includes('<b>Sprocket') && /data-irfam="s"/.test(hx) && /right after you/.test(hx) &&
+         /Roll for the fight already running\./.test(hx), hx);
+      ck('#163 ...and Roll initiative still opens through the line #161 checks', /openModal\("Roll initiative",initRollHTML\(party,mid\)\);/.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '87-initiative.js'), 'utf8')));
+
+      /* Start: the boxes are read, a blank HP with a max is filled on the familiar */
+      sheet();
+      ctx.document.getElementById = id => id === 'irTyped' ? {value: ''} : keep.gid(id);
+      ctx.document.querySelectorAll = () => [];
+      ctx.document.querySelector = q => q === '[data-irfam="s"]' ? {value: '14'} : null;
+      X.irState().set = true; X.irState().faces = [8]; painted = 0;
+      const mod = X.initModOf();
+      ck('#163 Start brings them in', X.irStart([]) === '' && X.inCombat(X.character), X.character.combatants);
+      const L = X.character.combatants, fr = id => L.find(r => r.famId === id) || {};
+      ck('#163 ...Sprocket by its roll, Wolf right behind you, no Cat',
+         L.map(r => r.kind === 'you' ? 'you' : r.name).join() === (14 > 8 + mod ? 'Sprocket,you,Wolf' : 'you,Wolf,Sprocket') && fr('s').init === 14 && fr('w').after === true && fr('w').init === null && !L.some(r => r.famId === 'c'),
+         L.map(r => [r.name, r.init]));
+      ck('#163 ...Sprocket\'s blank current HP took its max, on the familiar and in its row, and the paw repainted',
+         X.character.familiars[0].hp.cur === '7' && fr('s').hp === 7 && fr('s').maxHp === 7 && fr('w').hp === 11 && painted > 0 && X.character.familiars[2].hp.cur === '', [X.character.familiars, fr('s')]);
+    } finally {
+      X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderActiveSpells = keep.ra; ctx.closeModal = keep.cm; ctx.renderFamiliars = keep.rf;
+      ctx.document.querySelector = keep.qs; ctx.document.querySelectorAll = keep.qsa; ctx.document.getElementById = keep.gid;
+      X.irState().set = false; X.irState().faces = [];
+    }
+  }
+
+  /* Task 5 (#163): the familiar's combatant dialog, and its HP written through */
+  {
+    const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, rt: ctx.renderInitTable, ar: ctx.advanceRound, rf: ctx.renderFamiliars,
+      om: ctx.openModal, gid: ctx.document.getElementById, qs: ctx.document.querySelector};
+    let painted = 0;
+    ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {}; ctx.renderFamiliars = () => { painted++; };
+    ctx.advanceRound = d => { X.character.combatRound = X.num(X.character.combatRound) + d; };
+    /* Goblin 15, Mira 12, Wolf (after), then Sprocket 10 and Rat ratInit in sorted place */
+    const fight = (ratInit = 3) => {
+      const c = X.blankChar(); c.name = 'Mira'; c.combatActive = true; c.combatRound = 2; c.initMode = 'turns';
+      c.familiars = [{id: 's', name: 'Sprocket', kind: 'Owl', ac: '13', hp: {cur: '5', max: '7'}, active: true, turn: 'own'},
+                     {id: 'w', name: 'Wolf', kind: 'Wolf', ac: '', hp: {cur: '4', max: ''}, active: true, turn: 'after'}];
+      c.combatants = X.buildCombatants({name: 'Mira', init: 12}, [], [{name: 'Goblin', count: 1, ac: '', init: 15}, {name: 'Rat', count: 1, ac: '', init: ratInit}],
+        c.familiars.map(f => Object.assign({}, f, {init: f.id === 's' ? 10 : null})));
+      c.combatTurn = c.combatants[0].id;
+      X.character = c; painted = 0;
+      return c;
+    };
+    const rowOf = id => X.character.combatants.find(r => r.famId === id);
+    const famOf = id => X.character.familiars.find(f => f.id === id);
+    const order = () => X.character.combatants.map(r => r.kind === 'you' ? 'you' : r.name).join();
+    try {
+      fight();
+      const d = X.combatantDialogHTML(rowOf('s'), X.character);
+      ck('#163 the familiar\'s dialog: the HP stepper with its max, the switch with Own pressed, Initiative, no AC box, Remove and Done',
+         /data-chp="-1"/.test(d) && /id="cdHp"/.test(d) && /\/ 7</.test(d) && /data-cturn="own" class="on" aria-pressed="true"/.test(d) && /data-cturn="after" class="" aria-pressed="false"/.test(d) &&
+         /id="cdInit"/.test(d) && !/id="cdAC"/.test(d) && /id="cdRemove"/.test(d) && /id="cdDone"/.test(d) && !/data-ctrack/.test(d) && !/id="cdDead"/.test(d) && !/data-cband/.test(d), d);
+      ck('#163 ...AC read from the familiar, as a line', d.includes('AC 13, from the familiar. Edit the familiar from the paw to change it.'), d);
+      const dw = X.combatantDialogHTML(rowOf('w'), X.character);
+      ck('#163 ...an After familiar: Right after you pressed, no Initiative, no AC line with no AC, no "/ max" with none',
+         /data-cturn="after" class="on" aria-pressed="true"/.test(dw) && !/id="cdInit"/.test(dw) && !/from the familiar/.test(dw) && !/cd-k">\//.test(dw) && /id="cdHp"/.test(dw), dw);
+      ck('#163 test setup: Goblin, you, Wolf right behind you, Sprocket, Rat', order() === 'Goblin,you,Wolf,Sprocket,Rat', order());
+
+      const s = rowOf('s');
+      X.setCombatant(s.id, {hp: 4});
+      ck('#163 HP written through: the familiar\'s hp.cur, as the form stores it, and the row', famOf('s').hp.cur === '4' && famOf('s').hp.max === '7' && s.hp === 4 && painted > 0, [famOf('s').hp, s.hp]);
+      X.setCombatant(s.id, {hp: 99});
+      ck('#163 ...clamped to the max', famOf('s').hp.cur === '7' && s.hp === 7, famOf('s').hp);
+      X.setCombatant(s.id, {hp: -3});
+      ck('#163 ...a negative reads 0', famOf('s').hp.cur === '0' && s.hp === 0, famOf('s').hp);
+      X.setCombatant(s.id, {hp: 5}); X.setCombatant(s.id, {hp: ''});
+      /* review: a cleared box wrote "" to the familiar, which its card reads as 0 while the tracker
+         read "?" and kept its turns; decision 12 applies here too */
+      ck('#163 ...a cleared box with a max takes the max, on the familiar and in the row (decision 12)', famOf('s').hp.cur === '7' && s.hp === 7, [famOf('s').hp, s.hp]);
+      X.setCombatant(rowOf('w').id, {hp: 12});
+      ck('#163 ...with no max, any whole number', famOf('w').hp.cur === '12' && rowOf('w').hp === 12, famOf('w').hp);
+      X.setCombatant(rowOf('w').id, {hp: ''});
+      ck('#163 ...and with no max a cleared box stays blank, both sides', famOf('w').hp.cur === '' && rowOf('w').hp === '', famOf('w').hp);
+      X.setCombatant(rowOf('w').id, {ac: 19});
+      ck('#163 ...and the dialog never sets a familiar\'s AC: it is the familiar\'s', rowOf('w').ac === '' && famOf('w').ac === '');
+      const lone = rowOf('w'); X.character.familiars = X.character.familiars.filter(f => f.id !== 'w');
+      X.setCombatant(lone.id, {hp: 3});
+      ck('#163 ...a familiar the row no longer finds is left alone', lone.hp === 3 && X.character.familiars.length === 1);
+
+      /* the acting familiar at 0 moves the marker (initSettleTurn) */
+      fight();
+      X.character.combatTurn = rowOf('s').id;
+      X.setCombatant(rowOf('s').id, {hp: 0});
+      ck('#163 the acting familiar at 0: the marker moves to its living successor, the round unchanged',
+         X.character.combatTurn === X.character.combatants.find(r => r.name === 'Rat').id && X.character.combatRound === 2 && X.combatantDead(rowOf('s')), [X.character.combatTurn, X.character.combatRound]);
+      fight(11);
+      ck('#163 test setup: Sprocket last', order() === 'Goblin,you,Wolf,Rat,Sprocket', order());
+      X.character.combatTurn = rowOf('s').id;
+      X.setCombatant(rowOf('s').id, {hp: 0});
+      ck('#163 ...acting and last: the first living row, and the round up by one (T5-M2)',
+         X.character.combatTurn === X.character.combatants[0].id && X.character.combatRound === 3, [X.character.combatTurn, X.character.combatRound]);
+
+      /* the switch from the dialog */
+      fight();
+      X.setCombatant(rowOf('s').id, {after: true});
+      ck('#163 the dialog\'s switch to Right after you: the familiar\'s turn, the row behind you, no initiative',
+         famOf('s').turn === 'after' && rowOf('s').after === true && rowOf('s').init === null && order() === 'Goblin,you,Wolf,Sprocket,Rat', [famOf('s').turn, order()]);
+      X.setCombatant(rowOf('s').id, {after: false});
+      ck('#163 ...back to Own initiative: blank, last among the unrolled',
+         famOf('s').turn === 'own' && rowOf('s').after === false && rowOf('s').init === null && order() === 'Goblin,you,Wolf,Rat,Sprocket', [famOf('s').turn, order()]);
+      X.setCombatant(rowOf('s').id, {init: '9'});
+      ck('#163 ...and then its initiative is typed as anyone\'s', rowOf('s').init === 9 && order() === 'Goblin,you,Wolf,Sprocket,Rat', order());
+      X.setCombatant(rowOf('w').id, {init: '20'});
+      ck('#163 ...an After row takes no initiative', rowOf('w').init === null && order() === 'Goblin,you,Wolf,Sprocket,Rat', order());
+
+      /* review: re-tapping the button already pressed wiped an Own familiar's roll and sorted it
+         last; acting, the next Next then wrapped the round and everyone after lost a turn */
+      {
+        const keepLive = ctx.setCombatLive; ctx.setCombatLive = () => {};
+        const all = () => JSON.stringify([X.character.combatants, X.character.combatTurn, X.character.combatRound, X.character.familiars]);
+        try {
+          fight();
+          X.character.combatTurn = rowOf('s').id;
+          let was = all();
+          X.setCombatant(rowOf('s').id, {after: false});
+          ck('#163 re-tapping Own initiative on the acting Own familiar changes nothing: its roll, its place, the marker, the round', all() === was && rowOf('s').init === 10, order());
+          X.initNext();
+          ck('#163 ...and Next goes on to the Rat, in the same round', X.character.combatTurn === X.character.combatants.find(r => r.name === 'Rat').id && X.character.combatRound === 2,
+             [X.character.combatTurn, X.character.combatRound]);
+          fight(); was = all();
+          X.setCombatant(rowOf('s').id, {after: false});
+          ck('#163 ...nor when it is not acting', all() === was);
+          X.setCombatant(rowOf('w').id, {after: true});
+          ck('#163 re-tapping Right after you on an After familiar changes nothing', all() === was);
+          X.character.combatTurn = rowOf('w').id; was = all();
+          X.setCombatant(rowOf('w').id, {after: true});
+          ck('#163 ...nor when it is acting', all() === was);
+        } finally { ctx.setCombatLive = keepLive; }
+      }
+
+      /* a tap on the switch reopens the dialog with focus on the pressed button */
+      {
+        fight();
+        const els = {};
+        let focused = '', opened = '';
+        const el = id => els[id] || (els[id] = {id, value: '', dataset: {}, ls: {}, addEventListener(ev, fn) { (this.ls[ev] = this.ls[ev] || []).push(fn); }, focus() {}});
+        ctx.document.getElementById = el;
+        ctx.document.querySelector = q => { const m = /^#mBody (.+)$/.exec(q); return m ? {focus() { focused = m[1]; }} : null; };
+        ctx.openModal = (t, h) => { opened = String(h); };
+        X.openCombatant(rowOf('s').id);
+        const t = {closest: q => q === '[data-cturn]' ? {dataset: {cturn: 'after'}} : null};
+        els.mBody.ls.click.forEach(f => f({target: t}));
+        ck('#163 a tap on Right after you writes the familiar, reopens the dialog and keeps focus on it',
+           famOf('s').turn === 'after' && /data-cturn="after" class="on"/.test(opened) && focused === '[data-cturn="after"]', [famOf('s').turn, focused]);
+        X.setCombatant(rowOf('s').id, {after: false}); X.setCombatant(rowOf('s').id, {init: '10'});
+        const was = order(), tOwn = {closest: q => q === '[data-cturn]' ? {dataset: {cturn: 'own'}} : null};
+        focused = '';
+        els.mBody.ls.click.forEach(f => f({target: tOwn}));
+        ck('#163 a tap on the Own initiative already pressed keeps its roll and place, focus on it', rowOf('s').init === 10 && order() === was && focused === '[data-cturn="own"]', [rowOf('s').init, order(), focused]);
+      }
+    } finally {
+      X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.advanceRound = keep.ar; ctx.renderFamiliars = keep.rf;
+      ctx.openModal = keep.om; ctx.document.getElementById = keep.gid; ctx.document.querySelector = keep.qs;
+    }
+  }
+
+  /* Task 6 (#163): keeping the tracker in step with the familiars */
+  {
+    const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, rt: ctx.renderInitTable, ar: ctx.advanceRound, rf: ctx.renderFamiliars,
+      re: ctx.recompute, toast: ctx.toast, om: ctx.openModal, cm: ctx.closeModal, gid: ctx.document.getElementById};
+    let toasts = [], toastOpts = [], painted = 0;
+    ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {}; ctx.recompute = () => {};
+    ctx.renderFamiliars = () => { painted++; }; ctx.toast = (m, a, o) => { toasts.push(String(m)); toastOpts.push(o); return null; };
+    ctx.advanceRound = d => { X.character.combatRound = X.num(X.character.combatRound) + d; };
+    /* you 15, Goblin 12, Sprocket (Own, summoned) by sInit, Thorn 8; Wolf (After) and Owl (Own) dismissed */
+    const fight = (sInit = 10) => {
+      const c = X.blankChar(); c.name = 'Mira'; c.combatActive = true; c.combatRound = 2; c.initMode = 'turns';
+      c.familiars = [
+        {id: 'w', name: 'Wolf', kind: 'Wolf', ac: '12', hp: {cur: '11', max: '11'}, speed: '40 ft', description: '', effects: [], active: false, turn: 'after'},
+        {id: 'o', name: 'Owl', kind: 'Owl', ac: '11', hp: {cur: '', max: '6'}, speed: '', description: '', effects: [], active: false, turn: 'own'},
+        {id: 's', name: 'Sprocket', kind: 'Owl', ac: '13', hp: {cur: '5', max: '7'}, speed: '', description: '', effects: [], active: true, turn: 'own'}];
+      c.combatants = X.buildCombatants({name: 'Mira', init: 15}, [{id: 'p1', name: 'Thorn', ac: '', maxHp: '', init: 8}], [{name: 'Goblin', count: 1, ac: '', init: 12}],
+        [Object.assign({}, c.familiars[2], {init: sInit})]);
+      c.combatTurn = c.combatants.find(r => r.name === 'Goblin').id;
+      X.character = c; toasts = []; toastOpts = []; painted = 0;
+      return c;
+    };
+    const rowOf = id => X.character.combatants.find(r => r.famId === id);
+    const famOf = id => X.character.familiars.find(f => f.id === id);
+    const named = n => X.character.combatants.find(r => r.name === n);
+    const order = () => X.character.combatants.map(r => r.kind === 'you' ? 'you' : r.name).join();
+    const snap = () => JSON.stringify([X.character.combatants, X.character.combatTurn, X.character.combatRound]);
+    try {
+      fight();
+      ck('#163 test setup: you, Goblin, Sprocket, Thorn; the Goblin acting', order() === 'you,Goblin,Sprocket,Thorn', order());
+
+      /* syncFamiliarRows: the familiar is the truth; it copies, never writes one, never adds or removes a row */
+      {
+        const c = fight(), s = famOf('s');
+        s.name = 'Sprocket II'; s.ac = '14'; s.hp = {cur: '3', max: '9'};
+        const was = JSON.stringify(c.familiars);
+        const gone = X.syncFamiliarRows(c);
+        ck('#163 syncFamiliarRows: a renamed, re-ACed and re-HPed familiar shows in its row', gone.length === 0 && rowOf('s').name === 'Sprocket II' && rowOf('s').ac === 14 &&
+           rowOf('s').hp === 3 && rowOf('s').maxHp === 9 && JSON.stringify(c.familiars) === was, rowOf('s'));
+        s.turn = 'after';
+        X.syncFamiliarRows(c);
+        ck('#163 ...a switch to After re-sorts it behind you, with no initiative', order() === 'you,Sprocket II,Goblin,Thorn' && rowOf('s').after === true && rowOf('s').init === null, order());
+        s.turn = 'own'; X.syncFamiliarRows(c);
+        ck('#163 ...and back to Own leaves it blank, last', order() === 'you,Goblin,Thorn,Sprocket II' && rowOf('s').after === false && rowOf('s').init === null, order());
+        s.active = false;
+        const id = rowOf('s').id, n = c.combatants.length, was2 = JSON.stringify(c.familiars);
+        ck('#163 ...a dismissed familiar\'s row id is returned and the row left in place', JSON.stringify(X.syncFamiliarRows(c)) === JSON.stringify([id]) && c.combatants.length === n && JSON.stringify(c.familiars) === was2);
+        c.familiars = c.familiars.filter(f => f.id !== 's');
+        ck('#163 ...and so is a deleted one\'s', JSON.stringify(X.syncFamiliarRows(c)) === JSON.stringify([id]) && c.combatants.length === n);
+      }
+
+      /* Review Focus 1: a summon mid-fight joins; the marker and the round stay */
+      fight();
+      ck('#163 summoning an After familiar mid-fight: its row directly behind you, no toast',
+         X.setFamiliarSummoned('w', true) === true && order() === 'you,Wolf,Goblin,Sprocket,Thorn' && rowOf('w').after === true && toasts.length === 0 &&
+         X.character.combatTurn === named('Goblin').id && X.character.combatRound === 2 && famOf('w').active === true, [order(), toasts]);
+      X.setFamiliarSummoned('o', true);
+      ck('#163 ...an Own one: last, blank, its blank HP filled from the max, one toast; the marker and round unchanged',
+         order() === 'you,Wolf,Goblin,Sprocket,Thorn,Owl' && rowOf('o').init === null && famOf('o').hp.cur === '6' && rowOf('o').hp === 6 && rowOf('o').maxHp === 6 &&
+         toasts.length === 1 && toasts[0] === 'Owl joined the fight. Tap its chip to set its initiative.' &&
+         X.character.combatTurn === named('Goblin').id && X.character.combatRound === 2 && painted > 0, [order(), toasts, famOf('o').hp]);
+      /* browser QA: the toast is an instruction, and at the default 1.9 s it was gone before it
+         could be read beside the familiar's reopened window */
+      ck('#163 ...the toast stays up long enough to read (opts.long, 6 s)', !!toastOpts[0] && toastOpts[0].long === true, toastOpts);
+      ck('#163 ...an unknown familiar changes nothing', X.setFamiliarSummoned('nobody', true) === false && X.deleteFamiliar('nobody') === false);
+
+      /* Review Focus 2: a dismiss or a delete leaves, moving the marker as Remove does */
+      fight();
+      X.character.combatTurn = rowOf('s').id;
+      X.setFamiliarSummoned('s', false);
+      ck('#163 dismissing the acting familiar mid-order: its row leaves, the marker goes to its successor, the round stays',
+         !rowOf('s') && X.character.combatTurn === named('Thorn').id && X.character.combatRound === 2 && famOf('s').active === false, [order(), X.character.combatTurn]);
+      fight(1);
+      ck('#163 test setup: Sprocket last', order() === 'you,Goblin,Thorn,Sprocket', order());
+      X.character.combatTurn = rowOf('s').id;
+      X.setFamiliarSummoned('s', false);
+      ck('#163 ...acting and last: the first living row, and the round up by one (T5-M2)',
+         !rowOf('s') && X.character.combatTurn === X.character.combatants[0].id && X.character.combatRound === 3, [X.character.combatTurn, X.character.combatRound]);
+      fight();
+      X.character.combatTurn = rowOf('s').id;
+      ck('#163 deleting the acting familiar likewise: gone from the paw and the fight, the marker on its successor',
+         X.deleteFamiliar('s') === true && !famOf('s') && !rowOf('s') && X.character.combatTurn === named('Thorn').id && X.character.combatRound === 2, order());
+      fight(); X.character.combatActive = false;
+      let before = JSON.stringify(X.character.combatants);
+      X.setFamiliarSummoned('w', true); X.setFamiliarSummoned('s', false);
+      ck('#163 out of a fight, a summon and a dismiss change nothing in the tracker', JSON.stringify(X.character.combatants) === before && famOf('w').active === true && famOf('s').active === false);
+      fight(); X.character.combatants = []; X.character.combatTurn = '';
+      X.setFamiliarSummoned('w', true); X.deleteFamiliar('s');
+      ck('#163 ...nor in a fight with no list yet (Roll initiative will list them)', X.character.combatants.length === 0 && toasts.length === 0 && !famOf('s'));
+      /* a familiar the player Removed stays out until it is dismissed and summoned again (the
+         form's save while it is still summoned is checked with the form, below) */
+      fight(); X.removeCombatant(rowOf('s').id);
+      X.setFamiliarSummoned('w', true);
+      ck('#163 a familiar Removed from the fight stays out: another familiar joining brings it nothing', !rowOf('s') && !!rowOf('w') && famOf('s').active === true, order());
+      X.setFamiliarSummoned('s', false);
+      ck('#163 ...dismissing it changes nothing more in the tracker', !rowOf('s') && famOf('s').active === false && order() === 'you,Wolf,Goblin,Thorn', order());
+      toasts = [];
+      X.setFamiliarSummoned('s', true);
+      ck('#163 ...and summoning it again brings it back: last, blank, with the toast', !!rowOf('s') && rowOf('s').init === null && order() === 'you,Wolf,Goblin,Thorn,Sprocket' &&
+         toasts.length === 1 && /^Sprocket joined the fight\./.test(toasts[0]), [order(), toasts]);
+
+      /* the form's "Summoned (active)" tick is the same summon */
+      {
+        const byId = {};
+        const el = () => ({
+          value: '', dataset: {}, hidden: false, textContent: '', innerHTML: '', style: {}, children: [],
+          classList: {toggle() {}, add() {}, remove() {}, contains: () => false},
+          _on: {}, addEventListener(type, fn) { (this._on[type] = this._on[type] || []).push(fn); },
+          querySelector: () => null, querySelectorAll: () => [], closest: () => null, insertAdjacentHTML() {},
+          setAttribute() {}, removeAttribute() {}, focus() {}, remove() {},
+        });
+        ctx.document.getElementById = id => byId[id] || (byId[id] = el());
+        ctx.openModal = () => {}; ctx.closeModal = () => {};
+        const put = (id, v) => { ctx.document.getElementById(id).value = v == null ? '' : String(v); };
+        /* open the form on f (or a new one), the fields as given, tick "Summoned" if asked, Save */
+        const save = (f, fields, tick) => {
+          Object.keys(byId).forEach(k => delete byId[k]);
+          ctx.openFamiliarForm(f);
+          const v = Object.assign({}, f ? {name: f.name, kind: f.kind, ac: f.ac, cur: f.hp.cur, max: f.hp.max, speed: f.speed, desc: f.description} : {}, fields || {});
+          put('faName', v.name); put('faKind', v.kind); put('faAc', v.ac); put('faHpCur', v.cur); put('faHpMax', v.max); put('faSpeed', v.speed); put('faDesc', v.desc);
+          if (tick) (byId.faActive._on.click || []).forEach(fn => fn());
+          (byId.faSave._on.click || []).forEach(fn => fn());
+        };
+        fight();
+        X.setFamiliarSummoned('o', true);
+        const viaPaw = {row: Object.assign({}, rowOf('o'), {id: ''}), order: order(), hp: famOf('o').hp.cur, toasts: toasts.slice()};
+        fight();
+        save(famOf('o'), null, true);
+        ck('#163 the form, saving an existing dismissed familiar with "Summoned" ticked: it joins exactly as the paw\'s summon does',
+           famOf('o').active === true && JSON.stringify(Object.assign({}, rowOf('o'), {id: ''})) === JSON.stringify(viaPaw.row) && order() === viaPaw.order &&
+           famOf('o').hp.cur === viaPaw.hp && JSON.stringify(toasts) === JSON.stringify(viaPaw.toasts), [rowOf('o'), viaPaw, toasts]);
+        fight();
+        save(null, {name: 'Hawk', cur: '', max: '4'}, true);
+        const hawk = X.character.familiars.find(f => f.name === 'Hawk');
+        ck('#163 ...saving a new familiar with it ticked joins it, filled, with the toast',
+           !!hawk && hawk.turn === 'own' && rowOf(hawk.id) && rowOf(hawk.id).hp === 4 && hawk.hp.cur === '4' && toasts[0] === 'Hawk joined the fight. Tap its chip to set its initiative.' &&
+           order() === 'you,Goblin,Sprocket,Thorn,Hawk', [order(), toasts]);
+        fight();
+        X.character.combatTurn = rowOf('s').id;
+        save(famOf('s'), null, true);
+        ck('#163 ...saving a summoned one with it unticked takes it out, the marker moving on', famOf('s').active === false && !rowOf('s') && X.character.combatTurn === named('Thorn').id, order());
+        /* Review Focus 5 */
+        fight();
+        before = snap();
+        save(famOf('s'), {name: 'Sprocket', speed: 'fly 60 ft'}, false);
+        save(famOf('w'), null, false);
+        ck('#163 ...saving with nothing about summoning changed adds and removes nothing, no toast, the marker and round alone',
+           snap() === before && toasts.length === 0 && famOf('s').speed === 'fly 60 ft', [snap(), before, toasts]);
+        save(famOf('s'), {name: 'Sprocket the Bold', ac: '15'}, false);
+        ck('#163 ...but its new name and AC show in the tracker at once', rowOf('s').name === 'Sprocket the Bold' && rowOf('s').ac === 15, rowOf('s'));
+
+        /* a form save fills and settles */
+        fight();
+        save(famOf('s'), {cur: '', max: '7'}, false);
+        ck('#163 a form save mid-fight with a blank current HP and a max fills it, on the familiar and in the row', famOf('s').hp.cur === '7' && rowOf('s').hp === 7, [famOf('s').hp, rowOf('s')]);
+        X.character.combatTurn = rowOf('s').id;
+        save(famOf('s'), {cur: '0'}, false);
+        ck('#163 ...saving the acting familiar at 0 HP moves the marker to its living successor', famOf('s').hp.cur === '0' && rowOf('s').hp === 0 && X.character.combatTurn === named('Thorn').id &&
+           X.character.combatRound === 2, [X.character.combatTurn, order()]);
+        /* review: a negative typed on the form read "HP ? / 7" in the row and kept its turns */
+        fight();
+        X.character.combatTurn = rowOf('s').id;
+        save(famOf('s'), {cur: '-3'}, false);
+        ck('#163 ...a negative typed on the form: the familiar keeps it, its row reads 0, fallen, and the marker moves on',
+           famOf('s').hp.cur === '-3' && rowOf('s').hp === 0 && X.combatantDead(rowOf('s')) && X.character.combatTurn === named('Thorn').id, [famOf('s').hp, rowOf('s'), order()]);
+        /* review item 6: the Removed familiar's form saved while it is still summoned brings it nothing */
+        fight(); X.removeCombatant(rowOf('s').id);
+        before = snap();
+        save(famOf('s'), {speed: 'fly 60 ft'}, false);
+        ck('#163 ...saving a Removed familiar\'s form while it is still summoned leaves it out, no toast', !rowOf('s') && snap() === before && toasts.length === 0 && famOf('s').speed === 'fly 60 ft', order());
+        fight(); X.character.combatActive = false; X.character.combatants = [];
+        save(famOf('o'), null, true);
+        ck('#163 ...out of a fight a save fills nothing and joins nothing', famOf('o').active === true && famOf('o').hp.cur === '' && X.character.combatants.length === 0 && toasts.length === 0);
+      }
+
+      /* on load */
+      {
+        const g = X.blankChar(); g.name = 'Mira'; g.combatActive = true; g.combatRound = 4; g.initMode = 'turns';
+        g.familiars = [{id: 's', name: 'Sprocket', ac: '13', hp: {cur: '2', max: '7'}, active: true, turn: 'own'},
+                       {id: 'w', name: 'Wolf', ac: '', hp: {cur: '11', max: '11'}, active: false, turn: 'after'},
+                       {id: 'h', name: 'Hawk', ac: '', hp: {cur: '', max: '7'}, active: true, turn: 'own'}];
+        const yr = {id: 'y', kind: 'you', name: '', init: 15, ac: '', track: '', band: null, hp: '', maxHp: '', dead: false, partyId: '', famId: '', after: false};
+        const fr = (id, famId, init, after, hp) => ({id, kind: 'familiar', name: 'stale', init, ac: '', track: 'exact', band: null, hp, maxHp: 7, dead: false, partyId: '', famId, after});
+        g.combatants = [yr, fr('rw', 'w', null, true, 11), fr('rs', 's', 10, false, 5), fr('rh', 'h', 9, false, 7),
+          {id: 'g', kind: 'foe', name: 'Goblin', init: 3, ac: '', track: '', band: null, hp: '', maxHp: '', dead: false, partyId: '', famId: '', after: false}];
+        g.combatTurn = 'rw';
+        const saved = JSON.parse(JSON.stringify(g)), famsWas = JSON.stringify(saved.familiars.map(f => f.hp));
+        const m = X.migrate(saved);
+        ck('#163 on load: a row whose familiar is dismissed is dropped; the marker on the first living row, the round unchanged',
+           !m.combatants.some(r => r.famId === 'w') && m.combatTurn === 'y' && m.combatRound === 4 && m.combatants.map(r => r.id).join() === 'y,rs,rh,g', [m.combatants.map(r => r.id), m.combatTurn]);
+        ck('#163 ...a kept row\'s copy refreshed from its familiar', m.combatants[1].hp === 2 && m.combatants[1].name === 'Sprocket' && m.combatants[1].ac === 13, m.combatants[1]);
+        ck('#163 ...no familiar written: a blank current HP with a max stays blank, and its row reads "HP ? / 7"',
+           JSON.stringify(m.familiars.map(f => f.hp)) === famsWas && m.familiars[2].hp.cur === '' && m.combatants[2].hp === '' && X.combatantHealthText(m.combatants[2]) === 'HP ? / 7' &&
+           !X.combatantDead(m.combatants[2]), [m.familiars, m.combatants[2]]);
+        const m2 = X.migrate(JSON.parse(JSON.stringify(m)));
+        ck('#163 ...and a save → load round trip mid-fight keeps the familiar rows in their places', JSON.stringify(m2.combatants) === JSON.stringify(m.combatants) && m2.combatTurn === m.combatTurn, m2.combatants);
+        const g2 = JSON.parse(JSON.stringify(g)); g2.familiars = g2.familiars.filter(f => f.id !== 's'); g2.combatTurn = 'rh';
+        const m3 = X.migrate(g2);
+        ck('#163 ...a deleted familiar\'s row goes too, and a living actor keeps the marker', !m3.combatants.some(r => r.famId === 's') && m3.combatTurn === 'rh', m3.combatants.map(r => r.id));
+      }
+    } finally {
+      X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderInitTable = keep.rt; ctx.advanceRound = keep.ar; ctx.renderFamiliars = keep.rf;
+      ctx.recompute = keep.re; ctx.toast = keep.toast; ctx.openModal = keep.om; ctx.closeModal = keep.cm; ctx.document.getElementById = keep.gid;
+    }
   }
 }
 
