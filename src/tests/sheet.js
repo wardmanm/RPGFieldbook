@@ -98,6 +98,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'renderInitStrip', 'irStart', 'renderCombatHeader',
   'initPrevTurn', 'initPrev', 'initCanPrev', 'initFitCount', 'initFitSide', 'iniMoreHTML', 'initTableBtnHTML',
   'openIniFly', 'closeIniFly',
+  'irFoeRowHTML',
   'INV_LOG_SIZES', 'COIN_CP', 'coinsToCp', 'cpToGpText', 'itemWorthCp', 'invSame', 'invSnap',
   'cleanInvLog', 'logInv', 'logGrant', 'logItemSave', 'invUndoCheck', 'invUndo', 'invRemoveQty', 'invRestore',
   'applyCoinInput', 'convertCoins', 'ammoFightSummary',
@@ -10267,6 +10268,30 @@ async function t181AddClassUndo() {
     ck('#170 ...once', got.undo() === false && h() === '1,1,0');
   } finally {
     ctx.toast = keep.toast; X.character = keep.ch; X._endFight = null;
+  }
+}
+
+/* ---------- #164 #163 Initiative: Roll initiative's rows are one grid under
+   Name · × · AC · Init (#164); summoned familiars join the fight, each by its
+   own roll or right after you, with one HP shared with the paw (#163). Spec:
+   src/docs/specs/2026-11-07-initiative-design.md. Synchronous, and kept above
+   the chain below, as the #170 block is: each sub-block puts back what it
+   swaps. */
+{
+  /* Task 1 (#164): the heading row and the grid */
+  {
+    const keep = {ch: X.character};
+    try {
+      X.character = X.blankChar(); X.character.name = 'Mira';
+      const h = X.initRollHTML([{id: 'p1', name: 'Thorn', ac: '', maxHp: ''}], false);
+      ck('#164 one heading row, aria-hidden, after your row and before the party and the monsters',
+         /id="irRes"[\s\S]*class="ir-head" aria-hidden="true">[\s\S]*>Name<[\s\S]*>×<[\s\S]*>AC<[\s\S]*>Init<[\s\S]*data-irparty="p1"[\s\S]*data-irfoe/.test(h), h);
+      ck('#164 ...exactly one', (h.match(/class="ir-head"/g) || []).length === 1, h);
+      const f = X.irFoeRowHTML();
+      ck('#164 a monster row shows no × or AC words; its boxes keep their names',
+         !/>×/.test(f) && !/>AC/.test(f) && /aria-label="How many"/.test(f) && /aria-label="AC guess \(optional\)"/.test(f) &&
+         /aria-label="Initiative"/.test(f) && /placeholder="Init"/.test(f) && /value="1"/.test(f) && (f.match(/data-irf="/g) || []).length === 4, f);
+    } finally { X.character = keep.ch; }
   }
 }
 

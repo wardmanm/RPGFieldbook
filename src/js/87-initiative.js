@@ -148,12 +148,17 @@ function openPartyForm(id){
    "Roll initiative" when an old save has a fight but no list (midFight). */
 let _ir={faces:[],set:false,adv:false};
 function irState(){return _ir;}
+/* #164: a monster row is four bare boxes in the grid the heading row names
+   (Name · × · AC · Init, .ir-head); each box keeps its own aria-label, since
+   the heading is aria-hidden. With "×" and "AC" in every row it needed 353px
+   and a phone's dialog gives 326, so Init wrapped. */
 function irFoeRowHTML(){
   return `<div class="ir-foe" data-irfoe><input data-irf="name" placeholder="Monster" aria-label="Monster name" autocomplete="off">`+
-    `<label class="ir-k">× <input data-irf="count" inputmode="numeric" size="2" value="1" aria-label="How many"></label>`+
-    `<label class="ir-k">AC <input data-irf="ac" inputmode="numeric" size="2" aria-label="AC guess (optional)"></label>`+
+    `<input data-irf="count" inputmode="numeric" size="2" value="1" aria-label="How many">`+
+    `<input data-irf="ac" inputmode="numeric" size="2" aria-label="AC guess (optional)">`+
     `<input data-irf="init" inputmode="numeric" size="3" placeholder="Init" aria-label="Initiative"></div>`;
 }
+function irHeadHTML(){return `<div class="ir-head" aria-hidden="true"><span>Name</span><span>×</span><span>AC</span><span>Init</span></div>`;}
 function initRollHTML(party,midFight){
   const mod=initModOf();
   return `<p class="hint">${midFight?"Roll for the fight already running.":"Your party and you are in. Add the monsters, then everyone's roll."}</p>`+
@@ -161,7 +166,7 @@ function initRollHTML(party,midFight){
     `<div class="hd-how"><button type="button" class="tbtn primary" id="irRoll">🎲 Roll for me</button> <span>or</span> `+
     `<label>I rolled <input id="irTyped" inputmode="numeric" size="3"></label> <button type="button" class="tbtn" id="irApply">Apply</button> `+
     `<button type="button" class="switch" id="irAdv" role="switch" aria-checked="false" aria-label="Advantage"></button><span class="ir-k">Advantage</span></div>`+
-    `<div class="hd-res" id="irRes" aria-live="polite"></div></div>`+
+    `<div class="hd-res" id="irRes" aria-live="polite"></div></div>`+irHeadHTML()+
     (party.length?`<div class="ir-party">`+party.map(p=>`<label class="ir-row"><span>${esc(p.name)} <span class="ir-k">party</span></span>`+
       `<input data-irparty="${esc(p.id)}" inputmode="numeric" size="3" placeholder="Init" aria-label="${esc(p.name+"'s initiative")}"></label>`).join("")+`</div>`:"")+
     `<div id="irFoes">${irFoeRowHTML()}</div><button type="button" class="add" id="irAddFoe">+ Add a monster</button>`+

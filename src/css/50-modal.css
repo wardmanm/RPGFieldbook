@@ -275,17 +275,23 @@ button.chip.ext-req::after,a.chip.ext-req::after{content:"";position:absolute;le
 
 /* ---- Roll initiative (#91) ---- */
 .ir-you{padding:8px 0;border-bottom:1px dotted var(--hair)}
-.ir-row,.ir-foe{display:flex;align-items:center;gap:8px;min-height:44px;border-bottom:1px dotted var(--hair);flex-wrap:wrap}
-.ir-row>span{flex:1;min-width:0}
-.ir-foe input[data-irf="name"]{flex:1;min-width:120px}
+/* #164: one grid for the heading and every row under it: the name takes what
+   is left, then ×, AC and Init in fixed columns (178px with the gaps), so at
+   320px the name keeps about 78px and nothing wraps. It was a wrapping flex
+   line needing 353px, and a phone's dialog gives 326: Init dropped a line. */
+.ir-head,.ir-row,.ir-foe{display:grid;grid-template-columns:minmax(0,1fr) 48px 52px 60px;gap:6px;align-items:center}
+.ir-row,.ir-foe{min-height:44px;border-bottom:1px dotted var(--hair)}
+.ir-head{padding:10px 0 4px;border-bottom:1px dotted var(--hair);font-family:var(--head);font-size:11px;color:var(--ink-soft)}
+.ir-head>span+span{text-align:center}
+.ir-row>span{grid-column:1;min-width:0;overflow-wrap:anywhere}
 .ir-k{font-family:var(--head);font-size:11px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:4px}
 .hd-res.bad{color:var(--brick)}
-/* #91 fix round 1: the general input{width:100%} rule forces every narrow
-   box in a row onto its own full-width line (flex-wrap has nowhere else to
-   put it). Only the name input should flex; count/AC/initiative are fixed,
-   narrow boxes that sit beside their label on the same line. */
-.ir-row input[data-irparty],.ir-foe input[data-irf="count"],.ir-foe input[data-irf="ac"],.ir-foe input[data-irf="init"]{
-  width:60px;flex:0 0 auto;min-height:44px}
+/* Each box fills its cell (the general input{width:100%} rule did that to the
+   whole row before #91's fix round 1 gave them fixed widths; the grid's
+   columns are those widths now). A party row's box sits in the Init column. */
+.ir-row input[data-irparty],.ir-foe input{width:100%;min-width:0;min-height:44px}
+.ir-row input[data-irparty]{grid-column:4}
+.ir-foe input[data-irf="count"],.ir-foe input[data-irf="ac"],.ir-foe input[data-irf="init"],.ir-row input[data-irparty]{padding-left:6px;padding-right:6px}
 /* #91 fix round 1: "+ Add a monster" used .label .add's look, but that rule
    is scoped to .label — here it sits in a plain modal body (or, later, the
    initiative table's own foot), so it needs its own scoped copy. */

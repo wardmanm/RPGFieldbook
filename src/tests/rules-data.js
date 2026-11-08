@@ -3275,6 +3275,22 @@ function block(html, needle, tag) {
      /\.hd-how label\{[^}]*display:inline-flex[^}]*align-items:center/.test(sc) && /\.hd-how label input\{[^}]*width:\d+px/.test(sc));
 }
 
+// ---------- #164 Roll initiative's rows are one grid that never wraps
+{
+  /* A monster row was a wrapping flex line needing 353px (a 120px name, "× [60]",
+     "AC [60]", a 60px Init and three gaps); a phone's dialog gives it 326px, so
+     Init dropped to a second line. One grid under the heading: the name takes
+     what is left, the three boxes fixed columns. */
+  const mc = fs.readFileSync(path.join(__dirname, '..', 'css', '50-modal.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = mc.match(/[^{}]+\{[^}]*\}/g) || [];
+  const grid = rules.find(r => { const sel = r.split('{')[0]; return /\.ir-head\b/.test(sel) && /\.ir-row\b/.test(sel) && /\.ir-foe\b/.test(sel); }) || '';
+  ck('#164 Roll initiative\'s rows are one grid that never wraps',
+     /display:grid/.test(grid) && /grid-template-columns:minmax\(0,1fr\) 48px 52px 60px/.test(grid), grid);
+  const rowRules = rules.filter(r => /\.ir-(row|foe)\b/.test(r.split('{')[0]));
+  ck('#164 ...and no row rule wraps or holds the name to 120px',
+     rowRules.length > 0 && !rowRules.some(r => /flex-wrap:wrap|min-width:120px/.test(r)), rowRules);
+}
+
 // ---------- #129 the Include spells tick: one delegated listener, not one per editor
 {
   const forms = fs.readFileSync(path.join(ROOT, 'src/js/80-modal-forms.js'), 'utf8');
