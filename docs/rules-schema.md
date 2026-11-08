@@ -473,7 +473,8 @@ the converter applies — mirroring `overlay.json` for feats.
 - **`skills`** (granted), **`equipment`** (text). **`feature`** is optional (2024 XPHB backgrounds
   have none; some settings do).
 - **`tools`** and **`languages`** become chips on the Bio tab, marked "· background", and leave with
-  the background when it is removed or changed. Separate them with commas or "and". A part that offers
+  the background when it is removed or changed. Separate them with commas or "and", or give a list of
+strings. A tool's own name is always read as that tool ("Three-Dragon Ante Set"). A part that offers
   a choice ("Choose one kind of Gaming Set", "one type of Artisan's Tools of your choice") is asked for
   when the background is added, from the kinds it names: **Artisan's Tools**, **Gaming Set** and
   **Musical Instrument** (or **Instrument**). A choice that names none of them, or one the player

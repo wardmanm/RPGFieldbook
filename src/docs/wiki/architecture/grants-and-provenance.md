@@ -105,7 +105,10 @@ not know (hand-edited) reads as the player's: `chipSrcLabel()` looks up own keys
 `chipClean()` clears it, so the chip's × and `removeChip()` agree.
 
 **Tools** (#121). A background's `tools` text grants chips the same way, through `grantTools()`:
-`toolParse()` splits it as `langParse()` does, a named tool becomes a chip stamped `bg:<Name>` (one
+`toolParse()` splits it as `langParse()` does (an array of strings reads as one list). A part that
+is a known tool's name, from the built-in list or a loaded pack's `Tool` items
+(`toolKnownNames()`), is that tool; otherwise its words, split on spaces so a hyphenated one is
+never a count or choice word, decide whether it is a choice. A named tool becomes a chip stamped `bg:<Name>` (one
 the sheet already has keeps its own source), and a part naming a choice ("Choose one kind of Gaming
 Set") adds `count` **placeholders** stamped the same way, each `{id, name, src, ask}` with the pack's
 wording in `ask` and the kinds it names as its `name` ("Gaming Set", or "Tool of your choice" when
@@ -123,12 +126,14 @@ player's value always wins; `0` is full) and records `{sid, field, value}` in `c
 value as the source gave it (a Humblewood speed `30`, an SRD one `"30 ft"`), or `null` when the field
 was already full. There is one entry per sid and field, replaced when the source applies again; a
 species and its subrace share one sid, so a later `null` never replaces the same sid's value, and
-their two text lines are recorded as the one text they make together. The text is appended, never
-"full". `unseedSource(c, sid, would)` reverts each field:
+their two text lines are recorded as the one text they make together, taken back line by line. The
+text is appended, never "full". `unseedSource(c, sid, would)` reverts each field, and answers which
+fields it emptied:
 - a field with a `player` entry is skipped entirely;
 - an entry with a value: the field is emptied only while it still equals it (compared as text, so
-  `30` and `"30"` match), and the recorded text is taken out where it still stands as its own line, with the newline
-  that joined it; anything the player changed stays;
+  `30` and `"30"` match), and each recorded line of text is taken out where it still stands as its
+  own line, with the newline that joined it; anything the player changed stays, the species' line
+  and the subrace's each on its own;
 - an entry with `null`: nothing is touched;
 - **no entry at all** for that sid and field means a source applied before the record: the outgoing
   source's loaded definition (`would`, from `raceWould()` for a species, `spellcasting` for a class or
@@ -186,9 +191,10 @@ legacy `ancestry` / `background` string when it is the removed name, so print st
 `removeClass()` also removes every `subclass:<Class>:` grant and seed and un-seeds the level-1 HP.
 Removing the first class while another remains hands the saving throws on: the class now first gets
 its own through `grantClassSaves()`, under its own sid, so they revert with it in turn. An emptied
-spellcasting ability is handed on the same way: after `removeClass()`, and after `selectSubclass()`
-replaces a subclass that seeded it, `handOnSpellAbility()` seeds it from the first remaining class,
-or that class's subclass, that casts, under that one's sid. `applyRace()` and `applyBackground()`
+spellcasting ability is handed on the same way: when `removeClass()`'s revert, or the revert of a
+subclass `selectSubclass()` replaces, empties it, `handOnSpellAbility()` seeds it from the first
+remaining class, or that class's subclass, that casts, under that one's sid. Only then: a "—" the
+player chose on the Spells tab stays "—". `applyRace()` and `applyBackground()`
 remove the previous one first, so a swap empties the old species' unchanged speed and size and the
 new species seeds them; a speed or size the player set survives, its `player` entry skipped by the
 revert and counted full by the seed. Changing a subclass removes the old subclass's features,
@@ -257,7 +263,12 @@ grants and seeds before applying the new one.
   does to the text.
 - **A species and its subrace seed under one sid.** Recording the subrace's `null` over the species'
   value (the field already full) would have left a removed species' speed behind; a later `null`
-  never replaces the same sid's value.
+  never replaces the same sid's value. Their text is one record, so it is taken back line by line,
+  or editing the subrace's line would keep the species' too.
+- **`\b` reads a hyphen as a word's edge.** "Three-Dragon Ante Set" matched the count word
+  "three" and parsed as a choice of three tools, and the one-time lift would have turned a player's
+  old "Tools: Three-Dragon Ante Set" line into three placeholders for good. A known tool's name is
+  now matched first, and the words are split on spaces.
 
 ## Decisions
 
@@ -282,7 +293,7 @@ grants and seeds before applying the new one.
 | A swap or remove when the player changed a seeded value (#131) | The player's value stays: a source's value is reverted only while it still matches what that source put in (Mike) | The source always wins: overwrites the player's choice. Asking each time: a dialog for something with one right answer |
 | How the sheet knows what a source seeded (#131) | A record, `character.seeds`, one `{sid, field, value}` per sid and field, with `null` for a source that found the field full | Reading speed and size live from the pack: a sheet without its pack reads Speed 0. Recognising by value alone, as level-1 HP is: a pack update that changes a species' speed strands the old value |
 | Sheets saved before the record (#131) | A fallback only where there is no entry at all for that sid and field: reverted if it equals what the loaded definition seeds, else kept | No fallback: every existing character keeps the bug. A one-time pass in `migrate()`: the rules may not be loaded when it runs |
-| The spellcasting ability when its source goes (#131) | Handed to the next caster, after every revert that can empty it | Leaving it blank: a Cleric/Wizard who drops Cleric would have no spell DC |
+| The spellcasting ability when its source goes (#131) | Handed to the next caster, only after a revert that emptied it | Leaving it blank: a Cleric/Wizard who drops Cleric would have no spell DC. Handing on whenever it is blank: a "—" the player chose was overwritten by the next subclass pick (review, L9760) |
 | How a value the player set is told apart from a seed (#131) | A `player` entry in `seeds`, which `seedField()` counts as full and `unseedSource()` skips | Deleting the field's entries on a typed save: the fallback would then revert a typed speed equal to the old species' |
 
 ## Open

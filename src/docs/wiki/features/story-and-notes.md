@@ -59,7 +59,8 @@ the chips' ×.
 carrying the pack's wording in `ask` (its title and accessible name). It is asked for in the
 choices window that opens after Add background ([Character building](character-building.md)); one
 left unpicked, or one whose wording names no kind the app knows ("Tool of your choice"), stays on
-the card. Its name is a button (`data-chipask`) that opens `openToolNamer()`: the Add window with
+the card. Its name is a button (`data-chipask`) whose hit area fills the whole chip but its × (a
+positioned `::after`; the × comes later and stays on top), and opens `openToolNamer()`: the Add window with
 the kinds its wording names, instant pills and Or type one, refusing a tool the sheet already has
 ("You already have Dice Set.") in `#chipMsg` and staying open. The pencil doesn't hide it: it hides
 removal, not naming. A player's own placeholder (one lifted from old text) also has its ×.
@@ -71,7 +72,8 @@ plus the typed name at once (`addChips()`, case-blind duplicates skipped), its l
 the sheet is disabled with ✓. The titles read "Add resistances", "Add immunities", "Add languages",
 "Add tools". Tools' pills are grouped by kind under a heading each (Artisan's Tools, Gaming Sets,
 Musical Instruments, Other), from `toolSuggestions()`: the loaded packs' `Tool` items merged with a
-built-in list, so an SRD or Humblewood character has gaming sets to pick. **Senses** stay one at a
+built-in list, so a Humblewood character (whose pack has no tools), or one whose packs lack a kind,
+still has gaming sets to pick. **Senses** stay one at a
 time ("Add a sense"): a pill adds at once with the Range box's value.
 
 **Room to read and tap** (#120, #123). In a chip row a chip is 28px tall, chips and wrapped rows

@@ -9804,6 +9804,30 @@ its plan, on `issue/121-bio-chips`, in the spec's order. Decision numbers are th
   (the AC window's pattern) and is read-only while Vitals is locked (decision 22). The other badges'
   breakdowns moved into `statRowsHTML()` byte for byte.
 
+**Review fixes** (a fresh reviewer's pass over the branch, each test-first):
+1. `toolParse()` read "Three-Dragon Ante Set" as a choice of three: `\b` treats the hyphen as a
+   word's edge, so "Three" matched the count word, and the lift would have turned a player's old
+   "Tools: Three-Dragon Ante Set" line into three placeholders for good. A fragment that is a known
+   tool's name (`toolKnownNames()`: `TOOL_KINDS` and the loaded packs' Tool items) is that tool, and
+   the choice and count words are matched as whole space-split words, never part of a hyphenated one.
+2. The Size window pre-selected the seeded size and Save always wrote it, so Save with nothing
+   changed made the species' size the player's. Both size lists now pre-select From ancestry unless
+   the size is the player's (`sizePickValue()`), and Save writes only a change.
+3. `removeRace()` and `removeBackground()` now call `renderAllRT()`, so the Proficiencies text a
+   species takes back leaves the Bio card at once (`removeClass()` changes no text field).
+4. A placeholder's tap target was its 14px name button: the button's `::after` now fills the chip,
+   which is positioned; the × comes later and stays on top.
+5. `handOnSpellAbility()` ran whenever `spellAbility` was blank, so a "—" the player chose was
+   overwritten on the next subclass pick. `unseedSource()` now answers which fields it emptied, and
+   `removeClass()` and `selectSubclass()` hand on only when theirs emptied `spellAbility`
+   (decision 12 as written).
+6. A species and subrace's Proficiencies lines, recorded as one text, are taken back line by line,
+   so editing only one keeps only that one. The null-overwrite guard above is unchanged.
+7. A pack's `tools` given as an array of strings reads as one list (it granted nothing).
+8. Spec decision 15 said the SRD pack had only artisan's tools and instruments; its
+   `items-magic.json` has all four gaming sets and six kits too. Corrected there and on Story &
+   notes; the built-in list still serves Humblewood and any pack without a kind.
+
 Tests: a new `sheet.js` block below the #130 block drives the flows against recorders (the card,
 the tool step, the namer, the multi-select window, seeds, swaps, the Speed window); `char-update.js`
 covers the tool step's window and guard and the spellcasting hand-on; `rules-data.js` pins the Bio

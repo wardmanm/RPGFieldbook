@@ -124,7 +124,7 @@ When a page gains a Decisions row, add its line here under that page.
 - **A swap or remove when the player changed a seeded value (#131)** — The player's value stays: a source's value is reverted only while it still matches what it put in (Mike)
 - **How the sheet knows what a source seeded (#131)** — A record, `character.seeds`, one `{sid, field, value}` per sid and field, `null` when the field was already full
 - **Sheets saved before the record (#131)** — A fallback only where there is no entry at all: reverted if it equals what the loaded definition seeds, else kept
-- **The spellcasting ability when its source goes (#131)** — Handed to the next caster, after every revert that can empty it
+- **The spellcasting ability when its source goes (#131)** — Handed to the next caster, only after a revert that emptied it
 - **How a value the player set is told apart from a seed (#131)** — A `player` entry in `seeds`, which seeding counts as full and reverting skips
 
 ### [Computed stats & effects](architecture/computed-stats-and-effects.md)

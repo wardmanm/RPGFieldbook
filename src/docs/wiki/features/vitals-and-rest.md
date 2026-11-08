@@ -21,7 +21,7 @@ the hit-dice bar and its spend box, the level badge, and what each rest gives ba
 `openHdSpend()`, `hdConMod()`, `hdHeal()`, `hdSpendCheck()`, `spendHitDie()`,
 `rollHitDie()`, `recoverHitDice()`, `renderDeath()` in `65-resources.js`; `level1HP()`, `seedLevel1HP()`,
 `resyncLevel1HP()`, `hitDieMax()` in `56-class.js`; `charSize()`, `sizeByHand()`, `sizeOptionsHTML()`,
-`capacityFor()` in `25-origins-items.js`; `openSizePicker()`, `openStatBreakdown()`, `statRowsHTML()`,
+`capacityFor()`, `sizePickValue()` in `25-origins-items.js`; `openSizePicker()`, `openStatBreakdown()`, `statRowsHTML()`,
 and the Speed window's `parseBaseSpeed()`, `speedBase()`, `speedWindowHTML()`, `commitBaseSpeed()`,
 `openSpeedWindow()` in `80-modal-forms.js`; `setPlayerField()`, `playerOwns()` in `50-classrace.js`; `bumpHP()`,
 the HP bar's tap, death-save and hit-dice handlers in `90-boot.js` · `xpProgress()`, `xpNumber()`,
@@ -50,7 +50,10 @@ Medium. Tapping it (or Enter/Space) opens `openSizePicker()` — a chooser, not 
 `sizeOptionsHTML()`, is in Settings → Carrying. Both write through `setPlayerField()` (#131): a
 picked size is the player's, marked by a `player` entry in `seeds`, so no species swap or remove
 touches it, and "From ancestry" gives it back
-([Grants & provenance](../architecture/grants-and-provenance.md)). Size is marked as set by hand
+([Grants & provenance](../architecture/grants-and-provenance.md)). Both lists show "From ancestry"
+selected unless the size is the player's (`sizePickValue()`), and the Size window's Save writes
+nothing when nothing changed, so opening it and pressing Save never makes the species' size the
+player's. Size is marked as set by hand
 only when it is the player's (`sizeByHand()`): a `player` entry, or, on a sheet from before the
 record, a size that matches neither a source's record nor the species' own. A size the species
 seeded is not marked. Size changes nothing but carrying capacity, and that only while Encumbrance
@@ -358,6 +361,9 @@ came back.
 - **The layout guards once encoded nesting.** `rules-data.js` sliced "to the next card" and "to the
   first `</div>`"; moving a block broke them for reasons unrelated to what they guarded. They now
   use a `block` helper that counts divs, and each was mutation-tested.
+- **Save with nothing changed made the species' size the player's** (review of #131): the Size
+  window pre-selected the seeded size and Save always wrote it, so the next species swap kept it.
+  It pre-selects From ancestry now, and writes only a change.
 
 ## Decisions
 
