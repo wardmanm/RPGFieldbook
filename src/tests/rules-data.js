@@ -2201,6 +2201,8 @@ function block(html, needle, tag) {
     ck('#171 asiRefresh reads only the open window, through document.querySelectorAll("#mBody …")',
        /document\.querySelectorAll\('#mBody \.choice\[data-ctype="asi"\]'\)/.test(refresh) && /document\.querySelectorAll\('#mBody \.choice\[data-ctype="option"\]'\)/.test(refresh)
        && !/getElementById/.test(refresh) && !/document\.querySelector\(/.test(refresh), refresh.slice(0, 400));
+    ck('#171 ...and clears a stale second select (asiSecondStale) before it reads the steps, so "+1 to two" never shows one ability twice',
+       /steps\.forEach\(div=>\{if\(asiSecondStale\(asiReadStep\(div\)\)\)\{const b=div\.querySelector\("\[data-asi-b\]"\);if\(b\)b\.value="";\}\}\);[\s\S]*?const read=\(\)=>/.test(refresh), refresh.slice(0, 700));
     ck('#171 ...and both choice windows reach it: runChoices and runExtraChoices call wireAsiFeats',
        /wireAsiFeats\(_activeChoices\);/.test(fnBody('runChoices')) && /wireAsiFeats\(list\);/.test(fnBody('runExtraChoices')));
   }

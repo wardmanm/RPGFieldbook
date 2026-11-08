@@ -456,6 +456,15 @@ function asiTakenElsewhere(picks,ci){
   return out;
 }
 function asiTakenTag(level){return level==null?"picked in this window":"picked at level "+level;}
+/* The second select holds an ability only under "+1 to two", and never the
+   first's. Under "+2 to one" it is hidden and ignored, so a value left there
+   came back with "+1 to two": "+1 to two" STR/DEX, then "+2 to one" with DEX,
+   then "+1 to two" again showed DEX in both, both greyed, a pick that never
+   lands (review fix). Stale then: asiRefresh() empties it. DOM-free. */
+function asiSecondStale(sel){
+  if(!sel||sel.pick!=="__asi__"||!sel.b)return false;
+  return sel.mode!=="1"||sel.b===sel.a;
+}
 /* the choices of the open window, by data-ci — set by wireAsiFeats() */
 let _asiChoices=[];
 function asiNote(div,text){const n=div.querySelector("[data-asi-note]");if(n){n.textContent=text||"";n.hidden=!text;}}
@@ -489,6 +498,8 @@ function asiRefresh(src){
   const steps=Array.prototype.slice.call(document.querySelectorAll('#mBody .choice[data-ctype="asi"]'));
   if(!steps.length)return;
   const styles=Array.prototype.slice.call(document.querySelectorAll('#mBody .choice[data-ctype="option"]')).filter(div=>isStyleChoice(_asiChoices[num(div.dataset.ci)]));
+  /* 0. a second select left over from "+1 to two", or holding the first's ability, is emptied */
+  steps.forEach(div=>{if(asiSecondStale(asiReadStep(div))){const b=div.querySelector("[data-asi-b]");if(b)b.value="";}});
   const base=asiScores();
   const read=()=>steps.map(div=>{const sel=asiReadStep(div),f=asiStepFeat(sel);return {div,sel,f,st:asiStepIncreases(sel,f)};});
   let rs=read(),L=asiLedger(base,rs.map(r=>r.st));

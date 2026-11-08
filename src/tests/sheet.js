@@ -111,7 +111,7 @@ const {X, ctx, state, bootError, fragments} = loadApp([
   'levelLogRecord', 'undoLevelUpAvailable', 'undoLevelUp', 'levelDownHTML', 'applyLevelDown', 'asiFeatShort',
   'isStyleChoice', 'classStyleSources', 'hasFightingStyle', 'featFeatureNamed', 'styleOptionTaken', 'findClassDef',
   'asiStepLabel', 'asiReadStep', 'asiStepDone', 'asiScore', 'asiScores', 'asiStepIncreases', 'asiLedger',
-  'asiLineText', 'asiChooseAgainText', 'asiTakenElsewhere',
+  'asiLineText', 'asiChooseAgainText', 'asiTakenElsewhere', 'asiSecondStale',
 ]);
 if (bootError) { console.log('LOAD FAIL: ' + bootError.message); process.exit(1); }
 console.log('loaded ' + fragments.length + ' fragments\n');
@@ -9258,6 +9258,14 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#171 live: a chip or row that can\'t be chosen looks it (as a .seg button does)', /\.ft-chip:disabled,\.ft-row:disabled\{cursor:default;opacity:\.55\}/.test(css));
     ck('#171 live: the note is in --brick, the line small, both hidden when hidden', /\.asi-note\{[^}]*color:var\(--brick\)/.test(css) && /\.asi-line\{[^}]*font-size:12px/.test(css) && /\.asi-note\[hidden\][^{]*\{display:none\}/.test(css) && /\.ft-capnote\[hidden\]\{display:none\}/.test(css));
   }
+  /* review fix: "+1 to two" STR/DEX, then "+2 to one" with DEX, then "+1 to two"
+     again showed DEX in both selects, both greyed, no note: the hidden second
+     select kept its value under "+2 to one" */
+  const stale = s => X.asiSecondStale(Object.assign({pick: '__asi__'}, s));
+  ck('#171 live: the second select is stale under "+2 to one" whenever it holds an ability', stale({mode: '2', a: 'dex', b: 'dex'}) && stale({mode: '2', a: 'str', b: 'con'}) && stale({mode: '2', a: '', b: 'con'}));
+  ck('#171 live: ...and under "+1 to two" when it holds the first\'s ability', stale({mode: '1', a: 'con', b: 'con'}) && !stale({mode: '1', a: 'con', b: 'dex'}) && !stale({mode: '1', a: '', b: 'dex'}));
+  ck('#171 live: ...never when blank, nor on a feat\'s step', !stale({mode: '2', a: 'str', b: ''}) && !stale({mode: '1', a: '', b: ''}) && !stale({mode: '2', b: undefined})
+     && !X.asiSecondStale({pick: 'Grappler', mode: '2', b: 'dex'}) && !X.asiSecondStale({pick: null, mode: '2', b: 'dex'}) && !X.asiSecondStale(null));
   ck('#171 live: asiRefresh() over the harness\'s empty document does nothing, and throws nothing', (() => { try { ctx.asiRefresh(); ctx.wireAsiFeats([]); return true; } catch (e) { return String(e); } })() === true);
 
   // ---- #171 end to end: a level-18 start opens one window, six blank ASI steps
