@@ -8983,6 +8983,23 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     ck('#133 ...the Classic skin\'s, with none open', d.els.wmMain.textContent === 'D&D' && ctx.document.title === 'D&D Character Sheet' && d.root.dataset.skin === 'classic',
        [d.els.wmMain.textContent, ctx.document.title, d.root.dataset.skin]);
 
+    /* review: deleting the open character leaves no character open, so the
+       title and wordmark go back to the skin's (decision 6) */
+    X.settings.skin = 'humblewood';
+    ctx.newCharacter('Gone', 'dnd');
+    const goneId = X.character.id;
+    ctx.newCharacter('Kept', 'dnd');
+    const keptId = X.character.id;
+    d = themeDOM();
+    try { ctx.deleteCharacter(goneId); } finally { undoDOM(); }
+    ck('#133 deleting a character that isn\'t open leaves the open one and its title alone',
+       X.activeId === keptId && d.els.wmMain.textContent === '', [X.activeId, d.els.wmMain.textContent]);
+    d = themeDOM();
+    try { ctx.deleteCharacter(keptId); } finally { undoDOM(); }
+    ck('#133 deleting the open D&D character under the humblewood skin: the title and wordmark follow the skin again',
+       X.activeId == null && d.els.wmMain.textContent === 'Humblewood' && ctx.document.title === 'Fieldbook — Humblewood',
+       [X.activeId, d.els.wmMain.textContent, ctx.document.title]);
+
     /* Review Focus 5: a settings file's skin changes the look, not the open character */
     X.character = X.blankChar(); X.character.system = 'humblewood'; X.character.id = 'hw133'; X.character.name = 'Wren'; X.activeId = 'hw133';
     X.settings.skin = 'humblewood';

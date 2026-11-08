@@ -46,7 +46,8 @@ wordmark and title follow the **open character's system**, and the skin only whe
 open (`activeId` unset), since then there is no system to follow; the home screen covers the top bar
 with its own fixed wordmark, so that case shows only in the browser tab. The header's "+ Race" /
 "+ Ancestry" follows the system too, through `raceTerm()`. It runs at boot, on every character load,
-create and import, on a system change, and on each Appearance control.
+create and import, on a system change, when the open character is deleted (`deleteCharacter()`), and
+on each Appearance control.
 
 ### The skin is look only; the system is the character's
 

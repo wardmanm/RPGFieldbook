@@ -9826,6 +9826,8 @@ Builder's calls against the plan:
   `systemChangePlan()`, so an ancestry the new system's list leaves out by `excludeSystems` (Tasha's
   Custom Lineage going to Humblewood) gets the line too. A check runs every stubbed ancestry both
   ways against `racesForCharacter()`.
+- After review: `deleteCharacter()` calls `applyTheme()` when it closes the open character, so the
+  tab title stops naming the deleted character's game and follows the skin (decision 6).
 - Found in the screenshot pass: on a 390px screen the error toast was 195px wide and the settings
   sentence ran to seven lines. `.toast` is fixed at `left:50%` with `translateX(-50%)`, so a
   shrink-to-fit width stopped at the half-screen to its right, short of its own `max-width:80vw`.

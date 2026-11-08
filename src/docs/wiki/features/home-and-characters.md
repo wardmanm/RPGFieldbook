@@ -36,7 +36,8 @@ from the top bar's house button (`#btnHome`) and from Settings → Backup → Op
   star clears it. `setAutoload()` returns "" or why the index write was refused, and alerts it.
 - **Delete** (`data-delchar`) confirms, then `deleteCharacter()` drops the index entry and clears
   autoload if it pointed there. Only once that index write lands does it remove the blob and null
-  `activeId` if that character was open. A refused write alerts ("That character couldn't be
+  `activeId` if that character was open, then call `applyTheme()`, so the tab title follows the
+  skin again (#133). A refused write alerts ("That character couldn't be
   deleted — …") and keeps both, so the card still opens the character. An alert, not the save
   strip: the home overlay covers the strip.
 - **The setup panel** (`#homeSetup`: skin, mode, hand-drawn borders, bulk rules import, loaded data,

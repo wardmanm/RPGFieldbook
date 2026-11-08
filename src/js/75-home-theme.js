@@ -47,7 +47,8 @@ function deleteCharacter(id){
   const why=libSave(lib);
   if(why){alert("That character couldn't be deleted — "+why+". It is still in your library.");renderHome();return why;}
   try{localStorage.removeItem(charKey(id));}catch(e){}
-  if(activeId===id)activeId=null;
+  /* no character open now, so the title and wordmark follow the skin again (#133) */
+  if(activeId===id){activeId=null;applyTheme();}
   renderHome();return "";
 }
 function setAutoload(id){const lib=libLoad();lib.autoload=(lib.autoload===id)?null:id;const why=libSave(lib);renderHome();if(why)alert("Couldn't change which character opens first — "+why+".");return why;}
