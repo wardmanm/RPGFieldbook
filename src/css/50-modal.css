@@ -64,6 +64,9 @@ html[data-rough="on"] .modal::before{filter:url(#rough)}
 .seg button.on{background:var(--accent);color:var(--on-accent)}
 /* #130: a switch the Vitals lock holds (the Armor Class window) looks held */
 .seg button:disabled{cursor:default;opacity:.55}
+/* ...and so does a number box it holds: the Speed window's Base speed (#131)
+   and the Armor Class window's Flat AC looked as editable as ever (QA) */
+#spdBase:disabled,#acFlat:disabled{cursor:default;opacity:.55}
 .toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px dotted var(--hair)}
 .toggle .t-lbl{font-size:15px}
 .toggle .t-sub{font-family:var(--body);font-size:12px;color:var(--ink-soft);margin-top:2px}

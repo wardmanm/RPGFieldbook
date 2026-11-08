@@ -1307,6 +1307,9 @@ function block(html, needle, tag) {
   ck('#121 a placeholder is positioned, so its name\'s hit area can fill it', !!ask && /position\s*:\s*relative/.test(ask), ask);
   ck('#121 ...the name button has a ::after covering the chip', !!askName && /position\s*:\s*absolute/.test(askName) && (/inset\s*:\s*0/.test(askName) || ['top', 'right', 'bottom', 'left'].every(k => new RegExp('(^|;)\\s*' + k + '\\s*:\\s*0').test(askName))), askName);
   ck('#121 ...and the name itself is not positioned, so that ::after spans the chip, not the name', !/position\s*:/.test(rule(cards, '.chip-name') || ''), rule(cards, '.chip-name'));
+  /* QA: the dimmed "· background" has opacity, so it paints above the name's ::after and took
+     the tap for itself; it lets the tap through */
+  ck('#121 ...and its "· background" lets a tap through to the name', /pointer-events\s*:\s*none/.test(rule(cards, '.chip-ask .chip-src') || ''), rule(cards, '.chip-ask .chip-src'));
   ck('#121 ...and its name is a plain button that keeps its own casing', /text-transform\s*:\s*none/.test(rule(cards, '.chip-name') || '') && /background\s*:\s*none/.test(rule(cards, '.chip-name') || ''), rule(cards, '.chip-name'));
   /* #123: the Add window's pills, scoped to .chip-sug — the browse picker's
      filter pills share .fgrp and .fpill and stay as they are */
@@ -1337,6 +1340,12 @@ function block(html, needle, tag) {
   ck('#131 the Size mark reads sizeByHand()', /mark\(szEl,sizeByHand\(character\)\)/.test(src('10-compute.js')));
   /* decision 20: the Speed badge opens a window with a Base speed box */
   ck('#131 openStatBreakdown() sends speed to openSpeedWindow(), as ac to openACWindow()', /if\(target==="speed"\)return openSpeedWindow\(\);/.test(fn(forms, 'openStatBreakdown')));
+  /* QA: a box Vitals locks looked as editable as ever; the Speed window's and the AC window's Flat box look locked */
+  {
+    const modalCss = fs.readFileSync(path.join(ROOT, 'src/css/50-modal.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const m = /([^{}]*#spdBase:disabled[^{}]*)\{([^}]*)\}/.exec(modalCss);
+    ck('#131 a locked Base speed box, and the AC window\'s locked Flat box, look locked', !!m && /#acFlat:disabled/.test(m[1]) && /opacity\s*:\s*\.?[0-9]/.test(m[2]) && parseFloat((/opacity\s*:\s*([.0-9]+)/.exec(m[2]) || [0, 1])[1]) < 1, m && m[0]);
+  }
   ck('#131 ...whose dismiss guard commits a typed #spdBase, as the AC window\'s does its Flat box', /setDismissGuard\(\(\)=>\{const b=document\.getElementById\("spdBase"\);[^}]*commitBaseSpeed\(b\.value\);return null;\}\)/.test(fn(forms, 'openSpeedWindow')));
 }
 
