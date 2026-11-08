@@ -9794,14 +9794,22 @@ settings save lands: `saveSettingsSaid()` clears it then and repaints the page (
 
 Tests: `sheet.js` block A (shared app, above `t118EndToEnd()`): the open paths leave the skin,
 `raceTerm()` and the wordmark under either skin, Import settings' skin (Review Focus 5), the swap,
-`coinKeys()` with junk counts, Convert, the trade window's give side, the plan's purity, the
-warning's sentences and plurals, round trips with and without declared defaults, the question's
-title and buttons, and the control driven through `openSettings()`'s handler with Cancel then Yes.
+`coinKeys()` with junk counts, Convert, the trade window on a Humblewood sheet holding 3 PP and
+4 EP (each give box's cap from `tradeGiveCap()`, and 15 GP paid by splitting 2 PP; both fail
+against main's `coinKeys()`; after review, the give-side check had passed its own cap in), the
+plan's purity, the warning's sentences and plurals, round trips with and without declared defaults,
+the question's title and buttons, Yes after the rules change mid-question, deleting the open
+character, and the control driven through `openSettings()`'s handler with Cancel then Yes.
 Block B (fresh `BS.app()` at the file's end): once a session, re-armed, the pill's own sentence,
-`rbOpenCat()`, storage working, blocked storage, and the boot fold refused and landing.
-`rules-data.js`: the skin's two writers, the Settings handlers, the row and its help, the hint, every
-`saveSettings()` answer used, each named site through the helper, `_pillSaved()` gone, the fold
-line; the `#swBackdrop` and page-switch checks rewritten in place. A throwaway Node check compared
+`rbOpenCat()`, storage working, blocked storage at boot (quiet) and later (said), and the boot fold
+refused, landing, and cleared by a later save. `rules-data.js`: the skin's two writers, the
+Settings handlers, the row and its help, the hint, every `saveSettings()` answer used, each named
+site through the helper, `_pillSaved()` gone, the fold line, the blocked flag; the `#swBackdrop`
+and page-switch checks rewritten in place. A limit, by design: the #141 handlers bound in
+`openSettings()` and `wire()` (Appearance's controls, the theme button, the home screen's look
+buttons, the pills' ×) can't be clicked in the harness, so each is pinned only by `rules-data.js`'s
+source check that it calls `saveSettingsSaid()`, plus block B's checks of the helper itself; the
+screenshot pass drove Mode, borders and the home screen's Skin in a browser. A throwaway Node check compared
 `systemChangePlan().langs` with `changeSystem()` over four chip mixes, both systems and both default
 maps: no mismatch.
 

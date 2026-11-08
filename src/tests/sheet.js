@@ -9074,10 +9074,18 @@ const SRC103 = f => FS103.readFileSync(P103.join(__dirname, '..', f), 'utf8');
     X.convertCoins();
     ck('#133 ...and an odd count into gold and silver: 1 PP and 3 EP make 11 GP 5 SP',
        p.coins.gp === 11 && p.coins.sp === 5 && p.coins.pp === '' && p.coins.ep === '' && keys() === '["gp","sp","cp"]', p.coins);
-    purse({ep: 50});
-    const give = X.tradeCoinsHTML('give', {}, {ep: 50, gp: 0, sp: 0, cp: 0});
-    ck('#133 the trade window\'s give side offers the held EP, capped at what is held',
-       /data-trcoin="give:ep"[^>]*max="50"/.test(give) && !/give:pp/.test(give), give);
+    /* the trade window, on a Humblewood sheet holding 3 PP and 4 EP: each give box
+       capped by tradeGiveCap() as tradeHTML() builds them, and a payment in gold
+       broken from the held platinum (#168's split reads coinKeys()) */
+    const tch = purse({pp: 3, ep: 4});
+    const caps = Object.fromEntries(X.coinKeys().map(k => [k, X.tradeGiveCap(X.newTradeDraft(), tch, k)]));
+    const give = X.tradeCoinsHTML('give', {}, caps);
+    ck('#133 the trade window\'s give side offers the held PP and EP, each capped by tradeGiveCap()',
+       JSON.stringify(caps) === '{"pp":3,"gp":30,"ep":4,"sp":320,"cp":3200}' &&
+       /data-trcoin="give:pp"[^>]*max="3"/.test(give) && /data-trcoin="give:ep"[^>]*max="4"/.test(give) && /data-trcoin="give:gp"[^>]*max="30"/.test(give), [caps, give]);
+    const split = X.tradeSplitPlan({gp: 15}, tch.coins);
+    ck('#133 ...and 15 GP is paid by splitting 2 of the held PP',
+       JSON.stringify(split) === '[{"from":"pp","into":"gp","n":2}]' && JSON.stringify(X.tradeSplitText(split)) === '["2 PP into 20 GP"]', [split, X.tradeSplitText(split)]);
 
     /* ---- #133 the Game system row: the plan, the warning's words, the change */
     const keepRaces = X.rules.races, keepAdv = X.rules.advancement, keepAsk = ctx.askConfirm;
