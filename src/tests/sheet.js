@@ -10634,9 +10634,9 @@ async function t181AddClassUndo() {
   {
     const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, rt: ctx.renderInitTable, ar: ctx.advanceRound, rf: ctx.renderFamiliars,
       re: ctx.recompute, toast: ctx.toast, om: ctx.openModal, cm: ctx.closeModal, gid: ctx.document.getElementById};
-    let toasts = [], painted = 0;
+    let toasts = [], toastOpts = [], painted = 0;
     ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderInitTable = () => {}; ctx.recompute = () => {};
-    ctx.renderFamiliars = () => { painted++; }; ctx.toast = m => { toasts.push(String(m)); return null; };
+    ctx.renderFamiliars = () => { painted++; }; ctx.toast = (m, a, o) => { toasts.push(String(m)); toastOpts.push(o); return null; };
     ctx.advanceRound = d => { X.character.combatRound = X.num(X.character.combatRound) + d; };
     /* you 15, Goblin 12, Sprocket (Own, summoned) by sInit, Thorn 8; Wolf (After) and Owl (Own) dismissed */
     const fight = (sInit = 10) => {
@@ -10648,7 +10648,7 @@ async function t181AddClassUndo() {
       c.combatants = X.buildCombatants({name: 'Mira', init: 15}, [{id: 'p1', name: 'Thorn', ac: '', maxHp: '', init: 8}], [{name: 'Goblin', count: 1, ac: '', init: 12}],
         [Object.assign({}, c.familiars[2], {init: sInit})]);
       c.combatTurn = c.combatants.find(r => r.name === 'Goblin').id;
-      X.character = c; toasts = []; painted = 0;
+      X.character = c; toasts = []; toastOpts = []; painted = 0;
       return c;
     };
     const rowOf = id => X.character.combatants.find(r => r.famId === id);
@@ -10690,6 +10690,9 @@ async function t181AddClassUndo() {
          order() === 'you,Wolf,Goblin,Sprocket,Thorn,Owl' && rowOf('o').init === null && famOf('o').hp.cur === '6' && rowOf('o').hp === 6 && rowOf('o').maxHp === 6 &&
          toasts.length === 1 && toasts[0] === 'Owl joined the fight. Tap its chip to set its initiative.' &&
          X.character.combatTurn === named('Goblin').id && X.character.combatRound === 2 && painted > 0, [order(), toasts, famOf('o').hp]);
+      /* browser QA: the toast is an instruction, and at the default 1.9 s it was gone before it
+         could be read beside the familiar's reopened window */
+      ck('#163 ...the toast stays up long enough to read (opts.long, 6 s)', !!toastOpts[0] && toastOpts[0].long === true, toastOpts);
       ck('#163 ...an unknown familiar changes nothing', X.setFamiliarSummoned('nobody', true) === false && X.deleteFamiliar('nobody') === false);
 
       /* Review Focus 2: a dismiss or a delete leaves, moving the marker as Remove does */

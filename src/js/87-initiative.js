@@ -212,7 +212,8 @@ function familiarsChanged(id,wasActive){
     famFillHP(f);
     const row=famRow(f,null);
     character.combatants=initSort(character.combatants.concat([row]));
-    if(!row.after)toast(`${row.name} joined the fight. Tap its chip to set its initiative.`);
+    /* an instruction, read beside the familiar's reopened window: the long toast */
+    if(!row.after)toast(`${row.name} joined the fight. Tap its chip to set its initiative.`,null,{long:true});
   }
   else if(has)famFillHP(f);
   syncFamiliarRows(character).forEach(initDropRow);
