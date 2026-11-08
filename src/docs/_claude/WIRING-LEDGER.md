@@ -9786,7 +9786,8 @@ per sentence a session, re-armed by a save that lands, and quiet when `storageBl
 The eleven silent callers (Skin, Mode, borders, Icon tabs and Tap outside on Appearance; the top
 bar's theme button; a Settings page switch; a Rules category tap; the home screen's Skin, Mode and
 borders) and both pills' × use it; `_pillSaved()` goes. Boot's fold of old sources keeps a refused
-save in `extSaveError`, so Settings → Extensions shows it, as the boot source check does. No bare
+save in `extSaveError`, so Settings → Extensions shows it, as the boot source check does, until a
+settings save lands: `saveSettingsSaid()` clears it then and repaints the page (review). No bare
 `saveSettings();` is left in `src/js`.
 
 Tests: `sheet.js` block A (shared app, above `t118EndToEnd()`): the open paths leave the skin,

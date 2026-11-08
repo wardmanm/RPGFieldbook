@@ -128,14 +128,16 @@ function saveSettings(){try{localStorage.setItem(K_SET,JSON.stringify(settings))
    Fieldbook.", or with `what`, "Couldn't save what: why." Each sentence once a
    session: a page switch and a Rules category tap save too, so a full disk
    would otherwise toast at every ordinary tap. A save that lands forgets them,
-   so the next refusal is said again. Quiet where storageBlockedWhy() is set:
+   so the next refusal is said again, and clears a sources save the boot check
+   or fold kept for the Extensions page (extSaveError, 89-extensions.js), which
+   was true only "until a later save lands". Quiet where storageBlockedWhy() is set:
    boot's alert has already said nothing will be kept. The memory is this
    module's alone, never saved; a reload starts it empty. Returns
    saveSettings()'s answer either way. */
 const _settingsSaid=new Set();
 function saveSettingsSaid(what){
   const why=saveSettings();
-  if(!why){_settingsSaid.clear();return "";}
+  if(!why){_settingsSaid.clear();if(extSaveErrorText()){extSaveOk("");renderExtUI();}return "";}
   if(storageBlockedWhy())return why;
   const msg=what?"Couldn't save "+what+": "+why+".":"Couldn't save your settings: "+why+". Changes to settings last until you close Fieldbook.";
   if(!_settingsSaid.has(msg)){_settingsSaid.add(msg);toast(msg,null,{err:true});}

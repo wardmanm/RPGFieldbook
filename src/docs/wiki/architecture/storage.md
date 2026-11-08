@@ -118,7 +118,8 @@ lands forgets what was said, so the next refusal is said again; the memory is a 
 alert has already said nothing will be kept. The boot source check stays quiet too, so a save
 refused there is kept (`extSaveErrorText()`) and the page shows it as "Couldn't save your sources
 at the last check: …" until a later save lands; boot's own fold of old sources
-(`foldLegacySettings()`) keeps a refused save the same way.
+(`foldLegacySettings()`) keeps a refused save the same way. Any settings save that lands clears
+it, a source save or one through `saveSettingsSaid()`, which then repaints the page.
 
 **Every IndexedDB call is timed out.** `idbOpen()` and each `idbTx()` go through `idbTimeout()`,
 which rejects after `IDB_TIMEOUT` (4000 ms). A missing or throwing IndexedDB rejects at once. A

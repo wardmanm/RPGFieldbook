@@ -11096,6 +11096,15 @@ async function tBootStorage143() {
     ck('#141 a refused boot fold is kept for the Extensions page',
        a.bootThrew === null && a.ctx.extSaveErrorText() === "your browser's storage is full", [a.bootThrew && String(a.bootThrew), a.ctx.extSaveErrorText()]);
     ck('#141 ...said there, not in a toast over the first paint', a.toasts.length === 0 && a.alerts.length === 0, [a.toasts, a.alerts]);
+    /* storage frees up and any setting is saved: the page's line was true "until
+       a later save lands", so that save clears it, and the page repaints */
+    let repaints = 0; a.ctx.renderExtUI = () => { repaints++; };
+    a.state.quotaFull = false;
+    a.ctx.saveSettingsSaid();
+    ck('#141 ...a settings save that lands later clears it, and repaints the Extensions page',
+       a.ctx.extSaveErrorText() === '' && repaints === 1 && a.toasts.length === 0, [a.ctx.extSaveErrorText(), repaints]);
+    a.ctx.saveSettingsSaid();
+    ck('#141 ...and with nothing to clear, a landed save repaints nothing', repaints === 1, repaints);
     a = fresh({'hw-fb-settings': JSON.stringify({rulesSources: ['https://example.org/rules.json']})}, {noBoot: false});
     ck('#141 ...and a boot fold that lands leaves nothing to show', a.bootThrew === null && a.ctx.extSaveErrorText() === '' && a.toasts.length === 0,
        [a.ctx.extSaveErrorText(), a.toasts]);
