@@ -10479,6 +10479,60 @@ async function t181AddClassUndo() {
     ck('#163 End of combat lists a familiar like a party member: a fallen one struck, "fell"',
        /<li class="ec-chip fell"><s>Owl<\/s><span class="sh-vh">, fell<\/span><\/li>/.test(sum) && /<li class="ec-chip">Cat<\/li>/.test(sum), sum);
   }
+
+  /* Task 4 (#163): Roll initiative lists the summoned familiars; Start brings them in */
+  {
+    const keep = {ch: X.character, sv: ctx.scheduleSave, rc: ctx.renderCombatChrome, ra: ctx.renderActiveSpells, cm: ctx.closeModal, rf: ctx.renderFamiliars,
+      qs: ctx.document.querySelector, qsa: ctx.document.querySelectorAll, gid: ctx.document.getElementById};
+    let painted = 0;
+    ctx.scheduleSave = () => {}; ctx.renderCombatChrome = () => {}; ctx.renderActiveSpells = () => {}; ctx.closeModal = () => {}; ctx.renderFamiliars = () => { painted++; };
+    const sheet = () => {
+      X.character = X.blankChar(); X.character.name = 'Mira';
+      X.character.familiars = [
+        {id: 's', name: 'Sprocket', kind: 'Owl', ac: '13', hp: {cur: '', max: '7'}, active: true, turn: 'own'},
+        {id: 'w', name: 'Wolf', kind: 'Wolf', ac: '12', hp: {cur: '11', max: '11'}, active: true, turn: 'after'},
+        {id: 'c', name: 'Cat', kind: 'Cat', ac: '', hp: {cur: '', max: '3'}, active: false, turn: 'own'}];
+      return X.character;
+    };
+    try {
+      sheet();
+      const h = X.initRollHTML([{id: 'p1', name: 'Thorn', ac: '', maxHp: ''}], false);
+      ck('#163 Roll initiative lists an Own familiar with its own Init box',
+         /<input data-irfam="s"[^>]*placeholder="Init"[^>]*aria-label="Sprocket&#39;s initiative"/.test(h) || /<input data-irfam="s"[^>]*placeholder="Init"[^>]*aria-label="Sprocket's initiative"/.test(h), h);
+      const wolfRow = (h.match(/<div class="ir-row ir-after">[\s\S]*?<\/div>/) || [''])[0];
+      ck('#163 ...an After one with no box, "right after you" in its place', /Wolf/.test(wolfRow) && /right after you/.test(wolfRow) && !/data-irfam="w"/.test(h), wolfRow);
+      ck('#163 ...both tagged familiar, after the party row and before the monsters; no dismissed Cat',
+         (h.match(/<span class="ir-k">familiar<\/span>/g) || []).length === 2 && h.indexOf('data-irparty="p1"') < h.indexOf('data-irfam="s"') &&
+         h.indexOf('data-irfam="s"') < h.indexOf('Wolf') && h.indexOf('Wolf') < h.indexOf('data-irfoe') && !/Cat/.test(h) && h.indexOf('class="ir-head"') < h.indexOf('data-irparty="p1"'), h);
+      ck('#163 ...the hint names them', h.includes("You, your party and your summoned familiars are in. Add the monsters, then everyone's roll."), h);
+      X.character.familiars.forEach(f => { f.active = false; });
+      ck('#163 ...with none summoned the hint is today\'s, and no familiar row', /Your party and you are in\. Add the monsters, then everyone's roll\./.test(X.initRollHTML([], false)) && !/data-irfam|ir-after/.test(X.initRollHTML([], false)));
+      sheet(); X.character.familiars[0].name = '<b>Sprocket</b>';
+      const hx = X.initRollHTML([], true);
+      ck('#163 ...a name comes out escaped; mid-fight lists them the same way', hx.includes('&lt;b&gt;Sprocket&lt;/b&gt;') && !hx.includes('<b>Sprocket') && /data-irfam="s"/.test(hx) && /right after you/.test(hx) &&
+         /Roll for the fight already running\./.test(hx), hx);
+      ck('#163 ...and Roll initiative still opens through the line #161 checks', /openModal\("Roll initiative",initRollHTML\(party,mid\)\);/.test(require('fs').readFileSync(require('path').join(__dirname, '..', 'js', '87-initiative.js'), 'utf8')));
+
+      /* Start: the boxes are read, a blank HP with a max is filled on the familiar */
+      sheet();
+      ctx.document.getElementById = id => id === 'irTyped' ? {value: ''} : keep.gid(id);
+      ctx.document.querySelectorAll = () => [];
+      ctx.document.querySelector = q => q === '[data-irfam="s"]' ? {value: '14'} : null;
+      X.irState().set = true; X.irState().faces = [8]; painted = 0;
+      const mod = X.initModOf();
+      ck('#163 Start brings them in', X.irStart([]) === '' && X.inCombat(X.character), X.character.combatants);
+      const L = X.character.combatants, fr = id => L.find(r => r.famId === id) || {};
+      ck('#163 ...Sprocket by its roll, Wolf right behind you, no Cat',
+         L.map(r => r.kind === 'you' ? 'you' : r.name).join() === (14 > 8 + mod ? 'Sprocket,you,Wolf' : 'you,Wolf,Sprocket') && fr('s').init === 14 && fr('w').after === true && fr('w').init === null && !L.some(r => r.famId === 'c'),
+         L.map(r => [r.name, r.init]));
+      ck('#163 ...Sprocket\'s blank current HP took its max, on the familiar and in its row, and the paw repainted',
+         X.character.familiars[0].hp.cur === '7' && fr('s').hp === 7 && fr('s').maxHp === 7 && fr('w').hp === 11 && painted > 0 && X.character.familiars[2].hp.cur === '', [X.character.familiars, fr('s')]);
+    } finally {
+      X.character = keep.ch; ctx.scheduleSave = keep.sv; ctx.renderCombatChrome = keep.rc; ctx.renderActiveSpells = keep.ra; ctx.closeModal = keep.cm; ctx.renderFamiliars = keep.rf;
+      ctx.document.querySelector = keep.qs; ctx.document.querySelectorAll = keep.qsa; ctx.document.getElementById = keep.gid;
+      X.irState().set = false; X.irState().faces = [];
+    }
+  }
 }
 
 t118EndToEnd().then(t118Warn).then(t118UndoUnderWarning).then(t105End).then(t105Xp).then(t105Loot).then(t105After).then(t168Ask).then(t181AddClassUndo).then(t136GlossSave).then(() => ck.done(), err => { ck('#118 e2e ran without throwing', false, String(err && err.stack || err)); ck.done(); });

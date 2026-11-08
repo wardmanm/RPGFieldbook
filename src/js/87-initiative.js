@@ -227,9 +227,17 @@ function irFoeRowHTML(){
     `<input data-irf="init" inputmode="numeric" size="3" placeholder="Init" aria-label="Initiative"></div>`;
 }
 function irHeadHTML(){return `<div class="ir-head" aria-hidden="true"><span>Name</span><span>×</span><span>AC</span><span>Init</span></div>`;}
-function initRollHTML(party,midFight){
+/* #163: a summoned familiar's row, after the party. Own: an Init box in the
+   Init column, blank allowed (last). After: no box, "right after you" across
+   the three columns (60px is too narrow for the words). */
+function irFamRowHTML(f){
+  const nm=String(f.name||"Familiar"),tag=`<span>${esc(nm)} <span class="ir-k">familiar</span></span>`;
+  if(famTurn(f)==="after")return `<div class="ir-row ir-after">${tag}<span class="ir-aft">right after you</span></div>`;
+  return `<label class="ir-row">${tag}<input data-irfam="${esc(f.id)}" inputmode="numeric" size="3" placeholder="Init" aria-label="${esc(nm+"'s initiative")}"></label>`;
+}
+function initRollHTML(party,midFight,fams=fightFamiliars(character)){
   const mod=initModOf();
-  return `<p class="hint">${midFight?"Roll for the fight already running.":"Your party and you are in. Add the monsters, then everyone's roll."}</p>`+
+  return `<p class="hint">${midFight?"Roll for the fight already running.":fams.length?"You, your party and your summoned familiars are in. Add the monsters, then everyone's roll.":"Your party and you are in. Add the monsters, then everyone's roll."}</p>`+
     `<div class="ir-you"><b>${esc(character.name||"You")}</b> <span class="ir-k">you · initiative ${esc((mod<0?"−":"+")+Math.abs(mod))}</span>`+
     `<div class="hd-how"><button type="button" class="tbtn primary" id="irRoll">🎲 Roll for me</button> <span>or</span> `+
     `<label>I rolled <input id="irTyped" inputmode="numeric" size="3"></label> <button type="button" class="tbtn" id="irApply">Apply</button> `+
@@ -237,6 +245,7 @@ function initRollHTML(party,midFight){
     `<div class="hd-res" id="irRes" aria-live="polite"></div></div>`+irHeadHTML()+
     (party.length?`<div class="ir-party">`+party.map(p=>`<label class="ir-row"><span>${esc(p.name)} <span class="ir-k">party</span></span>`+
       `<input data-irparty="${esc(p.id)}" inputmode="numeric" size="3" placeholder="Init" aria-label="${esc(p.name+"'s initiative")}"></label>`).join("")+`</div>`:"")+
+    (fams.length?`<div class="ir-fams">${fams.map(irFamRowHTML).join("")}</div>`:"")+
     `<div id="irFoes">${irFoeRowHTML()}</div><button type="button" class="add" id="irAddFoe">+ Add a monster</button>`+
     `<p class="hint">A blank initiative goes last; you can fill it in later.</p>`+
     `<div class="m-actions"><button class="tbtn" id="irCancel">Cancel</button><button class="tbtn primary" id="irStart">Start ▸</button></div>`;
@@ -256,9 +265,9 @@ function irRoll(){
   const box=document.getElementById("irTyped");if(box)box.value=String(Math.max.apply(null,_ir.faces));
   irPaint("");
 }
-function startInitFight(you,party,foes){
+function startInitFight(you,party,foes,fams){
   if(!inCombat(character))combatStart(character);
-  character.combatants=buildCombatants(you,party,foes);
+  character.combatants=buildCombatants(you,party,foes,fams);
   character.combatTurn=character.initMode==="turns"?initFirstAlive(character.combatants):"";
   renderActiveSpells();renderCombatChrome();scheduleSave();
 }
@@ -276,13 +285,14 @@ function openInitRoll(){
   on("irAdv","click",e=>{_ir.adv=!_ir.adv;e.currentTarget.classList.toggle("on",_ir.adv);e.currentTarget.setAttribute("aria-checked",_ir.adv?"true":"false");});
   on("irAddFoe","click",()=>{const f=document.getElementById("irFoes");if(f)f.insertAdjacentHTML("beforeend",irFoeRowHTML());});
   on("irCancel","click",closeModal);
-  on("irStart","click",()=>irStart(party));
+  on("irStart","click",()=>irStart(party,fightFamiliars(character)));
 }
 /* Start ▸ is the commit (final review I3): a roll typed into "I rolled" but
    never Applied is applied here, and a bad one stops Start with irSetTyped()'s
    message in #irRes. A blank box still means unrolled, last. Returns that
-   message, or "" once the fight has started. */
-function irStart(party){
+   message, or "" once the fight has started. The summoned familiars (#163)
+   join with a blank current HP filled from the max, on the familiar. */
+function irStart(party,fams=fightFamiliars(character)){
   if(!_ir.set){
     const b=document.getElementById("irTyped"),typed=b?String(b.value==null?"":b.value).trim():"";
     if(typed){const why=irSetTyped(typed);if(why)return why;}
@@ -291,7 +301,11 @@ function irStart(party){
   const party2=party.map(p=>{const i=document.querySelector(`[data-irparty="${CSS.escape(p.id)}"]`);return Object.assign({},p,{init:i?i.value:""});});
   const foes=Array.from(document.querySelectorAll("[data-irfoe]")).map(row=>{const v=k=>{const i=row.querySelector(`[data-irf="${k}"]`);return i?i.value:"";};
     return {name:v("name"),count:v("count"),ac:v("ac"),init:v("init")};});
-  closeModal();startInitFight(you,party2,foes);return "";
+  const filled=fams.map(famFillHP).some(Boolean);
+  const fams2=fams.map(f=>{const i=famTurn(f)==="after"?null:document.querySelector(attrSel("data-irfam",f.id));return Object.assign({},f,{init:i?i.value:""});});
+  closeModal();startInitFight(you,party2,foes,fams2);
+  if(filled)renderFamiliars();   /* the paw's card and the view's Familiars show the filled HP */
+  return "";
 }
 
 /* ---- the strip (in #cvHead, so it sticks with it) and the table ----
