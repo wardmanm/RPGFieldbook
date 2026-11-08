@@ -2,11 +2,20 @@
 Updated: 2026-11-07 · Branch: main
 
 ## Current focus
-1.9.1 wave 1 is done (`src/docs/wiki/roadmap/1.9.1.md`), and so is the release process: #199 and
-#200 (`/sign-off-notes`) are merged, so the 1.9.1 pre-release can run as designed. Next: wave 2's
-design calls (Bio chips, Skin & settings saves, ASI, Initiative), then wave 2. No branch open.
+1.9.1 wave 2 is being built (`src/docs/wiki/roadmap/1.9.1.md`): four worktrees, each with an
+approved spec and plan on its branch: Bio chips (`issue/121-bio-chips`), Skin & settings saves
+(`issue/133-skin-settings-saves`), ASI (`issue/172-asi`), Initiative (`issue/164-initiative`).
+One builder agent per branch (Mike's choice); screenshots run one branch at a time after the code.
+Merge order: Bio chips, Skin, ASI, Initiative. Then wave 3.
 
 ## Recent changes
+- 2026-11-07: Wave 2's design calls settled by Mike, and its four specs and plans approved
+  (`src/docs/specs/2026-11-07-*-design.md` on each branch). Tools become Bio chips with a pick step
+  for a tool choice; a removed or swapped source reverts only what it seeded, the player's values
+  stay; a Base speed box; Skin is look only, a Game system row changes the system with a warning,
+  and PP/EP show on a Humblewood sheet while held; each ASI starts blank, capped at 20 in level
+  order (#146 S2-24 rides along); summoned familiars join initiative, "Own initiative" or "Right
+  after you", one shared HP, struck and skipped at 0.
 - 2026-11-07: Merged #200: `/sign-off-notes`, typed on main in a second window during a release's
   test pass. A note that fails a line gets that line's `FAIL:`; anything else is filed after Mike's
   yes and recorded as a `while on` row in the pre-release record's Step 4 table, which step 4 lists
@@ -39,6 +48,8 @@ design calls (Bio chips, Skin & settings saves, ASI, Initiative), then wave 2. N
 - None open.
 
 ## Loose ends
+- Wave 2's four branches are unmerged and in progress (worktrees 121, 133, 172, 164). At merge:
+  tick #146's S2-24 and S2-26 (ASI) and #146's Size "set by hand" item (Bio chips).
 - Installing RPGFieldbookPrivate through Extensions on Mike's devices (a read-only token each) is his
   to do, with an app that has #182 (main's build now, or the next app release).
 - 17 player-visible notes in `UNRELEASED.md`, not released.
